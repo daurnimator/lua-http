@@ -14,7 +14,7 @@ This project is a work in progress and not ready for production use.
 
   - [ ] HTTP1.1
   - [ ] [HTTP2](https://http2.github.io/http2-spec/)
-	  - [ ] [HPACK](https://http2.github.io/http2-spec/compression.html)
+	  - [x] [HPACK](https://http2.github.io/http2-spec/compression.html)
   - [ ] Connection pooling
   - [ ] [`socket.http`](http://w3.impa.br/~diego/software/luasocket/http.html) compatibility layer
   - [ ] Prosody [`net.http`](https://prosody.im/doc/developers/net/http) compatibility layer
