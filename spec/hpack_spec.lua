@@ -35,8 +35,8 @@ describe("Correctly implements all examples in spec.", function()
 		local encoded = hpack.encode_literal_header_indexed_new("custom-key", "custom-header")
 		assert.same("@\10custom-key\13custom-header", encoded)
 		assert.same(
-			{{{name = "custom-key", value = "custom-header"}}, #encoded+1},
-			{hpack.new():decode_headers(encoded)}
+			{{name = "custom-key", value = "custom-header"}},
+			hpack.new():decode_headers(encoded)
 		)
 	end)
 
@@ -44,8 +44,8 @@ describe("Correctly implements all examples in spec.", function()
 		local encoded = hpack.encode_literal_header_none(4, "/sample/path")
 		assert.same("\04\12/sample/path", encoded)
 		assert.same(
-			{{{name = ":path", value = "/sample/path"}}, #encoded+1},
-			{hpack.new():decode_headers(encoded)}
+			{{name = ":path", value = "/sample/path"}},
+			hpack.new():decode_headers(encoded)
 		)
 	end)
 
@@ -53,8 +53,8 @@ describe("Correctly implements all examples in spec.", function()
 		local encoded = hpack.encode_literal_header_never_new("password", "secret")
 		assert.same("\16\8password\6secret", encoded)
 		assert.same(
-			{{{name = "password", value = "secret", never_index = true}}, #encoded+1},
-			{hpack.new():decode_headers(encoded)}
+			{{name = "password", value = "secret", never_index = true}},
+			hpack.new():decode_headers(encoded)
 		)
 	end)
 
@@ -62,8 +62,8 @@ describe("Correctly implements all examples in spec.", function()
 		local encoded = hpack.encode_indexed_header(2)
 		assert.same("\130", encoded)
 		assert.same(
-			{{{name = ":method", value = "GET"}}, #encoded+1},
-			{hpack.new():decode_headers(encoded)}
+			{{name = ":method", value = "GET"}},
+			hpack.new():decode_headers(encoded)
 		)
 	end)
 

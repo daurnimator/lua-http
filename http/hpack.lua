@@ -776,7 +776,7 @@ function methods:decode_headers(payload, pos)
 		end
 	end
 	assert(pos == #payload+1)
-	return header_list, pos
+	return header_list
 end
 
 return {
