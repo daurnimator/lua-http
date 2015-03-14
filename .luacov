@@ -1,0 +1,10 @@
+return {
+	statsfile = "luacov.stats.out";
+	reportfile = "luacov.report.out";
+	deletestats = true;
+	include = {
+		"http/";
+	};
+	exclude = {
+	};
+}
