@@ -307,7 +307,7 @@ do
 		[253] = "111111111111111111111101111";
 		[254] = "111111111111111111111110000";
 		[255] = "11111111111111111111101110";
-		[256] = "111111111111111111111111111111";
+		EOS   = "111111111111111111111111111111";
 	}
 	local function bit_string_to_byte(bitstring)
 		return string.char(tonumber(bitstring, 2))
@@ -324,8 +324,9 @@ do
 		local bytes = bitstring:gsub("........", bit_string_to_byte)
 		return bytes
 	end
+	-- Build tree for huffman decoder
 	local huffman_tree = {}
-	for i, v in ipairs(huffman_codes) do
+	for k, v in pairs(huffman_codes) do
 		local prev_node
 		local node = huffman_tree
 		local lr
@@ -338,7 +339,7 @@ do
 				prev_node[lr] = node
 			end
 		end
-		prev_node[lr] = i
+		prev_node[lr] = k
 	end
 	local byte_to_bitstring = {}
 	for i=0, 255 do
@@ -354,16 +355,25 @@ do
 		local output = {}
 		for c in bitstring:gmatch(".") do
 			node = node[c]
-			if type(node) == "number" then
+			local nt = type(node)
+			if nt == "table" then
+			elseif nt == "number" then
 				table.insert(output, node)
 				node = huffman_tree
+			elseif node == "EOS" then
+				-- 5.2: A Huffman encoded string literal containing the EOS symbol MUST be treated as a decoding error.
+				assert(node ~= 256, "invalid huffman code (EOS)")
+			else
+				error("invalid huffman code")
 			end
 		end
-		-- Ensure that any left over bits are all one.
-		while type(node) ~= "number" do
+		--[[ Ensure that any left over bits are all one.
+		Section 5.2: A padding not corresponding to the most significant bits
+		of the code for the EOS symbol MUST be treated as a decoding error]]
+		while type(node) == "table" do
 			node = node["1"]
 		end
-		assert(node == 256)
+		assert(node == "EOS", "invalid huffman padding")
 
 		return string.char(unpack(output))
 	end
