@@ -544,19 +544,22 @@ local function encode_max_size(n)
 	return encode_integer(n, 5, 0x20)
 end
 
----
 --[[
-This object encapulates a dynamic table and provides a way to build requests
+"class" to represent an encoding/decoding context
+This object encapulates a dynamic table
 
-We use a ever growing head/tail
-To get the specified behaviour that the you insert at the head of the table,
-we need to correct
+The FIFO implementation uses an ever growing head/tail;
+with the exception that when empty, the indexes are reset.
+
+This requires indexes to be corrected, as in the specification
+the 'newest' item is always just after the static section.
 ]]
 
 local methods = {}
 local mt = {
 	__index = methods;
 }
+
 local function new(SETTINGS_HEADER_TABLE_SIZE)
 	local self = {
 		dynamic_names_to_indexes = {};
