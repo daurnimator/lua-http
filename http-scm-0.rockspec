@@ -13,6 +13,7 @@ source = {
 dependencies = {
 	"lua >= 5.1";
 	"compat53"; -- Only if lua < 5.3
+	"bitop"; -- Only if lua == 5.1
 }
 
 build = {
