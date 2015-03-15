@@ -34,6 +34,10 @@ If using lua < 5.3 you will need
 
   - [compat-5.3](https://github.com/keplerproject/lua-compat-5.3)
 
+If using lua 5.1 you will need
+
+  - [luabitop](http://bitop.luajit.org/)
+
 ### For running tests
 
   - [busted](http://olivinelabs.com/busted/)

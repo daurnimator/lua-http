@@ -4,8 +4,8 @@
 local schar = string.char
 local spack = string.pack or require "compat53.string".pack
 local sunpack = string.unpack or require "compat53.string".unpack
-local band = require "bit".band
-local bor = require "bit".bor
+local band = require "http.bit".band
+local bor = require "http.bit".bor
 local unpack = table.unpack or unpack
 
 -- Section 5.1
