@@ -39,7 +39,7 @@ If using lua < 5.3 you will need
 
 If using lua 5.1 you will need
 
-  - [luabitop](http://bitop.luajit.org/)
+  - [luabitop](http://bitop.luajit.org/) or a backported [bit32](https://rocks.moonscript.org/modules/siffiejoe/bit32)
 
 ### For running tests
 

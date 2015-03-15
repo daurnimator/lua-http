@@ -13,7 +13,7 @@ source = {
 dependencies = {
 	"lua >= 5.1";
 	"compat53"; -- Only if lua < 5.3
-	"luabitop"; -- Only if lua == 5.1
+	"bit32"; -- Only if lua == 5.1
 	"cqueues";
 	"luaossl >= 20150305";
 }
