@@ -1,6 +1,6 @@
 --[[ This module smooths over all the various lua bit libraries
 
-The bit operations are done on operands up to 2^32,
+The bit operations are only done on bytes (8 bits),
 so the differences between bit libraries can be ignored.
 ]]
 
