@@ -15,6 +15,9 @@ before_install:
   - sudo luarocks install luacov-coveralls
   - sudo luarocks install busted
 
+install:
+  - sudo luarocks make
+
 script:
   - busted -c
 
