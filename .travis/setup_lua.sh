@@ -54,8 +54,8 @@ else
     curl http://www.lua.org/ftp/lua-5.1.5.tar.gz | tar xz
     cd lua-5.1.5;
   elif [ "$LUA" == "lua5.2" ]; then
-    curl http://www.lua.org/ftp/lua-5.2.3.tar.gz | tar xz
-    cd lua-5.2.3;
+    curl http://www.lua.org/ftp/lua-5.2.4.tar.gz | tar xz
+    cd lua-5.2.4;
   elif [ "$LUA" == "lua5.3" ]; then
     curl http://www.lua.org/ftp/lua-5.3.0.tar.gz | tar xz
     cd lua-5.3.0;
