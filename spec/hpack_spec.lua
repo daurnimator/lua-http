@@ -1,3 +1,4 @@
+local unpack = table.unpack or unpack
 local hpack = require "http.hpack"
 
 describe("Correctly implements all examples in spec.", function()

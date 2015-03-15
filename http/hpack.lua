@@ -25,7 +25,7 @@ local function encode_integer(i, prefix_len, mask)
 		while i >= 128 do
 			chars[j] = i % 128 + 128
 			j = j + 1
-			i = i / 128
+			i = math.floor(i / 128)
 		end
 		chars[j] = i
 		return schar(unpack(chars, 1, j))
