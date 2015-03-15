@@ -10,7 +10,7 @@
 
 This project is a work in progress and not ready for production use.
 
-[![Build Status](https://travis-ci.org/daurnimator/lua-http.svg)](https://travis-ci.org/daurnimator/lua-http)  
+[![Build Status](https://travis-ci.org/daurnimator/lua-http.svg)](https://travis-ci.org/daurnimator/lua-http)
 [![Coverage Status](https://coveralls.io/repos/daurnimator/lua-http/badge.svg?branch=master)](https://coveralls.io/r/daurnimator/lua-http?branch=master)
 
 ## Todo
