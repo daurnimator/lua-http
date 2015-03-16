@@ -405,6 +405,7 @@ local function decode_string(str, pos)
 	local len
 	len, pos = decode_integer(str, 7, pos)
 	local newpos = pos + len
+	assert(newpos <= #str + 1)
 	local val = str:sub(pos, newpos-1)
 	if huffman then
 		return huffman_decode(val), newpos

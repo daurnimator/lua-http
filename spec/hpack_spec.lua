@@ -289,3 +289,14 @@ e9ae 82ae 43d3]])
 9587 3160 65c0 03ed 4ee5 b106 3d50 07]])
 	end)
 end)
+
+describe("Malformed input is detected", function()
+	it("rejects incomplete strings", function()
+		-- "hi" is shorter than 7 chars; should error.
+		local s = hpack.encode_integer(5, 7, 0) .. "hi"
+		assert.errors(function() hpack.decode_string(s) end)
+		-- with huffman
+		local s = hpack.encode_integer(5, 7, 0x80) .. "hi"
+		assert.errors(function() hpack.decode_string(s) end)
+	end)
+end)
