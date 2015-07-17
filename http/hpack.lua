@@ -357,14 +357,13 @@ do
 		for c in bitstring:gmatch(".") do
 			node = node[c]
 			local nt = type(node)
-			if nt == "table" then
-			elseif nt == "number" then
+			if nt == "number" then
 				table.insert(output, node)
 				node = huffman_tree
 			elseif node == "EOS" then
 				-- 5.2: A Huffman encoded string literal containing the EOS symbol MUST be treated as a decoding error.
 				assert(node ~= 256, "invalid huffman code (EOS)")
-			else
+			elseif nt ~= "table" then
 				error("invalid huffman code")
 			end
 		end
@@ -646,7 +645,7 @@ function methods:resize_dynamic_table(new_size)
 	self.dynamic_max = new_size
 end
 
-function methods:add_to_dynamic_table(name, value, k)
+function methods:add_to_dynamic_table(name, value, k) -- luacheck: ignore 212
 	-- Early exit if we can't fit into dynamic table
 	if self.dynamic_max == 0 then return end
 	local new_entry_size = dynamic_table_entry_size(k)
