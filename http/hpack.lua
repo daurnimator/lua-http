@@ -6,6 +6,7 @@ local spack = string.pack or require "compat53.string".pack
 local sunpack = string.unpack or require "compat53.string".unpack
 local band = require "http.bit".band
 local bor = require "http.bit".bor
+local new_headers = require "http.headers".new
 local unpack = table.unpack or unpack
 
 -- Section 5.1
@@ -757,7 +758,7 @@ local function decode_header_helper(self, payload, prefix_len, pos)
 end
 function methods:decode_headers(payload, pos)
 	pos = pos or 1
-	local header_list = {}
+	local header_list = new_headers()
 	local i = 0
 	while pos <= #payload do
 		local first_byte = payload:byte(pos, pos)
@@ -768,25 +769,26 @@ function methods:decode_headers(payload, pos)
 			local name, value = self:lookup_index(index, false)
 			if name == nil then error("index " .. index .. " not found in table") end
 			i = i + 1
-			header_list[i] = {name = name, value = value}
+			header_list:append(name, value)
 		elseif band(first_byte, 0x40) ~= 0 then -- Section 6.2.1
 			local name, value
 			name, value, pos = decode_header_helper(self, payload, 6, pos)
 			self:add_to_dynamic_table(name, value, compound_key(name, value))
 			i = i + 1
-			header_list[i] = {name = name, value = value}
+			header_list:append(name, value)
 		elseif band(first_byte, 0x20) ~= 0 then -- Section 6.3
 			local size
 			size, pos = decode_integer(payload, 5, pos)
 			self:resize_dynamic_table(size)
 		else -- Section 6.2.2 and 6.2.3
-			local entry = {}
+			local never_index
 			if band(first_byte, 0x10) ~= 0 then
-				entry.never_index = true
+				never_index = true
 			end
-			entry.name, entry.value, pos = decode_header_helper(self, payload, 4, pos)
+			local name, value
+			name, value, pos = decode_header_helper(self, payload, 4, pos)
 			i = i + 1
-			header_list[i] = entry
+			header_list:append(name, value, never_index)
 		end
 	end
 	assert(pos == #payload+1)

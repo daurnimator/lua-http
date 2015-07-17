@@ -1,5 +1,6 @@
 local unpack = table.unpack or unpack
 local hpack = require "http.hpack"
+local new_headers = require "http.headers".new
 
 describe("Correctly implements all examples in spec.", function()
 	local function xxd_escape(s)
@@ -35,37 +36,33 @@ describe("Correctly implements all examples in spec.", function()
 	it("Example C.2.1", function()
 		local encoded = hpack.encode_literal_header_indexed_new("custom-key", "custom-header")
 		assert.same("@\10custom-key\13custom-header", encoded)
-		assert.same(
-			{{name = "custom-key", value = "custom-header"}},
-			hpack.new():decode_headers(encoded)
-		)
+		local h = new_headers()
+		h:append("custom-key", "custom-header")
+		assert.same(h, hpack.new():decode_headers(encoded))
 	end)
 
 	it("Example C.2.2", function()
 		local encoded = hpack.encode_literal_header_none(4, "/sample/path")
 		assert.same("\04\12/sample/path", encoded)
-		assert.same(
-			{{name = ":path", value = "/sample/path"}},
-			hpack.new():decode_headers(encoded)
-		)
+		local h = new_headers()
+		h:append(":path", "/sample/path")
+		assert.same(h, hpack.new():decode_headers(encoded))
 	end)
 
 	it("Example C.2.3", function()
 		local encoded = hpack.encode_literal_header_never_new("password", "secret")
 		assert.same("\16\8password\6secret", encoded)
-		assert.same(
-			{{name = "password", value = "secret", never_index = true}},
-			hpack.new():decode_headers(encoded)
-		)
+		local h = new_headers()
+		h:append("password", "secret", true)
+		assert.same(h, hpack.new():decode_headers(encoded))
 	end)
 
 	it("Example C.2.4", function()
 		local encoded = hpack.encode_indexed_header(2)
 		assert.same("\130", encoded)
-		assert.same(
-			{{name = ":method", value = "GET"}},
-			hpack.new():decode_headers(encoded)
-		)
+		local h = new_headers()
+		h:append(":method", "GET")
+		assert.same(h, hpack.new():decode_headers(encoded))
 	end)
 
 	local function check_request(enc_ctx, dec_ctx, headers, dyn_table, xxd_req)
