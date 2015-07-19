@@ -49,6 +49,14 @@ local function new_headers()
 	}, headers_mt)
 end
 
+function headers_mt:__len()
+	return self.n
+end
+
+function headers_mt:__tostring()
+	return string.format("http.headers(%d headers)", self.n)
+end
+
 local function add_to_index(_index, name, i)
 	local dex = _index[name]
 	if dex == nil then
@@ -84,6 +92,7 @@ function headers_methods:each()
 		return entry:unpack()
 	end, self
 end
+headers_mt.__pairs = headers_methods.each
 
 function headers_methods:has(name)
 	local dex = self._index[name]
