@@ -99,15 +99,28 @@ function headers_methods:has(name)
 	return dex ~= nil
 end
 
-function headers_methods:get(name)
+function headers_methods:get_as_sequence(name)
 	local dex = self._index[name]
-	if dex == nil then return nil end
-	local r = {}
-	local n = #dex
-	for i=1, n do
+	if dex == nil then return { n = 0; } end
+	local r = { n = #dex; }
+	for i=1, r.n do
 		r[i] = self[dex[i]].value
 	end
-	return unpack(r, 1, n)
+	return r
+end
+
+function headers_methods:get(name)
+	local r = self:get_as_sequence(name)
+	return unpack(r, 1, r.n)
+end
+
+function headers_methods:get_comma_separated(name)
+	local r = self:get_as_sequence(name)
+	if r.n == 0 then
+		return nil
+	else
+		return table.concat(r, ",", 1, r.n)
+	end
 end
 
 function headers_methods:upsert(name, ...)
