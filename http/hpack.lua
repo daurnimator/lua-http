@@ -768,23 +768,20 @@ function methods:decode_headers(payload, pos)
 			local name, value = self:lookup_index(index, false)
 			if name == nil then error("index " .. index .. " not found in table") end
 			i = i + 1
-			header_list:append(name, value)
+			header_list:append(name, value, false)
 		elseif band(first_byte, 0x40) ~= 0 then -- Section 6.2.1
 			local name, value
 			name, value, pos = decode_header_helper(self, payload, 6, pos)
 			self:add_to_dynamic_table(name, value, compound_key(name, value))
 			i = i + 1
-			header_list:append(name, value)
+			header_list:append(name, value, false)
 		elseif band(first_byte, 0x20) ~= 0 then -- Section 6.3
 			local size
 			size, pos = decode_integer(payload, 5, pos)
 			self:resize_dynamic_table(size)
 		else -- Section 6.2.2 and 6.2.3
-			local never_index
-			if band(first_byte, 0x10) ~= 0 then
-				never_index = true
-			end
 			local name, value
+			local never_index = band(first_byte, 0x10) ~= 0
 			name, value, pos = decode_header_helper(self, payload, 4, pos)
 			i = i + 1
 			header_list:append(name, value, never_index)

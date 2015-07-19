@@ -19,7 +19,15 @@ local entry_mt = {
 	__index = entry_methods;
 }
 
+local never_index_defaults = {
+	authorization = true;
+	["proxy-authorization"] = true;
+}
+
 local function new_entry(name, value, never_index)
+	if never_index == nil then
+		never_index = never_index_defaults[name] or false
+	end
 	return setmetatable({
 		name = name;
 		value = value;
@@ -29,6 +37,9 @@ end
 
 function entry_methods:modify(value, never_index)
 	self.value = value
+	if never_index == nil then
+		never_index = never_index_defaults[name] or false
+	end
 	self.never_index = never_index
 end
 
