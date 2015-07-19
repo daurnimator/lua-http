@@ -47,6 +47,10 @@ function connection_methods:close()
 	s:close()
 end
 
+function connection_methods:flush(...)
+	return self.socket:flush(...)
+end
+
 function connection_methods:read_request_line(timeout)
 	local line, err = self.socket:xread("*L", timeout)
 	if line == nil then return nil, err end
@@ -54,7 +58,7 @@ function connection_methods:read_request_line(timeout)
 	if not method then
 		error("invalid request line")
 	end
-	return method, path, httpversion
+	return method, path, tonumber(httpversion)
 end
 
 function connection_methods:read_status_line(timeout)
