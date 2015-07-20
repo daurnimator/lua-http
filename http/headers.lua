@@ -61,9 +61,10 @@ local function new_headers()
 	}, headers_mt)
 end
 
-function headers_mt:__len()
+function headers_methods:len()
 	return self._n
 end
+headers_mt.__len = headers_methods.len
 
 function headers_mt:__tostring()
 	return string.format("http.headers(%d headers)", self._n)
