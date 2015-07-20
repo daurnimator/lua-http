@@ -118,8 +118,6 @@ describe("http 1 connections", function()
 			assert(s:read_headers_done())
 
 			-- Test 'each_header' iterator as well
-			local s, c = new_pair(1.1)
-
 			assert(c:write_request_line("GET", "/", 1.1))
 			for _, t in ipairs(input) do
 				assert(c:write_header(t[1], t[2]))
