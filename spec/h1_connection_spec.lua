@@ -116,6 +116,25 @@ describe("http 1 connections", function()
 				assert.same(t[2], v)
 			end
 			assert(s:read_headers_done())
+
+			-- Test 'each_header' iterator as well
+			local s, c = new_pair(1.1)
+
+			assert(c:write_request_line("GET", "/", 1.1))
+			for _, t in ipairs(input) do
+				assert(c:write_header(t[1], t[2]))
+			end
+			assert(c:write_headers_done())
+
+			assert(s:read_request_line())
+			local i = 0
+			for k, v in s:each_header() do
+				i = i + 1
+				local t = input[i]
+				assert.same(t[1], k)
+				assert.same(t[2], v)
+			end
+			assert.same(#input, i)
 		end
 		test{}
 		test{
