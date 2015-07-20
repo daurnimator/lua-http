@@ -77,8 +77,9 @@ describe("Correctly implements all examples in spec.", function()
 		local decoded = dec_ctx:decode_headers(raw)
 		assert.same(dyn_table, dec_ctx:dynamic_table_tostring())
 		for i, input in ipairs(headers) do
-			local entry = decoded[i]
-			assert.same({input[1], input[2]}, {entry.name, entry.value})
+			local name, val, never_indexed = decoded:geti(i)
+			assert.same(input[1], name)
+			assert.same(input[2], val)
 		end
 	end
 	it("Example C.3", function()

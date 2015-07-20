@@ -110,6 +110,12 @@ function headers_methods:has(name)
 	return dex ~= nil
 end
 
+function headers_methods:geti(i)
+	local e = self[i]
+	if e == nil then return nil end
+	return e:unpack()
+end
+
 function headers_methods:get_as_sequence(name)
 	local dex = self._index[name]
 	if dex == nil then return { n = 0; } end
