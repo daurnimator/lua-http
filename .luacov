@@ -3,7 +3,7 @@ return {
 	reportfile = "luacov.report.out";
 	deletestats = true;
 	include = {
-		"http/";
+		"/http/";
 	};
 	exclude = {
 	};
