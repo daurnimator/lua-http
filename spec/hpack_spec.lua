@@ -1,8 +1,7 @@
-local unpack = table.unpack or unpack -- luacheck: ignore 113
-local hpack = require "http.hpack"
-local new_headers = require "http.headers".new
-
 describe("Correctly implements all examples in spec.", function()
+	local hpack = require "http.hpack"
+	local new_headers = require "http.headers".new
+
 	local function xxd_escape(s)
 		return (s
 			:gsub(".", function(c) return string.format("%02x", c:byte(1,1)) end)
@@ -67,7 +66,7 @@ describe("Correctly implements all examples in spec.", function()
 
 	local function check_request(enc_ctx, dec_ctx, headers, dyn_table, xxd_req)
 		for _, v in ipairs(headers) do
-			enc_ctx:add_header_indexed(unpack(v))
+			enc_ctx:add_header_indexed(v[1], v[2], v[3])
 		end
 		assert.same(dyn_table, enc_ctx:dynamic_table_tostring())
 		local raw = enc_ctx:render_data()
