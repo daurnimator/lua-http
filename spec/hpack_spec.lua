@@ -1,4 +1,4 @@
-local unpack = table.unpack or unpack
+local unpack = table.unpack or unpack -- luacheck: ignore 113
 local hpack = require "http.hpack"
 local new_headers = require "http.headers".new
 
@@ -66,7 +66,7 @@ describe("Correctly implements all examples in spec.", function()
 	end)
 
 	local function check_request(enc_ctx, dec_ctx, headers, dyn_table, xxd_req)
-		for i, v in ipairs(headers) do
+		for _, v in ipairs(headers) do
 			enc_ctx:add_header_indexed(unpack(v))
 		end
 		assert.same(dyn_table, enc_ctx:dynamic_table_tostring())
@@ -77,7 +77,7 @@ describe("Correctly implements all examples in spec.", function()
 		local decoded = dec_ctx:decode_headers(raw)
 		assert.same(dyn_table, dec_ctx:dynamic_table_tostring())
 		for i, input in ipairs(headers) do
-			local name, val, never_indexed = decoded:geti(i)
+			local name, val = decoded:geti(i)
 			assert.same(input[1], name)
 			assert.same(input[2], val)
 		end
@@ -291,10 +291,10 @@ end)
 describe("Malformed input is detected", function()
 	it("rejects incomplete strings", function()
 		-- "hi" is shorter than 7 chars; should error.
-		local s = hpack.encode_integer(5, 7, 0) .. "hi"
-		assert.errors(function() hpack.decode_string(s) end)
+		local s1 = hpack.encode_integer(5, 7, 0) .. "hi"
+		assert.errors(function() hpack.decode_string(s1) end)
 		-- with huffman
-		local s = hpack.encode_integer(5, 7, 0x80) .. "hi"
-		assert.errors(function() hpack.decode_string(s) end)
+		local s2 = hpack.encode_integer(5, 7, 0x80) .. "hi"
+		assert.errors(function() hpack.decode_string(s2) end)
 	end)
 end)

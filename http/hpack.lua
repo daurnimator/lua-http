@@ -7,7 +7,7 @@ local sunpack = string.unpack or require "compat53.string".unpack
 local band = require "http.bit".band
 local bor = require "http.bit".bor
 local new_headers = require "http.headers".new
-local unpack = table.unpack or unpack
+local unpack = table.unpack or unpack -- luacheck: ignore 113
 
 -- Section 5.1
 local function encode_integer(i, prefix_len, mask)

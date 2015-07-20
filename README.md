@@ -43,6 +43,7 @@ If using lua 5.1 you will need
 
 ### For running tests
 
+  - [luacheck](https://github.com/mpeterv/luacheck)
   - [busted](http://olivinelabs.com/busted/)
   - [luacov](https://keplerproject.github.io/luacov/)
 
@@ -60,6 +61,11 @@ If using lua 5.1 you will need
   - Install dependencies
     ```
     $ luarocks install --only-deps http-scm-0.rockspec
+    ```
+
+  - Lint the code (check for common programming errors)
+    ```
+    $ luacheck .
     ```
 
   - Run tests and view coverage report ([install tools first](#for-running-tests))
