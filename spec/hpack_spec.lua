@@ -288,6 +288,7 @@ e9ae 82ae 43d3]])
 end)
 
 describe("Malformed input is detected", function()
+	local hpack = require "http.hpack"
 	it("rejects incomplete strings", function()
 		-- "hi" is shorter than 7 chars; should error.
 		local s1 = hpack.encode_integer(5, 7, 0) .. "hi"
