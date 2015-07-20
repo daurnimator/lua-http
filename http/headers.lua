@@ -38,7 +38,7 @@ end
 function entry_methods:modify(value, never_index)
 	self.value = value
 	if never_index == nil then
-		never_index = never_index_defaults[name] or false
+		never_index = never_index_defaults[self.name] or false
 	end
 	self.never_index = never_index
 end
