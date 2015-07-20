@@ -55,17 +55,18 @@ local headers_mt = {
 
 local function new_headers()
 	return setmetatable({
-		n = 0;
-		_index = {}
+		_n = 0;
+		_data = {};
+		_index = {};
 	}, headers_mt)
 end
 
 function headers_mt:__len()
-	return self.n
+	return self._n
 end
 
 function headers_mt:__tostring()
-	return string.format("http.headers(%d headers)", self.n)
+	return string.format("http.headers(%d headers)", self._n)
 end
 
 local function add_to_index(_index, name, i)
@@ -80,26 +81,26 @@ end
 
 local function rebuild_index(self)
 	local index = {}
-	for i=1, self.n do
-		local entry = self[i]
+	for i=1, self._n do
+		local entry = self._data[i]
 		add_to_index(index, entry.name, i)
 	end
 	self._index = index
 end
 
 function headers_methods:append(name, ...)
-	local n = self.n + 1
-	self[n] = new_entry(name, ...)
+	local n = self._n + 1
+	self._data[n] = new_entry(name, ...)
 	add_to_index(self._index, name, n)
-	self.n = n
+	self._n = n
 end
 
 function headers_methods:each()
 	local i = 0
 	return function(self) -- luacheck: ignore 432
-		if i >= self.n then return end
+		if i >= self._n then return end
 		i = i + 1
-		local entry = self[i]
+		local entry = self._data[i]
 		return entry:unpack()
 	end, self
 end
@@ -111,7 +112,7 @@ function headers_methods:has(name)
 end
 
 function headers_methods:geti(i)
-	local e = self[i]
+	local e = self._data[i]
 	if e == nil then return nil end
 	return e:unpack()
 end
@@ -121,7 +122,7 @@ function headers_methods:get_as_sequence(name)
 	if dex == nil then return { n = 0; } end
 	local r = { n = #dex; }
 	for i=1, r.n do
-		r[i] = self[dex[i]].value
+		r[i] = self._data[dex[i]].value
 	end
 	return r
 end
@@ -146,7 +147,7 @@ function headers_methods:upsert(name, ...)
 		self:append(name, ...)
 	else
 		assert(dex[2] == nil, "Cannot upsert multi-valued field")
-		self[dex[1]]:modify(...)
+		self._data[dex[1]]:modify(...)
 	end
 end
 
