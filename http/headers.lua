@@ -141,13 +141,19 @@ function headers_methods:get_comma_separated(name)
 	end
 end
 
+function headers_methods:modifyi(i, ...)
+	local e = self._data[i]
+	if e == nil then error("invalid index") end
+	e:modify(...)
+end
+
 function headers_methods:upsert(name, ...)
 	local dex = self._index[name]
 	if dex == nil then
 		self:append(name, ...)
 	else
 		assert(dex[2] == nil, "Cannot upsert multi-valued field")
-		self._data[dex[1]]:modify(...)
+		self:modifyi(dex[1], ...)
 	end
 end
 
