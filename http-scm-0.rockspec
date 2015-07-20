@@ -22,6 +22,8 @@ build = {
 	type = "builtin";
 	modules = {
 		["http.bit"] = "http/bit.lua";
+		["http.h1_connection"] = "http/h1_connection.lua";
+		["http.headers"] = "http/headers.lua";
 		["http.hpack"] = "http/hpack.lua";
 	};
 }
