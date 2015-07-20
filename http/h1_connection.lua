@@ -134,10 +134,12 @@ function connection_methods:read_body_chunk(timeout)
 		error("invalid chunk: too large")
 	end
 	chunk_size = tonumber(chunk_size, 16)
-	assert(chunk_ext == "", "chunk extensions not supported") -- TODO
+	if chunk_ext == "" then
+		chunk_ext = nil
+	end
 	if chunk_size == 0 then
 		-- you MUST read trailers after this!
-		return nil
+		return nil, chunk_ext
 	else
 		local chunk_data, err2 = self.socket:xread(chunk_size, deadline and (deadline-monotime()))
 		if chunk_data == nil then
@@ -149,7 +151,7 @@ function connection_methods:read_body_chunk(timeout)
 		elseif crlf ~= "\r\n" then
 			error("invalid chunk: expected CRLF")
 		end
-		return chunk_data
+		return chunk_data, chunk_ext
 	end
 end
 
@@ -187,13 +189,15 @@ function connection_methods:write_headers_done(timeout)
 	return self.socket:xwrite("\r\n", "n", timeout)
 end
 
-function connection_methods:write_body_chunk(chunk, timeout)
+function connection_methods:write_body_chunk(chunk, chunk_ext, timeout)
+	assert(chunk_ext == nil, "chunk extensions not supported")
 	if chunk == "" then return true end
 	-- flushes write buffer
 	return self.socket:xwrite(string.format("%x\r\n%s\r\n", #chunk, chunk), "n", timeout)
 end
 
-function connection_methods:write_body_last_chunk(timeout)
+function connection_methods:write_body_last_chunk(chunk_ext, timeout)
+	assert(chunk_ext == nil, "chunk extensions not supported")
 	-- no flush; writing trailers (via write_headers_done) will do that
 	return self.socket:xwrite("0\r\n", "f", timeout)
 end
