@@ -23,7 +23,7 @@ before_install:
   - luarocks install busted
 
 install:
-  - luarocks make
+  - luarocks install --only-deps http-scm-0.rockspec
 
 script:
   - busted -c
