@@ -45,3 +45,30 @@ If using lua 5.1 you will need
 
   - [busted](http://olivinelabs.com/busted/)
   - [luacov](https://keplerproject.github.io/luacov/)
+
+
+# Development
+
+## Getting started
+
+  - Clone the repo:
+    ```
+    $ git clone https://github.com/daurnimator/lua-http.git
+    $ cd lua-http
+    ```
+
+  - Install dependencies
+    ```
+    $ luarocks install --only-deps http-scm-0.rockspec
+    ```
+
+  - Run tests and view coverage report ([install tools first](#for-running-tests))
+    ```
+    $ busted -c
+    $ luacov && less luacov.report.out
+    ```
+
+  - Install your local copy:
+    ```
+    $ luarocks make http-scm-0.rockspec
+    ```
