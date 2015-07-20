@@ -172,8 +172,8 @@ end
 
 function connection_methods:write_status_line(httpversion, status_code, reason_phrase, timeout)
 	assert(httpversion == 1.0 or httpversion == 1.1)
-	assert(status_code:match("[1-9]%d%d"), "invalid status code")
-	assert(type(reason_phrase) == "string" and reason_phrase:match("^[^\r\n]+$"), "invalid reason phrase")
+	assert(status_code:match("^[1-9]%d%d$"), "invalid status code")
+	assert(type(reason_phrase) == "string" and reason_phrase:match("^[^\r\n]*$"), "invalid reason phrase")
 	local line = string.format("HTTP/%1.1f %s %s\r\n", httpversion, status_code, reason_phrase)
 	return self.socket:xwrite(line, "f", timeout)
 end
