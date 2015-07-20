@@ -84,17 +84,25 @@ function connection_methods:read_header(timeout)
 	return key, val
 end
 
+function connection_methods:read_headers_done(timeout)
+	local crlf, err = self.socket:xread(2, timeout)
+	if crlf == nil then
+		return nil, err
+	elseif crlf ~= "\r\n" then
+		error("invalid header: expected CRLF")
+	end
+	return true
+end
+
 function connection_methods:each_header(timeout)
 	local deadline = timeout and (monotime()+timeout)
 	return function(self) -- luacheck: ignore 432
 		local key, val = self:read_header(deadline and (deadline-monotime()))
 		if key == nil then
 			if val == nil then -- EOH
-				local crlf, err = self.socket:xread(2, deadline and (deadline-monotime()))
-				if crlf == nil then
+				local ok, err = self:read_headers_done(deadline and (deadline-monotime()))
+				if ok == nil then
 					error(err)
-				elseif crlf ~= "\r\n" then
-					error("invalid header: expected CRLF")
 				end
 				-- Success: End of headers
 				return nil

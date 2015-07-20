@@ -48,4 +48,32 @@ describe("http 1 connections", function()
 		test("GET / HTTP/2.0")
 		test("GET / HTTP/1.1\nHeader: value") -- missing \r
 	end)
+	it("headers should round trip", function()
+		local function test(input)
+			local s, c = new_pair(1.1)
+
+			assert(c:write_request_line("GET", "/", 1.1))
+			for _, t in ipairs(input) do
+				assert(c:write_header(t[1], t[2]))
+			end
+			assert(c:write_headers_done())
+
+			assert(s:read_request_line())
+			for _, t in ipairs(input) do
+				local k, v = assert(s:read_header())
+				assert.same(t[1], k)
+				assert.same(t[2], v)
+			end
+			assert(s:read_headers_done())
+		end
+		test{}
+		test{
+			{"foo", "bar"};
+		}
+		test{
+			{"Host", "example.com"};
+			{"User-Agent", "some user/agent"};
+			{"Accept", "*/*"};
+		}
+	end)
 end)
