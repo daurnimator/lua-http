@@ -558,6 +558,7 @@ the 'newest' item is always just after the static section.
 
 local methods = {}
 local mt = {
+	__name = "http.hpack";
 	__index = methods;
 }
 

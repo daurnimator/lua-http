@@ -16,6 +16,7 @@ local unpack = table.unpack or unpack -- luacheck: ignore 113
 
 local entry_methods = {}
 local entry_mt = {
+	__name = "http.headers.entry";
 	__index = entry_methods;
 }
 
@@ -50,6 +51,7 @@ end
 
 local headers_methods = {}
 local headers_mt = {
+	__name = "http.headers";
 	__index = headers_methods;
 }
 

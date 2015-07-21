@@ -6,6 +6,7 @@ local monotime = require "cqueues".monotime
 
 local connection_methods = {}
 local connection_mt = {
+	__name = "http.h1_connection";
 	__index = connection_methods;
 }
 
