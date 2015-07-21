@@ -8,6 +8,7 @@ local band = require "http.bit".band
 local bor = require "http.bit".bor
 local new_headers = require "http.headers".new
 local unpack = table.unpack or unpack -- luacheck: ignore 113
+local PROTOCOL_ERROR = require "http.h2_error".errors.PROTOCOL_ERROR
 
 -- Section 5.1
 local function encode_integer(i, prefix_len, mask)
@@ -748,6 +749,9 @@ local function decode_header_helper(self, payload, prefix_len, pos)
 	index, pos = decode_integer(payload, prefix_len, pos)
 	if index == 0 then
 		name, pos = decode_string(payload, pos)
+		if name:match("%u") then
+			PROTOCOL_ERROR("malformed: header fields must not be uppercase")
+		end
 		value, pos = decode_string(payload, pos)
 	else
 		name = self:lookup_index(index, true)
