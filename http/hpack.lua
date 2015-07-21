@@ -756,9 +756,9 @@ local function decode_header_helper(self, payload, prefix_len, pos)
 	end
 	return name, value, pos
 end
-function methods:decode_headers(payload, pos)
+function methods:decode_headers(payload, header_list, pos)
+	header_list = header_list or new_headers()
 	pos = pos or 1
-	local header_list = new_headers()
 	while pos <= #payload do
 		local first_byte = payload:byte(pos, pos)
 		if band(first_byte, 0x80) ~= 0 then -- Section 6.1
