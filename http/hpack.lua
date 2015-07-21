@@ -744,6 +744,27 @@ function methods:add_header_indexed(name, value, huffman)
 	return self:append_data(data)
 end
 
+function methods:add_header_never_indexed(name, value, huffman)
+	local name_index = self:lookup_name_index(name)
+	if name_index then
+		local data = encode_literal_header_never(name_index, value, huffman)
+		return self:append_data(data)
+	end
+	-- Never before seen name
+	local data = encode_literal_header_never_new(name, value, huffman)
+	return self:append_data(data)
+end
+
+function methods:encode_headers(headers)
+	for name, value, never_index in headers:each() do
+		if never_index then
+			self:add_header_never_indexed(name, value)
+		else
+			self:add_header_indexed(name, value)
+		end
+	end
+end
+
 local function decode_header_helper(self, payload, prefix_len, pos)
 	local index, name, value
 	index, pos = decode_integer(payload, prefix_len, pos)
