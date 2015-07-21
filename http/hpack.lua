@@ -815,6 +815,8 @@ end
 
 return {
 	new = new;
+	methods = methods;
+	mt = mt;
 
 	encode_integer = encode_integer;
 	decode_integer = decode_integer;
