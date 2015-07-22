@@ -3,8 +3,8 @@ describe("http 1 connections", function()
 	local cs = require "cqueues.socket"
 	local function new_pair(version)
 		local s, c = cs.pair()
-		s = h1_connection.new(s, version)
-		c = h1_connection.new(c, version)
+		s = h1_connection.new(s, "server", version)
+		c = h1_connection.new(c, "client", version)
 		return s, c
 	end
 	it("request line should round trip", function()
