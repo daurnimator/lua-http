@@ -24,6 +24,7 @@ build = {
 	modules = {
 		["http.bit"] = "http/bit.lua";
 		["http.h1_connection"] = "http/h1_connection.lua";
+		["http.h2_error"] = "http/h2_error.lua";
 		["http.headers"] = "http/headers.lua";
 		["http.hpack"] = "http/hpack.lua";
 	};
