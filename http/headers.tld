@@ -1,0 +1,13 @@
+interface headers
+	const append : (self, string, string, nil|boolean) -> ()
+	const each : (self) -> ((self) -> (string, string, boolean))
+	const has : (self, string) -> (boolean)
+	const geti : (self, integer) -> (string, string, boolean)
+	const get_as_sequence : (self, string) -> ({"n": integer, integer:string})
+	const get : (self, string) -> (string*)
+	const get_comma_separated : (self, string) -> (string)
+	const modifyi : (self, integer, string, boolean?) -> ()
+	const upsert : (self, string, string, boolean?) -> ()
+end
+
+new : () -> (headers)
