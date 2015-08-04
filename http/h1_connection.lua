@@ -3,6 +3,7 @@
 -- e.g. header fields are un-normalised
 
 local monotime = require "cqueues".monotime
+local ce = require "cqueues.errno"
 
 local connection_methods = {}
 local connection_mt = {
@@ -34,6 +35,7 @@ function connection_methods:localname()
 	if self.socket == nil then return nil end
 	return self.socket:localname()
 end
+
 function connection_methods:peername()
 	if self.socket == nil then return nil end
 	return self.socket:peername()
@@ -58,7 +60,9 @@ end
 
 function connection_methods:read_request_line(timeout)
 	local line, err = self.socket:xread("*L", timeout)
-	if line == nil then return nil, err end
+	if line == nil then
+		return nil, err or ce.EPIPE
+	end
 	local method, path, httpversion = line:match("^(%w+) (%S+) HTTP/(1%.[01])\r\n$")
 	if not method then
 		error("invalid request line")
@@ -68,7 +72,9 @@ end
 
 function connection_methods:read_status_line(timeout)
 	local line, err = self.socket:xread("*L", timeout)
-	if line == nil then return nil, err end
+	if line == nil then
+		return nil, err or ce.EPIPE
+	end
 	local httpversion, status_code, reason_phrase = line:match("^HTTP/(1%.[01]) (%d%d%d) (.*)\r\n$")
 	if not httpversion then
 		error("invalid status line")
@@ -80,7 +86,7 @@ function connection_methods:read_header(timeout)
 	local line, err = self.socket:xread("*h", timeout)
 	if line == nil then
 		-- Note: the *h read returns *just* nil when data is a non-mime compliant header
-		return nil, err
+		return nil, err or ce.EPIPE
 	end
 	local key, val = line:match("^([^%s:]+): *(.*)$")
 	if not key then
@@ -92,46 +98,60 @@ end
 function connection_methods:read_headers_done(timeout)
 	local crlf, err = self.socket:xread(2, timeout)
 	if crlf == nil then
-		return nil, err
+		return nil, err or ce.EPIPE
 	elseif crlf ~= "\r\n" then
 		error("invalid header: expected CRLF")
 	end
 	return true
 end
 
+function connection_methods:next_header(timeout)
+	local deadline = timeout and (monotime()+timeout)
+	local key, val = self:read_header(timeout)
+	if key == nil then
+		if val == nil or val == ce.EPIPE then -- EOH
+			local ok, err = self:read_headers_done(deadline and (deadline-monotime()))
+			if ok == nil then
+				error(err)
+			end
+			-- Success: End of headers
+			return nil
+		else
+			error(val)
+		end
+	end
+	return key, val
+end
+
 function connection_methods:each_header(timeout)
 	local deadline = timeout and (monotime()+timeout)
 	return function(self) -- luacheck: ignore 432
-		local key, val = self:read_header(deadline and (deadline-monotime()))
-		if key == nil then
-			if val == nil then -- EOH
-				local ok, err = self:read_headers_done(deadline and (deadline-monotime()))
-				if ok == nil then
-					error(err)
-				end
-				-- Success: End of headers
-				return nil
-			else
-				error(val)
-			end
-		end
-		return key, val
+		return self:next_header(deadline and (deadline-monotime()))
 	end, self
 end
 
+-- pass a negative length for *up to* that number of bytes
 function connection_methods:read_body_by_length(len, timeout)
-	assert(type(len) == "number" and len >= 0)
-	return self.socket:xread(len, timeout)
+	assert(type(len) == "number")
+	local ok, err = self.socket:xread(len, timeout)
+	if ok == nil then
+		return nil, err or ce.EPIPE
+	end
+	return ok
 end
 
 function connection_methods:read_body_till_close(timeout)
-	return self.socket:xread("*a", timeout)
+	local ok, err = self.socket:xread("*a", timeout)
+	if ok == nil then
+		return nil, err or ce.EPIPE
+	end
+	return ok
 end
 
 function connection_methods:read_body_chunk(timeout)
 	local deadline = timeout and (monotime()+timeout)
 	local chunk_header, err = self.socket:xread("*L", timeout)
-	if chunk_header == nil then return nil, err end
+	if chunk_header == nil then return nil, err or ce.EPIPE end
 	local chunk_size, chunk_ext = chunk_header:match("^(%x+) *(.-)\r\n")
 	if chunk_size == nil then
 		error("invalid chunk")
@@ -144,15 +164,15 @@ function connection_methods:read_body_chunk(timeout)
 	end
 	if chunk_size == 0 then
 		-- you MUST read trailers after this!
-		return nil, chunk_ext
+		return false, chunk_ext
 	else
 		local chunk_data, err2 = self.socket:xread(chunk_size, deadline and (deadline-monotime()))
 		if chunk_data == nil then
-			return nil, err2
+			return nil, err2 or ce.EPIPE
 		end
 		local crlf, err3 = self.socket:xread(2, deadline and (deadline-monotime()))
 		if crlf == nil then
-			return nil, err3
+			return nil, err3 or ce.EPIPE
 		elseif crlf ~= "\r\n" then
 			error("invalid chunk: expected CRLF")
 		end
