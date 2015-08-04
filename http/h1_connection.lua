@@ -2,7 +2,8 @@
 -- It intentionally does not transform strings
 -- e.g. header fields are un-normalised
 
-local monotime = require "cqueues".monotime
+local cqueues = require "cqueues"
+local monotime = cqueues.monotime
 local ce = require "cqueues.errno"
 
 local connection_methods = {}
@@ -49,6 +50,8 @@ end
 
 function connection_methods:close()
 	self.socket:shutdown()
+	cqueues.poll()
+	cqueues.poll()
 	self.socket:close()
 end
 
