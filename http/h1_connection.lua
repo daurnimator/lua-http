@@ -1,10 +1,11 @@
--- This modules implements the socket level functionality needed for a HTTP 1 connection
--- It intentionally does not transform strings
--- e.g. header fields are un-normalised
+-- This module implements the socket level functionality needed for a HTTP 1 connection
 
 local cqueues = require "cqueues"
 local monotime = cqueues.monotime
+local cc = require "cqueues.condition"
 local ce = require "cqueues.errno"
+local h1_stream = require "http.h1_stream"
+local new_fifo = require "fifo"
 
 local connection_methods = {}
 local connection_mt = {
@@ -22,6 +23,10 @@ local function new_connection(socket, conn_type, version)
 		socket = assert(socket);
 		type = conn_type;
 		version = version;
+
+		pipeline = new_fifo(); -- streams waiting to go out
+		reading_locked = false; -- is a stream in the middle of being read
+		reading_cond = cc.new(); -- signaled when a stream has finished getting read
 	}, connection_mt)
 	socket:setmode("b", "bf")
 	return self
@@ -43,18 +48,58 @@ function connection_methods:peername()
 end
 
 function connection_methods:take_socket()
+	-- TODO: shutdown streams?
 	local s = self.socket
 	self.socket = nil
+	-- Reset socket to some defaults
+	s:onerror(nil)
 	return s
 end
 
 function connection_methods:close()
+	while self.pipeline:length() > 0 do
+		local stream = self.pipeline:peek()
+		stream:shutdown()
+	end
 	self.socket:shutdown()
 	cqueues.poll()
 	cqueues.poll()
 	self.socket:close()
 end
 
+function connection_methods:new_stream()
+	assert(self.type == "client")
+	local stream = h1_stream.new(self)
+	self.pipeline:push(stream)
+	return stream
+end
+
+-- this function *should never throw*
+function connection_methods:get_next_incoming_stream()
+	assert(self.type == "server")
+	-- Make sure we don't try and read befoe the previous request has been fully read
+	-- If there are no streams queued to write then we know it's okay
+	while self.reading_locked do
+		if self.socket == nil or self.socket:eof() then
+			return nil, ce.EPIPE
+		end
+		-- Wait until previous requests have been fully read
+		self.reading_cond:wait()
+	end
+
+	local stream = h1_stream.new(self)
+	-- Need to push before calling get_headers as it may
+	-- transition to closed which pops from the fifo
+	self.pipeline:push(stream)
+	self.reading_locked = true
+	local headers, err = stream:get_headers() -- this blocks
+	if headers == nil then
+		return nil, err
+	end
+	return stream
+end
+
+-- Primarily used for testing
 function connection_methods:flush(...)
 	return self.socket:flush(...)
 end

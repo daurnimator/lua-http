@@ -17,6 +17,7 @@ dependencies = {
 	"bit32"; -- Only if lua == 5.1
 	"cqueues";
 	-- "luaossl >= 20150305";
+	"fifo";
 }
 
 build = {
@@ -24,8 +25,12 @@ build = {
 	modules = {
 		["http.bit"] = "http/bit.lua";
 		["http.h1_connection"] = "http/h1_connection.lua";
+		["http.h1_reason_phrases"] = "http/h1_reason_phrases.lua";
+		["http.h1_stream"] = "http/h1_stream.lua";
 		["http.h2_error"] = "http/h2_error.lua";
 		["http.headers"] = "http/headers.lua";
 		["http.hpack"] = "http/hpack.lua";
+		["http.stream_common"] = "http/stream_common.lua";
+		["http.util"] = "http/util.lua";
 	};
 }

@@ -15,7 +15,7 @@ This project is a work in progress and not ready for production use.
 
 ## Todo
 
-  - [ ] HTTP1.1
+  - [x] HTTP1.1
   - [ ] [HTTP2](https://http2.github.io/http2-spec/)
 	  - [x] [HPACK](https://http2.github.io/http2-spec/compression.html)
   - [ ] Connection pooling
@@ -32,6 +32,7 @@ This project is a work in progress and not ready for production use.
 
   - [cqueues](http://25thandclement.com/~william/projects/cqueues.html)
   - [luaossl](http://25thandclement.com/~william/projects/luaossl.html)
+  - [fifo](https://github.com/daurnimator/fifo.lua)
 
 If using lua < 5.3 you will need
 
