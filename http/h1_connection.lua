@@ -233,6 +233,13 @@ function connection_methods:write_body_plain(body, timeout)
 	return self.socket:xwrite(body, "n", timeout)
 end
 
+function connection_methods:write_body_shutdown(timeout)
+	-- flushes write buffer
+	local ok, err = self.socket:flush("n", timeout)
+	if ok == nil then return nil, err end
+	return self.socket:shutdown("w")
+end
+
 return {
 	new = new_connection;
 	methods = connection_methods;
