@@ -48,10 +48,8 @@ function connection_methods:take_socket()
 end
 
 function connection_methods:close()
-	local s = self:take_socket()
-	if s == nil then return end
-	s:shutdown()
-	s:close()
+	self.socket:shutdown()
+	self.socket:close()
 end
 
 function connection_methods:flush(...)
