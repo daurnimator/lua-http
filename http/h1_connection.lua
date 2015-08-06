@@ -100,9 +100,9 @@ function connection_methods:get_next_incoming_stream()
 	-- transition to closed which pops from the fifo
 	self.pipeline:push(stream)
 	self.reading_locked = true
-	local headers, err = stream:get_headers() -- this blocks
+	local headers, err, errno = stream:get_headers() -- this blocks
 	if headers == nil then
-		return nil, err
+		return nil, err, errno
 	end
 	return stream
 end
@@ -113,9 +113,9 @@ function connection_methods:flush(...)
 end
 
 function connection_methods:read_request_line(timeout)
-	local line, err = self.socket:xread("*L", timeout)
+	local line, err, errno = self.socket:xread("*L", timeout)
 	if line == nil then
-		return nil, err or ce.EPIPE
+		return nil, err or ce.EPIPE, errno
 	end
 	local method, path, httpversion = line:match("^(%w+) (%S+) HTTP/(1%.[01])\r\n$")
 	if not method then
@@ -125,9 +125,9 @@ function connection_methods:read_request_line(timeout)
 end
 
 function connection_methods:read_status_line(timeout)
-	local line, err = self.socket:xread("*L", timeout)
+	local line, err, errno = self.socket:xread("*L", timeout)
 	if line == nil then
-		return nil, err or ce.EPIPE
+		return nil, err or ce.EPIPE, errno
 	end
 	local httpversion, status_code, reason_phrase = line:match("^HTTP/(1%.[01]) (%d%d%d) (.*)\r\n$")
 	if not httpversion then
@@ -137,10 +137,10 @@ function connection_methods:read_status_line(timeout)
 end
 
 function connection_methods:read_header(timeout)
-	local line, err = self.socket:xread("*h", timeout)
+	local line, err, errno = self.socket:xread("*h", timeout)
 	if line == nil then
 		-- Note: the *h read returns *just* nil when data is a non-mime compliant header
-		return nil, err or ce.EPIPE
+		return nil, err or ce.EPIPE, errno
 	end
 	local key, val = line:match("^([^%s:]+): *(.*)$")
 	if not key then
@@ -150,9 +150,9 @@ function connection_methods:read_header(timeout)
 end
 
 function connection_methods:read_headers_done(timeout)
-	local crlf, err = self.socket:xread(2, timeout)
+	local crlf, err, errno = self.socket:xread(2, timeout)
 	if crlf == nil then
-		return nil, err or ce.EPIPE
+		return nil, err or ce.EPIPE, errno
 	elseif crlf ~= "\r\n" then
 		error("invalid header: expected CRLF")
 	end
@@ -187,25 +187,25 @@ end
 -- pass a negative length for *up to* that number of bytes
 function connection_methods:read_body_by_length(len, timeout)
 	assert(type(len) == "number")
-	local ok, err = self.socket:xread(len, timeout)
+	local ok, err, errno = self.socket:xread(len, timeout)
 	if ok == nil then
-		return nil, err or ce.EPIPE
+		return nil, err or ce.EPIPE, errno
 	end
 	return ok
 end
 
 function connection_methods:read_body_till_close(timeout)
-	local ok, err = self.socket:xread("*a", timeout)
+	local ok, err, errno = self.socket:xread("*a", timeout)
 	if ok == nil then
-		return nil, err or ce.EPIPE
+		return nil, err or ce.EPIPE, errno
 	end
 	return ok
 end
 
 function connection_methods:read_body_chunk(timeout)
 	local deadline = timeout and (monotime()+timeout)
-	local chunk_header, err = self.socket:xread("*L", timeout)
-	if chunk_header == nil then return nil, err or ce.EPIPE end
+	local chunk_header, err, errno = self.socket:xread("*L", timeout)
+	if chunk_header == nil then return nil, err or ce.EPIPE, errno end
 	local chunk_size, chunk_ext = chunk_header:match("^(%x+) *(.-)\r\n")
 	if chunk_size == nil then
 		error("invalid chunk")
@@ -220,13 +220,13 @@ function connection_methods:read_body_chunk(timeout)
 		-- you MUST read trailers after this!
 		return false, chunk_ext
 	else
-		local chunk_data, err2 = self.socket:xread(chunk_size, deadline and (deadline-monotime()))
+		local chunk_data, err2, errno2 = self.socket:xread(chunk_size, deadline and (deadline-monotime()))
 		if chunk_data == nil then
-			return nil, err2 or ce.EPIPE
+			return nil, err2 or ce.EPIPE, errno2
 		end
-		local crlf, err3 = self.socket:xread(2, deadline and (deadline-monotime()))
+		local crlf, err3, errno3 = self.socket:xread(2, deadline and (deadline-monotime()))
 		if crlf == nil then
-			return nil, err3 or ce.EPIPE
+			return nil, err3 or ce.EPIPE, errno3
 		elseif crlf ~= "\r\n" then
 			error("invalid chunk: expected CRLF")
 		end
@@ -288,8 +288,8 @@ end
 
 function connection_methods:write_body_shutdown(timeout)
 	-- flushes write buffer
-	local ok, err = self.socket:flush("n", timeout)
-	if ok == nil then return nil, err end
+	local ok, err, errno = self.socket:flush("n", timeout)
+	if ok == nil then return nil, err, errno end
 	return self.socket:shutdown("w")
 end
 

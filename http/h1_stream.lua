@@ -101,7 +101,7 @@ function stream_methods:get_headers(timeout)
 	if self.type == "server" and self.state == "idle" then
 		local method, path, httpversion = -- luacheck: ignore 211
 			self.connection:read_request_line(deadline and (deadline-monotime()))
-		if method == nil then return nil, path end
+		if method == nil then return nil, path, httpversion end
 		self.req_method = method
 		self.peer_version = httpversion
 		self.headers:append(":method", method)
@@ -117,7 +117,7 @@ function stream_methods:get_headers(timeout)
 		and not self.headers:has(":status") then
 		local httpversion, status_code, reason_phrase = -- luacheck: ignore 211
 			self.connection:read_status_line(deadline and (deadline-monotime()))
-		if httpversion == nil then return nil, status_code end
+		if httpversion == nil then return nil, status_code, reason_phrase end
 		self.peer_version = httpversion
 		self.headers:append(":status", status_code)
 	elseif self.state == "idle" then -- client
