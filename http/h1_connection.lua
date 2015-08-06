@@ -13,6 +13,13 @@ local connection_mt = {
 	__index = connection_methods;
 }
 
+local function onerror(socket, op, why, lvl) -- luacheck: ignore 212
+	if why == ce.EPIPE or why == ce.ETIMEDOUT then
+		return why
+	end
+	return string.format("%s: %s", op, ce.strerror(why)), why
+end
+
 -- assumes ownership of the socket
 local function new_connection(socket, conn_type, version)
 	if conn_type ~= "client" and conn_type ~= "server" then
@@ -29,6 +36,7 @@ local function new_connection(socket, conn_type, version)
 		reading_cond = cc.new(); -- signaled when a stream has finished getting read
 	}, connection_mt)
 	socket:setmode("b", "bf")
+	socket:onerror(onerror)
 	return self
 end
 
