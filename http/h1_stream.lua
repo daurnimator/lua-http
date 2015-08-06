@@ -164,7 +164,8 @@ local ignore_fields = {
 	[":scheme"] = true;
 	[":status"] = true;
 }
-function stream_methods:write_headers(headers, end_stream)
+function stream_methods:write_headers(headers, end_stream, timeout)
+	local deadline = timeout and (monotime()+timeout)
 	assert(headers, "missing argument: headers")
 	if self.type == "server" then
 		if self.state == "closed" or self.state == "half closed (local)" then
@@ -177,7 +178,7 @@ function stream_methods:write_headers(headers, end_stream)
 		end
 		local status_code = assert(headers:get(":status"), "missing status")
 		local reason_phrase = reason_phrases[status_code]
-		assert(self.connection:write_status_line(self.connection.version, status_code, reason_phrase))
+		assert(self.connection:write_status_line(self.connection.version, status_code, reason_phrase, deadline and (deadline-monotime())))
 	else -- client
 		assert(self.state == "idle" or self.state == "open")
 		self.req_method = headers:get(":method")
@@ -188,7 +189,7 @@ function stream_methods:write_headers(headers, end_stream)
 		else
 			path = assert(headers:get(":path"), "missing path")
 		end
-		assert(self.connection:write_request_line(self.req_method, path, self.connection.version))
+		assert(self.connection:write_request_line(self.req_method, path, self.connection.version, deadline and (deadline-monotime())))
 	end
 
 	if self.req_method == "CONNECT" then
@@ -209,7 +210,7 @@ function stream_methods:write_headers(headers, end_stream)
 				and self.req_method ~= "HEAD" and not self.close_when_done then
 				-- By adding `content-length: 0` we can be sure that a server won't wait for a body
 				-- This is somewhat suggested in RFC 7231 section 8.1.2
-				assert(self.connection:write_header("content-length", "0"))
+				assert(self.connection:write_header("content-length", "0", deadline and (deadline-monotime())))
 			end
 		else
 			local te = http_util.split_header(headers:get_comma_separated("transfer-encoding"))
@@ -230,18 +231,19 @@ function stream_methods:write_headers(headers, end_stream)
 		end
 	end
 
+
 	for name, value in headers:each() do
 		if not ignore_fields[name] then
-			assert(self.connection:write_header(name, value))
+			assert(self.connection:write_header(name, value, deadline and (deadline-monotime())))
 		elseif name == ":authority" then
 			-- for CONNECT requests, :authority is the path
 			if self.req_method ~= "CONNECT" then
 				-- otherwise it's the Host header
-				assert(self.connection:write_header("host", value))
+				assert(self.connection:write_header("host", value, deadline and (deadline-monotime())))
 			end
 		end
 	end
-	assert(self.connection:write_headers_done())
+	assert(self.connection:write_headers_done(deadline and (deadline-monotime())))
 
 	if end_stream then
 		self:set_state("half closed (local)")
@@ -334,21 +336,24 @@ function stream_methods:get_next_chunk(timeout)
 	return get_more(self, deadline and (deadline-monotime()))
 end
 
-function stream_methods:write_chunk(chunk, end_stream)
+function stream_methods:write_chunk(chunk, end_stream, timeout)
 	if self.state ~= "open" and self.state ~= "half closed (remote)" then
 		error("cannot write chunk when stream is " .. self.state)
 	end
 	if self.body_write_type == "chunked" then
+		local deadline = timeout and (monotime()+timeout)
 		if #chunk > 0 then
-			assert(self.connection:write_body_chunk(chunk))
+			assert(self.connection:write_body_chunk(chunk, nil, timeout))
+			timeout = deadline and (deadline-monotime())
 		end
 		if end_stream then
-			assert(self.connection:write_body_last_chunk())
-			assert(self.connection:write_headers_done())
+			assert(self.connection:write_body_last_chunk(nil, timeout))
+			timeout = deadline and (deadline-monotime())
+			assert(self.connection:write_headers_done(timeout))
 		end
 	elseif self.body_write_type == "length" then
 		if #chunk > 0 then
-			assert(self.connection:write_body_plain(chunk))
+			assert(self.connection:write_body_plain(chunk, timeout))
 			self.body_write_left = self.body_write_left - #chunk
 		end
 		if end_stream then
@@ -356,7 +361,7 @@ function stream_methods:write_chunk(chunk, end_stream)
 		end
 	elseif self.body_write_type == "close" then
 		if #chunk > 0 then
-			assert(self.connection:write_body_plain(chunk))
+			assert(self.connection:write_body_plain(chunk, timeout))
 		end
 	else
 		error("cannot write chunk")
