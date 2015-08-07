@@ -178,7 +178,13 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		end
 		local status_code = assert(headers:get(":status"), "missing status")
 		local reason_phrase = reason_phrases[status_code]
-		assert(self.connection:write_status_line(self.connection.version, status_code, reason_phrase, deadline and (deadline-monotime())))
+		local ok, err = self.connection:write_status_line(self.connection.version, status_code, reason_phrase, deadline and (deadline-monotime()))
+		if not ok then
+			if err == ce.EPIPE or err == ce.ETIMEDOUT then
+				return nil, err
+			end
+			error(err)
+		end
 	else -- client
 		assert(self.state == "idle" or self.state == "open")
 		self.req_method = headers:get(":method")
@@ -189,7 +195,13 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		else
 			path = assert(headers:get(":path"), "missing path")
 		end
-		assert(self.connection:write_request_line(self.req_method, path, self.connection.version, deadline and (deadline-monotime())))
+		local ok, err = self.connection:write_request_line(self.req_method, path, self.connection.version, deadline and (deadline-monotime()))
+		if not ok then
+			if err == ce.EPIPE or err == ce.ETIMEDOUT then
+				return nil, err
+			end
+			error(err)
+		end
 	end
 
 	if self.req_method == "CONNECT" then
@@ -210,7 +222,13 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 				and self.req_method ~= "HEAD" and not self.close_when_done then
 				-- By adding `content-length: 0` we can be sure that a server won't wait for a body
 				-- This is somewhat suggested in RFC 7231 section 8.1.2
-				assert(self.connection:write_header("content-length", "0", deadline and (deadline-monotime())))
+				local ok, err = self.connection:write_header("content-length", "0", deadline and (deadline-monotime()))
+				if not ok then
+					if err == ce.EPIPE or err == ce.ETIMEDOUT then
+						return nil, err
+					end
+					error(err)
+				end
 			end
 		else
 			local te = http_util.split_header(headers:get_comma_separated("transfer-encoding"))
@@ -234,16 +252,34 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 
 	for name, value in headers:each() do
 		if not ignore_fields[name] then
-			assert(self.connection:write_header(name, value, deadline and (deadline-monotime())))
+			local ok, err = self.connection:write_header(name, value, deadline and (deadline-monotime()))
+			if not ok then
+				if err == ce.EPIPE or err == ce.ETIMEDOUT then
+					return nil, err
+				end
+				error(err)
+			end
 		elseif name == ":authority" then
 			-- for CONNECT requests, :authority is the path
 			if self.req_method ~= "CONNECT" then
 				-- otherwise it's the Host header
-				assert(self.connection:write_header("host", value, deadline and (deadline-monotime())))
+				local ok, err = self.connection:write_header("host", value, deadline and (deadline-monotime()))
+				if not ok then
+					if err == ce.EPIPE or err == ce.ETIMEDOUT then
+						return nil, err
+					end
+					error(err)
+				end
 			end
 		end
 	end
-	assert(self.connection:write_headers_done(deadline and (deadline-monotime())))
+	local ok, err = self.connection:write_headers_done(deadline and (deadline-monotime()))
+	if not ok then
+		if err == ce.EPIPE or err == ce.ETIMEDOUT then
+			return nil, err
+		end
+		error(err)
+	end
 
 	if end_stream then
 		self:set_state("half closed (local)")
@@ -343,17 +379,41 @@ function stream_methods:write_chunk(chunk, end_stream, timeout)
 	if self.body_write_type == "chunked" then
 		local deadline = timeout and (monotime()+timeout)
 		if #chunk > 0 then
-			assert(self.connection:write_body_chunk(chunk, nil, timeout))
+			local ok, err = self.connection:write_body_chunk(chunk, nil, timeout)
+			if not ok then
+				if err == ce.EPIPE or err == ce.ETIMEDOUT then
+					return nil, err
+				end
+				error(err)
+			end
 			timeout = deadline and (deadline-monotime())
 		end
 		if end_stream then
-			assert(self.connection:write_body_last_chunk(nil, timeout))
+			local ok, err = self.connection:write_body_last_chunk(nil, timeout)
+			if not ok then
+				if err == ce.EPIPE or err == ce.ETIMEDOUT then
+					return nil, err
+				end
+				error(err)
+			end
 			timeout = deadline and (deadline-monotime())
-			assert(self.connection:write_headers_done(timeout))
+			ok, err = self.connection:write_headers_done(timeout)
+			if not ok then
+				if err == ce.EPIPE or err == ce.ETIMEDOUT then
+					return nil, err
+				end
+				error(err)
+			end
 		end
 	elseif self.body_write_type == "length" then
 		if #chunk > 0 then
-			assert(self.connection:write_body_plain(chunk, timeout))
+			local ok, err = self.connection:write_body_plain(chunk, timeout)
+			if not ok then
+				if err == ce.EPIPE or err == ce.ETIMEDOUT then
+					return nil, err
+				end
+				error(err)
+			end
 			self.body_write_left = self.body_write_left - #chunk
 		end
 		if end_stream then
@@ -361,7 +421,13 @@ function stream_methods:write_chunk(chunk, end_stream, timeout)
 		end
 	elseif self.body_write_type == "close" then
 		if #chunk > 0 then
-			assert(self.connection:write_body_plain(chunk, timeout))
+			local ok, err = self.connection:write_body_plain(chunk, timeout)
+			if not ok then
+				if err == ce.EPIPE or err == ce.ETIMEDOUT then
+					return nil, err
+				end
+				error(err)
+			end
 		end
 	else
 		error("cannot write chunk")
