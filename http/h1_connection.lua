@@ -119,7 +119,7 @@ function connection_methods:read_request_line(timeout)
 	end
 	local method, path, httpversion = line:match("^(%w+) (%S+) HTTP/(1%.[01])\r\n$")
 	if not method then
-		error("invalid request line")
+		return nil, "invalid request line"
 	end
 	return method, path, tonumber(httpversion)
 end
@@ -131,7 +131,7 @@ function connection_methods:read_status_line(timeout)
 	end
 	local httpversion, status_code, reason_phrase = line:match("^HTTP/(1%.[01]) (%d%d%d) (.*)\r\n$")
 	if not httpversion then
-		error("invalid status line")
+		return nil, "invalid status line"
 	end
 	return tonumber(httpversion), status_code, reason_phrase
 end
@@ -144,7 +144,7 @@ function connection_methods:read_header(timeout)
 	end
 	local key, val = line:match("^([^%s:]+): *(.*)$")
 	if not key then
-		error("invalid header")
+		return nil, "invalid header"
 	end
 	return key, val
 end
@@ -199,9 +199,9 @@ function connection_methods:read_body_chunk(timeout)
 	if chunk_header == nil then return nil, err or ce.EPIPE, errno end
 	local chunk_size, chunk_ext = chunk_header:match("^(%x+) *(.-)\r\n")
 	if chunk_size == nil then
-		error("invalid chunk")
+		return nil, "invalid chunk"
 	elseif #chunk_size > 8 then
-		error("invalid chunk: too large")
+		return nil, "invalid chunk: too large"
 	end
 	chunk_size = tonumber(chunk_size, 16)
 	if chunk_ext == "" then
@@ -219,7 +219,7 @@ function connection_methods:read_body_chunk(timeout)
 		if crlf == nil then
 			return nil, err3 or ce.EPIPE, errno3
 		elseif crlf ~= "\r\n" then
-			error("invalid chunk: expected CRLF")
+			return nil, "invalid chunk: expected CRLF"
 		end
 		return chunk_data, chunk_ext
 	end
@@ -228,7 +228,13 @@ end
 function connection_methods:each_chunk(timeout)
 	local deadline = timeout and (monotime()+timeout)
 	return function(self) -- luacheck: ignore 432
-		return assert(self:read_body_chunk(deadline and (deadline-monotime())))
+		local chunk_data, chunk_ext = self:read_body_chunk(deadline and (deadline-monotime()))
+		if chunk_data == nil then
+			error(chunk_ext)
+		elseif chunk_data == false then -- last chunk
+			return nil
+		end
+		return chunk_data, chunk_ext
 	end, self
 end
 

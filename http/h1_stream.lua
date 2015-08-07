@@ -127,8 +127,14 @@ function stream_methods:get_headers(timeout)
 	end
 	-- Use while loop for lua 5.1 compatibility
 	while true do
-		local k, v = self.connection:next_header(deadline and (deadline-monotime()))
-		if k == nil then break end
+		local k, v, errno = self.connection:next_header(deadline and (deadline-monotime()))
+		if k == nil then
+			if v == nil then
+				break
+			else
+				return nil, v, errno
+			end
+		end
 		k = k:lower() -- normalise to lower case
 		if k == "host" then
 			k = ":authority"
@@ -304,22 +310,27 @@ local function read_body_iter(headers)
 			end
 			local chunk, err, errno = self.connection:read_body_chunk(timeout)
 			if chunk == nil then
-				if err == ce.EPIPE then
-					-- read trailers
-					-- TODO: check against trailer header as whitelist?
-					while true do
-						local k, v, errno2 = self.connection:next_header()
-						if k == nil then
+				return nil, err, errno
+			elseif chunk == false then
+				-- read trailers
+				-- TODO: check against trailer header as whitelist?
+				while true do
+					local k, v, errno2 = self.connection:next_header()
+					if k == nil then
+						if v == nil then
+							break
+						else
 							return nil, v, errno2
 						end
-						self.headers:append(k, v)
 					end
-					got_trailers = true
-					self.headers_cond:signal()
+					self.headers:append(k, v)
 				end
-				return nil, err, errno
+				got_trailers = true
+				self.headers_cond:signal()
+				return nil, ce.EPIPE
+			else
+				return chunk
 			end
-			return chunk
 		end
 		te[#te] = nil
 	elseif cl then
