@@ -297,22 +297,29 @@ local function read_body_iter(headers)
 	local te = http_util.split_header(headers:get_comma_separated("transfer-encoding"))
 	local cl = headers:get("content-length")
 	if te[#te] == "chunked" then
+		local got_trailers = false
 		function get_more(self, timeout)
-			local chunk, err = self.connection:read_body_chunk(timeout)
+			if got_trailers then
+				return nil, ce.EPIPE
+			end
+			local chunk, err, errno = self.connection:read_body_chunk(timeout)
 			if chunk == nil then
-				error(err)
-			end
-			if chunk then
-				return chunk
-			else
-				-- read trailers
-				-- TODO: check against trailer header as whitelist?
-				for k, v in self.connection:each_header() do
-					self.headers:append(k, v)
+				if err == ce.EPIPE then
+					-- read trailers
+					-- TODO: check against trailer header as whitelist?
+					while true do
+						local k, v, errno2 = self.connection:next_header()
+						if k == nil then
+							return nil, v, errno2
+						end
+						self.headers:append(k, v)
+					end
+					got_trailers = true
+					self.headers_cond:signal()
 				end
-				self.headers_cond:signal()
-				return nil
+				return nil, err, errno
 			end
+			return chunk
 		end
 		te[#te] = nil
 	elseif cl then
@@ -321,28 +328,27 @@ local function read_body_iter(headers)
 		local length_n = tonumber(cl)
 		function get_more(self, timeout)
 			if length_n <= 0 then
-				return nil
+				return nil, ce.EPIPE
 			end
-			local chunk, err = self.connection:read_body_by_length(-length_n, timeout)
+			local chunk, err, errno = self.connection:read_body_by_length(-length_n, timeout)
 			if chunk == nil then
-				error(err)
+				return nil, err, errno
 			end
 			length_n = length_n - #chunk
 			return chunk
 		end
-	else
+	else -- read until close
 		local closed = false
 		function get_more(self, timeout)
 			if closed then
-				return nil
+				return nil, ce.EPIPE
 			end
-			local chunk, err = self.connection:read_body_by_length(-0x80000000, timeout)
+			local chunk, err, errno = self.connection:read_body_by_length(-0x80000000, timeout)
 			if chunk == nil then
 				if err == ce.EPIPE then
 					closed = true
-					return nil
 				end
-				error(err)
+				return nil, err, errno
 			end
 			return chunk
 		end
@@ -358,14 +364,16 @@ function stream_methods:get_next_chunk(timeout)
 	local headers = self:get_headers(timeout)
 	local get_more = read_body_iter(headers)
 	self.get_next_chunk = function(self, timeout) -- luacheck: ignore 212 432
-		local chunk = get_more(self, timeout)
+		local chunk, err, errno = get_more(self, timeout)
 		if chunk == nil then
-			if self.state == "half closed (local)" then
-				self:set_state("closed")
-			else
-				self:set_state("half closed (remote)")
+			if err == ce.EPIPE then
+				if self.state == "half closed (local)" then
+					self:set_state("closed")
+				else
+					self:set_state("half closed (remote)")
+				end
 			end
-			return nil
+			return nil, err, errno
 		end
 		return chunk
 	end

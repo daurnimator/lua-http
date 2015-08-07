@@ -161,27 +161,18 @@ end
 
 function connection_methods:next_header(timeout)
 	local deadline = timeout and (monotime()+timeout)
-	local key, val = self:read_header(timeout)
+	local key, val, errno = self:read_header(timeout)
 	if key == nil then
-		if val == nil or val == ce.EPIPE then -- EOH
-			local ok, err = self:read_headers_done(deadline and (deadline-monotime()))
+		if val == ce.EPIPE then -- EOH
+			local ok, err, errno2 = self:read_headers_done(deadline and (deadline-monotime()))
 			if ok == nil then
-				error(err)
+				return nil, err, errno2
 			end
-			-- Success: End of headers
-			return nil
-		else
-			error(val)
+			-- Success: End of headers. val is ce.EPIPE
 		end
+		return nil, val, errno
 	end
 	return key, val
-end
-
-function connection_methods:each_header(timeout)
-	local deadline = timeout and (monotime()+timeout)
-	return function(self) -- luacheck: ignore 432
-		return self:next_header(deadline and (deadline-monotime()))
-	end, self
 end
 
 -- pass a negative length for *up to* that number of bytes
