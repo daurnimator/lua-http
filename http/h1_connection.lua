@@ -225,19 +225,6 @@ function connection_methods:read_body_chunk(timeout)
 	end
 end
 
-function connection_methods:each_chunk(timeout)
-	local deadline = timeout and (monotime()+timeout)
-	return function(self) -- luacheck: ignore 432
-		local chunk_data, chunk_ext = self:read_body_chunk(deadline and (deadline-monotime()))
-		if chunk_data == nil then
-			error(chunk_ext)
-		elseif chunk_data == false then -- last chunk
-			return nil
-		end
-		return chunk_data, chunk_ext
-	end, self
-end
-
 function connection_methods:write_request_line(method, path, httpversion, timeout)
 	assert(method:match("^[^ \r\n]+$"))
 	assert(path:match("^[^ \r\n]+$"))

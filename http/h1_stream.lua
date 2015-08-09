@@ -77,9 +77,8 @@ end
 function stream_methods:shutdown()
 	if self.state == "open" or (self.type == "client" and self.state == "half closed (local)") then
 		-- need to clean out pipeline by reading it.
-		for _ in self:each_chunk() do
-			-- ignore them
-		end
+		-- ignore errors
+		while self:get_next_chunk() do end
 	end
 	if self.state == "half closed (remote)" and self.type == "server" and self.body_write_type then
 		-- TODO: finish sending body
