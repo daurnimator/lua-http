@@ -100,16 +100,11 @@ function stream_methods:shutdown()
 		-- ignore errors
 		while self:get_next_chunk() do end
 	end
-	if self.state == "half closed (remote)" and self.type == "server" and self.body_write_type then
-		-- TODO: finish sending body
-		local fake_chunk
-		if self.body_write_type == "length" then
-			fake_chunk = ("\0"):rep(self.body_write_left)
-		else
-			fake_chunk = ""
-		end
-
-		self:write_chunk(fake_chunk, true)
+	if (self.state == "open" or self.state == "half closed (remote)") and self.body_write_type then
+		-- This is a bad situation: we are trying to shutdown a connection that has the body partially sent
+		-- Especially in the case of Connection: close, where closing indicates EOF,
+		-- this will result in a client only getting a partial response
+		self.connection.socket:shutdown("w")
 	end
 	self:set_state("closed")
 end
