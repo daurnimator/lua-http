@@ -13,6 +13,11 @@ local connection_mt = {
 	__index = connection_methods;
 }
 
+function connection_mt:__tostring()
+	return string.format("http.h1_connection{type=%q;version=%f}",
+		self.type, self.version)
+end
+
 local function onerror(socket, op, why, lvl) -- luacheck: ignore 212
 	if why == ce.EPIPE or why == ce.ETIMEDOUT then
 		return why
