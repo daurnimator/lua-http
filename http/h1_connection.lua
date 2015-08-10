@@ -149,7 +149,15 @@ function connection_methods:read_header(timeout)
 	local line, err, errno = self.socket:xread("*h", timeout)
 	if line == nil then
 		-- Note: the *h read returns *just* nil when data is a non-mime compliant header
-		return nil, err or ce.EPIPE, errno
+		if err == nil then
+			-- Check if we're at EOF to distinguish between end of headers and EPIPE
+			if self.socket:eof("r") then
+				err = ce.EPIPE
+			else
+				return -- end of headers
+			end
+		end
+		return nil, err, errno
 	end
 	local key, val = line:match("^([^%s:]+): *(.*)$")
 	if not key then
@@ -172,12 +180,12 @@ function connection_methods:next_header(timeout)
 	local deadline = timeout and (monotime()+timeout)
 	local key, val, errno = self:read_header(timeout)
 	if key == nil then
-		if val == ce.EPIPE then -- EOH
+		if val == nil then -- EOH
 			local ok, err, errno2 = self:read_headers_done(deadline and (deadline-monotime()))
 			if ok == nil then
 				return nil, err, errno2
 			end
-			-- Success: End of headers. val is ce.EPIPE
+			return -- Success: End of headers.
 		end
 		return nil, val, errno
 	end
