@@ -95,8 +95,10 @@ function stream_methods:set_state(new)
 end
 
 function stream_methods:shutdown()
-	if self.state == "open" or (self.type == "client" and self.state == "half closed (local)") then
-		-- need to clean out pipeline by reading it.
+	if self.type == "client" and self.state == "half closed (local)" then
+		-- If we're a client and have fully sent our request body
+		-- we'd like to finishing reading any remaining response so that we get out of the way
+		-- TODO: don't bother if we're reading until connection is closed
 		-- ignore errors
 		while self:get_next_chunk() do end
 	end
