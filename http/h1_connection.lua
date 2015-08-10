@@ -31,9 +31,15 @@ local function new_connection(socket, conn_type, version)
 		type = conn_type;
 		version = version;
 
-		pipeline = new_fifo(); -- streams waiting to go out
-		reading_locked = false; -- is a stream in the middle of being read
-		reading_cond = cc.new(); -- signaled when a stream has finished getting read
+		-- for server: streams waiting to go out
+		-- for client: streams waiting for a response
+		pipeline = new_fifo();
+
+		-- for server: held while request being read
+		-- for client: held while writing request
+		req_locked = nil;
+		-- signaled when unlocked
+		req_cond = cc.new();
 	}, connection_mt)
 	socket:setmode("b", "bf")
 	socket:onerror(onerror)
@@ -78,7 +84,6 @@ end
 function connection_methods:new_stream()
 	assert(self.type == "client")
 	local stream = h1_stream.new(self)
-	self.pipeline:push(stream)
 	return stream
 end
 
@@ -87,8 +92,8 @@ function connection_methods:get_next_incoming_stream()
 	assert(self.type == "server")
 	-- Make sure we don't try and read befoe the previous request has been fully read
 	-- If there are no streams queued to write then we know it's okay
-	while self.reading_locked do
-		if self.socket == nil or self.socket:eof() then
+	while self.req_locked do
+		if self.socket == nil or self.socket:eof("r") then
 			return nil, ce.EPIPE
 		end
 		-- Wait until previous requests have been fully read
@@ -99,7 +104,7 @@ function connection_methods:get_next_incoming_stream()
 	-- Need to push before calling get_headers as it may
 	-- transition to closed which pops from the fifo
 	self.pipeline:push(stream)
-	self.reading_locked = true
+	self.req_locked = stream
 	local headers, err, errno = stream:get_headers() -- this blocks
 	if headers == nil then
 		return nil, err, errno

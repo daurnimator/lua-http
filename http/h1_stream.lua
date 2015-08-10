@@ -60,16 +60,36 @@ function stream_methods:set_state(new)
 	assert(valid_states[new])
 	local old = self.state
 	self.state = new
-	-- If we have just finished reading; remove our read lock
-	if (old == "idle" or old == "open" or old == "half closed (local)")
-		and (new == "half closed (remote)" or new == "closed") then
-		self.connection.reading_locked = false
-		self.connection.reading_cond:signal(1)
-	end
-	-- If we have just finished writing; remove ourselves from the write pipeline
-	if (old == "idle" or old == "open" or old == "half closed (remote)")
-		and (new == "half closed (local)" or new == "closed") then
-		assert(self.connection.pipeline:pop() == self)
+	if self.type == "server" then
+		-- If we have just finished reading the request
+		if (old == "idle" or old == "open" or old == "half closed (local)")
+			and (new == "half closed (remote)" or new == "closed") then
+			-- remove our read lock
+			assert(self.connection.req_locked == self)
+			self.connection.req_locked = nil
+			self.connection.req_cond:signal(1)
+		end
+		-- If we have just finished writing the response
+		if (old == "idle" or old == "open" or old == "half closed (remote)")
+			and (new == "half closed (local)" or new == "closed") then
+			-- remove ourselves from the write pipeline
+			assert(self.connection.pipeline:pop() == self)
+		end
+	else -- client
+		-- If we have just finished writing the request
+		if (old == "open" or old == "half closed (remote)")
+			and (new == "half closed (local)" or new == "closed") then
+			-- remove our write lock
+			assert(self.connection.req_locked == self)
+			self.connection.req_locked = nil
+			self.connection.req_cond:signal(1)
+		end
+		-- If we have just finished reading the response;
+		if (old == "idle" or old == "open" or old == "half closed (local)")
+			and (new == "half closed (remote)" or new == "closed") then
+			-- remove ourselves from the read pipeline
+			assert(self.connection.pipeline:pop() == self)
+		end
 	end
 	self.state_cond:signal()
 end
@@ -114,6 +134,7 @@ function stream_methods:get_headers(timeout)
 	elseif self.type == "client"
 		and (self.state == "open" or self.state == "half closed (local)")
 		and not self.headers:has(":status") then
+		assert(self.connection.pipeline:peek() == self)
 		local httpversion, status_code, reason_phrase = -- luacheck: ignore 211
 			self.connection:read_status_line(deadline and (deadline-monotime()))
 		if httpversion == nil then return nil, status_code, reason_phrase end
@@ -172,40 +193,59 @@ local ignore_fields = {
 function stream_methods:write_headers(headers, end_stream, timeout)
 	local deadline = timeout and (monotime()+timeout)
 	assert(headers, "missing argument: headers")
+	if self.state == "closed" or self.state == "half closed (local)" then
+		return nil, ce.EPIPE
+	end
 	if self.type == "server" then
-		if self.state == "closed" or self.state == "half closed (local)" then
-			error(ce.EPIPE)
-		end
 		assert(self.state == "open" or self.state == "half closed (remote)")
 		-- Make sure we're at the front of the pipeline
 		if self.connection.pipeline:peek() ~= self then
 			error("NYI")
 		end
-		local status_code = assert(headers:get(":status"), "missing status")
-		local reason_phrase = reason_phrases[status_code]
-		local ok, err = self.connection:write_status_line(self.connection.version, status_code, reason_phrase, deadline and (deadline-monotime()))
-		if not ok then
-			if err == ce.EPIPE or err == ce.ETIMEDOUT then
-				return nil, err
+		local status_code = headers:get(":status")
+		if status_code then
+			-- Should send status line
+			local reason_phrase = reason_phrases[status_code]
+			local ok, err = self.connection:write_status_line(self.connection.version, status_code, reason_phrase, deadline and (deadline-monotime()))
+			if not ok then
+				if err == ce.EPIPE or err == ce.ETIMEDOUT then
+					return nil, err
+				end
+				error(err)
 			end
-			error(err)
 		end
 	else -- client
-		assert(self.state == "idle" or self.state == "open")
-		self.req_method = headers:get(":method")
-		local path
-		if self.req_method == "CONNECT" then
-			path = assert(headers:get(":authority"), "missing authority")
-			assert(not headers:has(":path"), "CONNECT requests should not have a path")
-		else
-			path = assert(headers:get(":path"), "missing path")
-		end
-		local ok, err = self.connection:write_request_line(self.req_method, path, self.connection.version, deadline and (deadline-monotime()))
-		if not ok then
-			if err == ce.EPIPE or err == ce.ETIMEDOUT then
-				return nil, err
+		if self.state == "idle" then
+			self.req_method = assert(headers:get(":method"), "missing method")
+			local path
+			if self.req_method == "CONNECT" then
+				path = assert(headers:get(":authority"), "missing authority")
+				assert(not headers:has(":path"), "CONNECT requests should not have a path")
+			else
+				path = assert(headers:get(":path"), "missing path")
 			end
-			error(err)
+			-- acquire lock
+			while self.connection.req_locked do
+				if self.connection.socket == nil or self.connection.socket:eof("w") then
+					return nil, ce.EPIPE
+				end
+				if not self.req_cond:wait(deadline and (deadline-monotime())) then
+					return nil, ce.ETIMEDOUT
+				end
+			end
+			self.connection.req_locked = self
+			self.connection.pipeline:push(self)
+			-- write request line
+			local ok, err = self.connection:write_request_line(self.req_method, path, self.connection.version, deadline and (deadline-monotime()))
+			if not ok then
+				if err == ce.EPIPE or err == ce.ETIMEDOUT then
+					return nil, err
+				end
+				error(err)
+			end
+			self:set_state("open")
+		else
+			assert(self.state == "open")
 		end
 	end
 
@@ -254,7 +294,6 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		end
 	end
 
-
 	for name, value in headers:each() do
 		if not ignore_fields[name] then
 			local ok, err = self.connection:write_header(name, value, deadline and (deadline-monotime()))
@@ -291,8 +330,6 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		if self.close_when_done then
 			self.connection.socket:shutdown("w")
 		end
-	elseif self.state == "idle" then
-		self:set_state("open")
 	end
 end
 
@@ -393,6 +430,11 @@ end
 function stream_methods:write_chunk(chunk, end_stream, timeout)
 	if self.state ~= "open" and self.state ~= "half closed (remote)" then
 		error("cannot write chunk when stream is " .. self.state)
+	end
+	if self.type == "client" then
+		assert(self.connection.req_locked == self)
+	else
+		assert(self.connection.pipeline:peek() == self)
 	end
 	if self.body_write_type == "chunked" then
 		local deadline = timeout and (monotime()+timeout)
