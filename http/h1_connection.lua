@@ -88,8 +88,9 @@ function connection_methods:new_stream()
 end
 
 -- this function *should never throw*
-function connection_methods:get_next_incoming_stream()
+function connection_methods:get_next_incoming_stream(timeout)
 	assert(self.type == "server")
+	local deadline = timeout and (monotime()+timeout)
 	-- Make sure we don't try and read befoe the previous request has been fully read
 	-- If there are no streams queued to write then we know it's okay
 	while self.req_locked do
@@ -97,7 +98,10 @@ function connection_methods:get_next_incoming_stream()
 			return nil, ce.EPIPE
 		end
 		-- Wait until previous requests have been fully read
-		self.reading_cond:wait()
+		if not self.req_cond:wait(timeout) then
+			return nil, ce.ETIMEDOUT
+		end
+		timeout = deadline and (deadline-monotime())
 	end
 
 	local stream = h1_stream.new(self)
@@ -105,7 +109,7 @@ function connection_methods:get_next_incoming_stream()
 	-- transition to closed which pops from the fifo
 	self.pipeline:push(stream)
 	self.req_locked = stream
-	local headers, err, errno = stream:get_headers() -- this blocks
+	local headers, err, errno = stream:get_headers(timeout) -- this blocks
 	if headers == nil then
 		return nil, err, errno
 	end
