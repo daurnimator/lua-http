@@ -263,7 +263,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		end
 		if end_stream then
 			-- Make sure 'end_stream' is respected
-			if self.connection.type ~= "server"
+			if self.type ~= "server"
 				and self.req_method ~= "HEAD" and not self.close_when_done then
 				-- By adding `content-length: 0` we can be sure that a server won't wait for a body
 				-- This is somewhat suggested in RFC 7231 section 8.1.2
@@ -284,7 +284,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 				self.body_write_left = assert(tonumber(cl), "invalid content-length")
 			elseif self.close_when_done then
 				self.body_write_type = "close"
-			elseif self.connection.type == "server" then
+			elseif self.type == "server" then
 				-- default for servers if they don't send a particular header
 				self.body_write_type = "close"
 				self.close_when_done = true
