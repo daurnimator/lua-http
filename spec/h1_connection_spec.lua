@@ -1,4 +1,4 @@
-describe("http 1 connections", function()
+describe("low level http 1 connection operations", function()
 	local h1_connection = require "http.h1_connection"
 	local cs = require "cqueues.socket"
 	local ce = require "cqueues.errno"
@@ -184,13 +184,38 @@ describe("http 1 connections", function()
 		assert.same(false, s:read_body_chunk())
 		assert(s:read_headers_done())
 	end)
+end)
+describe("high level http1 connection operations", function()
+	local h1_connection = require "http.h1_connection"
+	local cqueues = require "cqueues"
+	local cs = require "cqueues.socket"
+	local ce = require "cqueues.errno"
+
+	local function new_pair(version)
+		local s, c = cs.pair()
+		s = h1_connection.new(s, "server", version)
+		c = h1_connection.new(c, "client", version)
+		return s, c
+	end
+
 	it(":get_next_incoming_stream times out", function()
 		local s, c = new_pair(1.1) -- luacheck: ignore 211
-		assert.same({nil, ce.ETIMEDOUT}, {s:get_next_incoming_stream(0.1)})
+		local cq = cqueues.new()
+		cq:wrap(function()
+			local stream = s:get_next_incoming_stream()
+			cqueues.sleep(0.1)
+			stream:shutdown()
+		end)
+		cq:wrap(function()
+			cqueues.poll() -- yield so that other thread goes first
+			assert.same({nil, ce.ETIMEDOUT}, {s:get_next_incoming_stream(0.05)})
+		end)
+		assert(cq:loop())
 	end)
 	it(":get_next_incoming_stream returns nil, EPIPE when no data", function()
 		local s, c = new_pair(1.1)
 		c:close()
+		s:read_status_line() -- do a read option so we note the EOF
 		assert.same({nil, ce.EPIPE}, {s:get_next_incoming_stream()})
 	end)
 end)
