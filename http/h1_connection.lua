@@ -108,18 +108,16 @@ end
 -- this function *should never throw*
 function connection_methods:get_next_incoming_stream(timeout)
 	assert(self.type == "server")
-	local deadline = timeout and (monotime()+timeout)
-	-- Make sure we don't try and read befoe the previous request has been fully read
-	-- If there are no streams queued to write then we know it's okay
-	while self.req_locked do
-		if self.socket == nil or self.socket:eof("r") then
-			return nil, ce.EPIPE
-		end
+	-- Make sure we don't try and read before the previous request has been fully read
+	if self.req_locked then
 		-- Wait until previous requests have been fully read
 		if not self.req_cond:wait(timeout) then
 			return nil, ce.ETIMEDOUT
 		end
-		timeout = deadline and (deadline-monotime())
+		assert(self.req_locked == nil)
+	end
+	if self.socket == nil or self.socket:eof("r") then
+		return nil, ce.EPIPE
 	end
 
 	local stream = h1_stream.new(self)

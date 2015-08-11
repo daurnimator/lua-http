@@ -221,17 +221,15 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 			else
 				path = assert(headers:get(":path"), "missing path")
 			end
-			-- acquire lock
-			while self.connection.req_locked do
-				if self.connection.socket == nil or self.connection.socket:eof("w") then
-					return nil, ce.EPIPE
-				end
+			if self.req_locked then
+				-- Wait until previous responses have been fully written
 				if not self.req_cond:wait(deadline and (deadline-monotime())) then
 					return nil, ce.ETIMEDOUT
 				end
+				assert(self.req_locked == nil)
 			end
-			self.connection.req_locked = self
 			self.connection.pipeline:push(self)
+			self.connection.req_locked = self
 			-- write request line
 			local ok, err = self.connection:write_request_line(self.req_method, path, self.connection.version, deadline and (deadline-monotime()))
 			if not ok then
