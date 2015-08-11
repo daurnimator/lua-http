@@ -1,3 +1,14 @@
+--[[
+This module implements an error object that can encapsulate the data required of a http2 error.
+This data is:
+  - the error 'name'
+  - the error 'code'
+  - the error 'description'
+  - an optional error message
+
+Additionally, there is a field for a traceback.
+]]
+
 local errors = {}
 
 local http_error_methods = {}
