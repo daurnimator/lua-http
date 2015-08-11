@@ -124,17 +124,9 @@ function connection_methods:get_next_incoming_stream(timeout)
 	if errno then
 		return nil, onerror(self.socket, "read", errno, 3)
 	end
-
 	local stream = h1_stream.new(self)
-	-- Need to push before calling get_headers as it may
-	-- transition to closed which pops from the fifo
 	self.pipeline:push(stream)
 	self.req_locked = stream
-	local headers, err, errno = stream:get_headers(timeout) -- this blocks
-	if headers == nil then
-		stream:shutdown()
-		return nil, err, errno
-	end
 	return stream
 end
 
