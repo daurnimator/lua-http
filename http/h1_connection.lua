@@ -116,6 +116,7 @@ function connection_methods:get_next_incoming_stream(timeout)
 	self.req_locked = stream
 	local headers, err, errno = stream:get_headers(timeout) -- this blocks
 	if headers == nil then
+		stream:shutdown()
 		return nil, err, errno
 	end
 	return stream
