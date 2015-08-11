@@ -160,6 +160,30 @@ function headers_methods:upsert(name, ...)
 	end
 end
 
+local function default_cmp(a, b)
+	if a.name ~= b.name then
+		-- Things with a colon *must* be before others
+		local a_is_colon = a.name:sub(1,1) == ":"
+		local b_is_colon = b.name:sub(1,1) == ":"
+		if a_is_colon and not b_is_colon then
+			return true
+		elseif not a_is_colon and b_is_colon then
+			return false
+		else
+			return a.name < b.name
+		end
+	end
+	if a.value ~= b.value then
+		return a.value < b.value
+	end
+	return a.never_index
+end
+
+function headers_methods:sort()
+	table.sort(self._data, default_cmp)
+	rebuild_index(self)
+end
+
 return {
 	new = new_headers;
 	methods = headers_methods;
