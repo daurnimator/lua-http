@@ -66,6 +66,11 @@ function connection_methods:peername()
 	return self.socket:peername()
 end
 
+function connection_methods:clearerr(...)
+	if self.socket == nil then return nil end
+	return self.socket:clearerr(...)
+end
+
 function connection_methods:take_socket()
 	-- TODO: shutdown streams?
 	local s = self.socket
