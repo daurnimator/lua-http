@@ -236,11 +236,27 @@ function connection_methods:read_body_chunk(timeout)
 	else
 		local chunk_data, err2, errno2 = self.socket:xread(chunk_size, deadline and (deadline-monotime()))
 		if chunk_data == nil then
+			do
+				local unget_ok1, err3 = self.socket:unget(chunk_header)
+				if not unget_ok1 then
+					return nil, err3
+				end
+			end
 			return nil, err2 or ce.EPIPE, errno2
 		end
-		local crlf, err3, errno3 = self.socket:xread(2, deadline and (deadline-monotime()))
+		local crlf, err4, errno4 = self.socket:xread(2, deadline and (deadline-monotime()))
 		if crlf == nil then
-			return nil, err3 or ce.EPIPE, errno3
+			do
+				local unget_ok1, err5 = self.socket:unget(chunk_data)
+				if not unget_ok1 then
+					return nil, err5
+				end
+				local unget_ok2, err6 = self.socket:unget(chunk_header)
+				if not unget_ok2 then
+					return nil, err6
+				end
+			end
+			return nil, err4 or ce.EPIPE, errno4
 		elseif crlf ~= "\r\n" then
 			return nil, "invalid chunk: expected CRLF"
 		end
