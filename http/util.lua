@@ -1,7 +1,7 @@
 -- Many HTTP headers contain comma seperated values
 -- This function returns an iterator over header components
 local function each_header_component(str)
-	return str:gmatch(" *([^,]+) *%f[,%z]")
+	return str:gmatch(" *([^ ,][^,]-) *%f[,%z]")
 end
 
 local function split_header(str)
