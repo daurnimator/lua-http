@@ -52,22 +52,30 @@ local function new_connection(socket, conn_type, version)
 end
 
 function connection_methods:checktls()
-	if self.socket == nil then return nil end
+	if self.socket == nil then
+		return nil
+	end
 	return self.socket:checktls()
 end
 
 function connection_methods:localname()
-	if self.socket == nil then return nil end
+	if self.socket == nil then
+		return nil
+	end
 	return self.socket:localname()
 end
 
 function connection_methods:peername()
-	if self.socket == nil then return nil end
+	if self.socket == nil then
+		return nil
+	end
 	return self.socket:peername()
 end
 
 function connection_methods:clearerr(...)
-	if self.socket == nil then return nil end
+	if self.socket == nil then
+		return nil
+	end
 	return self.socket:clearerr(...)
 end
 
@@ -224,7 +232,9 @@ end
 function connection_methods:read_body_chunk(timeout)
 	local deadline = timeout and (monotime()+timeout)
 	local chunk_header, err, errno = self.socket:xread("*L", timeout)
-	if chunk_header == nil then return nil, err or ce.EPIPE, errno end
+	if chunk_header == nil then
+		return nil, err or ce.EPIPE, errno
+	end
 	local chunk_size, chunk_ext = chunk_header:match("^(%x+) *(.-)\r\n")
 	if chunk_size == nil then
 		return nil, "invalid chunk"
@@ -298,7 +308,9 @@ end
 
 function connection_methods:write_body_chunk(chunk, chunk_ext, timeout)
 	assert(chunk_ext == nil, "chunk extensions not supported")
-	if chunk == "" then return true end
+	if chunk == "" then
+		return true
+	end
 	-- flushes write buffer
 	return self.socket:xwrite(string.format("%x\r\n%s\r\n", #chunk, chunk), "n", timeout)
 end
@@ -317,7 +329,9 @@ end
 function connection_methods:write_body_shutdown(timeout)
 	-- flushes write buffer
 	local ok, err, errno = self.socket:flush("n", timeout)
-	if ok == nil then return nil, err, errno end
+	if ok == nil then
+		return nil, err, errno
+	end
 	return self.socket:shutdown("w")
 end
 
