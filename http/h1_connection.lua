@@ -119,6 +119,11 @@ function connection_methods:get_next_incoming_stream(timeout)
 	if self.socket == nil or self.socket:eof("r") then
 		return nil, ce.EPIPE
 	end
+	-- check if socket has already got an error set
+	local errno = self.socket:error("r")
+	if errno then
+		return nil, onerror(self.socket, "read", errno, 3)
+	end
 
 	local stream = h1_stream.new(self)
 	-- Need to push before calling get_headers as it may
