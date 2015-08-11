@@ -303,9 +303,6 @@ end
 
 function connection_methods:write_body_chunk(chunk, chunk_ext, timeout)
 	assert(chunk_ext == nil, "chunk extensions not supported")
-	if chunk == "" then
-		return true
-	end
 	-- flushes write buffer
 	return self.socket:xwrite(string.format("%x\r\n%s\r\n", #chunk, chunk), "n", timeout)
 end
