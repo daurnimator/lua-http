@@ -19,6 +19,22 @@ describe("low level http 1 connection operations", function()
 		c = h1_connection.new(c, "client", version)
 		return s, c
 	end
+	it(":localname and :peername work", function()
+		do
+			local s, c = new_pair(1.1)
+			-- these are unnamed sockets; so 2nd return should be `nil`
+			assert.same({cs.AF_UNIX, nil}, {s:localname()})
+			assert.same({cs.AF_UNIX, nil}, {s:peername()})
+			assert.same({cs.AF_UNIX, nil}, {c:localname()})
+			assert.same({cs.AF_UNIX, nil}, {c:peername()})
+		end
+		do
+			local s = new_pair(1.1)
+			s:take_socket() -- take out socket (and discard)
+			assert.same({nil}, {s:localname()})
+			assert.same({nil}, {s:peername()})
+		end
+	end)
 	it("errors should persist until cleared", function()
 		local s, c = new_pair(1.1)
 		assert.same({nil, ce.ETIMEDOUT}, {s:read_request_line(0)})
