@@ -8,6 +8,7 @@ interface headers
 	const get_comma_separated : (self, string) -> (string)
 	const modifyi : (self, integer, string, boolean?) -> ()
 	const upsert : (self, string, string, boolean?) -> ()
+	const sort : (self) -> ()
 end
 
 new : () -> (headers)
