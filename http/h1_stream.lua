@@ -147,7 +147,7 @@ function stream_methods:get_headers(timeout)
 		local k, v = self.connection:read_header(deadline and (deadline-monotime()))
 		if k == nil then
 			-- if it was an error, it will be repeated
-			local ok, err, errno2 = self:read_headers_done(deadline and (deadline-monotime()))
+			local ok, err, errno2 = self.connection:read_headers_done(deadline and (deadline-monotime()))
 			if ok == nil then
 				return nil, err, errno2
 			end
@@ -350,7 +350,7 @@ local function read_body_iter(headers)
 					local k, v = self.connection:read_header(deadline and (deadline-monotime()))
 					if k == nil then
 						-- if it was an error, it will be repeated
-						local ok, err, errno2 = self:read_headers_done(deadline and (deadline-monotime()))
+						local ok, err, errno2 = self.connection:read_headers_done(deadline and (deadline-monotime()))
 						if ok == nil then
 							return nil, err, errno2
 						end
