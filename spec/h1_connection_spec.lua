@@ -160,25 +160,6 @@ describe("low level http 1 connection operations", function()
 				assert.same(t[2], v)
 			end
 			assert(s:read_headers_done())
-
-			-- Test 'next_header' as well
-			assert(c:write_request_line("GET", "/", 1.1))
-			for _, t in ipairs(input) do
-				assert(c:write_header(t[1], t[2]))
-			end
-			assert(c:write_headers_done())
-
-			assert(s:read_request_line())
-			local i = 0
-			while true do
-				local k, v = s:next_header()
-				if k == nil then break end
-				i = i + 1
-				local t = input[i]
-				assert.same(t[1], k)
-				assert.same(t[2], v)
-			end
-			assert.same(#input, i)
 		end
 		test{}
 		test{

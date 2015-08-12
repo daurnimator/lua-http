@@ -193,20 +193,6 @@ function connection_methods:read_headers_done(timeout)
 	end
 end
 
-function connection_methods:next_header(timeout)
-	local deadline = timeout and (monotime()+timeout)
-	local key, val = self:read_header(timeout)
-	if key == nil then
-		-- if it was an error, it will be repeated
-		local ok, err, errno2 = self:read_headers_done(deadline and (deadline-monotime()))
-		if ok == nil then
-			return nil, err, errno2
-		end
-		return -- Success: End of headers.
-	end
-	return key, val
-end
-
 -- pass a negative length for *up to* that number of bytes
 function connection_methods:read_body_by_length(len, timeout)
 	assert(type(len) == "number")
