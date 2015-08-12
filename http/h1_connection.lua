@@ -82,6 +82,10 @@ end
 function connection_methods:take_socket()
 	-- TODO: shutdown streams?
 	local s = self.socket
+	if s == nil then
+		-- already taken
+		return nil
+	end
 	self.socket = nil
 	-- Reset socket to some defaults
 	s:onerror(nil)

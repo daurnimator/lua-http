@@ -19,6 +19,13 @@ describe("low level http 1 connection operations", function()
 		c = h1_connection.new(c, "client", version)
 		return s, c
 	end
+	it(":take_socket works", function()
+		local s = new_pair(1.1)
+		local sock = s:take_socket()
+		assert.same(debug.getmetatable((cs.pair())), debug.getmetatable(sock))
+		-- 2nd time it should return nil
+		assert.same(nil, s:take_socket())
+	end)
 	it(":localname and :peername work", function()
 		do
 			local s, c = new_pair(1.1)
