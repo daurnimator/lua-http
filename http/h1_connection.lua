@@ -182,12 +182,15 @@ end
 
 function connection_methods:read_headers_done(timeout)
 	local crlf, err, errno = self.socket:xread(2, timeout)
-	if crlf == nil then
+	if crlf == "\r\n" then
+		return true
+	elseif crlf == nil then
 		return nil, err or ce.EPIPE, errno
-	elseif crlf ~= "\r\n" then
-		error("invalid header: expected CRLF")
+	elseif crlf == "\r" then
+		return nil, ce.EPIPE
+	else
+		return nil, "invalid header: expected CRLF"
 	end
-	return true
 end
 
 function connection_methods:next_header(timeout)
