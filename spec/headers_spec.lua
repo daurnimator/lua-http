@@ -1,8 +1,8 @@
 describe("http.headers module", function()
 	local headers = require "http.headers"
-	it("__tosting works", function()
+	it("__tostring works", function()
 		local h = headers.new()
-		assert.same("http.headers(", tostring(h):match("^.-%("))
+		assert.same("http.headers{", tostring(h):match("^.-%{"))
 	end)
 	it("multiple values can be added for same key", function()
 		local h = headers.new()

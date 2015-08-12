@@ -69,7 +69,7 @@ end
 headers_mt.__len = headers_methods.len
 
 function headers_mt:__tostring()
-	return string.format("http.headers(%d headers)", self._n)
+	return string.format("http.headers{%d headers}", self._n)
 end
 
 local function add_to_index(_index, name, i)
