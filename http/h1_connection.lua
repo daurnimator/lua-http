@@ -168,15 +168,15 @@ function connection_methods:read_header(timeout)
 			if self.socket:eof("r") then
 				err = ce.EPIPE
 			else
-				return -- end of headers
+				-- next data is not a valid header
+				-- (could be end of headers)
+				return nil, "invalid header"
 			end
 		end
 		return nil, err, errno
 	end
 	local key, val = line:match("^([^%s:]+): *(.*)$")
-	if not key then
-		return nil, "invalid header"
-	end
+	-- don't need to validate, the *h read mode ensures a valid header
 	return key, val
 end
 
@@ -195,16 +195,14 @@ end
 
 function connection_methods:next_header(timeout)
 	local deadline = timeout and (monotime()+timeout)
-	local key, val, errno = self:read_header(timeout)
+	local key, val = self:read_header(timeout)
 	if key == nil then
-		if val == nil then -- EOH
-			local ok, err, errno2 = self:read_headers_done(deadline and (deadline-monotime()))
-			if ok == nil then
-				return nil, err, errno2
-			end
-			return -- Success: End of headers.
+		-- if it was an error, it will be repeated
+		local ok, err, errno2 = self:read_headers_done(deadline and (deadline-monotime()))
+		if ok == nil then
+			return nil, err, errno2
 		end
-		return nil, val, errno
+		return -- Success: End of headers.
 	end
 	return key, val
 end
