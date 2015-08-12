@@ -270,7 +270,11 @@ function connection_methods:write_request_line(method, path, httpversion, timeou
 	assert(path:match("^[^ \r\n]+$"))
 	assert(httpversion == 1.0 or httpversion == 1.1)
 	local line = string.format("%s %s HTTP/%1.1f\r\n", method, path, httpversion)
-	return self.socket:xwrite(line, "f", timeout)
+	local ok, err, errno = self.socket:xwrite(line, "f", timeout)
+	if not ok then
+		return nil, err, errno
+	end
+	return true
 end
 
 function connection_methods:write_status_line(httpversion, status_code, reason_phrase, timeout)
@@ -278,35 +282,59 @@ function connection_methods:write_status_line(httpversion, status_code, reason_p
 	assert(status_code:match("^[1-9]%d%d$"), "invalid status code")
 	assert(type(reason_phrase) == "string" and reason_phrase:match("^[^\r\n]*$"), "invalid reason phrase")
 	local line = string.format("HTTP/%1.1f %s %s\r\n", httpversion, status_code, reason_phrase)
-	return self.socket:xwrite(line, "f", timeout)
+	local ok, err, errno = self.socket:xwrite(line, "f", timeout)
+	if not ok then
+		return nil, err, errno
+	end
+	return true
 end
 
 function connection_methods:write_header(k, v, timeout)
 	assert(type(k) == "string" and k:match("^[^:\r\n]+$"), "field name invalid")
 	assert(type(v) == "string" and v:match("^[^\r\n]*$") and not v:match("^ "), "field value invalid")
-	return self.socket:xwrite(string.format("%s: %s\r\n", k, v), "f", timeout)
+	local ok, err, errno = self.socket:xwrite(string.format("%s: %s\r\n", k, v), "f", timeout)
+	if not ok then
+		return nil, err, errno
+	end
+	return true
 end
 
 function connection_methods:write_headers_done(timeout)
 	-- flushes write buffer
-	return self.socket:xwrite("\r\n", "n", timeout)
+	local ok, err, errno = self.socket:xwrite("\r\n", "n", timeout)
+	if not ok then
+		return nil, err, errno
+	end
+	return true
 end
 
 function connection_methods:write_body_chunk(chunk, chunk_ext, timeout)
 	assert(chunk_ext == nil, "chunk extensions not supported")
 	-- flushes write buffer
-	return self.socket:xwrite(string.format("%x\r\n%s\r\n", #chunk, chunk), "n", timeout)
+	local ok, err, errno = self.socket:xwrite(string.format("%x\r\n%s\r\n", #chunk, chunk), "n", timeout)
+	if not ok then
+		return nil, err, errno
+	end
+	return true
 end
 
 function connection_methods:write_body_last_chunk(chunk_ext, timeout)
 	assert(chunk_ext == nil, "chunk extensions not supported")
 	-- no flush; writing trailers (via write_headers_done) will do that
-	return self.socket:xwrite("0\r\n", "f", timeout)
+	local ok, err, errno = self.socket:xwrite("0\r\n", "f", timeout)
+	if not ok then
+		return nil, err, errno
+	end
+	return true
 end
 
 function connection_methods:write_body_plain(body, timeout)
 	-- flushes write buffer
-	return self.socket:xwrite(body, "n", timeout)
+	local ok, err, errno = self.socket:xwrite(body, "n", timeout)
+	if not ok then
+		return nil, err, errno
+	end
+	return true
 end
 
 function connection_methods:write_body_shutdown(timeout)
