@@ -1,5 +1,6 @@
 describe("low level http 1 connection operations", function()
 	local h1_connection = require "http.h1_connection"
+	local cqueues = require "cqueues"
 	local cs = require "cqueues.socket"
 	local ce = require "cqueues.errno"
 	it("cannot construct with invalid type", function()
@@ -165,6 +166,126 @@ describe("low level http 1 connection operations", function()
 			{"User-Agent", "some user/agent"};
 			{"Accept", "*/*"};
 		}
+	end)
+	it(":read_header works in exotic conditions", function()
+		do -- continuation
+			local s, c = new_pair(1.1)
+			c = c:take_socket()
+			assert(c:xwrite("foo: bar\r\n qux\r\n\r\n", "bn"))
+			c:close()
+			assert.same({"foo", "bar qux"}, {s:read_header()})
+		end
+		do -- not a continuation, but only partial next header
+			local s, c = new_pair(1.1)
+			c = c:take_socket()
+			assert(c:xwrite("foo: bar\r\npartial", "bn"))
+			c:close()
+			assert.same({"foo", "bar"}, {s:read_header()})
+		end
+		do -- not a continuation as gets a single byte of EOH
+			local s, c = new_pair(1.1)
+			c = c:take_socket()
+			assert(c:xwrite("foo: bar\r\n\r", "bn"))
+			c:close()
+			assert.same({"foo", "bar"}, {s:read_header()})
+		end
+		do -- trickle
+			local s, c = new_pair(1.1)
+			c = c:take_socket()
+			local cq = cqueues.new();
+			cq:wrap(function()
+				for char in ("foo: bar\r\n\r\n"):gmatch(".") do
+					assert(c:xwrite(char, "bn"))
+					cqueues.sleep(0.01)
+				end
+			end)
+			cq:wrap(function()
+				assert.same({"foo", "bar"}, {s:read_header()})
+			end)
+			assert(cq:loop())
+		end
+	end)
+	it(":read_header should handle failure conditions", function()
+		do -- no data
+			local s, c = new_pair(1.1)
+			c:close()
+			assert.same({nil, ce.EPIPE}, {s:read_header()})
+		end
+		do -- sudden connection close
+			local s, c = new_pair(1.1)
+			c = c:take_socket()
+			assert(c:xwrite("foo", "bn"))
+			c:close()
+			assert.same({nil, ce.EPIPE}, {s:read_header()})
+		end
+		do -- closed after new line
+			-- unknown if this it was going to be a header continuation or not
+			local s, c = new_pair(1.1)
+			c = c:take_socket()
+			assert(c:xwrite("foo: bar\r\n", "bn"))
+			c:close()
+			assert.same({nil, ce.EPIPE}, {s:read_header()})
+		end
+		do -- timeout
+			local s, c = new_pair(1.1)
+			assert.same({nil, ce.ETIMEDOUT}, {s:read_header(0.01)})
+			c:close()
+		end
+		do -- connection reset
+			local s, c = new_pair(1.1)
+			assert(s:write_body_plain("something that flushes"))
+			c:close()
+			assert.same({nil, "read: Connection reset by peer", ce.ECONNRESET}, {s:read_header()})
+		end
+		do -- no field name
+			local s, c = new_pair(1.1)
+			assert(c:take_socket():xwrite(": fs\r\n\r\n", "bn"))
+			assert.same({nil, "invalid header"}, {s:read_header()})
+		end
+		do -- no colon
+			local s, c = new_pair(1.1)
+			assert(c:take_socket():xwrite("foo bar\r\n\r\n", "bn"))
+			assert.same({nil, "invalid header"}, {s:read_header()})
+		end
+	end)
+	it(":read_headers_done should handle failure conditions", function()
+		do -- no data
+			local s, c = new_pair(1.1)
+			c:close()
+			assert.same({nil, ce.EPIPE}, {s:read_headers_done()})
+		end
+		do -- sudden connection close
+			local s, c = new_pair(1.1)
+			c = c:take_socket()
+			assert(c:xwrite("\r", "bn"))
+			c:close()
+			assert.same({nil, ce.EPIPE}, {s:read_headers_done()})
+		end
+		do -- timeout
+			local s, c = new_pair(1.1)
+			assert.same({nil, ce.ETIMEDOUT}, {s:read_headers_done(0.01)})
+			c:close()
+		end
+		do -- connection reset
+			local s, c = new_pair(1.1)
+			assert(s:write_body_plain("something that flushes"))
+			c:close()
+			assert.same({nil, "read: Connection reset by peer", ce.ECONNRESET}, {s:read_headers_done()})
+		end
+		do -- wrong byte
+			local s, c = new_pair(1.1)
+			c = c:take_socket()
+			assert(c:xwrite("\0", "bn"))
+			c:close()
+			assert.same({nil, "invalid header: expected CRLF"}, {s:read_headers_done()})
+		end
+		do -- wrong bytes
+			local s, c = new_pair(1.1)
+			c = c:take_socket()
+			assert(c:xwrite("hi", "bn"))
+			c:close()
+			assert.same({nil, "invalid header: expected CRLF"}, {s:read_headers_done()})
+		end
 	end)
 	it("chunks round trip", function()
 		local s, c = new_pair(1.1)
