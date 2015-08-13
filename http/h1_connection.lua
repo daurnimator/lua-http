@@ -291,7 +291,7 @@ end
 
 function connection_methods:write_header(k, v, timeout)
 	assert(type(k) == "string" and k:match("^[^:\r\n]+$"), "field name invalid")
-	assert(type(v) == "string" and v:match("^[^\r\n]*$") and not v:match("^ "), "field value invalid")
+	assert(type(v) == "string" and v:sub(-1, -1) ~= "\n" and not v:match("\n[^ ]"), "field value invalid")
 	local ok, err, errno = self.socket:xwrite(string.format("%s: %s\r\n", k, v), "f", timeout)
 	if not ok then
 		return nil, err, errno
