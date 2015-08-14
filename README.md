@@ -15,8 +15,8 @@ This project is a work in progress and not ready for production use.
 
 ## Todo
 
-  - [x] HTTP1.1
-  - [ ] [HTTP2](https://http2.github.io/http2-spec/)
+  - [x] HTTP 1.1
+  - [ ] [HTTP 2](https://http2.github.io/http2-spec/)
 	  - [x] [HPACK](https://http2.github.io/http2-spec/compression.html)
   - [ ] Connection pooling
   - [ ] [`socket.http`](http://w3.impa.br/~diego/software/luasocket/http.html) compatibility layer
@@ -40,7 +40,7 @@ If using lua < 5.3 you will need
 
 If using lua 5.1 you will need
 
-  - [luabitop](http://bitop.luajit.org/) or a backported [bit32](https://rocks.moonscript.org/modules/siffiejoe/bit32)
+  - [luabitop](http://bitop.luajit.org/)(comes with LuaJIT) or a backported [bit32](https://luarocks.org/modules/siffiejoe/bit32)
 
 ### For running tests
 
