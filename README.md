@@ -40,7 +40,7 @@ If using lua < 5.3 you will need
 
 If using lua 5.1 you will need
 
-  - [luabitop](http://bitop.luajit.org/)(comes with LuaJIT) or a backported [bit32](https://luarocks.org/modules/siffiejoe/bit32)
+  - [luabitop](http://bitop.luajit.org/) (comes [with LuaJIT](http://luajit.org/extensions.html)) or a [backported bit32](https://luarocks.org/modules/siffiejoe/bit32)
 
 ### For running tests
 
