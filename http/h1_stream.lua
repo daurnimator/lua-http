@@ -188,9 +188,18 @@ local ignore_fields = {
 	[":scheme"] = true;
 	[":status"] = true;
 }
+-- Writes the given headers to the stream; optionally ends the stream at end of headers
+--
+-- We're free to insert any of the "Hop-by-hop" headers (as listed in RFC 2616 Section 13.5.1)
+-- Do this by directly writing the headers, rather than adding them to the passed headers object,
+-- as we don't want to modify the caller owned object.
+-- Note from RFC 7230 Appendix 2:
+--     "hop-by-hop" header fields are required to appear in the Connection header field;
+--     just because they're defined as hop-by-hop doesn't exempt them.
 function stream_methods:write_headers(headers, end_stream, timeout)
 	local deadline = timeout and (monotime()+timeout)
 	assert(headers, "missing argument: headers")
+	assert(type(end_stream) == "boolean", "'end_stream' MUST be a boolean")
 	if self.state == "closed" or self.state == "half closed (local)" then
 		return nil, ce.EPIPE
 	end
@@ -252,7 +261,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		local cl = headers:get("content-length")
 		local connection = headers:get_comma_separated("connection")
 		connection = connection and http_util.split_header(connection)
-		if self.peer_version == 1.0 then
+		if self.connection.version == 1.0 or (self.type == "server" and self.peer_version == 1.0) then
 			self.close_when_done = not connection or not has(connection, "keep-alive")
 		else
 			self.close_when_done = connection and has(connection, "close")
@@ -263,29 +272,33 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 				and self.req_method ~= "HEAD" and not self.close_when_done then
 				-- By adding `content-length: 0` we can be sure that a server won't wait for a body
 				-- This is somewhat suggested in RFC 7231 section 8.1.2
-				local ok, err = self.connection:write_header("content-length", "0", deadline and (deadline-monotime()))
-				if not ok then
-					if err == ce.EPIPE or err == ce.ETIMEDOUT then
-						return nil, err
+				if cl then
+					assert(tonumber(cl) == 0, "cannot end stream after headers if you have a non-zero content-length")
+				else
+					local ok, err = self.connection:write_header("content-length", "0", deadline and (deadline-monotime()))
+					if not ok then
+						if err == ce.EPIPE or err == ce.ETIMEDOUT then
+							return nil, err
+						end
+						error(err)
 					end
-					error(err)
 				end
 			end
 		else
 			local te = http_util.split_header(headers:get_comma_separated("transfer-encoding"))
 			if te[#te] == "chunked" then
 				self.body_write_type = "chunked"
+			elseif self.close_when_done then
+				self.body_write_type = "close"
 			elseif cl then
 				self.body_write_type = "length"
 				self.body_write_left = assert(tonumber(cl), "invalid content-length")
-			elseif self.close_when_done then
-				self.body_write_type = "close"
 			elseif self.type == "server" then
 				-- default for servers if they don't send a particular header
 				self.body_write_type = "close"
 				self.close_when_done = true
-			else
-				error("unknown body type")
+			else -- self.type == "client"
+				error("cannot send a body with a request without indicating body type in headers")
 			end
 		end
 	end
