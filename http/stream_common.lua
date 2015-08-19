@@ -95,7 +95,7 @@ function stream_methods:get_body_as_file(timeout)
 end
 
 function stream_methods:write_body_from_string(str)
-	self:write_chunk(str, true)
+	return self:write_chunk(str, true)
 end
 
 function stream_methods:write_body_from_file(file)
@@ -104,9 +104,12 @@ function stream_methods:write_body_from_file(file)
 	while true do
 		local chunk = file:read(CHUNK_SIZE)
 		if chunk == nil then break end
-		self:write_chunk(chunk)
+		local ok, err = self:write_chunk(chunk)
+		if not ok then
+			return nil, err
+		end
 	end
-	self:write_chunk("", true)
+	return self:write_chunk("", true)
 end
 
 return {
