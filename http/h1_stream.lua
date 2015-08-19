@@ -114,6 +114,7 @@ end
 -- this function *should never throw* under normal operation
 function stream_methods:get_headers(timeout)
 	local deadline = timeout and (monotime()+timeout)
+	local status_code
 	if self.type == "server" and self.state == "idle" then
 		local method, path, httpversion = -- luacheck: ignore 211
 			self.connection:read_request_line(deadline and (deadline-monotime()))
@@ -132,7 +133,8 @@ function stream_methods:get_headers(timeout)
 		and (self.state == "open" or self.state == "half closed (local)")
 		and not self.headers:has(":status") then
 		assert(self.connection.pipeline:peek() == self)
-		local httpversion, status_code, reason_phrase = -- luacheck: ignore 211
+		local httpversion, reason_phrase
+		httpversion, status_code, reason_phrase = -- luacheck: ignore 211
 			self.connection:read_status_line(deadline and (deadline-monotime()))
 		if httpversion == nil then return nil, status_code, reason_phrase end
 		self.peer_version = httpversion
@@ -163,13 +165,19 @@ function stream_methods:get_headers(timeout)
 	-- Now guess if there's a body...
 	local no_body
 	if self.type == "client" then
-		-- if it was a HEAD request there will be no body
-		no_body = (self.req_method == "HEAD")
+		-- RFC 7230 Section 3.3
+		no_body = (self.req_method == "HEAD"
+			or status_code == "204"
+			or status_code:sub(1,1) == "1"
+			or status_code == "304")
 	else -- server
+		-- GET and HEAD requests usually don't have bodies
+		-- but if client sends a header that implies a body, assume it does
 		no_body = (self.req_method == "GET" or self.req_method == "HEAD")
 			and not (self.headers:has("content-length")
 			or self.headers:has("content-type")
-			or self.headers:has("transfer-encoding"))
+			or self.headers:has("transfer-encoding")
+			or has(http_util.split_header(self:get_comma_separated("connection")), "close"))
 	end
 	if no_body then
 		if self.state == "open" then
