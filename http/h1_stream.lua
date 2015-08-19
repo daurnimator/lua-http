@@ -5,7 +5,6 @@ local ce = require "cqueues.errno"
 local new_headers = require "http.headers".new
 local reason_phrases = require "http.h1_reason_phrases"
 local stream_common = require "http.stream_common"
-local http_util = require "http.util"
 
 local function has(list, val)
 	for i=1, list.n do
@@ -422,6 +421,7 @@ local function read_body_iter(headers)
 			if got_trailers then
 				return nil, ce.EPIPE
 			end
+			local deadline = timeout and (monotime()+timeout)
 			local chunk, err, errno = self.connection:read_body_chunk(timeout)
 			if chunk == nil then
 				return nil, err, errno
@@ -432,9 +432,9 @@ local function read_body_iter(headers)
 					local k, v = self.connection:read_header(deadline and (deadline-monotime()))
 					if k == nil then
 						-- if it was an error, it will be repeated
-						local ok, err, errno2 = self.connection:read_headers_done(deadline and (deadline-monotime()))
+						local ok, err2, errno2 = self.connection:read_headers_done(deadline and (deadline-monotime()))
 						if ok == nil then
-							return nil, err, errno2
+							return nil, err2, errno2
 						end
 						break -- Success: End of headers.
 					end
