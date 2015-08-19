@@ -399,6 +399,8 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 			error(err)
 		end
 	end
+
+	return true
 end
 
 local function read_body_iter(headers)
@@ -571,6 +573,7 @@ function stream_methods:write_chunk(chunk, end_stream, timeout)
 			self:set_state("half closed (local)")
 		end
 	end
+	return true
 end
 
 return {
