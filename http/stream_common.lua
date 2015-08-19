@@ -103,11 +103,16 @@ function stream_methods:write_body_from_file(file, timeout)
 	assert(file:seek("set")) -- this implicity disallows non-seekable streams
 	-- Can't use :lines here as in Lua 5.1 it doesn't take a parameter
 	while true do
-		local chunk = file:read(CHUNK_SIZE)
-		if chunk == nil then break end
-		local ok, err = self:write_chunk(chunk, false, deadline and (deadline-monotime()))
+		local chunk, err = file:read(CHUNK_SIZE)
+		if chunk == nil then
+			if err then
+				error(err)
+			end
+			break
+		end
+		local ok, err2 = self:write_chunk(chunk, false, deadline and (deadline-monotime()))
 		if not ok then
-			return nil, err
+			return nil, err2
 		end
 	end
 	return self:write_chunk("", true, deadline and (deadline-monotime()))
