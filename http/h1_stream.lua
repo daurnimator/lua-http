@@ -360,7 +360,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 			connection_header.n = connection_header.n + 1
 			connection_header[connection_header.n] = "transfer-encoding"
 		end
-		local value = table.concat(transfer_encoding_header, ",")
+		local value = table.concat(transfer_encoding_header, ",", 1, transfer_encoding_header.n)
 		local ok, err = self.connection:write_header("transfer-encoding", value, deadline and (deadline-monotime()))
 		if not ok then
 			if err == ce.EPIPE or err == ce.ETIMEDOUT then
@@ -370,7 +370,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		end
 	end
 	if connection_header.n > 0 then
-		local value = table.concat(connection_header, ",")
+		local value = table.concat(connection_header, ",", 1, connection_header.n)
 		local ok, err = self.connection:write_header("connection", value, deadline and (deadline-monotime()))
 		if not ok then
 			if err == ce.EPIPE or err == ce.ETIMEDOUT then
