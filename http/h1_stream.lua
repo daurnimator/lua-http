@@ -203,13 +203,14 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 	if self.state == "closed" or self.state == "half closed (local)" then
 		return nil, ce.EPIPE
 	end
+	local status_code
 	if self.type == "server" then
 		assert(self.state == "open" or self.state == "half closed (remote)")
 		-- Make sure we're at the front of the pipeline
 		if self.connection.pipeline:peek() ~= self then
 			error("NYI")
 		end
-		local status_code = headers:get(":status")
+		status_code = headers:get(":status")
 		if status_code then
 			-- Should send status line
 			local reason_phrase = reason_phrases[status_code]
@@ -254,7 +255,8 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		end
 	end
 
-	if self.req_method == "CONNECT" then
+	if self.req_method == "CONNECT" and (self.type == "client" or status_code == "200") then
+		-- successful CONNECT requests always continue until the connection is closed
 		self.body_write_type = "close"
 		self.close_when_done = true
 	else
