@@ -177,7 +177,7 @@ function stream_methods:get_headers(timeout)
 			and not (self.headers:has("content-length")
 			or self.headers:has("content-type")
 			or self.headers:has("transfer-encoding")
-			or has(http_util.split_header(self:get_comma_separated("connection")), "close"))
+			or has(self.headers:get_split_as_sequence("connection"), "close"))
 	end
 	if no_body then
 		if self.state == "open" then
@@ -265,8 +265,8 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		end
 	end
 
-	local connection_header = http_util.split_header(self:get_comma_separated("connection"))
-	local transfer_encoding_header = http_util.split_header(self:get_comma_separated(("transfer-encoding"))
+	local connection_header = headers:get_split_as_sequence("connection")
+	local transfer_encoding_header = headers:get_split_as_sequence("transfer-encoding")
 	if self.req_method == "CONNECT" and (self.type == "client" or status_code == "200") then
 		-- successful CONNECT requests always continue until the connection is closed
 		self.body_write_type = "close"
@@ -414,7 +414,7 @@ end
 local function read_body_iter(headers)
 	local get_more
 
-	local te = http_util.split_header(headers:get_comma_separated("transfer-encoding"))
+	local te = headers:get_split_as_sequence("transfer-encoding")
 	local cl = headers:get("content-length")
 	if te[#te] == "chunked" then
 		local got_trailers = false
