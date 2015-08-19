@@ -439,13 +439,12 @@ local function read_body_iter(headers)
 		end
 		te[#te] = nil
 	elseif cl then
-		assert(#cl < 13, "content-length too long")
-		assert(cl:match("^%d+$"), "invalid content-length")
-		local length_n = tonumber(cl)
+		local length_n = assert(tonumber(cl, 10), "invalid content-length")
 		function get_more(self, timeout)
-			if length_n <= 0 then
+			if length_n == 0 then
 				return nil, ce.EPIPE
 			end
+			assert(length_n > 0)
 			local chunk, err, errno = self.connection:read_body_by_length(-length_n, timeout)
 			if chunk == nil then
 				return nil, err, errno
