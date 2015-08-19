@@ -3,7 +3,6 @@
 local cqueues = require "cqueues"
 local monotime = cqueues.monotime
 local ce = require "cqueues.errno"
-local http_util = require "http.util"
 
 local CHUNK_SIZE = 2^20 -- write in 1MB chunks
 
@@ -19,24 +18,6 @@ end
 
 function stream_methods:peername()
 	return self.connection:peername()
-end
-
-function stream_methods:get_split_authority(timeout)
-	local host, port
-	local ssl = self:checktls()
-	local request_headers, err, errno = self:get_headers(timeout)
-	if not request_headers then
-		return nil, err, errno
-	end
-	local scheme = request_headers:get(":scheme") or (ssl and "https" or "http")
-	if request_headers:has(":authority") then
-		host, port = http_util.split_authority(request_headers:get(":authority"), scheme)
-	else
-		local fam -- luacheck: ignore 231
-		fam, host, port = self:localname()
-		host = ssl:getHostName() or host
-	end
-	return host, port
 end
 
 -- need helper to discard 'last' argument
