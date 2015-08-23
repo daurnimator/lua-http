@@ -34,7 +34,6 @@ local function new_stream(connection)
 		type = connection.type;
 
 		state = "idle";
-		state_cond = cc.new();
 		stats_sent = 0;
 
 		req_method = nil;
@@ -92,7 +91,6 @@ function stream_methods:set_state(new)
 			assert(self.connection.pipeline:pop() == self)
 		end
 	end
-	self.state_cond:signal()
 end
 
 function stream_methods:shutdown()
