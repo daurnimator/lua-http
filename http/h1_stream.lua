@@ -492,6 +492,9 @@ local function read_body_iter(te, cl)
 end
 
 function stream_methods:get_next_chunk(timeout)
+	if self.state == "closed" or self.state == "half closed (remote)" then
+		return nil, ce.EPIPE
+	end
 	local get_more, err = read_body_iter(self.body_read_te, self.body_read_left)
 	if not get_more then
 		return nil, err
