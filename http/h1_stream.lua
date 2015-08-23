@@ -259,7 +259,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 			end
 			if self.req_locked then
 				-- Wait until previous responses have been fully written
-				if not self.req_cond:wait(deadline and (deadline-monotime())) then
+				if not self.connection.req_cond:wait(deadline and (deadline-monotime())) then
 					return nil, ce.ETIMEDOUT
 				end
 				assert(self.req_locked == nil)
