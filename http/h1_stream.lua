@@ -1,6 +1,5 @@
 local cqueues = require "cqueues"
 local monotime = cqueues.monotime
-local cc = require "cqueues.condition"
 local ce = require "cqueues.errno"
 local new_headers = require "http.headers".new
 local reason_phrases = require "http.h1_reason_phrases"
@@ -493,26 +492,25 @@ local function read_body_iter(te, cl)
 end
 
 function stream_methods:get_next_chunk(timeout)
-	local deadline = timeout and (monotime()+timeout)
 	local get_more, err = read_body_iter(self.body_read_te, self.body_read_left)
 	if not get_more then
 		return nil, err
 	end
 	self.get_next_chunk = function(self, timeout) -- luacheck: ignore 432
-		local chunk, err, errno = get_more(self, timeout)
+		local chunk, err2, errno2 = get_more(self, timeout)
 		if chunk == nil then
-			if err == ce.EPIPE then
+			if err2 == ce.EPIPE then
 				if self.state == "half closed (local)" then
 					self:set_state("closed")
 				else
 					self:set_state("half closed (remote)")
 				end
 			end
-			return nil, err, errno
+			return nil, err2, errno2
 		end
 		return chunk
 	end
-	return get_more(self, deadline and (deadline-monotime()))
+	return self:get_next_chunk(timeout)
 end
 
 function stream_methods:write_chunk(chunk, end_stream, timeout)
