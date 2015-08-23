@@ -90,6 +90,8 @@ function stream_methods:set_state(new)
 	end
 end
 
+local server_error_headers = new_headers()
+server_error_headers:append(":status", "503")
 function stream_methods:shutdown()
 	if self.type == "client" and self.state == "half closed (local)" then
 		-- If we're a client and have fully sent our request body
@@ -98,11 +100,20 @@ function stream_methods:shutdown()
 		-- ignore errors
 		while self:get_next_chunk() do end
 	end
-	if (self.state == "open" or self.state == "half closed (remote)") and self.body_write_type then
-		-- This is a bad situation: we are trying to shutdown a connection that has the body partially sent
-		-- Especially in the case of Connection: close, where closing indicates EOF,
-		-- this will result in a client only getting a partial response
-		self.connection.socket:shutdown("w")
+	if self.state == "open" or self.state == "half closed (remote)" then
+		if not self.body_write_type and self.type == "server" then
+			-- Can send server error response
+			local ok, err = self:write_headers(server_error_headers, true)
+			if not ok then
+				self.connection.socket:shutdown("w")
+			end
+		else
+			-- This is a bad situation: we are trying to shutdown a connection that has the body partially sent
+			-- Especially in the case of Connection: close, where closing indicates EOF,
+			-- this will result in a client only getting a partial response.
+			-- Could also end up here if a client sending headers fails.
+			self.connection.socket:shutdown("w")
+		end
 	end
 	self:set_state("closed")
 end
