@@ -38,8 +38,6 @@ local function new_stream(connection)
 
 		req_method = nil;
 		peer_version = nil;
-		headers = new_headers();
-		headers_cond = cc.new();
 		body_write_type = nil;
 		body_write_left = nil;
 		body_read_te = nil; -- sequence: transfer-encoding header from peer
@@ -110,38 +108,43 @@ function stream_methods:shutdown()
 	self:set_state("closed")
 end
 
+-- get_headers may be called more than once for a stream
+-- e.g. for 100 Continue
 -- this function *should never throw* under normal operation
 function stream_methods:get_headers(timeout)
 	local deadline = timeout and (monotime()+timeout)
+	local headers = new_headers()
 	local status_code
-	if self.type == "server" and self.state == "idle" then
-		local method, path, httpversion = -- luacheck: ignore 211
+	if self.type == "server" then
+		assert(self.state == "idle")
+		local method, path, httpversion =
 			self.connection:read_request_line(deadline and (deadline-monotime()))
-		if method == nil then return nil, path, httpversion end
+		if method == nil then
+			return nil, path, httpversion
+		end
 		self.req_method = method
 		self.peer_version = httpversion
-		self.headers:append(":method", method)
+		headers:append(":method", method)
 		if method == "CONNECT" then
-			self.headers:append(":authority", path)
+			headers:append(":authority", path)
 		else
-			self.headers:append(":path", path)
+			headers:append(":path", path)
 		end
-		self.headers:append(":scheme", self:checktls() and "https" or "http")
+		headers:append(":scheme", self:checktls() and "https" or "http")
 		self:set_state("open")
-	elseif self.type == "client"
-		and (self.state == "open" or self.state == "half closed (local)")
-		and not self.headers:has(":status") then
+	else -- client
+		assert(self.state == "open" or self.state == "half closed (local)")
+		-- Make sure we're at front of connection pipeline
 		assert(self.connection.pipeline:peek() == self)
 		local httpversion, reason_phrase
-		httpversion, status_code, reason_phrase = -- luacheck: ignore 211
+		httpversion, status_code, reason_phrase =
 			self.connection:read_status_line(deadline and (deadline-monotime()))
-		if httpversion == nil then return nil, status_code, reason_phrase end
+		if httpversion == nil then
+			return nil, status_code, reason_phrase
+		end
 		self.peer_version = httpversion
-		self.headers:append(":status", status_code)
-	elseif self.state == "idle" then -- client
-		error("programming error: no headers sent, what do you expect to receive?")
-	else -- no more headers to get
-		return self.headers
+		headers:append(":status", status_code)
+		-- reason phase intentionally does not exist in HTTP2; discard for consistency
 	end
 	-- Use while loop for lua 5.1 compatibility
 	while true do
@@ -158,12 +161,11 @@ function stream_methods:get_headers(timeout)
 		if k == "host" then
 			k = ":authority"
 		end
-		self.headers:append(k, v)
+		headers:append(k, v)
 	end
-	self.headers_cond:signal();
 
-	self.body_read_te = self.headers:get_split_as_sequence("transfer-encoding")
-	self.body_read_left = self.headers:get("content-length")
+	self.body_read_te = headers:get_split_as_sequence("transfer-encoding")
+	self.body_read_left = headers:get("content-length")
 
 	-- Now guess if there's a body...
 	local no_body
@@ -177,10 +179,10 @@ function stream_methods:get_headers(timeout)
 		-- GET and HEAD requests usually don't have bodies
 		-- but if client sends a header that implies a body, assume it does
 		no_body = (self.req_method == "GET" or self.req_method == "HEAD")
-			and not (self.headers:has("content-length")
-			or self.headers:has("content-type")
-			or self.headers:has("transfer-encoding")
-			or has(self.headers:get_split_as_sequence("connection"), "close"))
+			and not (headers:has("content-length")
+			or headers:has("content-type")
+			or headers:has("transfer-encoding")
+			or has(headers:get_split_as_sequence("connection"), "close"))
 	end
 	if no_body then
 		if self.state == "open" then
@@ -189,7 +191,7 @@ function stream_methods:get_headers(timeout)
 			self:set_state("closed")
 		end
 	end
-	return self.headers
+	return headers
 end
 
 local ignore_fields = {
@@ -440,10 +442,9 @@ local function read_body_iter(te, cl)
 						end
 						break -- Success: End of headers.
 					end
-					self.headers:append(k, v)
+					-- self.trailers:append(k, v)
 				end
 				got_trailers = true
-				self.headers_cond:signal()
 				return nil, ce.EPIPE
 			else
 				return chunk
