@@ -188,11 +188,17 @@ function stream_methods:get_headers(timeout)
 	else -- server
 		-- GET and HEAD requests usually don't have bodies
 		-- but if client sends a header that implies a body, assume it does
+		-- don't include `connection: close` here
+			-- some clients (e.g. siege) send it without closing.
 		no_body = (self.req_method == "GET" or self.req_method == "HEAD")
 			and not (headers:has("content-length")
 			or headers:has("content-type")
-			or headers:has("transfer-encoding")
-			or has(headers:get_split_as_sequence("connection"), "close"))
+			or headers:has("transfer-encoding"))
+
+		-- if client is sends `Connection: close`, server knows it can close at end of response
+		if has(headers:get_split_as_sequence("connection"), "close") then
+			self.close_when_done = true
+		end
 	end
 	if no_body then
 		if self.state == "open" then
@@ -287,10 +293,12 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		self.body_write_type = "close"
 		self.close_when_done = true
 	else
-		if self.connection.version == 1.0 or (self.type == "server" and self.peer_version == 1.0) then
-			self.close_when_done = not has(connection_header, "keep-alive")
-		else
-			self.close_when_done = has(connection_header, "close")
+		if self.close_when_done == nil then
+			if self.connection.version == 1.0 or (self.type == "server" and self.peer_version == 1.0) then
+				self.close_when_done = not has(connection_header, "keep-alive")
+			else
+				self.close_when_done = has(connection_header, "close")
+			end
 		end
 		local cl = headers:get("content-length")
 		if end_stream then
@@ -349,6 +357,11 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 			else
 				error("a client cannot send a body with connection: keep-alive without indicating body delimiter in headers")
 			end
+		end
+		-- Add 'Connection: close' header if we're going to close after
+		if self.close_when_done and not has(connection_header, "close") then
+			connection_header.n = connection_header.n + 1
+			connection_header[connection_header.n] = "close"
 		end
 	end
 
