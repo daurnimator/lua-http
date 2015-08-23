@@ -36,13 +36,13 @@ local function new_stream(connection)
 		state = "idle";
 		stats_sent = 0;
 
-		req_method = nil;
-		peer_version = nil;
-		body_write_type = nil;
-		body_write_left = nil;
+		req_method = nil; -- string
+		peer_version = nil; -- 1.0 or 1.1
+		body_write_type = nil; -- "closed", "chunked" or "length"
+		body_write_left = nil; -- integer: only set when body_write_type == "length"
 		body_read_te = nil; -- sequence: transfer-encoding header from peer
 		body_read_left = nil; -- string: content-length header from peer
-		close_when_done = nil;
+		close_when_done = nil; -- boolean
 	}, stream_mt)
 	return self
 end
