@@ -43,6 +43,8 @@ local function new_stream(connection)
 		headers_cond = cc.new();
 		body_write_type = nil;
 		body_write_left = nil;
+		body_read_te = nil; -- sequence: transfer-encoding header from peer
+		body_read_left = nil; -- string: content-length header from peer
 		close_when_done = nil;
 	}, stream_mt)
 	return self
@@ -161,6 +163,10 @@ function stream_methods:get_headers(timeout)
 		self.headers:append(k, v)
 	end
 	self.headers_cond:signal();
+
+	self.body_read_te = self.headers:get_split_as_sequence("transfer-encoding")
+	self.body_read_left = self.headers:get("content-length")
+
 	-- Now guess if there's a body...
 	local no_body
 	if self.type == "client" then
@@ -410,12 +416,10 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 	return true
 end
 
-local function read_body_iter(headers)
+local function read_body_iter(te, cl)
 	local get_more
-
-	local te = headers:get_split_as_sequence("transfer-encoding")
-	local cl = headers:get("content-length")
-	if te[#te] == "chunked" then
+	local te_n = te.n
+	if te[te_n] == "chunked" then
 		local got_trailers = false
 		function get_more(self, timeout)
 			if got_trailers then
@@ -447,9 +451,12 @@ local function read_body_iter(headers)
 				return chunk
 			end
 		end
-		te[#te] = nil
+		te_n = te_n - 1
 	elseif cl then
-		local length_n = assert(tonumber(cl, 10), "invalid content-length")
+		local length_n = tonumber(cl, 10)
+		if not length_n or length_n < 0 then
+			return nil, "invalid content-length"
+		end
 		function get_more(self, timeout)
 			if length_n == 0 then
 				return nil, ce.EPIPE
@@ -479,16 +486,20 @@ local function read_body_iter(headers)
 		end
 	end
 
-	assert(te[1] == nil, "unknown transfer-encoding")
+	if te_n > 0 then
+		return nil, "unknown transfer-encoding"
+	end
 
 	return get_more
 end
 
 function stream_methods:get_next_chunk(timeout)
 	local deadline = timeout and (monotime()+timeout)
-	local headers = self:get_headers(timeout)
-	local get_more = read_body_iter(headers)
-	self.get_next_chunk = function(self, timeout) -- luacheck: ignore 212 432
+	local get_more, err = read_body_iter(self.body_read_te, self.body_read_left)
+	if not get_more then
+		return nil, err
+	end
+	self.get_next_chunk = function(self, timeout) -- luacheck: ignore 432
 		local chunk, err, errno = get_more(self, timeout)
 		if chunk == nil then
 			if err == ce.EPIPE then
