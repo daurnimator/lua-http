@@ -37,7 +37,7 @@ local function new_stream(connection)
 
 		req_method = nil; -- string
 		peer_version = nil; -- 1.0 or 1.1
-		body_write_type = nil; -- "closed", "chunked" or "length"
+		body_write_type = nil; -- "closed", "chunked", "length" or "missing"
 		body_write_left = nil; -- integer: only set when body_write_type == "length"
 		body_read_transfer_encoding = nil; -- sequence: transfer-encoding header from peer
 		body_read_left = nil; -- string: content-length header from peer
@@ -325,7 +325,9 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		end
 		if end_stream then
 			-- Make sure 'end_stream' is respected
-			if transfer_encoding_header.n > 0 then
+			if self.type == "server" and (self.req_method == "HEAD" or status_code == "304") then
+				self.body_write_type = "missing"
+			elseif transfer_encoding_header.n > 0 then
 				if transfer_encoding_header[transfer_encoding_header.n] == "chunked" then
 					-- Set body type to chunked so that we know how to end the stream
 					self.body_write_type = "chunked"
@@ -630,8 +632,8 @@ function stream_methods:write_chunk(chunk, end_stream, timeout)
 				error(err)
 			end
 		end
-	else
-		error("cannot write chunk")
+	elseif self.body_write_type ~= "missing" then
+		error("unknown body writing method")
 	end
 	self.stats_sent = self.stats_sent + #chunk
 	if end_stream then
