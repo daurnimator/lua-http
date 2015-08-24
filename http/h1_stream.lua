@@ -39,7 +39,7 @@ local function new_stream(connection)
 		peer_version = nil; -- 1.0 or 1.1
 		body_write_type = nil; -- "closed", "chunked" or "length"
 		body_write_left = nil; -- integer: only set when body_write_type == "length"
-		body_read_te = nil; -- sequence: transfer-encoding header from peer
+		body_read_transfer_encoding = nil; -- sequence: transfer-encoding header from peer
 		body_read_left = nil; -- string: content-length header from peer
 		close_when_done = nil; -- boolean
 	}, stream_mt)
@@ -174,7 +174,7 @@ function stream_methods:get_headers(timeout)
 		headers:append(k, v)
 	end
 
-	self.body_read_te = headers:get_split_as_sequence("transfer-encoding")
+	self.body_read_transfer_encoding = headers:get_split_as_sequence("transfer-encoding")
 	self.body_read_left = headers:get("content-length")
 
 	-- Now guess if there's a body...
@@ -519,7 +519,7 @@ function stream_methods:get_next_chunk(timeout)
 	if self.state == "closed" or self.state == "half closed (remote)" then
 		return nil, ce.EPIPE
 	end
-	local get_more, err = read_body_iter(self.body_read_te, self.body_read_left)
+	local get_more, err = read_body_iter(self.body_read_transfer_encoding, self.body_read_left)
 	if not get_more then
 		return nil, err
 	end
