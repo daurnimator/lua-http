@@ -216,7 +216,9 @@ local ignore_fields = {
 	[":path"] = true;
 	[":scheme"] = true;
 	[":status"] = true;
+	-- fields written manually in :write_headers
 	["connection"] = true;
+	["content-length"] = true;
 	["transfer-encoding"] = true;
 }
 -- Writes the given headers to the stream; optionally ends the stream at end of headers
@@ -288,10 +290,17 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 
 	local connection_header = headers:get_split_as_sequence("connection")
 	local transfer_encoding_header = headers:get_split_as_sequence("transfer-encoding")
+	local cl = headers:get("content-length") -- ignore subsequent content-length values
 	if self.req_method == "CONNECT" and (self.type == "client" or status_code == "200") then
 		-- successful CONNECT requests always continue until the connection is closed
 		self.body_write_type = "close"
 		self.close_when_done = true
+		if self.type == "server" and (cl or transfer_encoding_header.n > 0) then
+			-- RFC 7231 Section 4.3.6:
+			-- A server MUST NOT send any Transfer-Encoding or Content-Length header
+			-- fields in a 2xx (Successful) response to CONNECT.
+			error("Content-Length and Transfer-Encoding not allowed with successful CONNECT response")
+		end
 	else
 		if self.close_when_done == nil then
 			if self.connection.version == 1.0 or (self.type == "server" and self.peer_version == 1.0) then
@@ -300,25 +309,36 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 				self.close_when_done = has(connection_header, "close")
 			end
 		end
-		local cl = headers:get("content-length")
+		if cl then
+			-- RFC 7230 Section 3.3.2:
+			-- A sender MUST NOT send a Content-Length header field in any message that contains a Transfer-Encoding header field.
+			if transfer_encoding_header.n > 0 then
+				error("Content-Length not allowed in message with a transfer-encoding")
+			elseif self.type == "server" then
+				-- A server MUST NOT send a Content-Length header field in any response with a status code of 1xx (Informational) or 204 (No Content)
+				if status_code == "204"then
+					error("Content-Length not allowed in response with 204 status code")
+				elseif status_code:sub(1,1) == "1" then
+					error("Content-Length not allowed in response with 1xx status code")
+				end
+			end
+		end
 		if end_stream then
 			-- Make sure 'end_stream' is respected
-			if transfer_encoding_header[transfer_encoding_header.n] == "chunked" then
-				-- Set body type to chunked so that we know how to end the stream
-				self.body_write_type = "chunked"
+			if transfer_encoding_header.n > 0 then
+				if transfer_encoding_header[transfer_encoding_header.n] == "chunked" then
+					-- Set body type to chunked so that we know how to end the stream
+					self.body_write_type = "chunked"
+				else
+					error("unknown transfer-encoding")
+				end
 			else
 				-- By adding `content-length: 0` we can be sure that our peer won't wait for a body
 				-- This is somewhat suggested in RFC 7231 section 8.1.2
 				if cl then -- might already have content-length: 0
 					assert(cl:match("^ *0+ *$"), "cannot end stream after headers if you have a non-zero content-length")
 				else
-					local ok, err = self.connection:write_header("content-length", "0", deadline and (deadline-monotime()))
-					if not ok then
-						if err == ce.EPIPE or err == ce.ETIMEDOUT then
-							return nil, err
-						end
-						error(err)
-					end
+					cl = "0"
 				end
 				self.body_write_type = "length"
 				self.body_write_left = 0
@@ -389,7 +409,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		end
 	end
 
-	-- Write transfer-encoding and connection headers separately
+	-- Write transfer-encoding, content-length and connection headers separately
 	if transfer_encoding_header.n > 0 then
 		-- Add to connection header
 		if not has(connection_header, "transfer-encoding") then
@@ -398,6 +418,14 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		end
 		local value = table.concat(transfer_encoding_header, ",", 1, transfer_encoding_header.n)
 		local ok, err = self.connection:write_header("transfer-encoding", value, deadline and (deadline-monotime()))
+		if not ok then
+			if err == ce.EPIPE or err == ce.ETIMEDOUT then
+				return nil, err
+			end
+			error(err)
+		end
+	elseif cl then
+		local ok, err = self.connection:write_header("content-length", cl, deadline and (deadline-monotime()))
 		if not ok then
 			if err == ce.EPIPE or err == ce.ETIMEDOUT then
 				return nil, err
