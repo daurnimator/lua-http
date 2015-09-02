@@ -301,6 +301,8 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 			-- fields in a 2xx (Successful) response to CONNECT.
 			error("Content-Length and Transfer-Encoding not allowed with successful CONNECT response")
 		end
+	elseif status_code == "100" then -- implies self.type == "server"
+		assert(not end_stream, "cannot end stream directly after 100-continue")
 	else
 		if self.close_when_done == nil then
 			if self.connection.version == 1.0 or (self.type == "server" and self.peer_version == 1.0) then
