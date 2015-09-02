@@ -174,9 +174,6 @@ function stream_methods:get_headers(timeout)
 		headers:append(k, v)
 	end
 
-	self.body_read_transfer_encoding = headers:get_split_as_sequence("transfer-encoding")
-	self.body_read_left = headers:get("content-length")
-
 	-- Now guess if there's a body...
 	local no_body
 	if self.type == "client" then
@@ -206,6 +203,9 @@ function stream_methods:get_headers(timeout)
 		else -- self.state == "half closed (local)"
 			self:set_state("closed")
 		end
+	else
+		self.body_read_transfer_encoding = headers:get_split_as_sequence("transfer-encoding")
+		self.body_read_left = headers:get("content-length")
 	end
 	return headers
 end
