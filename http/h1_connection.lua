@@ -14,7 +14,7 @@ local connection_mt = {
 }
 
 function connection_mt:__tostring()
-	return string.format("http.h1_connection{type=%q;version=%f}",
+	return string.format("http.h1_connection{type=%q;version=%.1f}",
 		self.type, self.version)
 end
 
