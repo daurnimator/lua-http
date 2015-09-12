@@ -7,7 +7,7 @@ local stream_common = require "http.stream_common"
 
 local function has(list, val)
 	for i=1, list.n do
-		if list[i] == val then
+		if list[i]:lower() == val then
 			return true
 		end
 	end
