@@ -34,6 +34,10 @@ This project is a work in progress and not ready for production use.
   - [luaossl](http://25thandclement.com/~william/projects/luaossl.html)
   - [fifo](https://github.com/daurnimator/fifo.lua)
 
+If you want to use gzip compression you will need **one** of:
+
+  - [lzlib](https://github.com/LuaDist/lzlib) or [lua-zlib](https://github.com/brimworks/lua-zlib)
+
 If using lua < 5.3 you will need
 
   - [compat-5.3](https://github.com/keplerproject/lua-compat-5.3)

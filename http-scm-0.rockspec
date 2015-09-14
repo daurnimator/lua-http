@@ -32,5 +32,6 @@ build = {
 		["http.hpack"] = "http/hpack.lua";
 		["http.stream_common"] = "http/stream_common.lua";
 		["http.util"] = "http/util.lua";
+		["http.zlib"] = "http/zlib.lua";
 	};
 }

@@ -7,11 +7,23 @@ env:
     - LUAROCKS=2.2.2
   matrix:
     - LUA=lua5.1
+    - LUA=lua5.1     ZLIB=lzlib
+    - LUA=lua5.1     ZLIB=lua-zlib
     - LUA=lua5.2
+    - LUA=lua5.2     ZLIB=lzlib
+    - LUA=lua5.2     ZLIB=lua-zlib
     - LUA=lua5.3
+    - LUA=lua5.3     ZLIB=lzlib
+    # lua-zlib is currently unavailable for lua5.3
     - LUA=luajit
+    - LUA=luajit     ZLIB=lzlib
+    - LUA=luajit     ZLIB=lua-zlib
     - LUA=luajit2.0
+    - LUA=luajit2.0  ZLIB=lzlib
+    - LUA=luajit2.0  ZLIB=lua-zlib
     - LUA=luajit2.1
+    - LUA=luajit2.1  ZLIB=lzlib
+    - LUA=luajit2.1  ZLIB=lua-zlib
 
 branches:
   only:
@@ -24,6 +36,8 @@ before_install:
 
 install:
   - luarocks install --only-deps http-scm-0.rockspec
+  - if [ "$ZLIB" = "lzlib" ]; then luarocks install lzlib; fi
+  - if [ "$ZLIB" = "lua-zlib" ]; then luarocks install lua-zlib; fi
 
 script:
   - busted -c
