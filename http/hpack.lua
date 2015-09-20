@@ -37,11 +37,13 @@ end
 local function decode_integer(str, prefix_len, pos)
 	pos = pos or 1
 	local prefix_mask = 2^prefix_len-1
+	if pos > #str then return end
 	local I = band(prefix_mask, str:byte(pos, pos))
 	if I == prefix_mask then
 		local M = 0
 		repeat
 			pos = pos + 1
+			if pos > #str then return end
 			local B = str:byte(pos, pos)
 			I = I + band(B, 127) * 2^M
 			M = M + 7
@@ -401,12 +403,14 @@ end
 
 local function decode_string(str, pos)
 	pos = pos or 1
+	if pos > #str then return end
 	local first_byte = str:byte(pos, pos)
 	local huffman = band(first_byte, 0x80) ~= 0
 	local len
 	len, pos = decode_integer(str, 7, pos)
+	if len == nil then return end
 	local newpos = pos + len
-	assert(newpos <= #str + 1)
+	if newpos > #str+1 then return end
 	local val = str:sub(pos, newpos-1)
 	if huffman then
 		return huffman_decode(val), newpos
@@ -414,7 +418,6 @@ local function decode_string(str, pos)
 		return val, newpos
 	end
 end
-
 
 local function compound_key(name, value)
 	return spack("s4s4", name, value)
@@ -768,16 +771,20 @@ end
 local function decode_header_helper(self, payload, prefix_len, pos)
 	local index, name, value
 	index, pos = decode_integer(payload, prefix_len, pos)
+	if index == nil then return end
 	if index == 0 then
 		name, pos = decode_string(payload, pos)
+		if name == nil then return end
 		if name:match("%u") then
 			PROTOCOL_ERROR("malformed: header fields must not be uppercase")
 		end
 		value, pos = decode_string(payload, pos)
+		if value == nil then return end
 	else
 		name = self:lookup_index(index, true)
 		if name == nil then error("index " .. index .. " not found in table") end
 		value, pos = decode_string(payload, pos)
+		if value == nil then return end
 	end
 	return name, value, pos
 end
@@ -788,29 +795,32 @@ function methods:decode_headers(payload, header_list, pos)
 		local first_byte = payload:byte(pos, pos)
 		if band(first_byte, 0x80) ~= 0 then -- Section 6.1
 			-- indexed header
-			local index
-			index, pos = decode_integer(payload, 7, pos)
+			local index, newpos = decode_integer(payload, 7, pos)
+			if index == nil then break end
+			pos = newpos
 			local name, value = self:lookup_index(index, false)
 			if name == nil then error("index " .. index .. " not found in table") end
 			header_list:append(name, value, false)
 		elseif band(first_byte, 0x40) ~= 0 then -- Section 6.2.1
-			local name, value
-			name, value, pos = decode_header_helper(self, payload, 6, pos)
+			local name, value, newpos = decode_header_helper(self, payload, 6, pos)
+			if name == nil then break end
+			pos = newpos
 			self:add_to_dynamic_table(name, value, compound_key(name, value))
 			header_list:append(name, value, false)
 		elseif band(first_byte, 0x20) ~= 0 then -- Section 6.3
-			local size
-			size, pos = decode_integer(payload, 5, pos)
+			local size, newpos = decode_integer(payload, 5, pos)
+			if size == nil then break end
+			pos = newpos
 			self:resize_dynamic_table(size)
 		else -- Section 6.2.2 and 6.2.3
-			local name, value
 			local never_index = band(first_byte, 0x10) ~= 0
-			name, value, pos = decode_header_helper(self, payload, 4, pos)
+			local name, value, newpos = decode_header_helper(self, payload, 4, pos)
+			if name == nil then break end
+			pos = newpos
 			header_list:append(name, value, never_index)
 		end
 	end
-	assert(pos == #payload+1)
-	return header_list
+	return header_list, pos
 end
 
 return {

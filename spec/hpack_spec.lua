@@ -287,14 +287,50 @@ e9ae 82ae 43d3]])
 	end)
 end)
 
-describe("Malformed input is detected", function()
+describe("Partial input is returned with correct offset", function()
 	local hpack = require "http.hpack"
-	it("rejects incomplete strings", function()
-		-- "hi" is shorter than 7 chars; should error.
-		local s1 = hpack.encode_integer(5, 7, 0) .. "hi"
-		assert.errors(function() hpack.decode_string(s1) end)
+	it("decodes integers without errors", function()
+		-- Empty string should return nil
+		assert.is._nil(hpack.decode_integer("", 7, 1))
+
+		-- Encode a large number and trim off last character
+		local s = hpack.encode_integer(2^20, 7, 0)
+		s = s:sub(1, -2)
+		assert.is._nil(hpack.decode_integer(s, 7, 1))
+	end)
+	it("decodes strings without errors", function()
+		-- Empty string should return nil
+		assert.is._nil(hpack.decode_string(""))
+
+		-- Encode a large string and trim off last character
+		local s1 = hpack.encode_string("this is a test", false)
+		s1 = s1:sub(1, -2)
+		assert.is._nil(hpack.decode_string(s1))
 		-- with huffman
-		local s2 = hpack.encode_integer(5, 7, 0x80) .. "hi"
-		assert.errors(function() hpack.decode_string(s2) end)
+		local s2 = hpack.encode_string("this is a test", true)
+		s2 = s2:sub(1, -2)
+		assert.is._nil(hpack.decode_string(s2))
+	end)
+	it("decodes partial headers without errors", function()
+		local h = hpack.new()
+		-- empty string should do nothing
+		assert.same(1, select(2, h:decode_headers("")))
+
+		-- trim off last character
+		local s1 do
+			local e = hpack.new()
+			e:add_header_indexed("foo", "bar")
+			s1 = e:render_data()
+		end
+		assert.same(1, select(2, h:decode_headers(s1:sub(1, -2))))
+
+		-- try again but this time with two headers
+		local s2 do
+			local e = hpack.new()
+			e:add_header_indexed("foo", "bar")
+			e:add_header_indexed("baz", "qux")
+			s2 = e:render_data()
+		end
+		assert.same(#s1+1, select(2, h:decode_headers(s2:sub(1, -2))))
 	end)
 end)
