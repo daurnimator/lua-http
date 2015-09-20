@@ -140,7 +140,13 @@ function connection_methods:flush(...)
 end
 
 function connection_methods:read_request_line(timeout)
+	local deadline = timeout and (monotime()+timeout)
 	local line, err, errno = self.socket:xread("*L", timeout)
+	if line == "\r\n" then
+		-- RFC 7230 3.5: a server that is expecting to receive and parse a request-line
+		-- SHOULD ignore at least one empty line (CRLF) received prior to the request-line.
+		line, err, errno = self.socket:xread("*L", deadline and (deadline-monotime()))
+	end
 	if line == nil then
 		return nil, err or ce.EPIPE, errno
 	end
