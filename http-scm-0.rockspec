@@ -16,7 +16,7 @@ dependencies = {
 	"compat53"; -- Only if lua < 5.3
 	"bit32"; -- Only if lua == 5.1
 	"cqueues";
-	-- "luaossl >= 20150305";
+	"luaossl >= 20150504";
 	"fifo";
 }
 
@@ -31,6 +31,7 @@ build = {
 		["http.headers"] = "http/headers.lua";
 		["http.hpack"] = "http/hpack.lua";
 		["http.stream_common"] = "http/stream_common.lua";
+		["http.tls"] = "http/tls.lua";
 		["http.util"] = "http/util.lua";
 		["http.zlib"] = "http/zlib.lua";
 	};

@@ -31,7 +31,7 @@ This project is a work in progress and not ready for production use.
 ## Dependencies
 
   - [cqueues](http://25thandclement.com/~william/projects/cqueues.html)
-  - [luaossl](http://25thandclement.com/~william/projects/luaossl.html)
+  - [luaossl](http://25thandclement.com/~william/projects/luaossl.html) >= 20150504
   - [fifo](https://github.com/daurnimator/fifo.lua)
 
 If you want to use gzip compression you will need **one** of:
