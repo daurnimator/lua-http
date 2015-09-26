@@ -15,8 +15,8 @@ dependencies = {
 	"lua >= 5.1";
 	"compat53"; -- Only if lua < 5.3
 	"bit32"; -- Only if lua == 5.1
-	"cqueues";
-	"luaossl >= 20150504";
+	"cqueues >= 20150907";
+	"luaossl >= 20150727";
 	"fifo";
 }
 
