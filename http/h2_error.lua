@@ -48,7 +48,7 @@ function http_error_methods:error(message, lvl)
 		message = message;
 	}
 	if lvl ~= 0 then
-		e.traceback = debug.traceback(lvl);
+		e.traceback = debug.traceback(nil, lvl);
 	end
 	error(self:new(e), 0)
 end
