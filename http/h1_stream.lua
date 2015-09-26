@@ -103,7 +103,7 @@ function stream_methods:shutdown()
 	if self.state == "open" or self.state == "half closed (remote)" then
 		if not self.body_write_type and self.type == "server" then
 			-- Can send server error response
-			local ok, err = self:write_headers(server_error_headers, true)
+			local ok = self:write_headers(server_error_headers, true)
 			if not ok then
 				self.connection.socket:shutdown("w")
 			end
