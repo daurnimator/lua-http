@@ -6,10 +6,12 @@ so the differences between bit libraries can be ignored.
 
 -- Lua 5.3 has built-in bit operators, wrap them in a function.
 if _VERSION == "Lua 5.3" then
-	return assert(load([[return {
+	-- Use debug.getinfo to get correct file+line numbers for loaded snippet
+	local info = debug.getinfo(1, "Sl")
+	return assert(load(("\n"):rep(info.currentline+1)..[[return {
 		band = function(a, b) return a & b end;
 		bor = function(a, b) return a | b end;
-	}]]))()
+	}]], info.source))()
 end
 
 -- The "bit" library that comes with luajit
