@@ -24,7 +24,8 @@ local stream_mt = {
 }
 
 function stream_mt:__tostring()
-	return string.format("http.h1_stream{state=%q}", self.state)
+	return string.format("http.h1_stream{connection=%s;state=%q}",
+		tostring(self.connection), self.state)
 end
 
 local function new_stream(connection)
