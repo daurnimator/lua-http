@@ -39,6 +39,7 @@ local function new_connection(socket, conn_type, version)
 		-- for server: streams waiting to go out
 		-- for client: streams waiting for a response
 		pipeline = new_fifo();
+		-- pipeline condition is stored in stream itself
 
 		-- for server: held while request being read
 		-- for client: held while writing request

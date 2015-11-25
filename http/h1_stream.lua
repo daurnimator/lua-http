@@ -710,6 +710,7 @@ function stream_methods:write_chunk(chunk, end_stream, timeout)
 				end
 				error(err)
 			end
+			-- TODO: trailers?
 			timeout = deadline and (deadline-monotime())
 			ok, err = self.connection:write_headers_done(timeout)
 			if not ok then

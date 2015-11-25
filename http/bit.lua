@@ -1,7 +1,10 @@
 --[[ This module smooths over all the various lua bit libraries
 
-The bit operations are only done on bytes (8 bits),
-so the differences between bit libraries can be ignored.
+The bit operations are only done
+  - on bytes (8 bits),
+  - with quantities <= LONG_MAX (0x7fffffff)
+  - band with 0x80000000 that is subsequently compared with 0
+This means we can ignore the differences between bit libraries.
 ]]
 
 -- Lua 5.3 has built-in bit operators, wrap them in a function.

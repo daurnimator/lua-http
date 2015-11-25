@@ -14,7 +14,7 @@ env:
     - LUA=lua5.2     ZLIB=lua-zlib
     - LUA=lua5.3
     - LUA=lua5.3     ZLIB=lzlib
-    # lua-zlib is currently unavailable for lua5.3
+    # lua-zlib is currently unavailable for lua5.3 https://github.com/brimworks/lua-zlib/issues/28
     - LUA=luajit
     - LUA=luajit     ZLIB=lzlib
     - LUA=luajit     ZLIB=lua-zlib
