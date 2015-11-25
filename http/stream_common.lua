@@ -3,6 +3,7 @@
 local cqueues = require "cqueues"
 local monotime = cqueues.monotime
 local ce = require "cqueues.errno"
+local new_headers = require "http.headers".new
 
 local CHUNK_SIZE = 2^20 -- write in 1MB chunks
 
@@ -18,6 +19,13 @@ end
 
 function stream_methods:peername()
 	return self.connection:peername()
+end
+
+-- 100-Continue response
+local continue_headers = new_headers()
+continue_headers:append(":status", "100")
+function stream_methods:write_continue(timeout)
+	return self:write_headers(continue_headers, false, timeout)
 end
 
 -- need helper to discard 'last' argument
