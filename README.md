@@ -23,7 +23,7 @@ This project is a work in progress and not ready for production use.
   - [ ] Prosody [`net.http`](https://prosody.im/doc/developers/net/http) compatibility layer
   - [ ] Handle redirects
   - [ ] Be able to use a HTTP proxy
-  - [ ] Compression (e.g. gzip)
+  - [x] Compression (e.g. gzip)
 
 
 # Installation
