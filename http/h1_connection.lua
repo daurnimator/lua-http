@@ -302,7 +302,7 @@ end
 function connection_methods:write_header(k, v, timeout)
 	assert(type(k) == "string" and k:match("^[^:\r\n]+$"), "field name invalid")
 	assert(type(v) == "string" and v:sub(-1, -1) ~= "\n" and not v:match("\n[^ ]"), "field value invalid")
-	local ok, err, errno = self.socket:xwrite(string.format("%s: %s\r\n", k, v), "f", timeout)
+	local ok, err, errno = self.socket:xwrite(k..": "..v.."\r\n", "f", timeout)
 	if not ok then
 		return nil, err, errno
 	end
@@ -320,8 +320,9 @@ end
 
 function connection_methods:write_body_chunk(chunk, chunk_ext, timeout)
 	assert(chunk_ext == nil, "chunk extensions not supported")
+	local data = string.format("%x\r\n", #chunk) .. chunk .. "\r\n"
 	-- flushes write buffer
-	local ok, err, errno = self.socket:xwrite(string.format("%x\r\n%s\r\n", #chunk, chunk), "n", timeout)
+	local ok, err, errno = self.socket:xwrite(data, "n", timeout)
 	if not ok then
 		return nil, err, errno
 	end
