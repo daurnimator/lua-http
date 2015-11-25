@@ -40,7 +40,7 @@ install:
   - if [ "$ZLIB" = "lua-zlib" ]; then luarocks install lua-zlib; fi
 
 script:
-  - busted -c
+  - busted -c --no-auto-insulate
 
 after_success:
   - luacov-coveralls -v
