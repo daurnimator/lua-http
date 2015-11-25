@@ -319,7 +319,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 				error("Content-Length not allowed in message with a transfer-encoding")
 			elseif self.type == "server" then
 				-- A server MUST NOT send a Content-Length header field in any response with a status code of 1xx (Informational) or 204 (No Content)
-				if status_code == "204"then
+				if status_code == "204" then
 					error("Content-Length not allowed in response with 204 status code")
 				elseif status_code:sub(1,1) == "1" then
 					error("Content-Length not allowed in response with 1xx status code")
