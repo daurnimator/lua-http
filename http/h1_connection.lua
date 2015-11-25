@@ -92,12 +92,16 @@ function connection_methods:take_socket()
 	return s
 end
 
+function connection_methods:shutdown(dir)
+	self.socket:shutdown(dir)
+end
+
 function connection_methods:close()
 	while self.pipeline:length() > 0 do
 		local stream = self.pipeline:peek()
 		stream:shutdown()
 	end
-	self.socket:shutdown()
+	self:shutdown()
 	cqueues.poll()
 	cqueues.poll()
 	self.socket:close()
