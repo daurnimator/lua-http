@@ -6,6 +6,7 @@ local new_fifo = require "fifo"
 local new_headers = require "http.headers".new
 local reason_phrases = require "http.h1_reason_phrases"
 local stream_common = require "http.stream_common"
+local has_zlib, zlib = pcall(require, "http.zlib")
 
 local function has(list, val)
 	for i=1, list.n do
@@ -14,6 +15,16 @@ local function has(list, val)
 		end
 	end
 	return false
+end
+
+local function has_any(list, val, ...)
+	if has(list, val) then
+		return true
+	elseif (...) then
+		return has(list, ...)
+	else
+		return false
+	end
 end
 
 local stream_methods = {}
@@ -46,7 +57,9 @@ local function new_stream(connection)
 		headers_cond = cc.new();
 		body_write_type = nil; -- "closed", "chunked", "length" or "missing"
 		body_write_left = nil; -- integer: only set when body_write_type == "length"
+		body_write_deflate = nil; -- nil or stateful deflate closure
 		body_read_type = nil;
+		body_read_inflate = nil;
 		close_when_done = nil; -- boolean
 	}, stream_mt)
 	return self
@@ -242,6 +255,10 @@ function stream_methods:read_headers(timeout)
 		else
 			self.body_read_type = "close"
 		end
+		if transfer_encoding[n] == "gzip" or transfer_encoding[n] == "deflate" then
+			self.body_read_inflate = zlib.inflate()
+			n = n - 1
+		end
 		if n > 0 then
 			return nil, "unknown transfer-encoding"
 		end
@@ -270,7 +287,16 @@ function stream_methods:read_headers(timeout)
 		else -- self.state == "half closed (local)"
 			self:set_state("closed")
 		end
+	else
+		if self.type == "server" then
+			local te = headers:get_split_as_sequence("te")
+			-- TODO: need to take care of quality suffixes ("deflate; q=0.5")
+			if has_zlib and has_any(te, "gzip", "deflate") then
+				self.body_write_deflate = zlib.deflate()
+			end
+		end
 	end
+
 	return headers
 end
 
@@ -461,6 +487,45 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 			connection_header.n = connection_header.n + 1
 			connection_header[connection_header.n] = "close"
 		end
+		if has_zlib then
+			if self.type == "client" then
+				-- If we support zlib; add a "te" header indicating we support the gzip transfer-encoding
+				if not has(connection_header, "te") then
+					connection_header.n = connection_header.n + 1
+					connection_header[connection_header.n] = "te"
+				end
+				local ok, err = self.connection:write_header("te", "gzip", deadline and (deadline-monotime()))
+				if not ok then
+					if err == ce.EPIPE or err == ce.ETIMEDOUT then
+						return nil, err
+					end
+					error(err)
+				end
+			else -- server
+				-- Whether to use transfer-encoding: gzip
+				if self.body_write_deflate -- only use if client sent the TE header allowing it
+					and not cl -- not allowed to use both content-length *and* transfer-encoding
+					and not end_stream -- no point encoding body if there isn't one
+					and not has_any(headers:get_split_as_sequence("content-encoding"), "gzip", "deflate")
+					-- don't bother if content-encoding is already gzip/deflate
+					then
+
+					-- Possibly need to insert before "chunked"
+					local i = transfer_encoding_header.n
+					if transfer_encoding_header[i] == "chunked" then
+						table.insert(transfer_encoding_header, i, "gzip")
+						transfer_encoding_header.n = i + 1
+					elseif transfer_encoding_header[i] ~= "gzip" and transfer_encoding_header[i] ~= "deflate" then
+						i = i + 1
+						transfer_encoding_header[i] = "gzip"
+						transfer_encoding_header.n = i
+					end
+				else
+					-- discard the encoding context (if there was one)
+					self.body_write_deflate = nil
+				end
+			end
+		end
 	end
 
 	for name, value in headers:each() do
@@ -600,6 +665,9 @@ function stream_methods:get_next_chunk(timeout)
 	else
 		error("unknown body read type")
 	end
+	if chunk and self.body_read_inflate then
+		chunk = self.body_read_inflate(chunk, end_stream)
+	end
 	if end_stream then
 		if self.state == "half closed (local)" then
 			self:set_state("closed")
@@ -618,6 +686,9 @@ function stream_methods:write_chunk(chunk, end_stream, timeout)
 		assert(self.connection.req_locked == self)
 	else
 		assert(self.connection.pipeline:peek() == self)
+	end
+	if self.body_write_deflate then
+		chunk = self.body_write_deflate(chunk, end_stream)
 	end
 	if self.body_write_type == "chunked" then
 		local deadline = timeout and (monotime()+timeout)
