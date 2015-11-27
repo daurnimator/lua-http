@@ -21,7 +21,7 @@ This project is a work in progress and not ready for production use.
   - [ ] Connection pooling
   - [ ] [`socket.http`](http://w3.impa.br/~diego/software/luasocket/http.html) compatibility layer
   - [ ] Prosody [`net.http`](https://prosody.im/doc/developers/net/http) compatibility layer
-  - [ ] Handle redirects
+  - [x] Handle redirects
   - [ ] Be able to use a HTTP proxy
   - [x] Compression (e.g. gzip)
 
