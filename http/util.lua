@@ -1,3 +1,21 @@
+-- Encodes a character as a percent encoded string
+local function char_to_pchar(c)
+	return string.format("%%%02X", c:byte(1,1))
+end
+
+-- encodeURI replaces all characters except the following with the appropriate UTF-8 escape sequences:
+-- ; , / ? : @ & = + $
+-- alphabetic, decimal digits, - _ . ! ~ * ' ( )
+-- #
+local function encodeURI(str)
+	return (str:gsub("[^%;%,%/%?%:%@%&%=%+%$%w%-%_%.%!%~%*%'%(%)%#]", char_to_pchar))
+end
+
+-- encodeURIComponent escapes all characters except the following: alphabetic, decimal digits, - _ . ! ~ * ' ( )
+local function encodeURIComponent(str)
+	return (str:gsub("[^%w%-_%.%!%~%*%'%(%)]", char_to_pchar))
+end
+
 -- Resolves a relative path
 local function resolve_relative_path(orig_path, relative_path)
 	local t, i = {}, 0
@@ -66,6 +84,8 @@ local function split_header(str)
 end
 
 return {
+	encodeURI = encodeURI;
+	encodeURIComponent = encodeURIComponent;
 	resolve_relative_path = resolve_relative_path;
 	split_header = split_header;
 }
