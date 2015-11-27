@@ -640,6 +640,14 @@ function methods:dynamic_table_tostring()
 	return table.concat(r, "\n")
 end
 
+function methods:set_max_dynamic_table_size(SETTINGS_HEADER_TABLE_SIZE)
+	self.total_max = SETTINGS_HEADER_TABLE_SIZE
+end
+
+function methods:encode_max_size(val)
+	self:append_data(encode_max_size(val))
+end
+
 -- Section 4.3
 function methods:resize_dynamic_table(new_size)
 	assert(new_size >= 0)
