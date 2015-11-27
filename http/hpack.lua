@@ -8,7 +8,7 @@ local band = require "http.bit".band
 local bor = require "http.bit".bor
 local new_headers = require "http.headers".new
 local unpack = table.unpack or unpack -- luacheck: ignore 113
-local PROTOCOL_ERROR = require "http.h2_error".errors.PROTOCOL_ERROR
+local h2_errors = require "http.h2_error".errors
 
 -- Section 5.1
 local function encode_integer(i, prefix_len, mask)
@@ -643,8 +643,10 @@ end
 -- Section 4.3
 function methods:resize_dynamic_table(new_size)
 	assert(new_size >= 0)
-	assert(new_size <= self.total_max)
-	while new_size > self.dynamic_current_size do
+	if new_size > self.total_max then
+		h2_errors.COMPRESSION_ERROR("Dynamic Table size update new maximum size MUST be lower than or equal to the limit")
+	end
+	while new_size < self.dynamic_current_size do
 		assert(self:evict_from_dynamic_table())
 	end
 	self.dynamic_max = new_size
@@ -776,13 +778,15 @@ local function decode_header_helper(self, payload, prefix_len, pos)
 		name, pos = decode_string(payload, pos)
 		if name == nil then return end
 		if name:match("%u") then
-			PROTOCOL_ERROR("malformed: header fields must not be uppercase")
+			h2_errors.PROTOCOL_ERROR("malformed: header fields must not be uppercase")
 		end
 		value, pos = decode_string(payload, pos)
 		if value == nil then return end
 	else
 		name = self:lookup_index(index, true)
-		if name == nil then error("index " .. index .. " not found in table") end
+		if name == nil then
+			h2_errors.COMPRESSION_ERROR(string.format("index %d not found in table", index))
+		end
 		value, pos = decode_string(payload, pos)
 		if value == nil then return end
 	end
@@ -799,7 +803,9 @@ function methods:decode_headers(payload, header_list, pos)
 			if index == nil then break end
 			pos = newpos
 			local name, value = self:lookup_index(index, false)
-			if name == nil then error("index " .. index .. " not found in table") end
+			if name == nil then
+				h2_errors.COMPRESSION_ERROR(string.format("index %d not found in table", index))
+			end
 			header_list:append(name, value, false)
 		elseif band(first_byte, 0x40) ~= 0 then -- Section 6.2.1
 			local name, value, newpos = decode_header_helper(self, payload, 6, pos)
