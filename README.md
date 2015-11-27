@@ -16,7 +16,7 @@ This project is a work in progress and not ready for production use.
 ## Todo
 
   - [x] HTTP 1.1
-  - [ ] [HTTP 2](https://http2.github.io/http2-spec/)
+  - [x] [HTTP 2](https://http2.github.io/http2-spec/)
 	  - [x] [HPACK](https://http2.github.io/http2-spec/compression.html)
   - [ ] Connection pooling
   - [ ] [`socket.http`](http://w3.impa.br/~diego/software/luasocket/http.html) compatibility layer
@@ -40,7 +40,7 @@ If you want to use gzip compression you will need **one** of:
 
 If using lua < 5.3 you will need
 
-  - [compat-5.3](https://github.com/keplerproject/lua-compat-5.3)
+  - [compat-5.3](https://github.com/keplerproject/lua-compat-5.3) >= 0.3
 
 If using lua 5.1 you will need
 
