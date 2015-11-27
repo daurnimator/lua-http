@@ -64,6 +64,49 @@ local function resolve_relative_path(orig_path, relative_path)
 	return table.concat(t, "/", s, i)
 end
 
+-- Splits a :authority header (same as Host) into host and port
+local function split_authority(authority, scheme)
+	local host, port
+	local h, p = authority:match("^ *(.-):(%d+) *$")
+	if p then
+		authority = h
+		port = tonumber(p)
+	else -- when port missing from host header, it defaults to the default for that scheme
+		if scheme == "https" then
+			port = 443
+		elseif scheme == "http" then
+			port = 80
+		else
+			error("unknown scheme")
+		end
+	end
+	local ipv6 = authority:match("%[([:%x]+)%]")
+	if ipv6 then
+		host = ipv6
+	else
+		host = authority
+	end
+	return host, port
+end
+
+-- Reverse of `split_authority`: converts a host, port and scheme
+-- into a string suitable for an :authority header.
+local function to_authority(host, port, scheme)
+	local authority = host
+	if host:match("^[%x:]+:[%x:]*$") then -- IPv6
+		authority = "[" .. authority .. "]"
+	end
+	if scheme == "https" then
+		if port == 443 then port = nil end
+	elseif scheme == "http" then
+		if port == 80 then port = nil end
+	end -- no else case, ignore lack of scheme
+	if port then
+		authority = string.format("%s:%d", authority, port)
+	end
+	return authority
+end
+
 -- Many HTTP headers contain comma seperated values
 -- This function returns an iterator over header components
 local function each_header_component(str)
@@ -93,6 +136,8 @@ return {
 	encodeURI = encodeURI;
 	encodeURIComponent = encodeURIComponent;
 	resolve_relative_path = resolve_relative_path;
+	split_authority = split_authority;
+	to_authority = to_authority;
 	split_header = split_header;
 	imf_date = imf_date;
 }
