@@ -83,9 +83,16 @@ local function split_header(str)
 	return r
 end
 
+-- HTTP prefered date format
+-- See RFC 7231 section 7.1.1.1
+local function imf_date(time)
+	return os.date("!%a, %d %b %Y %H:%M:%S GMT", time)
+end
+
 return {
 	encodeURI = encodeURI;
 	encodeURIComponent = encodeURIComponent;
 	resolve_relative_path = resolve_relative_path;
 	split_header = split_header;
+	imf_date = imf_date;
 }

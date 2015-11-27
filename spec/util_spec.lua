@@ -28,4 +28,7 @@ describe("http.util module", function()
 		assert.same({n=5,"foo", "bar", "qux", "more q=123","thing"},
 			util.split_header(",foo,  bar,qux , more q=123,thing  "))
 	end)
+	it("generates correct looking Date header format", function()
+		assert.same("Fri, 13 Feb 2009 23:31:30 GMT", util.imf_date(1234567890))
+	end)
 end)
