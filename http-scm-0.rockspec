@@ -17,6 +17,8 @@ dependencies = {
 	"bit32"; -- Only if lua == 5.1
 	"cqueues >= 20150907";
 	"luaossl >= 20150727";
+	"lbase64";
+	"lpeg_patterns";
 	"fifo";
 }
 
@@ -33,6 +35,7 @@ build = {
 		["http.h2_stream"] = "http/h2_stream.lua";
 		["http.headers"] = "http/headers.lua";
 		["http.hpack"] = "http/hpack.lua";
+		["http.request"] = "http/request.lua";
 		["http.server"] = "http/server.lua";
 		["http.stream_common"] = "http/stream_common.lua";
 		["http.tls"] = "http/tls.lua";
