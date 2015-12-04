@@ -12,7 +12,7 @@ local request_mt = {
 	__index = request_methods;
 }
 
-local function new_from_uri_t(uri_t)
+local function new_from_uri_t(uri_t, headers)
 	local scheme = assert(uri_t.scheme, "URI missing scheme")
 	assert(scheme == "https" or scheme == "http", "scheme not http")
 	local host = tostring(assert(uri_t.host, "URI must include a host"))
@@ -25,21 +25,26 @@ local function new_from_uri_t(uri_t)
 	if uri_t.query then
 		path = path .. "?" .. http_util.encodeURI(uri_t.query)
 	end
+	if headers == nil then
+		headers = new_headers()
+	end
 	local self = setmetatable({
 		host = host;
 		port = uri_t.port or (scheme == "https" and 443 or 80);
 		tls = (scheme == "https");
-		headers = new_headers();
+		headers = headers;
 		body = nil;
 	}, request_mt)
-	self.headers:append(":authority", http_util.to_authority(host, self.port, scheme))
-	self.headers:append(":method", "GET")
-	self.headers:append(":path", path)
-	self.headers:append(":scheme", scheme)
+	headers:upsert(":authority", http_util.to_authority(host, self.port, scheme))
+	headers:upsert(":method", "GET")
+	headers:upsert(":path", path)
+	headers:upsert(":scheme", scheme)
 	if uri_t.userinfo then
-		self.headers:append("authorization", "basic " .. base64.encode(uri_t.userinfo), true)
+		headers:upsert("authorization", "basic " .. base64.encode(uri_t.userinfo), true)
 	end
-	self.headers:append("user-agent", "lua-http")
+	if not headers:has("user-agent") then
+		headers:append("user-agent", "lua-http")
+	end
 	return self
 end
 
