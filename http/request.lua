@@ -16,6 +16,15 @@ local function new_from_uri_t(uri_t)
 	local scheme = assert(uri_t.scheme, "URI missing scheme")
 	assert(scheme == "https" or scheme == "http", "scheme not http")
 	local host = tostring(assert(uri_t.host, "URI must include a host"))
+	local path = uri_t.path
+	if path == nil or path == "" then
+		path = "/"
+	else
+		path = http_util.encodeURI(path)
+	end
+	if uri_t.query then
+		path = path .. "?" .. http_util.encodeURI(uri_t.query)
+	end
 	local self = setmetatable({
 		host = host;
 		port = uri_t.port or (scheme == "https" and 443 or 80);
@@ -25,7 +34,7 @@ local function new_from_uri_t(uri_t)
 	}, request_mt)
 	self.headers:append(":authority", http_util.to_authority(host, self.port, scheme))
 	self.headers:append(":method", "GET")
-	self.headers:append(":path", uri_t.target)
+	self.headers:append(":path", path)
 	self.headers:append(":scheme", scheme)
 	if uri_t.userinfo then
 		self.headers:append("authorization", "basic " .. base64.encode(uri_t.userinfo), true)
@@ -37,16 +46,6 @@ end
 local function new_from_uri(uri)
 	local uri_t = assert(uri_patts.uri:match(uri), "invalid URI")
 	uri_t.scheme = uri_t.scheme or "http" -- default to http
-	local path = uri_t.path
-	if path == nil or path == "" then
-		path = "/"
-	else
-		path = http_util.encodeURI(path)
-	end
-	if uri_t.query then
-		path = path .. "?" .. http_util.encodeURI(uri_t.query)
-	end
-	uri_t.target = path
 	return new_from_uri_t(uri_t)
 end
 
@@ -130,22 +129,15 @@ local function handle_redirect(orig_req, orig_headers, deadline)
 	if uri_t.host == nil then
 		uri_t.host, uri_t.port = http_util.split_authority(orig_req.headers:get(":authority"), orig_scheme)
 	end
-	local path = uri_t.path
-	if path == nil then
-		path = "/"
-	else
-		path = http_util.encodeURI(path)
-		if path:sub(1, 1) ~= "/" then -- relative path
+	if uri_t.path ~= nil then
+		uri_t.path = http_util.encodeURI(uri_t.path)
+		if uri_t.path:sub(1, 1) ~= "/" then -- relative path
 			local orig_target = orig_req.headers:get(":path")
 			local orig_path = assert(uri_patts.uri_reference:match(orig_target)).path
 			orig_path = http_util.encodeURI(orig_path)
-			path = http_util.resolve_relative_path(orig_path, path)
+			uri_t.path = http_util.resolve_relative_path(orig_path, uri_t.path)
 		end
 	end
-	if uri_t.query then
-		path = path .. "?" .. http_util.encodeURI(uri_t.query)
-	end
-	uri_t.target = path
 	local new_req = new_from_uri_t(uri_t)
 	new_req.max_redirects = orig_req.max_redirects - 1
 	new_req.headers:upsert("referer", orig_req:to_url())
