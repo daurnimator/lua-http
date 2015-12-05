@@ -4,9 +4,11 @@ local client_connect = require "http.client".connect
 local new_headers = require "http.headers".new
 local http_util = require "http.util"
 local monotime = require "cqueues".monotime
+local ce = require "cqueues.errno"
 
 local request_methods = {
 	max_redirects = 5;
+	expect_100_timeout = 1;
 }
 local request_mt = {
 	__index = request_methods;
@@ -166,50 +168,68 @@ end
 
 function request_methods:go(timeout)
 	local deadline = timeout and (monotime()+timeout)
-	local stream, err = self:new_stream(timeout)
-	if stream == nil then return nil, err end
+
+	local stream do
+		local err
+		stream, err = self:new_stream(timeout)
+		if stream == nil then return nil, err end
+	end
+
+	do -- Write outgoing headers
+		local ok, err = stream:write_headers(self.headers, not self.body, deadline and (deadline-monotime()))
+		if not ok then return nil, err end
+	end
+
 	local headers
-	if not self.body then
-		local ok
-		ok, err = stream:write_headers(self.headers, true, deadline and (deadline-monotime()))
-		if not ok then return nil, err end
-		headers, err = stream:get_headers(deadline and (deadline-monotime()))
-	else
-		local ok
-		ok, err = stream:write_headers(self.headers, false, deadline and (deadline-monotime()))
-		if not ok then return nil, err end
-		headers, err = stream:get_headers(deadline and (deadline-monotime()))
-		if headers and headers:get(":status") == "100" then
-			if type(self.body) == "string" then
-				local ok2, err2 = stream:write_body_from_string(self.body, deadline and (deadline-monotime()))
-				if not ok2 then return nil, err2 end
-			elseif io.type(self.body) == "file" then
-				local ok2, err2 = stream:write_body_from_file(self.body, deadline and (deadline-monotime()))
-				if not ok2 then return nil, err2 end
-			elseif type(self.body) == "function" then
-				-- call function to get body segments
-				while true do
-					local chunk = self.body(deadline and (deadline-monotime()))
-					if chunk then
-						local ok2, err2 = stream:write_chunk(chunk, false, deadline and (deadline-monotime()))
-						if not ok2 then return nil, err2 end
-					else
-						local ok2, err2 = stream:write_chunk("", true, deadline and (deadline-monotime()))
-						if not ok2 then return nil, err2 end
-						break
-					end
+	if self.body then
+		if self.headers:get("expect") == "100-continue" then
+			-- Try to wait for 100-continue before proceeding
+			if deadline then
+				local err
+				headers, err = stream:get_headers(math.min(self.expect_100_timeout, deadline-monotime()))
+				if headers == nil and (err ~= ce.TIMEOUT or monotime() > deadline) then return nil, err end
+			else
+				local err
+				headers, err = stream:get_headers(self.expect_100_timeout)
+				if headers == nil and err ~= ce.TIMEOUT then return nil, err end
+			end
+		end
+		if type(self.body) == "string" then
+			local ok, err = stream:write_body_from_string(self.body, deadline and (deadline-monotime()))
+			if not ok then return nil, err end
+		elseif io.type(self.body) == "file" then
+			local ok, err = stream:write_body_from_file(self.body, deadline and (deadline-monotime()))
+			if not ok then return nil, err end
+		elseif type(self.body) == "function" then
+			-- call function to get body segments
+			while true do
+				local chunk = self.body(deadline and (deadline-monotime()))
+				if chunk then
+					local ok, err2 = stream:write_chunk(chunk, false, deadline and (deadline-monotime()))
+					if not ok then return nil, err2 end
+				else
+					local ok, err2 = stream:write_chunk("", true, deadline and (deadline-monotime()))
+					if not ok then return nil, err2 end
+					break
 				end
 			end
-			headers, err = stream:get_headers(deadline and (deadline-monotime()))
 		end
 	end
-	if headers == nil then return nil, err end
+	if not headers or headers:get(":status") == "100" then
+		repeat -- Skip through 100-continue headers
+			local err
+			headers, err = stream:get_headers(deadline and (deadline-monotime()))
+			if headers == nil then return nil, err end
+		until headers:get(":status") ~= "100"
+	end
+
 	if self.max_redirects and headers:get(":status"):sub(1,1) == "3" then
 		stream:shutdown()
 		local new_req, err2 = self:handle_redirect(headers)
 		if not new_req then return nil, err2 end
 		return new_req:go(deadline and (deadline-monotime()))
 	end
+
 	return headers, stream
 end
 
