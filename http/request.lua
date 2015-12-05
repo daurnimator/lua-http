@@ -121,33 +121,33 @@ function request_methods:new_stream(timeout)
 	return connection:new_stream()
 end
 
-local function handle_redirect(orig_req, orig_headers, deadline)
-	if orig_req.max_redirects <= 0 then
-		error("maximum redirects exceeded")
+function request_methods:handle_redirect(orig_headers)
+	if self.max_redirects <= 0 then
+		return nil, "maximum redirects exceeded"
 	end
 	local location = assert(orig_headers:get("location"), "missing location header for redirect")
 	local uri_t = assert(uri_patts.uri_reference:match(location), "invalid URI")
-	local orig_scheme = orig_req.headers:get(":scheme")
+	local orig_scheme = self.headers:get(":scheme")
 	if uri_t.scheme == nil then
 		uri_t.scheme = orig_scheme
 	end
 	if uri_t.host == nil then
-		uri_t.host, uri_t.port = http_util.split_authority(orig_req.headers:get(":authority"), orig_scheme)
+		uri_t.host, uri_t.port = http_util.split_authority(self.headers:get(":authority"), orig_scheme)
 	end
 	if uri_t.path ~= nil then
 		uri_t.path = http_util.encodeURI(uri_t.path)
 		if uri_t.path:sub(1, 1) ~= "/" then -- relative path
-			local orig_target = orig_req.headers:get(":path")
+			local orig_target = self.headers:get(":path")
 			local orig_path = assert(uri_patts.uri_reference:match(orig_target)).path
 			orig_path = http_util.encodeURI(orig_path)
 			uri_t.path = http_util.resolve_relative_path(orig_path, uri_t.path)
 		end
 	end
 	local new_req = new_from_uri_t(uri_t)
-	new_req.max_redirects = orig_req.max_redirects - 1
-	new_req.headers:upsert("referer", orig_req:to_url())
-	new_req.body = orig_req.body
-	return new_req:go(deadline and (deadline-monotime()))
+	new_req.max_redirects = self.max_redirects - 1
+	new_req.headers:upsert("referer", self:to_url())
+	new_req.body = self.body
+	return new_req
 end
 
 function request_methods:go(timeout)
@@ -193,7 +193,9 @@ function request_methods:go(timeout)
 	if headers == nil then return nil, err end
 	if self.max_redirects and headers:get(":status"):sub(1,1) == "3" then
 		stream:shutdown()
-		return handle_redirect(self, headers, deadline)
+		local new_req, err2 = self:handle_redirect(headers)
+		if not new_req then return nil, err2 end
+		return new_req:go(deadline and (deadline-monotime()))
 	end
 	return headers, stream
 end
