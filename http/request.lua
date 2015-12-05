@@ -150,6 +150,20 @@ function request_methods:handle_redirect(orig_headers)
 	return new_req
 end
 
+function request_methods:set_body(body)
+	self.body = body
+	local length
+	if type(self.body) == "string" then
+		length = #body
+	end
+	if length then
+		self.headers:upsert("content-length", string.format("%d", #body))
+	end
+	if not length or length > 1024 then
+		self.headers:append("expect", "100-continue")
+	end
+end
+
 function request_methods:go(timeout)
 	local deadline = timeout and (monotime()+timeout)
 	local stream, err = self:new_stream(timeout)
@@ -161,7 +175,6 @@ function request_methods:go(timeout)
 		if not ok then return nil, err end
 		headers, err = stream:get_headers(deadline and (deadline-monotime()))
 	else
-		self.headers:append("expect", "100-continue")
 		local ok
 		ok, err = stream:write_headers(self.headers, false, deadline and (deadline-monotime()))
 		if not ok then return nil, err end
