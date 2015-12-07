@@ -7,9 +7,14 @@ local band = require "http.bit".band
 local bor = require "http.bit".bor
 local h2_errors = require "http.h2_error".errors
 local stream_common = require "http.stream_common"
+local assert = require "compat53.module".assert
 local spack = string.pack or require "compat53.string".pack
 local sunpack = string.unpack or require "compat53.string".unpack
 local unpack = table.unpack or unpack -- luacheck: ignore 113
+
+local function xor(a, b)
+	return (a and b) or not (a or b)
+end
 
 local MAX_HEADER_BUFFER_SIZE = 400*1024 -- 400 KB is max size in h2o
 
@@ -233,6 +238,53 @@ function stream_methods:write_data_frame(payload, end_stream, padded, timeout)
 	return ok
 end
 
+local function validate_headers(headers, is_request)
+	do -- Validate that all colon fields are before other ones (section 8.1.2.1)
+		local seen_non_colon = false
+		for name in headers:each() do
+			if name:sub(1,1) == ":" then
+				if seen_non_colon then
+					return nil, h2_errors.PROTOCOL_ERROR:traceback("All pseudo-header fields MUST appear in the header block before regular header fields")
+				end
+			else
+				seen_non_colon = true
+			end
+		end
+	end
+	if is_request then
+		--[[ All HTTP/2 requests MUST include exactly one valid value for the :method, :scheme,
+		and :path pseudo-header fields, unless it is a CONNECT request (Section 8.3).
+		An HTTP request that omits mandatory pseudo-header fields is malformed (Section 8.1.2.6).]]
+		local methods = headers:get_as_sequence(":method")
+		if methods.n ~= 1 then
+			return nil, h2_errors.PROTOCOL_ERROR:traceback("requests MUST include exactly one valid value for the :method, :scheme, and :path pseudo-header fields, unless it is a CONNECT request")
+		elseif methods[1] ~= "CONNECT" then
+			local scheme = headers:get_as_sequence(":scheme")
+			local path = headers:get_as_sequence(":path")
+			if scheme.n ~= 1 or path.n ~= 1 then
+				return nil, h2_errors.PROTOCOL_ERROR:traceback("requests MUST include exactly one valid value for the :method, :scheme, and :path pseudo-header fields, unless it is a CONNECT request")
+			end
+			if path[1] == "" and (scheme[1] == "http" or scheme[1] == "https") then
+				return nil, h2_errors.PROTOCOL_ERROR:traceback("The :path pseudo-header field MUST NOT be empty for http or https URIs")
+			end
+		else -- is CONNECT method
+			-- Section 8.3
+			if headers:has(":scheme") or headers:has(":path") then
+				return nil, h2_errors.PROTOCOL_ERROR:traceback("For a CONNECT request, the :scheme and :path pseudo-header fields MUST be omitted")
+			end
+		end
+	else
+		--[[ For HTTP/2 responses, a single :status pseudo-header field is
+		defined that carries the HTTP status code field (RFC7231, Section 6).
+		This pseudo-header field MUST be included in all responses; otherwise,
+		the response is malformed (Section 8.1.2.6)]]
+		if not headers:has(":status") then
+			return nil, h2_errors.PROTOCOL_ERROR:traceback(":status pseudo-header field MUST be included in all responses")
+		end
+	end
+	return true
+end
+
 local function handle_end_headers(stream)
 	-- We have a full header block
 	-- Have to decode now or the hpack dynamic table will go out of sync
@@ -250,18 +302,10 @@ local function handle_end_headers(stream)
 	if newpos ~= #payload + 1 then
 		return nil, h2_errors.COMPRESSION_ERROR:traceback("incomplete header fragment")
 	end
-	do -- Validate that all colon fields are before other ones (section 8.1.2.1)
-		local seen_non_colon = false
-		for name in headers:each() do
-			if name:sub(1,1) == ":" then
-				if seen_non_colon then
-					return nil, h2_errors.PROTOCOL_ERROR:traceback("All pseudo-header fields MUST appear in the header block before regular header fields")
-				end
-			else
-				seen_non_colon = true
-			end
-		end
-	end
+
+	local ok, err = validate_headers(headers, xor(stream.id % 2 == 0, stream.type == "client"))
+	if not ok then return nil, err end
+
 	stream.recv_headers_fifo:push(headers)
 	stream.recv_headers_cond:signal()
 
@@ -841,6 +885,7 @@ end
 function stream_methods:write_headers(headers, end_stream, timeout)
 	local deadline = timeout and (monotime()+timeout)
 	assert(headers, "missing argument: headers")
+	assert(validate_headers(headers, xor(self.id % 2 == 1, self.type == "client")))
 	assert(type(end_stream) == "boolean", "'end_stream' MUST be a boolean")
 	local encoding_context = self.connection.encoding_context
 	encoding_context:encode_headers(headers)
