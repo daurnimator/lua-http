@@ -164,7 +164,7 @@ frame_handlers[0x0] = function(stream, flags, payload)
 		return nil, h2_errors.PROTOCOL_ERROR:traceback("'DATA' frames MUST be associated with a stream")
 	end
 	if stream.state ~= "open" and stream.state ~= "half closed (local)" then
-		return nil, h2_errors.STREAM_CLOSED:traceback("'DATA' frame not allowed in '" .. stream.state .. "' state")
+		return nil, h2_errors.STREAM_CLOSED:traceback("'DATA' frame not allowed in '" .. stream.state .. "' state", true)
 	end
 
 	local end_stream = band(flags, 0x1) ~= 0
@@ -205,7 +205,7 @@ function stream_methods:write_data_frame(payload, end_stream, padded, timeout)
 		h2_errors.PROTOCOL_ERROR("'DATA' frames MUST be associated with a stream")
 	end
 	if self.state ~= "open" and self.state ~= "half closed (remote)" then
-		h2_errors.STREAM_CLOSED("'DATA' frame not allowed in '" .. self.state .. "' state")
+		h2_errors.STREAM_CLOSED("'DATA' frame not allowed in '" .. self.state .. "' state", true)
 	end
 	local pad_len, padding = "", ""
 	local flags = 0
@@ -325,7 +325,7 @@ frame_handlers[0x1] = function(stream, flags, payload)
 		return nil, h2_errors.PROTOCOL_ERROR:traceback("'HEADERS' frames MUST be associated with a stream")
 	end
 	if stream.state ~= "idle" and stream.state ~= "open" and stream.state ~= "half closed (local)" then
-		return nil, h2_errors.STREAM_CLOSED:traceback("'HEADERS' frame not allowed in '" .. stream.state .. "' state")
+		return nil, h2_errors.STREAM_CLOSED:traceback("'HEADERS' frame not allowed in '" .. stream.state .. "' state", true)
 	end
 
 	local end_stream = band(flags, 0x1) ~= 0
@@ -445,7 +445,7 @@ frame_handlers[0x2] = function(stream, flags, payload) -- luacheck: ignore 212
 		return nil, h2_errors.PROTOCOL_ERROR:traceback("'PRIORITY' frames MUST be associated with a stream")
 	end
 	if #payload ~= 5 then
-		return nil, h2_errors.FRAME_SIZE_ERROR:traceback("'PRIORITY' frames must be 5 bytes")
+		return nil, h2_errors.FRAME_SIZE_ERROR:traceback("'PRIORITY' frames must be 5 bytes", true)
 	end
 
 	local exclusive, stream_dep, weight
@@ -493,7 +493,7 @@ function stream_methods:write_rst_stream(err_code, timeout)
 		h2_errors.PROTOCOL_ERROR("'RST_STREAM' frames MUST be associated with a stream")
 	end
 	if self.state == "idle" then
-		h2_errors.PROTOCOL_ERROR([['RST_STREAM' frames MUST NOT be sent for a stream in the "idle" state]])
+		h2_errors.PROTOCOL_ERROR([['RST_STREAM' frames MUST NOT be sent for a stream in the "idle" state]], true)
 	end
 	local flags = 0
 	local payload = spack(">I4", err_code)
@@ -734,14 +734,14 @@ frame_handlers[0x8] = function(stream, flags, payload) -- luacheck: ignore 212
 		return nil, h2_errors.FRAME_SIZE_ERROR:traceback("'WINDOW_UPDATE' frames must be 4 bytes")
 	end
 	if stream.id ~= 0 and stream.state == "idle" then
-		return nil, h2_errors.PROTOCOL_ERROR([['WINDOW_UPDATE' frames not allowed in "idle" state]])
+		return nil, h2_errors.PROTOCOL_ERROR([['WINDOW_UPDATE' frames not allowed in "idle" state]], true)
 	end
 
 	local tmp = sunpack(">I4", payload)
 	assert(band(tmp, 0x80000000) == 0, "'WINDOW_UPDATE' reserved bit set")
 	local increment = band(tmp, 0x7fffffff)
 	if increment == 0 then
-		return nil, h2_errors.PROTOCOL_ERROR:traceback("'WINDOW_UPDATE' MUST not have an increment of 0")
+		return nil, h2_errors.PROTOCOL_ERROR:traceback("'WINDOW_UPDATE' MUST not have an increment of 0", stream.id ~= 0)
 	end
 	if stream.id == 0 then -- for connection
 		stream.connection.peer_flow_credits = stream.connection.peer_flow_credits + increment
@@ -757,10 +757,10 @@ end
 function stream_methods:write_window_update_frame(inc, timeout)
 	local flags = 0
 	if self.id ~= 0 and self.state == "idle" then
-		h2_errors.PROTOCOL_ERROR([['WINDOW_UPDATE' frames not allowed in "idle" state]])
+		h2_errors.PROTOCOL_ERROR([['WINDOW_UPDATE' frames not allowed in "idle" state]], true)
 	end
 	if inc >= 0x80000000 or inc <= 0 then
-		h2_errors.PROTOCOL_ERROR("invalid window update increment")
+		h2_errors.PROTOCOL_ERROR("invalid window update increment", true)
 	end
 	local payload = spack(">I4", inc)
 	return self:write_http2_frame(0x8, flags, payload, timeout)
