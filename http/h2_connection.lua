@@ -195,7 +195,10 @@ function connection_main_loop(self)
 				self.new_streams:push(stream)
 				self.new_streams_cond:signal(1)
 			end
-			handler(stream, flag, payload)
+			local ok, err = handler(stream, flag, payload)
+			if not ok then
+				error(err)
+			end
 		end
 	end
 	return true

@@ -154,10 +154,10 @@ end
 -- DATA
 frame_handlers[0x0] = function(stream, flags, payload)
 	if stream.id == 0 then
-		h2_errors.PROTOCOL_ERROR("'DATA' frames MUST be associated with a stream")
+		return nil, h2_errors.PROTOCOL_ERROR:traceback("'DATA' frames MUST be associated with a stream")
 	end
 	if stream.state ~= "open" and stream.state ~= "half closed (local)" then
-		h2_errors.STREAM_CLOSED("'DATA' frame not allowed in '" .. stream.state .. "' state")
+		return nil, h2_errors.STREAM_CLOSED:traceback("'DATA' frame not allowed in '" .. stream.state .. "' state")
 	end
 
 	local end_stream = band(flags, 0x1) ~= 0
@@ -168,9 +168,9 @@ frame_handlers[0x0] = function(stream, flags, payload)
 	if padded then
 		local pad_len = sunpack("> B", payload)
 		if pad_len >= #payload then -- >= will take care of the pad_len itself
-			h2_errors.PROTOCOL_ERROR("length of the padding is the length of the frame payload or greater")
+			return nil, h2_errors.PROTOCOL_ERROR:traceback("length of the padding is the length of the frame payload or greater")
 		elseif payload:match("[^%z]", -pad_len) then
-			h2_errors.PROTOCOL_ERROR("padding not null bytes")
+			return nil, h2_errors.PROTOCOL_ERROR:traceback("padding not null bytes")
 		end
 		payload = payload:sub(2, -pad_len-1)
 	end
@@ -189,6 +189,8 @@ frame_handlers[0x0] = function(stream, flags, payload)
 		stream.chunk_fifo:push(nil)
 	end
 	stream.chunk_cond:signal()
+
+	return true
 end
 
 function stream_methods:write_data_frame(payload, end_stream, padded, timeout)
@@ -238,9 +240,9 @@ local function handle_end_headers(stream)
 
 	local pad_len = stream.recv_headers_padding
 	if pad_len > #payload then
-		h2_errors.PROTOCOL_ERROR("length of the padding is the length of the frame payload or greater")
+		return nil, h2_errors.PROTOCOL_ERROR:traceback("length of the padding is the length of the frame payload or greater")
 	elseif pad_len > 0 and payload:match("[^%z]", -pad_len) then
-		h2_errors.PROTOCOL_ERROR("padding not null bytes")
+		return nil, h2_errors.PROTOCOL_ERROR:traceback("padding not null bytes")
 	end
 	payload = payload:sub(1, -pad_len-1)
 
@@ -251,7 +253,7 @@ local function handle_end_headers(stream)
 		for name in headers:each() do
 			if name:sub(1,1) == ":" then
 				if seen_non_colon then
-					h2_errors.PROTOCOL_ERROR("All pseudo-header fields MUST appear in the header block before regular header fields")
+					return nil, h2_errors.PROTOCOL_ERROR:traceback("All pseudo-header fields MUST appear in the header block before regular header fields")
 				end
 			else
 				seen_non_colon = true
@@ -265,15 +267,17 @@ local function handle_end_headers(stream)
 	stream.recv_headers_buffer_items = nil
 	stream.recv_headers_buffer_length = nil
 	stream.recv_headers_padding = nil
+
+	return true
 end
 
 -- HEADERS
 frame_handlers[0x1] = function(stream, flags, payload)
 	if stream.id == 0 then
-		h2_errors.PROTOCOL_ERROR("'HEADERS' frames MUST be associated with a stream")
+		return nil, h2_errors.PROTOCOL_ERROR:traceback("'HEADERS' frames MUST be associated with a stream")
 	end
 	if stream.state ~= "idle" and stream.state ~= "open" and stream.state ~= "half closed (local)" then
-		h2_errors.STREAM_CLOSED("'HEADERS' frame not allowed in '" .. stream.state .. "' state")
+		return nil, h2_errors.STREAM_CLOSED:traceback("'HEADERS' frame not allowed in '" .. stream.state .. "' state")
 	end
 
 	local end_stream = band(flags, 0x1) ~= 0
@@ -309,7 +313,7 @@ frame_handlers[0x1] = function(stream, flags, payload)
 	end
 
 	if #payload - pos + 1 > MAX_HEADER_BUFFER_SIZE then
-		h2_errors.PROTOCOL_ERROR("headers too large")
+		return nil, h2_errors.PROTOCOL_ERROR:traceback("headers too large")
 	end
 
 	if pos > 1 then
@@ -321,7 +325,8 @@ frame_handlers[0x1] = function(stream, flags, payload)
 	stream.recv_headers_buffer_length = #payload
 
 	if end_headers then
-		handle_end_headers(stream)
+		local ok, err = handle_end_headers(stream)
+		if not ok then return nil, err end
 	end
 
 	if end_stream then
@@ -337,6 +342,8 @@ frame_handlers[0x1] = function(stream, flags, payload)
 			stream:set_state("open")
 		end
 	end
+
+	return true
 end
 
 function stream_methods:write_headers_frame(payload, end_stream, end_headers, padded, exclusive, stream_dep, weight, timeout)
@@ -386,10 +393,10 @@ end
 -- PRIORITY
 frame_handlers[0x2] = function(stream, flags, payload) -- luacheck: ignore 212
 	if stream.id == 0 then
-		h2_errors.PROTOCOL_ERROR("'PRIORITY' frames MUST be associated with a stream")
+		return nil, h2_errors.PROTOCOL_ERROR:traceback("'PRIORITY' frames MUST be associated with a stream")
 	end
 	if #payload ~= 5 then
-		h2_errors.FRAME_SIZE_ERROR("'PRIORITY' frames must be 5 bytes")
+		return nil, h2_errors.FRAME_SIZE_ERROR:traceback("'PRIORITY' frames must be 5 bytes")
 	end
 
 	local exclusive, stream_dep, weight
@@ -402,15 +409,17 @@ frame_handlers[0x2] = function(stream, flags, payload) -- luacheck: ignore 212
 	local new_parent = stream.connection.streams[stream_dep]
 	new_parent:reprioritise(stream, exclusive)
 	stream.weight = weight
+
+	return true
 end
 
 -- RST_STREAM
 frame_handlers[0x3] = function(stream, flags, payload) -- luacheck: ignore 212
 	if stream.id == 0 then
-		h2_errors.PROTOCOL_ERROR("'RST_STREAM' frames MUST be associated with a stream")
+		return nil, h2_errors.PROTOCOL_ERROR:traceback("'RST_STREAM' frames MUST be associated with a stream")
 	end
 	if #payload ~= 4 then
-		h2_errors.FRAME_SIZE_ERROR("'RST_STREAM' frames must be 4 bytes")
+		return nil, h2_errors.FRAME_SIZE_ERROR:traceback("'RST_STREAM' frames must be 4 bytes")
 	end
 
 	local err_code = sunpack(">I4", payload)
@@ -422,6 +431,8 @@ frame_handlers[0x3] = function(stream, flags, payload) -- luacheck: ignore 212
 	stream:set_state("closed")
 	stream.recv_headers_cond:signal()
 	stream.chunk_cond:signal()
+
+	return true
 end
 
 function stream_methods:write_rst_stream(err_code, timeout)
@@ -442,18 +453,19 @@ end
 -- SETTING
 frame_handlers[0x4] = function(stream, flags, payload)
 	if stream.id ~= 0 then
-		h2_errors.PROTOCOL_ERROR("stream identifier for a 'SETTINGS' frame MUST be zero")
+		return nil, h2_errors.PROTOCOL_ERROR:traceback("stream identifier for a 'SETTINGS' frame MUST be zero")
 	end
 
 	local ack = band(flags, 0x1) ~= 0
 	if ack then -- server is ACK-ing our settings
 		if #payload ~= 0 then
-			h2_errors.FRAME_SIZE_ERROR("Receipt of a 'SETTINGS' frame with the ACK flag set and a length field value other than 0")
+			return nil, h2_errors.FRAME_SIZE_ERROR:traceback("Receipt of a 'SETTINGS' frame with the ACK flag set and a length field value other than 0")
 		end
 		stream.connection:ack_settings()
+		return true
 	else -- settings from server
 		if #payload % 6 ~= 0 then
-			h2_errors.FRAME_SIZE_ERROR("'SETTINGS' frame with a length other than a multiple of 6 octets")
+			return nil, h2_errors.FRAME_SIZE_ERROR:traceback("'SETTINGS' frame with a length other than a multiple of 6 octets")
 		end
 		local peer_settings = {}
 		for i=1, #payload, 6 do
@@ -469,30 +481,30 @@ frame_handlers[0x4] = function(stream, flags, payload)
 				elseif val == 1 then
 					val = true
 				else
-					h2_errors.PROTOCOL_ERROR()
+					return nil, h2_errors.PROTOCOL_ERROR:traceback()
 				end
 				if val and stream.type == "client" then
 					-- Clients MUST reject any attempt to change the SETTINGS_ENABLE_PUSH
 					-- setting to a value other than 0 by treating the message as a connection
 					-- error of type PROTOCOL_ERROR.
-					h2_errors.PROTOCOL_ERROR("SETTINGS_ENABLE_PUSH not allowed for clients")
+					return nil, h2_errors.PROTOCOL_ERROR:traceback("SETTINGS_ENABLE_PUSH not allowed for clients")
 				end
 			elseif id == 0x4 then
 				if val >= 2^31 then
-					h2_errors.FLOW_CONTROL_ERROR("SETTINGS_INITIAL_WINDOW_SIZE must be less than 2^31")
+					return nil, h2_errors.FLOW_CONTROL_ERROR:traceback("SETTINGS_INITIAL_WINDOW_SIZE must be less than 2^31")
 				end
 			elseif id == 0x5 then
 				if val < 16384 then
-					h2_errors.PROTOCOL_ERROR("SETTINGS_MAX_FRAME_SIZE must be greater than or equal to 16384")
+					return nil, h2_errors.PROTOCOL_ERROR:traceback("SETTINGS_MAX_FRAME_SIZE must be greater than or equal to 16384")
 				elseif val >= 2^24 then
-					h2_errors.PROTOCOL_ERROR("SETTINGS_MAX_FRAME_SIZE must be less than 2^24")
+					return nil, h2_errors.PROTOCOL_ERROR:traceback("SETTINGS_MAX_FRAME_SIZE must be less than 2^24")
 				end
 			end
 			peer_settings[id] = val
 		end
 		stream.connection:set_peer_settings(peer_settings)
 		-- Ack server's settings
-		assert(stream:write_settings_frame(true))
+		return stream:write_settings_frame(true)
 	end
 end
 
@@ -565,14 +577,14 @@ frame_handlers[0x5] = function(stream, flags, payload)
 	if not stream.connection.acked_settings[0x2] then
 		-- An endpoint that has both set this parameter to 0 and had it acknowledged MUST
 		-- treat the receipt of a PUSH_PROMISE frame as a connection error of type PROTOCOL_ERROR.
-		h2_errors.PROTOCOL_ERROR("SETTINGS_ENABLE_PUSH is 0")
+		return nil, h2_errors.PROTOCOL_ERROR:traceback("SETTINGS_ENABLE_PUSH is 0")
 	elseif stream.type == "server" then
 		-- A client cannot push. Thus, servers MUST treat the receipt of a PUSH_PROMISE
 		-- frame as a connection error of type PROTOCOL_ERROR.
-		h2_errors.PROTOCOL_ERROR("A client cannot push")
+		return nil, h2_errors.PROTOCOL_ERROR:traceback("A client cannot push")
 	end
 	if stream.id == 0 then
-		h2_errors.PROTOCOL_ERROR("'PUSH_PROMISE' frames MUST be associated with a stream")
+		return nil, h2_errors.PROTOCOL_ERROR:traceback("'PUSH_PROMISE' frames MUST be associated with a stream")
 	end
 
 	local end_headers = band(flags, 0x04) ~= 0
@@ -581,9 +593,9 @@ frame_handlers[0x5] = function(stream, flags, payload)
 	if padded then
 		local pad_len = sunpack("> B", payload)
 		if pad_len >= #payload then -- >= will take care of the pad_len itself
-			h2_errors.PROTOCOL_ERROR("length of the padding is the length of the frame payload or greater")
+			return nil, h2_errors.PROTOCOL_ERROR:traceback("length of the padding is the length of the frame payload or greater")
 		elseif payload:match("[^%z]", -pad_len) then
-			h2_errors.PROTOCOL_ERROR("padding not null bytes")
+			return nil, h2_errors.PROTOCOL_ERROR:traceback("padding not null bytes")
 		end
 		payload = payload:sub(2, -pad_len-1)
 	end
@@ -600,10 +612,10 @@ end
 -- PING
 frame_handlers[0x6] = function(stream, flags, payload)
 	if stream.id ~= 0 then
-		h2_errors.PROTOCOL_ERROR("'PING' must be on stream id 0")
+		return nil, h2_errors.PROTOCOL_ERROR:traceback("'PING' must be on stream id 0")
 	end
 	if #payload ~= 8 then
-		h2_errors.FRAME_SIZE_ERROR("'PING' frames must be 8 bytes")
+		return nil, h2_errors.FRAME_SIZE_ERROR:traceback("'PING' frames must be 8 bytes")
 	end
 
 	local ack = band(flags, 0x1) ~= 0
@@ -614,8 +626,9 @@ frame_handlers[0x6] = function(stream, flags, payload)
 			cond:signal()
 			stream.connection.pongs[payload] = nil
 		end
+		return true
 	else
-		assert(stream:write_ping_frame(true, payload))
+		return stream:write_ping_frame(true, payload)
 	end
 end
 
@@ -633,10 +646,10 @@ end
 -- GOAWAY
 frame_handlers[0x7] = function(stream, flags, payload) -- luacheck: ignore 212
 	if stream.id ~= 0 then
-		h2_errors.PROTOCOL_ERROR("'GOAWAY' frames must be on stream id 0")
+		return nil, h2_errors.PROTOCOL_ERROR:traceback("'GOAWAY' frames must be on stream id 0")
 	end
 	if #payload < 8 then
-		h2_errors.FRAME_SIZE_ERROR("'GOAWAY' frames must be at least 8 bytes")
+		return nil, h2_errors.FRAME_SIZE_ERROR:traceback("'GOAWAY' frames must be at least 8 bytes")
 	end
 
 	local last_streamid = sunpack(">I4 I4", payload)
@@ -645,6 +658,8 @@ frame_handlers[0x7] = function(stream, flags, payload) -- luacheck: ignore 212
 		stream.connection.recv_goaway_lowest = last_streamid
 		stream.connection.recv_goaway:signal()
 	end
+
+	return true
 end
 
 function stream_methods:write_goaway_frame(last_streamid, err_code, debug_msg, timeout)
@@ -663,14 +678,14 @@ end
 -- WINDOW_UPDATE
 frame_handlers[0x8] = function(stream, flags, payload) -- luacheck: ignore 212
 	if #payload ~= 4 then
-		h2_errors.FRAME_SIZE_ERROR("'WINDOW_UPDATE' frames must be 4 bytes")
+		return nil, h2_errors.FRAME_SIZE_ERROR:traceback("'WINDOW_UPDATE' frames must be 4 bytes")
 	end
 
 	local tmp = sunpack(">I4", payload)
 	assert(band(tmp, 0x80000000) == 0, "'WINDOW_UPDATE' reserved bit set")
 	local increment = band(tmp, 0x7fffffff)
 	if increment == 0 then
-		 h2_errors.PROTOCOL_ERROR("'WINDOW_UPDATE' MUST not have an increment of 0")
+		return nil, h2_errors.PROTOCOL_ERROR:traceback("'WINDOW_UPDATE' MUST not have an increment of 0")
 	end
 	if stream.id == 0 then -- for connection
 		stream.connection.peer_flow_credits = stream.connection.peer_flow_credits + increment
@@ -679,6 +694,8 @@ frame_handlers[0x8] = function(stream, flags, payload) -- luacheck: ignore 212
 		stream.peer_flow_credits = stream.peer_flow_credits + increment
 		stream.peer_flow_credits_increase:signal()
 	end
+
+	return true
 end
 
 function stream_methods:write_window_update_frame(inc, timeout)
@@ -702,10 +719,10 @@ end
 -- CONTINUATION
 frame_handlers[0x9] = function(stream, flags, payload)
 	if stream.id == 0 then
-		h2_errors.PROTOCOL_ERROR("'CONTINUATION' frames MUST be associated with a stream")
+		return nil, h2_errors.PROTOCOL_ERROR:traceback("'CONTINUATION' frames MUST be associated with a stream")
 	end
 	if stream.recv_headers_buffer_length == nil then
-		h2_errors.PROTOCOL_ERROR("'CONTINUATION' frames MUST be preceded by a 'HEADERS', 'PUSH_PROMISE' or 'CONTINUATION' frame without the 'END_HEADERS' flag set")
+		return nil, h2_errors.PROTOCOL_ERROR:traceback("'CONTINUATION' frames MUST be preceded by a 'HEADERS', 'PUSH_PROMISE' or 'CONTINUATION' frame without the 'END_HEADERS' flag set")
 	end
 
 	local end_headers = band(flags, 0x04) ~= 0
@@ -713,7 +730,7 @@ frame_handlers[0x9] = function(stream, flags, payload)
 
 	local l = stream.recv_headers_buffer_length + #header_fragment
 	if l > MAX_HEADER_BUFFER_SIZE then
-		h2_errors.PROTOCOL_ERROR("headers too large")
+		return nil, h2_errors.PROTOCOL_ERROR:traceback("headers too large")
 	end
 	local i = stream.recv_headers_buffer_items + 1
 	stream.recv_headers_buffer[i] = header_fragment
@@ -721,7 +738,9 @@ frame_handlers[0x9] = function(stream, flags, payload)
 	stream.recv_headers_buffer_length = l
 
 	if end_headers then
-		handle_end_headers(stream)
+		return handle_end_headers(stream)
+	else
+		return true
 	end
 end
 
