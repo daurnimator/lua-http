@@ -246,8 +246,10 @@ local function handle_end_headers(stream)
 	end
 	payload = payload:sub(1, -pad_len-1)
 
-
-	local headers = stream.connection.decoding_context:decode_headers(payload)
+	local headers, newpos = stream.connection.decoding_context:decode_headers(payload)
+	if newpos ~= #payload + 1 then
+		return nil, h2_errors.COMPRESSION_ERROR:traceback("incomplete header fragment")
+	end
 	do -- Validate that all colon fields are before other ones (section 8.1.2.1)
 		local seen_non_colon = false
 		for name in headers:each() do
