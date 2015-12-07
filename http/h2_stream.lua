@@ -31,9 +31,9 @@ function stream_mt:__tostring()
 	end
 	table.sort(dependee_list)
 	dependee_list = table.concat(dependee_list, ",")
-	return string.format("http.h2_stream{connection=%s;id=%d;state=%q;parent=%d;dependees={%s}}",
+	return string.format("http.h2_stream{connection=%s;id=%d;state=%q;parent=%s;dependees={%s}}",
 		tostring(self.connection), self.id, self.state,
-		(self.parent and self.parent.id or -1), dependee_list)
+		(self.parent and tostring(self.parent.id) or "nil"), dependee_list)
 end
 
 local function new_stream(connection, id)
