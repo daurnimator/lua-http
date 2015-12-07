@@ -768,7 +768,10 @@ end
 
 function stream_methods:shutdown()
 	if self.state ~= "idle" and self.state ~= "closed" and self.id ~= 0 then
-		assert(self:write_rst_stream(0))
+		local ok, err = self:write_rst_stream(0)
+		if not ok and err ~= ce.EPIPE then
+			error(err)
+		end
 	end
 	local len = 0
 	while self.chunk_fifo:length() > 0 do
