@@ -685,6 +685,9 @@ frame_handlers[0x8] = function(stream, flags, payload) -- luacheck: ignore 212
 	if #payload ~= 4 then
 		return nil, h2_errors.FRAME_SIZE_ERROR:traceback("'WINDOW_UPDATE' frames must be 4 bytes")
 	end
+	if stream.id ~= 0 and stream.state == "idle" then
+		return nil, h2_errors.PROTOCOL_ERROR([['WINDOW_UPDATE' frames not allowed in "idle" state]])
+	end
 
 	local tmp = sunpack(">I4", payload)
 	assert(band(tmp, 0x80000000) == 0, "'WINDOW_UPDATE' reserved bit set")
@@ -705,6 +708,9 @@ end
 
 function stream_methods:write_window_update_frame(inc, timeout)
 	local flags = 0
+	if self.id ~= 0 and self.state == "idle" then
+		h2_errors.PROTOCOL_ERROR([['WINDOW_UPDATE' frames not allowed in "idle" state]])
+	end
 	if inc >= 0x80000000 or inc <= 0 then
 		h2_errors.PROTOCOL_ERROR("invalid window update increment")
 	end
