@@ -240,13 +240,32 @@ function stream_methods:write_data_frame(payload, end_stream, padded, timeout)
 	return ok
 end
 
+-- Map from header name to whether it belongs in a request (vs a response)
+local valid_pseudo_headers = {
+	[":method"] = true;
+	[":scheme"] = true;
+	[":path"] = true;
+	[":authority"] = true;
+	[":status"] = false;
+}
 local function validate_headers(headers, is_request)
 	do -- Validate that all colon fields are before other ones (section 8.1.2.1)
 		local seen_non_colon = false
 		for name in headers:each() do
 			if name:sub(1,1) == ":" then
+				--[[ Pseudo-header fields are only valid in the context in
+				which they are defined. Pseudo-header fields defined for
+				requests MUST NOT appear in responses; pseudo-header fields
+				defined for responses MUST NOT appear in requests.
+				Pseudo-header fields MUST NOT appear in trailers.
+				Endpoints MUST treat a request or response that contains
+				undefined or invalid pseudo-header fields as malformed
+				(Section 8.1.2.6)]]
+				if valid_pseudo_headers[name] ~= is_request then
+					return nil, h2_errors.PROTOCOL_ERROR:traceback("Pseudo-header fields are only valid in the context in which they are defined", true)
+				end
 				if seen_non_colon then
-					return nil, h2_errors.PROTOCOL_ERROR:traceback("All pseudo-header fields MUST appear in the header block before regular header fields")
+					return nil, h2_errors.PROTOCOL_ERROR:traceback("All pseudo-header fields MUST appear in the header block before regular header fields", true)
 				end
 			else
 				seen_non_colon = true
@@ -259,20 +278,20 @@ local function validate_headers(headers, is_request)
 		An HTTP request that omits mandatory pseudo-header fields is malformed (Section 8.1.2.6).]]
 		local methods = headers:get_as_sequence(":method")
 		if methods.n ~= 1 then
-			return nil, h2_errors.PROTOCOL_ERROR:traceback("requests MUST include exactly one valid value for the :method, :scheme, and :path pseudo-header fields, unless it is a CONNECT request")
+			return nil, h2_errors.PROTOCOL_ERROR:traceback("requests MUST include exactly one valid value for the :method, :scheme, and :path pseudo-header fields, unless it is a CONNECT request", true)
 		elseif methods[1] ~= "CONNECT" then
 			local scheme = headers:get_as_sequence(":scheme")
 			local path = headers:get_as_sequence(":path")
 			if scheme.n ~= 1 or path.n ~= 1 then
-				return nil, h2_errors.PROTOCOL_ERROR:traceback("requests MUST include exactly one valid value for the :method, :scheme, and :path pseudo-header fields, unless it is a CONNECT request")
+				return nil, h2_errors.PROTOCOL_ERROR:traceback("requests MUST include exactly one valid value for the :method, :scheme, and :path pseudo-header fields, unless it is a CONNECT request", true)
 			end
 			if path[1] == "" and (scheme[1] == "http" or scheme[1] == "https") then
-				return nil, h2_errors.PROTOCOL_ERROR:traceback("The :path pseudo-header field MUST NOT be empty for http or https URIs")
+				return nil, h2_errors.PROTOCOL_ERROR:traceback("The :path pseudo-header field MUST NOT be empty for http or https URIs", true)
 			end
 		else -- is CONNECT method
 			-- Section 8.3
 			if headers:has(":scheme") or headers:has(":path") then
-				return nil, h2_errors.PROTOCOL_ERROR:traceback("For a CONNECT request, the :scheme and :path pseudo-header fields MUST be omitted")
+				return nil, h2_errors.PROTOCOL_ERROR:traceback("For a CONNECT request, the :scheme and :path pseudo-header fields MUST be omitted", true)
 			end
 		end
 	else
@@ -281,7 +300,7 @@ local function validate_headers(headers, is_request)
 		This pseudo-header field MUST be included in all responses; otherwise,
 		the response is malformed (Section 8.1.2.6)]]
 		if not headers:has(":status") then
-			return nil, h2_errors.PROTOCOL_ERROR:traceback(":status pseudo-header field MUST be included in all responses")
+			return nil, h2_errors.PROTOCOL_ERROR:traceback(":status pseudo-header field MUST be included in all responses", true)
 		end
 	end
 	return true
