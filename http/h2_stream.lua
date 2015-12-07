@@ -97,14 +97,15 @@ function stream_methods:reprioritise(child, exclusive)
 	assert(child.id ~= 0) -- cannot reprioritise stream 0
 	if self == child then
 		-- http2 spec, section 5.3.1
-		h2_errors.PROTOCOL_ERROR("A stream cannot depend on itself")
+		return nil, h2_errors.PROTOCOL_ERROR:traceback("A stream cannot depend on itself", true)
 	end
 	do -- Check if the child is an ancestor
 		local ancestor = self.parent
 		while ancestor do
 			if ancestor == child then
 				-- Break the loop. http spec, section 5.3.3
-				child.parent:reprioritise(self, false)
+				local ok, err = child.parent:reprioritise(self, false)
+				if not ok then return nil, err end
 				break
 			end
 			ancestor = ancestor.parent
@@ -126,6 +127,7 @@ function stream_methods:reprioritise(child, exclusive)
 	else
 		self.dependees[child] = true
 	end
+	return true
 end
 
 local chunk_methods = {}
@@ -354,7 +356,8 @@ frame_handlers[0x1] = function(stream, flags, payload)
 		if new_parent == nil then
 			error("parent doesn't exist " .. stream_dep) -- FIXME
 		end
-		new_parent:reprioritise(stream, exclusive)
+		local ok, err = new_parent:reprioritise(stream, exclusive)
+		if not ok then return nil, err end
 		stream.weight = weight
 	end
 
@@ -453,7 +456,8 @@ frame_handlers[0x2] = function(stream, flags, payload) -- luacheck: ignore 212
 	stream_dep = band(tmp, 0x7fffffff)
 
 	local new_parent = stream.connection.streams[stream_dep]
-	new_parent:reprioritise(stream, exclusive)
+	local ok, err = new_parent:reprioritise(stream, exclusive)
+	if not ok then return nil, err end
 	stream.weight = weight
 
 	return true
