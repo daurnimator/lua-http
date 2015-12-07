@@ -58,7 +58,10 @@ local function new_stream(connection, id)
 
 		rst_stream_error = nil;
 
-		stats_sent = 0;
+		stats_sent_headers = 0; -- number of header blocks sent
+		stats_recv_headers = 0; -- number of header blocks received
+		stats_sent = 0; -- #bytes sent in DATA blocks
+		stats_recv = 0; -- #bytes received in DATA blocks
 
 		recv_headers_fifo = new_fifo();
 		recv_headers_cond = cc.new();
@@ -192,6 +195,7 @@ frame_handlers[0x0] = function(stream, flags, payload)
 
 	local chunk = new_chunk(stream, original_length, payload)
 	stream.chunk_fifo:push(chunk)
+	stream.stats_recv = stream.stats_recv + #payload
 	if end_stream then
 		stream.chunk_fifo:push(nil)
 	end
@@ -392,6 +396,7 @@ frame_handlers[0x1] = function(stream, flags, payload)
 		payload = payload:sub(pos)
 	end
 
+	stream.stats_recv_headers = stream.stats_recv_headers + 1
 	stream.recv_headers_buffer = { payload }
 	stream.recv_headers_buffer_items = 1
 	stream.recv_headers_buffer_length = #payload
@@ -446,6 +451,7 @@ function stream_methods:write_headers_frame(payload, end_stream, end_headers, pa
 	payload = pad_len .. pri .. payload .. padding
 	local ok, err, errno = self:write_http2_frame(0x1, flags, payload, timeout)
 	if ok == nil then return nil, err, errno end
+	self.stats_sent_headers = self.stats_sent_headers + 1
 	if end_stream then
 		if self.state == "reserved (local)" then
 			self:set_state("closed")
