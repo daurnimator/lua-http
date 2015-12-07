@@ -254,9 +254,9 @@ function connection_methods:peername()
 	return self.socket:peername()
 end
 
-function connection_methods:close()
+function connection_methods:shutdown()
 	local ok, err = self:write_goaway_frame(nil, h2_error.errors.NO_ERROR.code, "connection closed")
-	if err == ce.EPIPE then
+	if not ok and err == ce.EPIPE then
 		-- other end already closed
 		ok, err = true, nil
 	end
@@ -264,6 +264,11 @@ function connection_methods:close()
 		stream:shutdown()
 	end
 	self.socket:shutdown("r")
+	return ok, err
+end
+
+function connection_methods:close()
+	local ok, err = self:shutdown()
 	cqueues.poll()
 	cqueues.poll()
 	self.socket:close()
