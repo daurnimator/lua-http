@@ -276,6 +276,9 @@ local function validate_headers(headers, is_request, nth_header, ended_stream)
 			end
 		end
 	end
+	if headers:has("connection") then
+		return nil, h2_errors.PROTOCOL_ERROR:traceback("An endpoint MUST NOT generate an HTTP/2 message containing connection-specific header fields", true)
+	end
 	local te = headers:get_as_sequence("te")
 	if te.n > 0 and (te[1] ~= "trailers" or te.n ~= 1) then
 		return nil, h2_errors.PROTOCOL_ERROR:traceback([[The TE header field, which MAY be present in an HTTP/2 request; when it is, it MUST NOT contain any value other than "trailers"]], true)
