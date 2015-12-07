@@ -35,10 +35,11 @@ function http_error_methods:new(ob)
 		description = ob.description or self.description;
 		message = ob.message;
 		traceback = ob.traceback;
+		stream_error = ob.stream_error or false;
 	}, http_error_mt)
 end
 
-function http_error_methods:traceback(message, lvl)
+function http_error_methods:traceback(message, stream_error, lvl)
 	if lvl == nil then
 		lvl = 2
 	elseif lvl ~= 0 then
@@ -46,6 +47,7 @@ function http_error_methods:traceback(message, lvl)
 	end
 	local e = {
 		message = message;
+		stream_error = stream_error;
 	}
 	if lvl ~= 0 then
 		-- COMPAT: should be passing `nil` message (not the empty string)
@@ -56,8 +58,8 @@ function http_error_methods:traceback(message, lvl)
 	return self:new(e)
 end
 
-function http_error_methods:error(message, lvl)
-	error(self:traceback(message, lvl), 0)
+function http_error_methods:error(...)
+	error(self:traceback(...), 0)
 end
 http_error_mt.__call = http_error_methods.error
 

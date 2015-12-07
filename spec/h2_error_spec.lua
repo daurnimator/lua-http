@@ -24,11 +24,12 @@ describe("", function()
 		assert.falsy(h2_error.is(io.stdin))
 	end)
 	it("throws errors when called", function()
-		assert.has.errors(function() h2_error.errors[0]("oops", 0) end, {
+		assert.has.errors(function() h2_error.errors[0]("oops", false, 0) end, {
 			name = "NO_ERROR";
 			code = 0;
 			description = "Graceful shutdown";
 			message = "oops";
+			stream_error = false;
 		})
 	end)
 	it("adds a traceback field", function()
