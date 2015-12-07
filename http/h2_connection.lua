@@ -209,7 +209,9 @@ function connection_main_loop(self)
 			local ok, err = handler(stream, flag, payload)
 			if not ok then
 				if h2_error.is(err) and err.stream_error then
-					assert(stream:write_rst_stream(err.code))
+					if not stream:write_rst_stream(err.code) then
+						error(err)
+					end
 				else -- connection error or unknown error
 					error(err)
 				end
