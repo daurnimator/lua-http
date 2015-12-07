@@ -227,7 +227,7 @@ local function handle_step_return(self, step_ok, last_err, errno)
 			-- ignore write failure here; there's nothing that can be done
 			self:write_goaway_frame(nil, code, message)
 		end
-		self.socket:shutdown()
+		self:shutdown()
 		return nil, last_err, errno
 	end
 end
