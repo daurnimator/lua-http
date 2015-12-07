@@ -272,6 +272,10 @@ local function validate_headers(headers, is_request)
 			end
 		end
 	end
+	local te = headers:get_as_sequence("te")
+	if te.n > 0 and (te[1] ~= "trailers" or te.n ~= 1) then
+		return nil, h2_errors.PROTOCOL_ERROR:traceback([[The TE header field, which MAY be present in an HTTP/2 request; when it is, it MUST NOT contain any value other than "trailers"]], true)
+	end
 	if is_request then
 		--[[ All HTTP/2 requests MUST include exactly one valid value for the :method, :scheme,
 		and :path pseudo-header fields, unless it is a CONNECT request (Section 8.3).
