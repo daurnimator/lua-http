@@ -38,7 +38,7 @@ function http_error_methods:new(ob)
 	}, http_error_mt)
 end
 
-function http_error_methods:error(message, lvl)
+function http_error_methods:traceback(message, lvl)
 	if lvl == nil then
 		lvl = 2
 	elseif lvl ~= 0 then
@@ -52,7 +52,12 @@ function http_error_methods:error(message, lvl)
 		-- see https://github.com/keplerproject/lua-compat-5.3/issues/16
 		e.traceback = debug.traceback("", lvl)
 	end
-	error(self:new(e), 0)
+
+	return self:new(e)
+end
+
+function http_error_methods:error(message, lvl)
+	error(self:traceback(message, lvl), 0)
 end
 http_error_mt.__call = http_error_methods.error
 
