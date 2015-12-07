@@ -743,13 +743,19 @@ frame_handlers[0x8] = function(stream, flags, payload) -- luacheck: ignore 212
 	if increment == 0 then
 		return nil, h2_errors.PROTOCOL_ERROR:traceback("'WINDOW_UPDATE' MUST not have an increment of 0", stream.id ~= 0)
 	end
+
+	local ob
 	if stream.id == 0 then -- for connection
-		stream.connection.peer_flow_credits = stream.connection.peer_flow_credits + increment
-		stream.connection.peer_flow_credits_increase:signal()
+		ob = stream.connection
 	else
-		stream.peer_flow_credits = stream.peer_flow_credits + increment
-		stream.peer_flow_credits_increase:signal()
+		ob = stream
 	end
+	local newval = ob.peer_flow_credits + increment
+	if newval > 2^31-1 then
+		return nil, h2_errors.FLOW_CONTROL_ERROR:traceback("A sender MUST NOT allow a flow-control window to exceed 2^31-1 octets", stream.id ~= 0)
+	end
+	ob.peer_flow_credits = newval
+	ob.peer_flow_credits_increase:signal()
 
 	return true
 end
