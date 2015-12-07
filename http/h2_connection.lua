@@ -186,7 +186,11 @@ function connection_main_loop(self)
 	while not self.socket:eof("r") do
 		local typ, flag, streamid, payload = self:read_http2_frame()
 		if typ == nil then
-			return nil, flag
+			if flag == nil then -- EOF
+				break
+			else
+				error(flag)
+			end
 		end
 		local handler = h2_stream.frame_handlers[typ]
 		-- http2 spec section 4.1:
@@ -354,14 +358,14 @@ end
 -- Will raise an error on other errors, or if the frame is invalid
 function connection_methods:read_http2_frame(timeout)
 	local deadline = timeout and (monotime()+timeout)
-	local frame_header, err = self.socket:xread(9, timeout)
+	local frame_header, err, errno = self.socket:xread(9, timeout)
 	if frame_header == nil then
 		if err == ce.ETIMEDOUT then
 			return nil, err
-		elseif err == nil --[[EPIPE]] and self.socket:pending() == 0 then
+		elseif err == nil --[[EPIPE]] and self.socket:eof("r") then
 			return nil
 		else
-			h2_error.errors.PROTOCOL_ERROR(err)
+			return nil, err, errno
 		end
 	end
 	local size, typ, flags, streamid = sunpack(">I3 B B I4", frame_header)
@@ -381,7 +385,7 @@ function connection_methods:read_http2_frame(timeout)
 			end
 			return nil, err2, errno2
 		else
-			h2_error.errors.PROTOCOL_ERROR(err2)
+			return nil, err2, errno2
 		end
 	end
 	return typ, flags, streamid, payload
