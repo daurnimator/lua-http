@@ -13,6 +13,10 @@ local assert = require "compat53.module".assert
 local spack = string.pack or require "compat53.string".pack
 local sunpack = string.unpack or require "compat53.string".unpack
 
+local function xor(a, b)
+	return (a and b) or not (a or b)
+end
+
 local preface = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"
 
 local default_settings = {
@@ -190,6 +194,9 @@ function connection_main_loop(self)
 		if handler then
 			local stream = self.streams[streamid]
 			if stream == nil then
+				if xor(streamid % 2 == 1, self.type == "client") then
+					h2_error.errors.PROTOCOL_ERROR("Streams initiated by a client MUST use odd-numbered stream identifiers; those initiated by the server MUST use even-numbered stream identifiers")
+				end
 				-- TODO: check MAX_CONCURRENT_STREAMS
 				stream = self:new_stream(streamid)
 				self.new_streams:push(stream)
