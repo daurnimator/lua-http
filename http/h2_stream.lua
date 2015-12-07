@@ -401,11 +401,6 @@ frame_handlers[0x1] = function(stream, flags, payload)
 	stream.recv_headers_buffer_items = 1
 	stream.recv_headers_buffer_length = #payload
 
-	if end_headers then
-		local ok, err = handle_end_headers(stream)
-		if not ok then return nil, err end
-	end
-
 	if end_stream then
 		if stream.state == "half closed (local)" then
 			stream:set_state("closed")
@@ -418,6 +413,12 @@ frame_handlers[0x1] = function(stream, flags, payload)
 		if stream.state == "idle" then
 			stream:set_state("open")
 		end
+	end
+
+	-- Handle end_headers after states are set
+	if end_headers then
+		local ok, err = handle_end_headers(stream)
+		if not ok then return nil, err end
 	end
 
 	return true
@@ -925,8 +926,8 @@ end
 function stream_methods:write_headers(headers, end_stream, timeout)
 	local deadline = timeout and (monotime()+timeout)
 	assert(headers, "missing argument: headers")
-	assert(validate_headers(headers, xor(self.id % 2 == 1, self.type == "client")))
 	assert(type(end_stream) == "boolean", "'end_stream' MUST be a boolean")
+	assert(validate_headers(headers, xor(self.id % 2 == 1, self.type == "client")))
 	local encoding_context = self.connection.encoding_context
 	encoding_context:encode_headers(headers)
 	local payload = encoding_context:render_data()
