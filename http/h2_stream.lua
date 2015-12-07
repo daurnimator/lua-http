@@ -252,7 +252,7 @@ local valid_pseudo_headers = {
 	[":authority"] = true;
 	[":status"] = false;
 }
-local function validate_headers(headers, is_request)
+local function validate_headers(headers, is_request, nth_header, ended_stream)
 	do -- Validate that all colon fields are before other ones (section 8.1.2.1)
 		local seen_non_colon = false
 		for name in headers:each() do
@@ -265,7 +265,7 @@ local function validate_headers(headers, is_request)
 				Endpoints MUST treat a request or response that contains
 				undefined or invalid pseudo-header fields as malformed
 				(Section 8.1.2.6)]]
-				if valid_pseudo_headers[name] ~= is_request then
+				if (is_request and nth_header ~= 1) or valid_pseudo_headers[name] ~= is_request then
 					return nil, h2_errors.PROTOCOL_ERROR:traceback("Pseudo-header fields are only valid in the context in which they are defined", true)
 				end
 				if seen_non_colon then
@@ -281,26 +281,34 @@ local function validate_headers(headers, is_request)
 		return nil, h2_errors.PROTOCOL_ERROR:traceback([[The TE header field, which MAY be present in an HTTP/2 request; when it is, it MUST NOT contain any value other than "trailers"]], true)
 	end
 	if is_request then
-		--[[ All HTTP/2 requests MUST include exactly one valid value for the :method, :scheme,
-		and :path pseudo-header fields, unless it is a CONNECT request (Section 8.3).
-		An HTTP request that omits mandatory pseudo-header fields is malformed (Section 8.1.2.6).]]
-		local methods = headers:get_as_sequence(":method")
-		if methods.n ~= 1 then
-			return nil, h2_errors.PROTOCOL_ERROR:traceback("requests MUST include exactly one valid value for the :method, :scheme, and :path pseudo-header fields, unless it is a CONNECT request", true)
-		elseif methods[1] ~= "CONNECT" then
-			local scheme = headers:get_as_sequence(":scheme")
-			local path = headers:get_as_sequence(":path")
-			if scheme.n ~= 1 or path.n ~= 1 then
+		if nth_header == 1 then
+			--[[ All HTTP/2 requests MUST include exactly one valid value for the :method, :scheme,
+			and :path pseudo-header fields, unless it is a CONNECT request (Section 8.3).
+			An HTTP request that omits mandatory pseudo-header fields is malformed (Section 8.1.2.6).]]
+			local methods = headers:get_as_sequence(":method")
+			if methods.n ~= 1 then
 				return nil, h2_errors.PROTOCOL_ERROR:traceback("requests MUST include exactly one valid value for the :method, :scheme, and :path pseudo-header fields, unless it is a CONNECT request", true)
+			elseif methods[1] ~= "CONNECT" then
+				local scheme = headers:get_as_sequence(":scheme")
+				local path = headers:get_as_sequence(":path")
+				if scheme.n ~= 1 or path.n ~= 1 then
+					return nil, h2_errors.PROTOCOL_ERROR:traceback("requests MUST include exactly one valid value for the :method, :scheme, and :path pseudo-header fields, unless it is a CONNECT request", true)
+				end
+				if path[1] == "" and (scheme[1] == "http" or scheme[1] == "https") then
+					return nil, h2_errors.PROTOCOL_ERROR:traceback("The :path pseudo-header field MUST NOT be empty for http or https URIs", true)
+				end
+			else -- is CONNECT method
+				-- Section 8.3
+				if headers:has(":scheme") or headers:has(":path") then
+					return nil, h2_errors.PROTOCOL_ERROR:traceback("For a CONNECT request, the :scheme and :path pseudo-header fields MUST be omitted", true)
+				end
 			end
-			if path[1] == "" and (scheme[1] == "http" or scheme[1] == "https") then
-				return nil, h2_errors.PROTOCOL_ERROR:traceback("The :path pseudo-header field MUST NOT be empty for http or https URIs", true)
+		elseif nth_header == 2 then
+			if not ended_stream then
+				return nil, h2_errors.PROTOCOL_ERROR:traceback("Trailers MUST be at end of stream", true)
 			end
-		else -- is CONNECT method
-			-- Section 8.3
-			if headers:has(":scheme") or headers:has(":path") then
-				return nil, h2_errors.PROTOCOL_ERROR:traceback("For a CONNECT request, the :scheme and :path pseudo-header fields MUST be omitted", true)
-			end
+		elseif nth_header > 2 then
+			return nil, h2_errors.PROTOCOL_ERROR:traceback("A HTTP request consists of maximum 2 HEADER blocks", true)
 		end
 	else
 		--[[ For HTTP/2 responses, a single :status pseudo-header field is
@@ -332,7 +340,7 @@ local function handle_end_headers(stream)
 		return nil, h2_errors.COMPRESSION_ERROR:traceback("incomplete header fragment")
 	end
 
-	local ok, err = validate_headers(headers, xor(stream.id % 2 == 0, stream.type == "client"))
+	local ok, err = validate_headers(headers, xor(stream.id % 2 == 0, stream.type == "client"), stream.stats_recv_headers, stream.state == "half closed (remote)" or stream.state == "closed")
 	if not ok then return nil, err end
 
 	stream.recv_headers_fifo:push(headers)
@@ -927,7 +935,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 	local deadline = timeout and (monotime()+timeout)
 	assert(headers, "missing argument: headers")
 	assert(type(end_stream) == "boolean", "'end_stream' MUST be a boolean")
-	assert(validate_headers(headers, xor(self.id % 2 == 1, self.type == "client")))
+	assert(validate_headers(headers, xor(self.id % 2 == 1, self.type == "client"), self.stats_sent_headers+1, end_stream))
 	local encoding_context = self.connection.encoding_context
 	encoding_context:encode_headers(headers)
 	local payload = encoding_context:render_data()
