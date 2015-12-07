@@ -423,6 +423,9 @@ frame_handlers[0x3] = function(stream, flags, payload) -- luacheck: ignore 212
 	if #payload ~= 4 then
 		return nil, h2_errors.FRAME_SIZE_ERROR:traceback("'RST_STREAM' frames must be 4 bytes")
 	end
+	if stream.state == "idle" then
+		return nil, h2_errors.PROTOCOL_ERROR:traceback([['RST_STREAM' frames MUST NOT be sent for a stream in the "idle" state]])
+	end
 
 	local err_code = sunpack(">I4", payload)
 
