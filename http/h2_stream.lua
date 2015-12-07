@@ -523,6 +523,7 @@ function stream_methods:write_rst_stream(err_code, timeout)
 	local ok, err, errno = self:write_http2_frame(0x3, flags, payload, timeout)
 	if not ok then return nil, err, errno end
 	self:set_state("closed")
+	self:shutdown()
 	return ok
 end
 
