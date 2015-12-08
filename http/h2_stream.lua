@@ -327,6 +327,8 @@ end
 
 local function handle_end_headers(stream)
 	-- We have a full header block
+	stream.connection.need_continuation = nil
+
 	-- Have to decode now or the hpack dynamic table will go out of sync
 	local payload = table.concat(stream.recv_headers_buffer, nil, 1, stream.recv_headers_buffer_items)
 
@@ -430,6 +432,8 @@ frame_handlers[0x1] = function(stream, flags, payload)
 	if end_headers then
 		local ok, err = handle_end_headers(stream)
 		if not ok then return nil, err end
+	else
+		stream.connection.need_continuation = stream
 	end
 
 	return true

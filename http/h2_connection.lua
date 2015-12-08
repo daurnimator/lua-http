@@ -134,6 +134,7 @@ local function new_connection(socket, conn_type, settings, timeout)
 
 		streams = setmetatable({}, {__mode="kv"});
 		stream0 = nil; -- store separetly with a strong reference
+		need_continuation = nil; -- stream
 		cq = cq;
 		highest_odd_stream = -1;
 		highest_even_stream = -2;
@@ -191,6 +192,9 @@ function connection_main_loop(self)
 			else
 				error(flag)
 			end
+		end
+		if self.need_continuation and (typ ~= 0x9 or streamid ~= self.need_continuation.id) then
+			h2_error.errors.PROTOCOL_ERROR("CONTINUATION frame expected")
 		end
 		local handler = h2_stream.frame_handlers[typ]
 		-- http2 spec section 4.1:
