@@ -260,12 +260,12 @@ describe("low level http 1 connection operations", function()
 		do -- no field name
 			local s, c = new_pair(1.1)
 			assert(c:take_socket():xwrite(": fs\r\n\r\n", "bn"))
-			assert.same({nil, "invalid header"}, {s:read_header()})
+			assert.same({nil, "invalid header", ce.ENOMSG}, {s:read_header()})
 		end
 		do -- no colon
 			local s, c = new_pair(1.1)
 			assert(c:take_socket():xwrite("foo bar\r\n\r\n", "bn"))
-			assert.same({nil, "invalid header"}, {s:read_header()})
+			assert.same({nil, "invalid header", ce.ENOMSG}, {s:read_header()})
 		end
 	end)
 	it(":read_headers_done should handle failure conditions", function()

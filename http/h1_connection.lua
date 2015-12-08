@@ -183,11 +183,25 @@ function connection_methods:read_header(timeout)
 		if err == nil then
 			-- Check if we're at EOF to distinguish between end of headers and EPIPE
 			if self.socket:eof("r") then
+				return nil, ce.EPIPE
+			end
+			-- Check for end of headers (peek ahead for \r\n)
+			local crlf
+			-- timeout of 0, the *h above should have read ahead enough
+			crlf, err, errno = self.socket:xread(2, 0)
+			if crlf == "\r\n" then -- luacheck: ignore 542
+				-- common case first, we're at end of headers!
+			elseif crlf == nil then
+				return nil, err or ce.EPIPE, errno
+			elseif crlf == "\r" then
 				err = ce.EPIPE
 			else
-				-- next data is not a valid header
-				-- (could be end of headers)
-				return nil, "invalid header"
+				self.socket:seterror("r", ce.ENOMSG)
+				err, errno = "invalid header", ce.ENOMSG
+			end
+			local ok, errno2 = self.socket:unget(crlf)
+			if not ok then
+				err, errno = onerror(self.socket, "unget", errno2)
 			end
 		end
 		return nil, err, errno
