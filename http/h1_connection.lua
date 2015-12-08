@@ -157,7 +157,8 @@ function connection_methods:read_request_line(timeout)
 	end
 	local method, path, httpversion = line:match("^(%w+) (%S+) HTTP/(1%.[01])\r\n$")
 	if not method then
-		return nil, "invalid request line"
+		self.socket:seterror("r", ce.ENOMSG)
+		return nil, "invalid request line", ce.ENOMSG
 	end
 	return method, path, tonumber(httpversion)
 end
@@ -169,7 +170,8 @@ function connection_methods:read_status_line(timeout)
 	end
 	local httpversion, status_code, reason_phrase = line:match("^HTTP/(1%.[01]) (%d%d%d) (.*)\r\n$")
 	if not httpversion then
-		return nil, "invalid status line"
+		self.socket:seterror("r", ce.ENOMSG)
+		return nil, "invalid status line", ce.ENOMSG
 	end
 	return tonumber(httpversion), status_code, reason_phrase
 end
@@ -204,7 +206,8 @@ function connection_methods:read_headers_done(timeout)
 	elseif crlf == "\r" then
 		return nil, ce.EPIPE
 	else
-		return nil, "invalid header: expected CRLF"
+		self.socket:seterror("r", ce.ENOMSG)
+		return nil, "invalid header: expected CRLF", ce.ENOMSG
 	end
 end
 
