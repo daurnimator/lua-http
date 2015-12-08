@@ -123,7 +123,7 @@ function request_methods:to_curl()
 	}
 	local n = 5
 
-	if self.max_redirects ~= 50 then
+	if self.max_redirects ~= 50 then -- curl default is 50
 		cmd[n+1] = "--max-redirs"
 		cmd[n+2] = string.format("%d", self.max_redirects or -1)
 		n = n + 2
@@ -138,7 +138,7 @@ function request_methods:to_curl()
 	end
 
 	local scheme = self.headers:get(":scheme")
-	-- Unlike the ':tourl' method, curl needs the authority in the URI to be the actual host/port
+	-- Unlike the ':to_url' method, curl needs the authority in the URI to be the actual host/port
 	local authority = http_util.to_authority(self.host, self.port, scheme)
 	local path = self.headers:get(":path")
 	cmd[n+1] = scheme .. "://" .. authority .. path
