@@ -113,13 +113,6 @@ function request_methods:to_url()
 	return scheme .. "://" .. authority .. path
 end
 
-local function cmdline_escape(str)
-	if str:match("[^%w%_%:%/%@%^%.%-]") then
-		return "'" .. str:gsub("'", "\\'") .. "'"
-	else
-		return str
-	end
-end
 function request_methods:to_curl()
 	local cmd = {
 		"curl";
@@ -192,7 +185,10 @@ function request_methods:to_curl()
 
 	-- escape ready for a command line
 	for i=1, n do
-		cmd[i] = cmdline_escape(cmd[i])
+		local arg = cmd[i]
+		if arg:match("[^%w%_%:%/%@%^%.%-]") then
+			cmd[i] = "'" .. arg:gsub("'", "'\\''") .. "'"
+		end
 	end
 	return table.concat(cmd, " ", 1, n)
 end
