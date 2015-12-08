@@ -237,9 +237,11 @@ function connection_methods:read_body_chunk(timeout)
 	end
 	local chunk_size, chunk_ext = chunk_header:match("^(%x+) *(.-)\r\n")
 	if chunk_size == nil then
-		return nil, "invalid chunk"
+		self.socket:seterror("r", ce.ENOMSG)
+		return nil, "invalid chunk", ce.ENOMSG
 	elseif #chunk_size > 8 then
-		return nil, "invalid chunk: too large"
+		self.socket:seterror("r", ce.ENOMSG)
+		return nil, "invalid chunk: too large", ce.ENOMSG
 	end
 	chunk_size = tonumber(chunk_size, 16)
 	if chunk_ext == "" then
@@ -273,7 +275,8 @@ function connection_methods:read_body_chunk(timeout)
 			end
 			return nil, err4 or ce.EPIPE, errno4
 		elseif crlf ~= "\r\n" then
-			return nil, "invalid chunk: expected CRLF"
+			self.socket:seterror("r", ce.ENOMSG)
+			return nil, "invalid chunk: expected CRLF", ce.ENOMSG
 		end
 		return chunk_data, chunk_ext
 	end
