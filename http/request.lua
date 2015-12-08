@@ -113,6 +113,90 @@ function request_methods:to_url()
 	return scheme .. "://" .. authority .. path
 end
 
+local function cmdline_escape(str)
+	if str:match("[^%w%_%:%/%@%^%.%-]") then
+		return "'" .. str:gsub("'", "\\'") .. "'"
+	else
+		return str
+	end
+end
+function request_methods:to_curl()
+	local cmd = {
+		"curl";
+		"--location-trusted";
+		"--post301";
+		"--post302";
+		"--post303";
+	}
+	local n = 5
+
+	if self.max_redirects ~= 50 then
+		cmd[n+1] = "--max-redirs"
+		cmd[n+2] = string.format("%d", self.max_redirects or -1)
+		n = n + 2
+	end
+
+	if self.expect_100_timeout ~= 1 then
+		error("NYI") -- the option to change this curl setting isn't in man page
+	end
+
+	if self.tls and self.tls ~= true then
+		error("NYI")
+	end
+
+	local scheme = self.headers:get(":scheme")
+	-- Unlike the ':tourl' method, curl needs the authority in the URI to be the actual host/port
+	local authority = http_util.to_authority(self.host, self.port, scheme)
+	local path = self.headers:get(":path")
+	cmd[n+1] = scheme .. "://" .. authority .. path
+	n = n + 1
+
+	for name, value in self.headers:each() do
+		if name:sub(1,1) == ":" then
+			if name == ":authority" then
+				if value ~= authority then
+					cmd[n+1] = "-H"
+					cmd[n+2] = "host: " .. value
+					n = n + 2
+				end
+			elseif name == ":method" then
+				if value == "HEAD" then
+					cmd[n+1] = "-I"
+					n = n + 1
+				elseif (value ~= "GET" or self.body ~= nil) and (value ~= "POST" or self.body == nil) then
+					cmd[n+1] = "-X"
+					cmd[n+2] = value
+					n = n + 2
+				end
+			end
+		elseif name == "user-agent" then
+			cmd[n+1] = "-A"
+			cmd[n+2] = value
+			n = n + 2
+		else
+			cmd[n+1] = "-H"
+			cmd[n+2] = name .. ": " .. value
+			n = n + 2
+		end
+	end
+
+	if self.body then
+		if type(self.body) == "string" then
+			cmd[n+1] = "--data-raw"
+			cmd[n+2] = self.body
+			n = n + 2
+		else
+			error("NYI")
+		end
+	end
+
+	-- escape ready for a command line
+	for i=1, n do
+		cmd[i] = cmdline_escape(cmd[i])
+	end
+	return table.concat(cmd, " ", 1, n)
+end
+
 function request_methods:new_stream(timeout)
 	-- TODO: pooling
 	local connection = client_connect({
