@@ -18,7 +18,7 @@ dependencies = {
 	"cqueues >= 20150907";
 	"luaossl >= 20150727";
 	"lbase64";
-	"lpeg_patterns";
+	"lpeg_patterns >= 0.2";
 	"fifo";
 }
 
