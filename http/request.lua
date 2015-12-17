@@ -7,6 +7,7 @@ local monotime = require "cqueues".monotime
 local ce = require "cqueues.errno"
 
 local request_methods = {
+	follow_redirects = true;
 	max_redirects = 5; -- false = no redirects
 	expect_100_timeout = 1;
 }
@@ -226,7 +227,7 @@ function request_methods:go(timeout)
 		until headers:get(":status") ~= "100"
 	end
 
-	if self.max_redirects and headers:get(":status"):sub(1,1) == "3" then
+	if self.follow_redirects and headers:get(":status"):sub(1,1) == "3" then
 		stream:shutdown()
 		local new_req, err2 = self:handle_redirect(headers)
 		if not new_req then return nil, err2 end
