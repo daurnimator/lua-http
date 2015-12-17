@@ -7,7 +7,7 @@ local monotime = require "cqueues".monotime
 local ce = require "cqueues.errno"
 
 local request_methods = {
-	max_redirects = 5;
+	max_redirects = 5; -- false = no redirects
 	expect_100_timeout = 1;
 }
 local request_mt = {
@@ -124,8 +124,9 @@ function request_methods:new_stream(timeout)
 end
 
 function request_methods:handle_redirect(orig_headers)
-	if self.max_redirects <= 0 then
-		return nil, "maximum redirects exceeded"
+	local max_redirects = self.max_redirects
+	if max_redirects == false or max_redirects <= 0 then
+		return nil, "maximum redirects exceeded", ce.ELOOP
 	end
 	local location = assert(orig_headers:get("location"), "missing location header for redirect")
 	local uri_t = assert(uri_patts.uri_reference:match(location), "invalid URI")
@@ -146,7 +147,9 @@ function request_methods:handle_redirect(orig_headers)
 		end
 	end
 	local new_req = new_from_uri_t(uri_t)
-	new_req.max_redirects = self.max_redirects - 1
+	if type(max_redirects) == "number" then
+		new_req.max_redirects = max_redirects - 1
+	end
 	new_req.headers:upsert("referer", self:to_url())
 	new_req.body = self.body
 	return new_req
