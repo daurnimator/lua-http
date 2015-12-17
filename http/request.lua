@@ -148,10 +148,11 @@ function request_methods:handle_redirect(orig_headers)
 		end
 	end
 	local new_req = new_from_uri_t(uri_t)
+	new_req.follow_redirects = rawget(self, "follow_redirects")
 	if type(max_redirects) == "number" then
 		new_req.max_redirects = max_redirects - 1
 	end
-	new_req.headers:upsert("referer", self:to_url())
+	new_req.expect_100_timeout = rawget(self, "expect_100_timeout")
 	new_req.body = self.body
 	return new_req
 end
