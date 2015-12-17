@@ -119,6 +119,21 @@ function headers_methods:has(name)
 	end
 end
 
+function headers_methods:delete(name)
+	local dex = self._index[name]
+	if dex then
+		local n = #dex
+		for i=n, 1, -1 do
+			table.remove(self._data, dex[i])
+		end
+		self._n = self._n - n
+		rebuild_index(self)
+		return true
+	else
+		return false
+	end
+end
+
 function headers_methods:geti(i)
 	local e = self._data[i]
 	if e == nil then return nil end
