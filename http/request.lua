@@ -60,7 +60,7 @@ end
 local function new_connect(uri, connect_authority)
 	local uri_t = assert(uri_patts.uri:match(uri), "invalid URI")
 	assert(uri_t.path == "", "connect requests cannot have paths")
-	local scheme = uri_t.scheme or "http" -- default to http
+	local scheme = uri_t.scheme
 	assert(scheme == "https" or scheme == "http", "scheme not http")
 	local host = tostring(assert(uri_t.host, "URI must include a host"))
 	local self = setmetatable({
