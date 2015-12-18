@@ -130,7 +130,9 @@ function request_methods:to_curl()
 	end
 
 	if self.expect_100_timeout ~= 1 then
-		error("NYI") -- the option to change this curl setting isn't in man page
+		cmd[n+1] = "--expect100-timeout"
+		cmd[n+2] = string.format("%d", self.expect_100_timeout)
+		n = n + 2
 	end
 
 	if self.tls and self.tls ~= true then
