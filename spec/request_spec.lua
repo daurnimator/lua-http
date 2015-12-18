@@ -52,6 +52,16 @@ describe("http.request module", function()
 		test("https://example.com/")
 		test("https://example.com:1234/")
 	end)
+	it("handles CONNECT requests in :to_url()", function()
+		local function test(uri)
+			local req = request.new_connect(uri, "connect.me")
+			assert.same(uri, req:to_url())
+		end
+		test("http://example.com")
+		test("https://example.com")
+		test("https://example.com:1234")
+		assert.has.errors(function() test("https://example.com/path") end)
+	end)
 	it(":handle_redirect works", function()
 		local headers = require "http.headers"
 		do

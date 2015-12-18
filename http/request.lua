@@ -103,14 +103,21 @@ local function new_from_stream(stream)
 end
 
 function request_methods:to_url()
-	local scheme = self.headers:get(":scheme")
-	local authority = self.headers:get(":authority")
-	if authority == nil then
-		authority = http_util.to_authority(self.host, self.port, scheme)
-	end
 	-- TODO: userinfo section (username/password)
-	local path = self.headers:get(":path")
-	return scheme .. "://" .. authority .. path
+	local method = self.headers:get(":method")
+	if method == "CONNECT" then
+		local scheme = self.tls and "https" or "http"
+		local authority = http_util.to_authority(self.host, self.port, scheme)
+		return scheme .. "://" .. authority
+	else
+		local scheme = self.headers:get(":scheme")
+		local authority = self.headers:get(":authority")
+		if authority == nil then
+			authority = http_util.to_authority(self.host, self.port, scheme)
+		end
+		local path = self.headers:get(":path")
+		return scheme .. "://" .. authority .. path
+	end
 end
 
 function request_methods:new_stream(timeout)
