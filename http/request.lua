@@ -128,7 +128,10 @@ function request_methods:handle_redirect(orig_headers)
 	if max_redirects == false or max_redirects <= 0 then
 		return nil, "maximum redirects exceeded", ce.ELOOP
 	end
-	local location = assert(orig_headers:get("location"), "missing location header for redirect")
+	local location = orig_headers:get("location")
+	if not location then
+		return nil, "missing location header for redirect", ce.EINVAL
+	end
 	local uri_t = assert(uri_patts.uri_reference:match(location), "invalid URI")
 	local orig_scheme = self.headers:get(":scheme")
 	if uri_t.scheme == nil then

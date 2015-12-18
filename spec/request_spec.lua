@@ -99,5 +99,12 @@ describe("http.request module", function()
 			orig_headers:append("location", "/")
 			assert.same({nil, "maximum redirects exceeded", ce.ELOOP}, {orig_req:handle_redirect(orig_headers)})
 		end
+		do -- missing location header
+			local ce = require "cqueues.errno"
+			local orig_req = request.new_from_uri("http://example.com")
+			local orig_headers = headers.new()
+			orig_headers:append(":status", "302")
+			assert.same({nil, "missing location header for redirect", ce.EINVAL}, {orig_req:handle_redirect(orig_headers)})
+		end
 	end)
 end)
