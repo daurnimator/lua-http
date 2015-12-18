@@ -43,4 +43,13 @@ describe("http.request module", function()
 		-- no scheme
 		assert.has.errors(function() request.new_from_uri("example.com") end)
 	end)
+	it("can (sometimes) roundtrip via :to_url()", function()
+		local function test(uri)
+			local req = request.new_from_uri(uri)
+			assert.same(uri, req:to_url())
+		end
+		test("http://example.com/")
+		test("https://example.com/")
+		test("https://example.com:1234/")
+	end)
 end)
