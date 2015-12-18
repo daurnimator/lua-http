@@ -53,7 +53,6 @@ end
 
 local function new_from_uri(uri)
 	local uri_t = assert(uri_patts.uri:match(uri), "invalid URI")
-	uri_t.scheme = uri_t.scheme or "http" -- default to http
 	return new_from_uri_t(uri_t)
 end
 
