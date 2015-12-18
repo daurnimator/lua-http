@@ -37,6 +37,47 @@ describe("http.request module", function()
 			assert.same(nil, req.body)
 		end
 	end)
+	it("can construct a CONNECT request", function()
+		do -- http url; no path
+			local req = request.new_connect("http://example.com", "connect.me")
+			assert.same("example.com", req.host)
+			assert.same(80, req.port)
+			assert.falsy(req.tls)
+			assert.same("connect.me", req.headers:get ":authority")
+			assert.same("CONNECT", req.headers:get ":method")
+			assert.falsy(req.headers:has ":path")
+			assert.falsy(req.headers:has ":scheme")
+			assert.same(nil, req.body)
+		end
+		do -- https
+			local req = request.new_connect("https://example.com", "connect.me:1234")
+			assert.same("example.com", req.host)
+			assert.same(443, req.port)
+			assert.truthy(req.tls)
+			assert.same("connect.me:1234", req.headers:get ":authority")
+			assert.same("CONNECT", req.headers:get ":method")
+			assert.falsy(req.headers:has ":path")
+			assert.falsy(req.headers:has ":scheme")
+			assert.same(nil, req.body)
+		end
+		do -- with userinfo section
+			local base64 = require "base64"
+			local req = request.new_connect("https://user:password@example.com", "connect.me")
+			assert.same("example.com", req.host)
+			assert.same(443, req.port)
+			assert.truthy(req.tls)
+			assert.same("connect.me", req.headers:get ":authority")
+			assert.same("CONNECT", req.headers:get ":method")
+			assert.falsy(req.headers:has ":path")
+			assert.falsy(req.headers:has ":scheme")
+			assert.same("user:password", base64.decode(req.headers:get "proxy-authorization":match "^basic%s+(.*)"))
+			assert.same(nil, req.body)
+		end
+		do -- anything with a path should fail
+			assert.has.errors(function() request.new_connect("http://example.com/") end)
+			assert.has.errors(function() request.new_connect("http://example.com/path") end)
+		end
+	end)
 	it("fails on invalid URIs", function()
 		assert.has.errors(function() request.new_from_uri("not a URI") end)
 
