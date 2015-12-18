@@ -52,4 +52,52 @@ describe("http.request module", function()
 		test("https://example.com/")
 		test("https://example.com:1234/")
 	end)
+	it(":handle_redirect works", function()
+		local headers = require "http.headers"
+		do
+			local orig_req = request.new_from_uri("http://example.com")
+			local orig_headers = headers.new()
+			orig_headers:append(":status", "301")
+			orig_headers:append("location", "/foo")
+			local new_req = orig_req:handle_redirect(orig_headers)
+			-- same
+			assert.same(orig_req.host, new_req.host)
+			assert.same(orig_req.port, new_req.port)
+			assert.same(orig_req.tls, new_req.tls)
+			assert.same(orig_req.headers:get ":authority", new_req.headers:get ":authority")
+			assert.same(orig_req.headers:get ":method", new_req.headers:get ":method")
+			assert.same(orig_req.headers:get ":scheme", new_req.headers:get ":scheme")
+			assert.same(orig_req.body, new_req.body)
+			-- different
+			assert.same("/foo", new_req.headers:get ":path")
+			assert.same(orig_req.max_redirects-1, new_req.max_redirects)
+		end
+		do
+			local orig_req = request.new_from_uri("http://example.com")
+			local orig_headers = headers.new()
+			orig_headers:append(":status", "302")
+			orig_headers:append("location", "//blah.com:1234/example")
+			local new_req = orig_req:handle_redirect(orig_headers)
+			-- same
+			assert.same(orig_req.tls, new_req.tls)
+			assert.same(orig_req.headers:get ":method", new_req.headers:get ":method")
+			assert.same(orig_req.headers:get ":scheme", new_req.headers:get ":scheme")
+			assert.same(orig_req.body, new_req.body)
+			-- different
+			assert.same("blah.com", new_req.host)
+			assert.same(1234, new_req.port)
+			assert.same("blah.com:1234", new_req.headers:get ":authority")
+			assert.same("/example", new_req.headers:get ":path")
+			assert.same(orig_req.max_redirects-1, new_req.max_redirects)
+		end
+		do -- maximum redirects exceeded
+			local ce = require "cqueues.errno"
+			local orig_req = request.new_from_uri("http://example.com")
+			orig_req.max_redirects = 0
+			local orig_headers = headers.new()
+			orig_headers:append(":status", "302")
+			orig_headers:append("location", "/")
+			assert.same({nil, "maximum redirects exceeded", ce.ELOOP}, {orig_req:handle_redirect(orig_headers)})
+		end
+	end)
 end)
