@@ -15,8 +15,8 @@ describe("server module", function()
 	it("works", function()
 		local cq = cqueues.new()
 		local s = server.listen {
-				host = "127.0.0.1";
-				port = 8000;
+			host = "127.0.0.1";
+			port = 8000;
 		}
 		s:listen()
 		local on_stream = spy.new(function(stream)
@@ -26,6 +26,7 @@ describe("server module", function()
 		end)
 		cq:wrap(function()
 			s:run(on_stream)
+			s:close()
 		end)
 		cq:wrap(function()
 			local c = assert(cs.connect{
@@ -36,6 +37,7 @@ describe("server module", function()
 			c:setmode("b", "nb")
 			assert(c:write("GET / HTTP/1.0\r\n\r\n", "n"))
 			c:read()
+			c:close()
 		end)
 		assert_loop(cq, TEST_TIMEOUT)
 		assert.truthy(cq:empty())
