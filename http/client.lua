@@ -27,10 +27,14 @@ local function connect(options, timeout)
 	local version = options.version
 	if tls then
 		if tls == true then
-			if version and version < 2 then
-				tls = default_h1_ctx
+			if version then
+				if version < 2 then
+					tls = default_h1_ctx
+				else
+					tls = assert(default_h2_ctx, "http2 TLS context unavailable")
+				end
 			else
-				tls = assert(default_h2_ctx, "http2 TLS context unavailable")
+				tls = default_h2_ctx or default_h1_ctx
 			end
 		end
 		assert(s:starttls(tls, timeout))
