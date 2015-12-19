@@ -1,8 +1,9 @@
 local TEST_TIMEOUT = 2
-describe("server module", function()
+describe("http.server module", function()
 	local server = require "http.server"
+	local client = require "http.client"
+	local new_headers = require "http.headers".new
 	local cqueues = require "cqueues"
-	local cs = require "cqueues.socket"
 	local function assert_loop(cq, timeout)
 		local ok, err, _, thd = cq:loop(timeout)
 		if not ok then
@@ -12,7 +13,7 @@ describe("server module", function()
 			error(err, 2)
 		end
 	end
-	it("works", function()
+	local function simple_test(tls, version)
 		local cq = cqueues.new()
 		local s = server.listen {
 			host = "127.0.0.1";
@@ -29,18 +30,35 @@ describe("server module", function()
 			s:close()
 		end)
 		cq:wrap(function()
-			local c = assert(cs.connect{
+			local conn = client.connect {
 				host = "127.0.0.1";
 				port = 8000;
-			})
-			assert(c:connect())
-			c:setmode("b", "nb")
-			assert(c:write("GET / HTTP/1.0\r\n\r\n", "n"))
-			c:read()
-			c:close()
+				tls = tls;
+				version = version;
+			}
+			local stream = conn:new_stream()
+			local headers = new_headers()
+			headers:append(":method", "GET")
+			headers:append(":path", "/")
+			headers:append(":scheme", "http")
+			assert(stream:write_headers(headers, true))
+			stream:get_headers()
+			conn:close()
 		end)
 		assert_loop(cq, TEST_TIMEOUT)
 		assert.truthy(cq:empty())
 		assert.spy(on_stream).was.called()
+	end
+	it("works with plain http 1.1", function()
+		simple_test(false, 1.1)
+	end)
+	it("works with https 1.1", function()
+		simple_test(true, 1.1)
+	end)
+	it("works with plain http 2.0", function()
+		simple_test(false, 2.0)
+	end)
+	it("works with https 2.0", function()
+		simple_test(true, 2.0)
 	end)
 end)
