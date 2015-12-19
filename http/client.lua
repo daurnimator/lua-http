@@ -42,7 +42,7 @@ local function connect(options, timeout)
 	if version == nil then
 		if tls then
 			local ssl = s:checktls()
-			if ssl:getAlpnSelected() == "h2" then
+			if http_tls.has_alpn and ssl:getAlpnSelected() == "h2" then
 				version = 2
 			else
 				version = 1.1

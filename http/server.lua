@@ -5,7 +5,7 @@ local cc = require "cqueues.condition"
 local ce = require "cqueues.errno"
 local h1_connection = require "http.h1_connection"
 local h2_connection = require "http.h2_connection"
-local new_server_context = require "http.tls".new_server_context
+local http_tls = require "http.tls"
 local pkey = require "openssl.pkey"
 local x509 = require "openssl.x509"
 local name = require "openssl.x509.name"
@@ -60,7 +60,7 @@ local function wrap_socket(self, socket, deadline)
 			return nil, err, errno
 		end
 		local ssl = socket:checktls()
-		if ssl and ssl.getAlpnSelected then
+		if ssl and http_tls.has_alpn then
 			local proto = ssl:getAlpnSelected()
 			if proto == "h2" then
 				is_h2 = true
@@ -119,7 +119,7 @@ end
 
 -- create a new self signed cert
 local function new_ctx(host)
-	local ctx = new_server_context()
+	local ctx = http_tls.new_server_context()
 	if ctx.setAlpnSelect then
 		ctx:setAlpnSelect(pick_h2)
 	end
