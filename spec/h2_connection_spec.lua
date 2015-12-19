@@ -77,7 +77,7 @@ describe("http2 connection", function()
 		assert_loop(cq, TEST_TIMEOUT)
 		assert.truthy(cq:empty())
 	end)
-	it("waits for peer flow #credits", function()
+	pending("waits for peer flow #credits", function()
 		local c, s = cs.pair()
 		local cq = cqueues.new()
 		local client_stream
