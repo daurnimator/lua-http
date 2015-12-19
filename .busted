@@ -1,5 +1,7 @@
 return {
-    default = {
-        lpath = "./?.lua";
-    };
+	default = {
+		lpath = "./?.lua";
+		["auto-insulate"] = false;
+		helper = "cqueues-luacov-helper.lua";
+	};
 }
