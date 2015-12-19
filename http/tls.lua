@@ -1,6 +1,9 @@
 local openssl_ctx = require "openssl.ssl.context"
 local openssl_pkey = require "openssl.pkey"
 
+-- Detect if openssl was compiled with ALPN enabled
+local has_alpn = openssl_ctx.new().setAlpnSelect ~= nil
+
 -- Creates a cipher list suitable for passing to `setCipherList`
 local function cipher_list(arr)
 	return table.concat(arr, ":")
@@ -345,6 +348,7 @@ local function new_server_context()
 end
 
 return {
+	has_alpn = has_alpn;
 	modern_cipher_list = modern_cipher_list;
 	banned_ciphers = banned_ciphers;
 	new_client_context = new_client_context;

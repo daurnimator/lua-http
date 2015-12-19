@@ -1,16 +1,16 @@
 local monotime = require "cqueues".monotime
 local cs = require "cqueues.socket"
-local new_client_context = require "http.tls".new_client_context
+local http_tls = require "http.tls"
 local new_h1_connection = require "http.h1_connection".new
 local new_h2_connection = require "http.h2_connection".new
 local h2_errors = require "http.h2_error".errors
 
 -- Create a shared 'default' TLS contexts
-local default_h1_ctx = new_client_context()
+local default_h1_ctx = http_tls.new_client_context()
 local default_h2_ctx
 -- if ALPN is not supported; do not create h2 context
-if default_h1_ctx.setAlpnProtos then
-	default_h2_ctx = new_client_context()
+if http_tls.has_alpn then
+	default_h2_ctx = http_tls.new_client_context()
 	default_h2_ctx:setAlpnProtos({"h2"})
 end
 
