@@ -41,9 +41,10 @@ describe("http2 connection", function()
 				for _=1, 10 do
 					assert(c:ping())
 				end
-				assert(c:close())
+				assert(c:shutdown())
 			end)
 			assert_loop(c)
+			assert(c:close())
 		end)
 		cq:wrap(function()
 			s = h2_connection.new(s, "server")
