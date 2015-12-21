@@ -506,8 +506,8 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 					and not end_stream -- no point encoding body if there isn't one
 					and not has_any(headers:get_split_as_sequence("content-encoding"), "gzip", "deflate")
 					-- don't bother if content-encoding is already gzip/deflate
-					then
-
+					-- TODO: need to take care of quality suffixes ("deflate; q=0.5")
+				then
 					-- Possibly need to insert before "chunked"
 					local i = transfer_encoding_header.n
 					if transfer_encoding_header[i] == "chunked" then
