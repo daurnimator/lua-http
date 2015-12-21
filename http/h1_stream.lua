@@ -451,8 +451,6 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 			-- The order of these checks matter:
 				-- chunked must be checked first, as it totally changes the body format
 				-- content-length is next
-					-- note that Content-Length may be provided in addition to "chunked"
-					-- e.g. to advise peer to preallocate a certain file size
 				-- closing the connection is ordered after length
 					-- this potentially means an early EOF can be caught if a connection
 					-- closure occurs before body size reaches the specified length
