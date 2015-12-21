@@ -369,15 +369,6 @@ function connection_methods:write_body_plain(body, timeout)
 	return true
 end
 
-function connection_methods:write_body_shutdown(timeout)
-	-- flushes write buffer
-	local ok, err, errno = self.socket:flush("n", timeout)
-	if ok == nil then
-		return nil, err, errno
-	end
-	return self.socket:shutdown("w")
-end
-
 return {
 	new = new_connection;
 	methods = connection_methods;
