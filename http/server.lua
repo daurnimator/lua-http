@@ -219,7 +219,7 @@ function server_methods:listen(timeout)
 end
 
 function server_methods:localname()
-	self.socket:localname()
+	return self.socket:localname()
 end
 
 function server_methods:shutdown()
