@@ -16,10 +16,11 @@ describe("http.server module", function()
 	local function simple_test(tls, version)
 		local cq = cqueues.new()
 		local s = server.listen {
-			host = "127.0.0.1";
-			port = 8000;
+			host = "localhost";
+			port = 0;
 		}
-		s:listen()
+		assert(s:listen())
+		local _, host, port = s:localname()
 		local on_stream = spy.new(function(stream)
 			stream:get_headers()
 			stream:shutdown()
@@ -31,8 +32,8 @@ describe("http.server module", function()
 		end)
 		cq:wrap(function()
 			local conn = client.connect {
-				host = "127.0.0.1";
-				port = 8000;
+				host = host;
+				port = port;
 				tls = tls;
 				version = version;
 			}
