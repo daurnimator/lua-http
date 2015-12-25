@@ -663,6 +663,17 @@ function stream_methods:get_next_chunk(timeout)
 		-- Use a big negative number instead of *a. see https://github.com/wahern/cqueues/issues/89
 		chunk, err, errno = self.connection:read_body_by_length(-0x80000000, timeout)
 		end_stream = (err == ce.EPIPE)
+	elseif self.body_read_type == nil then
+		-- Might get here if haven't read headers yet, or if only headers so far have been 1xx codes
+		local deadline = timeout and (monotime()+timeout)
+		local headers
+		headers, err, errno = self:read_headers(timeout)
+		if not headers then
+			return nil, err, errno
+		end
+		self.headers_fifo:push(headers)
+		self.headers_cond:signal(1)
+		return self:get_next_chunk(deadline and deadline-monotime())
 	else
 		error("unknown body read type")
 	end
