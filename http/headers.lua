@@ -24,6 +24,8 @@ local entry_mt = {
 local never_index_defaults = {
 	authorization = true;
 	["proxy-authorization"] = true;
+	cookie = true;
+	["set-cookie"] = true;
 }
 
 local function new_entry(name, value, never_index)
