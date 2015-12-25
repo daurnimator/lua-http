@@ -316,6 +316,7 @@ function connection_methods:new_stream(id)
 		-- TODO: check MAX_CONCURRENT_STREAMS
 	end
 	assert(self.streams[id] == nil, "stream id already in use")
+	assert(id < 2^32, "stream id too large")
 	if id % 2 == 0 then
 		assert(id > self.highest_even_stream, "stream id too small")
 		self.highest_even_stream = id
