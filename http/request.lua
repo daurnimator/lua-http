@@ -161,6 +161,7 @@ function request_methods:handle_redirect(orig_headers)
 		end
 	end
 	local headers = self.headers:clone()
+	headers:upsert("referer", self:to_url())
 	local new_req = new_from_uri_t(uri_t, headers)
 	new_req.follow_redirects = rawget(self, "follow_redirects")
 	if type(max_redirects) == "number" then
