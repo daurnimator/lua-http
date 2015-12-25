@@ -110,6 +110,9 @@ end
 
 function connection_methods:new_stream()
 	assert(self.type == "client")
+	if self.socket == nil or self.socket:eof() then
+		return nil, ce.EPIPE
+	end
 	local stream = h1_stream.new(self)
 	return stream
 end
