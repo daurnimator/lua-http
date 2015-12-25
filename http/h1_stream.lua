@@ -444,7 +444,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 				-- This is somewhat suggested in RFC 7231 section 8.1.2
 				if cl then -- might already have content-length: 0
 					assert(cl:match("^ *0+ *$"), "cannot end stream after headers if you have a non-zero content-length")
-				else
+				elseif self.type ~= "client" or (method ~= "GET" and method ~= "HEAD") then
 					cl = "0"
 				end
 				self.body_write_type = "length"
