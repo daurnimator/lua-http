@@ -14,6 +14,7 @@ if _VERSION == "Lua 5.3" then
 	return assert(load(("\n"):rep(info.currentline+1)..[[return {
 		band = function(a, b) return a & b end;
 		bor = function(a, b) return a | b end;
+		bxor = function(a, b) return a ~ b end;
 	}]], info.source))()
 end
 
@@ -24,6 +25,7 @@ if has_bit then
 	return {
 		band = bit.band;
 		bor = bit.bor;
+		bxor = bit.bxor;
 	}
 end
 
@@ -33,6 +35,7 @@ if has_bit32 then
 	return {
 		band = bit32.band;
 		bor = bit32.bor;
+		bxor = bit32.bxor;
 	}
 end
 
