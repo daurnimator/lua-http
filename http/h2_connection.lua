@@ -133,7 +133,7 @@ local function new_connection(socket, conn_type, settings, timeout)
 		version = 2; -- for compat with h1_connection
 
 		streams = setmetatable({}, {__mode="kv"});
-		stream0 = nil; -- store separetly with a strong reference
+		stream0 = nil; -- store separately with a strong reference
 		need_continuation = nil; -- stream
 		cq = cq;
 		highest_odd_stream = -1;
