@@ -178,7 +178,7 @@ function connection_methods:events()
 end
 
 function connection_methods:timeout()
-	if not self.cq:empty() then
+	if not self:empty() then
 		return 0
 	end
 end
@@ -247,8 +247,12 @@ local function handle_step_return(self, step_ok, last_err, errno)
 	end
 end
 
+function connection_methods:empty()
+	return self.cq:empty()
+end
+
 function connection_methods:step(...)
-	if self.cq:empty() then
+	if self:empty() then
 		return handle_step_return(self, false, ce.EPIPE)
 	else
 		return handle_step_return(self, self.cq:step(...))
@@ -256,7 +260,7 @@ function connection_methods:step(...)
 end
 
 function connection_methods:loop(...)
-	if self.cq:empty() then
+	if self:empty() then
 		return handle_step_return(self, false, ce.EPIPE)
 	else
 		return handle_step_return(self, self.cq:loop(...))
