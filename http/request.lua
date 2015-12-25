@@ -160,7 +160,8 @@ function request_methods:handle_redirect(orig_headers)
 			uri_t.path = http_util.resolve_relative_path(orig_path, uri_t.path)
 		end
 	end
-	local new_req = new_from_uri_t(uri_t)
+	local headers = self.headers:clone()
+	local new_req = new_from_uri_t(uri_t, headers)
 	new_req.follow_redirects = rawget(self, "follow_redirects")
 	if type(max_redirects) == "number" then
 		new_req.max_redirects = max_redirects - 1
