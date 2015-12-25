@@ -32,6 +32,7 @@ local function new_from_uri_t(uri_t, headers)
 	end
 	if headers == nil then
 		headers = new_headers()
+		headers:append(":method", "GET")
 	end
 	local self = setmetatable({
 		host = host;
@@ -41,7 +42,6 @@ local function new_from_uri_t(uri_t, headers)
 		body = nil;
 	}, request_mt)
 	headers:upsert(":authority", http_util.to_authority(host, self.port, scheme))
-	headers:upsert(":method", "GET")
 	headers:upsert(":path", path)
 	headers:upsert(":scheme", scheme)
 	if uri_t.userinfo then
