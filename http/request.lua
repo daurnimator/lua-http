@@ -35,7 +35,7 @@ local function new_from_uri_t(uri_t, headers)
 	end
 	local self = setmetatable({
 		host = host;
-		port = uri_t.port or (scheme == "https" and 443 or 80);
+		port = uri_t.port or http_util.scheme_to_port[scheme];
 		tls = (scheme == "https");
 		headers = headers;
 		body = nil;
