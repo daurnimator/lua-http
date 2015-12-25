@@ -133,11 +133,15 @@ local server_error_headers = new_headers()
 server_error_headers:append(":status", "503")
 function stream_methods:shutdown()
 	if self.type == "client" and self.state == "half closed (local)" then
-		-- If we're a client and have fully sent our request body
+		-- If we're a client and have fully sent our request body,
 		-- we'd like to finishing reading any remaining response so that we get out of the way
-		-- TODO: don't bother if we're reading until connection is closed
-		-- ignore errors
-		while self:get_next_chunk() do end
+		repeat
+			-- don't bother continuing if we're reading until connection is closed
+			if self.body_read_type == "close" then
+				self.connection:shutdown("rw")
+				break
+			end
+		until self:get_next_chunk() == nil -- ignore errors
 	end
 	if self.state == "open" or self.state == "half closed (remote)" then
 		if not self.body_write_type and self.type == "server" then
