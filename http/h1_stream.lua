@@ -334,7 +334,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 	if self.state == "closed" or self.state == "half closed (local)" then
 		return nil, ce.EPIPE
 	end
-	local status_code
+	local status_code, method
 	if self.type == "server" then
 		-- Make sure we're at the front of the pipeline
 		if self.connection.pipeline:peek() ~= self then
@@ -357,9 +357,10 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		end
 	else -- client
 		if self.state == "idle" then
-			self.req_method = assert(headers:get(":method"), "missing method")
+			method = assert(headers:get(":method"), "missing method")
+			self.req_method = method
 			local path
-			if self.req_method == "CONNECT" then
+			if method == "CONNECT" then
 				path = assert(headers:get(":authority"), "missing authority")
 				assert(not headers:has(":path"), "CONNECT requests should not have a path")
 			else
@@ -375,7 +376,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 			self.connection.pipeline:push(self)
 			self.connection.req_locked = self
 			-- write request line
-			local ok, err = self.connection:write_request_line(self.req_method, path, self.connection.version, deadline and (deadline-monotime()))
+			local ok, err = self.connection:write_request_line(method, path, self.connection.version, deadline and (deadline-monotime()))
 			if not ok then
 				if err == ce.EPIPE or err == ce.ETIMEDOUT then
 					return nil, err
