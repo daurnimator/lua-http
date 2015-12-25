@@ -11,7 +11,9 @@ local request_methods = {
 	max_redirects = 5; -- false = no redirects
 	expect_100_timeout = 1;
 }
+
 local request_mt = {
+	__name = "http.request";
 	__index = request_methods;
 }
 
