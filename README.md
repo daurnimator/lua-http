@@ -24,6 +24,7 @@ This project is a work in progress and not ready for production use.
   - [x] Handle redirects
   - [ ] Be able to use a HTTP proxy
   - [x] Compression (e.g. gzip)
+  - [ ] Websockets
 
 
 # Installation
