@@ -249,6 +249,9 @@ function stream_methods:read_headers(timeout)
 		-- we don't want to go into body reading mode;
 		-- we want to stay in header modes
 		no_body = false
+		if status_code == "101" then
+			self.body_read_type = "close"
+		end
 	elseif headers:has("transfer-encoding") then
 		no_body = false
 		local transfer_encoding = headers:get_split_as_sequence("transfer-encoding")
