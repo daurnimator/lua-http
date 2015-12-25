@@ -49,6 +49,10 @@ function entry_methods:unpack()
 	return self.name, self.value, self.never_index
 end
 
+function entry_methods:clone()
+	return new_entry(self.name, self.value, self.never_index)
+end
+
 
 local headers_methods = {}
 local headers_mt = {
@@ -90,6 +94,20 @@ local function rebuild_index(self)
 		add_to_index(index, entry.name, i)
 	end
 	self._index = index
+end
+
+function headers_methods:clone()
+	local index, new_data = {}, {}
+	for i=1, self._n do
+		local entry = self._data[i]
+		new_data[i] = entry:clone()
+		add_to_index(index, entry.name, i)
+	end
+	return setmetatable({
+		_n = self._n;
+		_data = new_data;
+		_index = index;
+	}, headers_mt)
 end
 
 function headers_methods:append(name, ...)
