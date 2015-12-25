@@ -66,7 +66,9 @@ end
 
 local scheme_to_port = {
 	http = 80;
+	ws = 80;
 	https = 443;
+	wss = 443;
 }
 
 -- Splits a :authority header (same as Host) into host and port

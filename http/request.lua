@@ -19,7 +19,7 @@ local request_mt = {
 
 local function new_from_uri_t(uri_t, headers)
 	local scheme = assert(uri_t.scheme, "URI missing scheme")
-	assert(scheme == "https" or scheme == "http", "scheme not http")
+	assert(scheme == "https" or scheme == "http" or scheme == "ws" or scheme == "wss", "scheme not http")
 	local host = tostring(assert(uri_t.host, "URI must include a host"))
 	local path = uri_t.path
 	if path == nil or path == "" then
@@ -36,7 +36,7 @@ local function new_from_uri_t(uri_t, headers)
 	local self = setmetatable({
 		host = host;
 		port = uri_t.port or http_util.scheme_to_port[scheme];
-		tls = (scheme == "https");
+		tls = (scheme == "https" or scheme == "wss");
 		headers = headers;
 		body = nil;
 	}, request_mt)
