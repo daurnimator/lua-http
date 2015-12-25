@@ -33,7 +33,7 @@ This project is a work in progress and not ready for production use.
 
   - [cqueues](http://25thandclement.com/~william/projects/cqueues.html) >= 20150907
   - [luaossl](http://25thandclement.com/~william/projects/luaossl.html) >= 20150727
-  - [lbase64](http://webserver2.tecgraf.puc-rio.br/~lhf/ftp/lua/#lbase64)
+  - [basexx](https://github.com/aiq/basexx/) >= 0.2.0
   - [lpeg_patterns](https://github.com/daurnimator/lpeg_patterns) >= 0.2
   - [fifo](https://github.com/daurnimator/fifo.lua)
 

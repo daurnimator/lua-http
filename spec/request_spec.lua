@@ -24,7 +24,7 @@ describe("http.request module", function()
 			assert.same(nil, req.body)
 		end
 		do -- with userinfo section
-			local base64 = require "base64"
+			local basexx = require "basexx"
 			local req = request.new_from_uri("https://user:password@example.com/")
 			assert.same("example.com", req.host)
 			assert.same(443, req.port)
@@ -33,7 +33,7 @@ describe("http.request module", function()
 			assert.same("GET", req.headers:get ":method")
 			assert.same("/", req.headers:get ":path")
 			assert.same("https", req.headers:get ":scheme")
-			assert.same("user:password", base64.decode(req.headers:get "authorization":match "^basic%s+(.*)"))
+			assert.same("user:password", basexx.from_base64(req.headers:get "authorization":match "^basic%s+(.*)"))
 			assert.same(nil, req.body)
 		end
 	end)
@@ -61,7 +61,7 @@ describe("http.request module", function()
 			assert.same(nil, req.body)
 		end
 		do -- with userinfo section
-			local base64 = require "base64"
+			local basexx = require "basexx"
 			local req = request.new_connect("https://user:password@example.com", "connect.me")
 			assert.same("example.com", req.host)
 			assert.same(443, req.port)
@@ -70,7 +70,7 @@ describe("http.request module", function()
 			assert.same("CONNECT", req.headers:get ":method")
 			assert.falsy(req.headers:has ":path")
 			assert.falsy(req.headers:has ":scheme")
-			assert.same("user:password", base64.decode(req.headers:get "proxy-authorization":match "^basic%s+(.*)"))
+			assert.same("user:password", basexx.from_base64(req.headers:get "proxy-authorization":match "^basic%s+(.*)"))
 			assert.same(nil, req.body)
 		end
 		do -- anything with a path should fail

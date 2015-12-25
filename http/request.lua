@@ -1,5 +1,5 @@
 local uri_patts = require "lpeg_patterns.uri"
-local base64 = require "base64"
+local basexx = require "basexx"
 local client_connect = require "http.client".connect
 local new_headers = require "http.headers".new
 local http_util = require "http.util"
@@ -45,7 +45,7 @@ local function new_from_uri_t(uri_t, headers)
 	headers:upsert(":path", path)
 	headers:upsert(":scheme", scheme)
 	if uri_t.userinfo then
-		headers:upsert("authorization", "basic " .. base64.encode(uri_t.userinfo), true)
+		headers:upsert("authorization", "basic " .. basexx.to_base64(uri_t.userinfo), true)
 	end
 	if not headers:has("user-agent") then
 		headers:append("user-agent", "lua-http")
@@ -75,7 +75,7 @@ local function new_connect(uri, connect_authority)
 	self.headers:append(":authority", connect_authority)
 	self.headers:append(":method", "CONNECT")
 	if uri_t.userinfo then
-		self.headers:append("proxy-authorization", "basic " .. base64.encode(uri_t.userinfo), true)
+		self.headers:append("proxy-authorization", "basic " .. basexx.to_base64(uri_t.userinfo), true)
 	end
 	return self
 end
