@@ -128,6 +128,7 @@ function request_methods:new_stream(timeout)
 		host = self.host;
 		port = self.port;
 		tls = self.tls;
+		sendname = self.sendname;
 		version = self.version;
 	}, timeout)
 	return connection:new_stream()
