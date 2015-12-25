@@ -401,8 +401,12 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 			-- fields in a 2xx (Successful) response to CONNECT.
 			error("Content-Length and Transfer-Encoding not allowed with successful CONNECT response")
 		end
-	elseif status_code == "100" then -- implies self.type == "server"
-		assert(not end_stream, "cannot end stream directly after 100-continue")
+	elseif self.type == "server" and status_code and status_code:sub(1, 1) == "1" then
+		assert(not end_stream, "cannot end stream directly after 1xx status code")
+		-- A server MUST NOT send a Content-Length header field in any response with a status code of 1xx (Informational) or 204 (No Content)
+		if cl then
+			error("Content-Length not allowed in response with 1xx status code")
+		end
 	elseif not self.body_write_type then -- only figure out how to send the body if we haven't figured it out yet... TODO: use better check
 		if self.close_when_done == nil then
 			if self.connection.version == 1.0 or (self.type == "server" and self.peer_version == 1.0) then
@@ -420,8 +424,6 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 				-- A server MUST NOT send a Content-Length header field in any response with a status code of 1xx (Informational) or 204 (No Content)
 				if status_code == "204" then
 					error("Content-Length not allowed in response with 204 status code")
-				elseif status_code:sub(1,1) == "1" then
-					error("Content-Length not allowed in response with 1xx status code")
 				end
 			end
 		end
