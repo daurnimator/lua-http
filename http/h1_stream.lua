@@ -48,6 +48,7 @@ local function new_stream(connection)
 
 		state = "idle";
 		stats_sent = 0;
+		stats_recv = 0;
 
 		pipeline_cond = cc.new(); -- signalled when stream reaches front of pipeline
 
@@ -684,8 +685,11 @@ function stream_methods:get_next_chunk(timeout)
 	else
 		error("unknown body read type")
 	end
-	if chunk and self.body_read_inflate then
-		chunk = self.body_read_inflate(chunk, end_stream)
+	if chunk then
+		if self.body_read_inflate then
+			chunk = self.body_read_inflate(chunk, end_stream)
+		end
+		self.stats_recv = self.stats_recv + #chunk
 	end
 	if end_stream then
 		if self.state == "half closed (local)" then
