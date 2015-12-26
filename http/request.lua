@@ -161,13 +161,19 @@ function request_methods:handle_redirect(orig_headers)
 		end
 	end
 	local headers = self.headers:clone()
-	headers:upsert("referer", self:to_url())
 	local new_req = new_from_uri_t(uri_t, headers)
 	new_req.follow_redirects = rawget(self, "follow_redirects")
 	if type(max_redirects) == "number" then
 		new_req.max_redirects = max_redirects - 1
 	end
 	new_req.expect_100_timeout = rawget(self, "expect_100_timeout")
+	if not new_req.tls and self.tls then
+		--[[ RFC 7231 5.5.2: A user agent MUST NOT send a Referer header field in an
+		unsecured HTTP request if the referring page was received with a secure protocol.]]
+		headers:delete("referer")
+	else
+		headers:upsert("referer", self:to_url())
+	end
 	new_req.body = self.body
 	return new_req
 end
