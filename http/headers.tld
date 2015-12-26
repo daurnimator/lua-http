@@ -2,7 +2,7 @@ interface headers
 	const clone : (self) -> headers
 	const append : (self, string, string, nil|boolean) -> ()
 	const each : (self) -> ((self) -> (string, string, boolean))
-	const has : (self, string) -> (boolean|integer)
+	const has : (self, string) -> (boolean)
 	const delete : (self, string) -> (boolean)
 	const geti : (self, integer) -> (string, string, boolean)
 	const get_as_sequence : (self, string) -> ({"n": integer, integer:string})

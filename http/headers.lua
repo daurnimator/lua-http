@@ -132,11 +132,7 @@ headers_mt.__pairs = headers_methods.each
 
 function headers_methods:has(name)
 	local dex = self._index[name]
-	if dex then
-		return #dex
-	else
-		return false
-	end
+	return dex ~= nil
 end
 
 function headers_methods:delete(name)
