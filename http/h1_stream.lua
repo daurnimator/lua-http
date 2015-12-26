@@ -8,6 +8,12 @@ local reason_phrases = require "http.h1_reason_phrases"
 local stream_common = require "http.stream_common"
 local has_zlib, zlib = pcall(require, "http.zlib")
 
+--[[ Maximum amount of data to read during shutdown before giving up on a clean stream shutdown
+500KB seems is a round number that is:
+  - larger than most bandwidth-delay products
+  - larger than most dynamically generated http documents]]
+local clean_shutdown_limit = 500*1024
+
 local function has(list, val)
 	for i=1, list.n do
 		if list[i]:lower() == val then
@@ -136,13 +142,21 @@ function stream_methods:shutdown()
 	if self.type == "client" and self.state == "half closed (local)" then
 		-- If we're a client and have fully sent our request body,
 		-- we'd like to finishing reading any remaining response so that we get out of the way
-		repeat
+		local start = self.stats_recv
+		while true do
 			-- don't bother continuing if we're reading until connection is closed
 			if self.body_read_type == "close" then
 				self.connection:shutdown("rw")
 				break
 			end
-		until self:get_next_chunk() == nil -- ignore errors
+			if self:get_next_chunk() == nil then
+				break -- ignore errors
+			end
+			if (self.stats_recv - start) >= clean_shutdown_limit then
+				self.connection:shutdown("rw")
+				break
+			end
+		end
 	end
 	if self.state == "open" or self.state == "half closed (remote)" then
 		if not self.body_write_type and self.type == "server" then
