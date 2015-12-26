@@ -1,6 +1,14 @@
 --[[
-Uses code from prosody's net/websocket
-Some portions Copyright (C) 2012 Florian Zeitz
+WebSocket module
+
+Specified in RFC-6455
+
+Design criteria:
+  - Client API must work without an event loop
+  - Borrow from the Browser Javascript WebSocket API when sensible
+  - server-side API should mirror client-side API
+
+This code is partially based on MIT/X11 code Copyright (C) 2012 Florian Zeitz
 ]]
 
 local basexx = require "basexx"
@@ -9,25 +17,38 @@ local sunpack = string.unpack or require "compat53.string".unpack
 local unpack = table.unpack or unpack -- luacheck: ignore 113
 local cqueues = require "cqueues"
 local monotime = cqueues.monotime
+local ce = require "cqueues.errno"
 local uri_patts = require "lpeg_patterns.uri"
 local rand = require "openssl.rand"
 local digest = require "openssl.digest"
-local new_headers = require "http.headers".new
 local bit = require "http.bit"
 local http_request = require "http.request"
 
--- Seconds to wait after sending close frame until closing connection.
-local close_timeout = 3
+local websocket_methods = {
+	-- Max seconds to wait after sending close frame until closing connection
+	close_timeout = 3;
+}
+
+local websocket_mt = {
+	__name = "http.websocket";
+	__index = websocket_methods;
+}
+
+local magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
 -- a nonce consisting of a randomly selected 16-byte value that has been base64-encoded
 local function new_key()
 	return basexx.to_base64(rand.bytes(16))
 end
 
-local magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
-
 local function base64_sha1(str)
 	return basexx.to_base64(digest.new("sha1"):final(str))
+end
+
+-- trim12 from http://lua-users.org/wiki/StringTrim
+local function trim(s)
+	local from = s:match"^%s*()"
+	return from > #s and "" or s:match(".*%S", from)
 end
 
 -- XORs the string `str` with a 32bit key
@@ -90,7 +111,7 @@ local function build_close(code, message, mask)
 		assert(#message<=123, "Close reason must be <=123 bytes")
 		data = data .. message
 	end
-	return build_frame {
+	return {
 		opcode = 0x8;
 		FIN = true;
 		MASK = mask;
@@ -168,32 +189,100 @@ local function parse_close(data)
 	return code, message
 end
 
-local function read_loop(sock, on_data, on_close)
-	local code, reason = 1000, nil
+function websocket_methods:send_frame(frame, timeout)
+	local ok, err, errno = self.socket:xwrite(build_frame(frame), "n", timeout)
+	if not ok then
+		return nil, err, errno
+	end
+	if frame.opcode == 0x8 then
+		self.readyState = 2
+	end
+	return true
+end
+
+function websocket_methods:send(data, opcode)
+	if self.readyState >= 2 then
+		return nil, "WebSocket closed, unable to send data", ce.EPIPE
+	end
+	assert(type(data) == "string")
+	if opcode == "text" or opcode == nil then
+		opcode = 0x1
+	elseif opcode == "binary" then
+		opcode = 0x2;
+	end
+	return self:send_frame({
+		FIN = true;
+		--[[ RFC 6455
+		5.1: A server MUST NOT mask any frames that it sends to the client
+		6.1.5: If the data is being sent by the client, the frame(s) MUST be masked]]
+		MASK = self.type == "client";
+		opcode = opcode;
+		data = data;
+	})
+end
+
+local function close_helper(self, code, reason, deadline)
+	if self.readyState == 3 then
+		return nil, ce.strerror(ce.EPIPE), ce.EPIPE
+	end
+
+	if self.readyState < 2 then
+		local close_frame = build_close(code, reason, true)
+		-- ignore failure
+		self:send_frame(close_frame, deadline and deadline-monotime())
+	end
+
+	-- Do not close socket straight away, wait for acknowledgement from server
+	local read_deadline = monotime() + self.close_timeout
+	if deadline then
+		read_deadline = math.min(read_deadline, deadline)
+	end
+	while not self.got_close_code do
+		if not self:read(read_deadline-monotime()) then
+			break
+		end
+	end
+
+	self.socket:shutdown()
+	cqueues.poll()
+	cqueues.poll()
+	self.socket:close()
+
+	self.readyState = 3
+
+	return nil, reason, ce.ENOMSG
+end
+
+function websocket_methods:close(code, reason, timeout)
+	local deadline = timeout and (monotime()+timeout)
+	code = code or 1000
+	close_helper(self, code, reason, deadline)
+	return true
+end
+
+function websocket_methods:read(timeout)
+	local deadline = timeout and (monotime()+timeout)
 	local databuffer, databuffer_type
 	while true do
-		local frame, err, errno = read_frame(sock)
+		local frame, err, errno = read_frame(self.socket, deadline and (deadline-monotime()))
 		if frame == nil then
 			return nil, err, errno
 		end
 
 		-- Error cases
 		if frame.RSV1 or frame.RSV2 or frame.RSV3 then -- Reserved bits non zero
-			code, reason = 1002, "Reserved bits not zero"
-			break
+			return close_helper(self, 1002, "Reserved bits not zero", deadline)
 		end
 
 		if frame.opcode < 0x8 then
 			if frame.opcode == 0x0 then -- Continuation frames
 				if not databuffer then
-					code, reason = 1002, "Unexpected continuation frame"
-					break
+					return close_helper(self, 1002, "Unexpected continuation frame", deadline)
 				end
 				databuffer[#databuffer+1] = frame.data
 			elseif frame.opcode == 0x1 or frame.opcode == 0x2 then -- Text or Binary frame
 				if databuffer then
-					code, reason = 1002, "Continuation frame expected"
-					break
+					return close_helper(self, 1002, "Continuation frame expected", deadline)
 				end
 				databuffer = { frame.data }
 				if frame.opcode == 0x1 then
@@ -202,25 +291,20 @@ local function read_loop(sock, on_data, on_close)
 					databuffer_type = "binary"
 				end
 			else
-				code, reason = 1002, "Reserved opcode"
-				break
+				return close_helper(self, 1002, "Reserved opcode", deadline)
 			end
 			if frame.FIN then
-				on_data(databuffer_type, table.concat(databuffer))
-				databuffer, databuffer_type = nil, nil
+				return table.concat(databuffer), databuffer_type
 			end
 		else -- Control frame
 			if frame.length > 125 then -- Control frame with too much payload
-				code, reason = 1002, "Payload too large"
-				break
+				return close_helper(self, 1002, "Payload too large", deadline)
 			elseif not frame.FIN then -- Fragmented control frame
-				code, reason = 1002, "Fragmented control frame"
-				break
+				return close_helper(self, 1002, "Fragmented control frame", deadline)
 			end
 			if frame.opcode == 0x8 then -- Close request
 				if frame.length == 1 then
-					code, reason = 1002, "Close frame with payload, but too short for status code"
-					break
+					return close_helper(self, 1002, "Close frame with payload, but too short for status code", deadline)
 				end
 				local status_code, message = parse_close(frame.data)
 				if status_code == nil then
@@ -228,232 +312,198 @@ local function read_loop(sock, on_data, on_close)
 					1005 is a reserved value and MUST NOT be set as a status code in a
 					Close control frame by an endpoint.  It is designated for use in
 					applications expecting a status code to indicate that no status
-					code was actually present.
-					]]
+					code was actually present.]]
 					status_code = 1005
 				elseif status_code < 1000 then
-					code, reason = 1002, "Closed with invalid status code"
-					break
+					return close_helper(self, 1002, "Closed with invalid status code", deadline)
 				elseif ((status_code > 1003 and status_code < 1007) or status_code > 1011) and status_code < 3000 then
-					code, reason = 1002, "Closed with reserved status code"
-					break
+					return close_helper(self, 1002, "Closed with reserved status code", deadline)
 				end
-				code, reason = 1000, nil
-				on_close(status_code, message)
-				break
+				self.got_close_code = status_code
+				self.got_close_message = message
+				return close_helper(self, status_code, message, deadline)
 			elseif frame.opcode == 0x9 then -- Ping frame
 				frame.opcode = 0xA
-				frame.MASK = true; -- RFC 6455 6.1.5: If the data is being sent by the client, the frame(s) MUST be masked
-				sock:write(build_frame(frame))
+				--[[ RFC 6455
+				5.1: A server MUST NOT mask any frames that it sends to the client
+				6.1.5: If the data is being sent by the client, the frame(s) MUST be masked]]
+				frame.MASK = self.type == "client";
+				if not self:send_frame(frame, deadline and (deadline-monotime())) then
+					return close_helper(self, 1002, "Pong failed", deadline)
+				end
 			elseif frame.opcode == 0xA then -- luacheck: ignore 542
 				-- Received unexpected pong frame
 			else
-				code, reason = 1002, "Reserved opcode"
-				break
+				return close_helper(self, 1002, "Reserved opcode", deadline)
 			end
 		end
 	end
-
-	if sock:xwrite(build_close(code, reason, true), "n") then
-		-- Do not close socket straight away, wait for acknowledgement from server.
-		cqueues.poll(sock, close_timeout)
-	end
-
-	sock:close()
-
-	return true
 end
 
+function websocket_methods:each()
+	return function(self) -- luacheck: ignore 432
+		return self:read()
+	end, self
+end
+
+local function new(type)
+	assert(type == "client")
+	local self = setmetatable({
+		socket = nil;
+		type = type;
+		readyState = 0;
+		got_close_code = nil;
+		got_close_reason = nil;
+		key = nil;
+		protocols = nil;
+		request = nil;
+	}, websocket_mt)
+	return self
+end
 
 local function new_from_uri_t(uri_t, protocols)
 	local scheme = assert(uri_t.scheme, "URI missing scheme")
 	assert(scheme == "ws" or scheme == "wss", "scheme not websocket")
-	local headers = new_headers()
-	headers:append("connection", "upgrade")
-	headers:append("upgrade", "websocket")
-	headers:append("sec-websocket-key", new_key(), true)
+	local self = new("client")
+	self.request = http_request.new_from_uri_t(uri_t)
+	self.request.version = 1.1
+	self.request.headers:append("connection", "upgrade")
+	self.request.headers:append("upgrade", "websocket")
+	self.key = new_key()
+	self.request.headers:append("sec-websocket-key", self.key, true)
+	self.request.headers:append("sec-websocket-version", "13")
 	if protocols then
 		--[[ The request MAY include a header field with the name
-        |Sec-WebSocket-Protocol|.  If present, this value indicates one
+        Sec-WebSocket-Protocol. If present, this value indicates one
         or more comma-separated subprotocol the client wishes to speak,
-        ordered by preference.  The elements that comprise this value
+        ordered by preference. The elements that comprise this value
         MUST be non-empty strings with characters in the range U+0021 to
         U+007E not including separator characters as defined in
-        [RFC2616] and MUST all be unique strings. ]]
+        [RFC2616] and MUST all be unique strings.]]
         -- TODO: protocol validation
-		headers:append("sec-websocket-protocol", table.concat(protocols, ","))
+		self.protocols = protocols
+		self.request.headers:append("sec-websocket-protocol", table.concat(protocols, ","))
 	end
-	headers:append("sec-websocket-version", "13")
-	local req = http_request.new_from_uri_t(uri_t, headers)
-	return req
+	return self
 end
 
 local function new_from_uri(uri, ...)
 	local uri_t = assert(uri_patts.uri:match(uri), "invalid URI")
-	uri_t.scheme = uri_t.scheme or "ws" -- default to ws
 	return new_from_uri_t(uri_t, ...)
 end
 
-do
-	local function has(list, val)
-		for i=1, list.n do
-			if list[i]:lower() == val then
-				return true
-			end
-		end
-		return false
-	end
-	local function has_any(list1, list2)
-		for i=1, list2.n do
-			if has(list1, list2[i]) then
-				return true
-			end
-		end
-		return false
+local function handle_websocket_response(self, headers, stream)
+	assert(self.type == "client" and self.readyState == 0)
+
+	if stream.connection.version < 1 or stream.connection.version >= 2 then
+		return nil, "websockets only supported with HTTP 1.x", ce.EINVAL
 	end
 
-	-- trim12 from http://lua-users.org/wiki/StringTrim
-	local function trim(s)
-		local from = s:match"^%s*()"
-		return from > #s and "" or s:match(".*%S", from)
+	--[[ If the status code received from the server is not 101, the
+	client handles the response per HTTP [RFC2616] procedures.  In
+	particular, the client might perform authentication if it
+	receives a 401 status code; the server might redirect the client
+	using a 3xx status code (but clients are not required to follow
+	them), etc.]]
+	if headers:get(":status") ~= "101" then
+		return nil, "status code not 101", ce.EINVAL
 	end
 
-	local req = new_from_uri("ws://echo.websocket.org")
-	local stream = req:new_stream()
-	assert(stream:write_headers(req.headers, false))
-	local headers = assert(stream:get_headers())
-	-- TODO: redirects
-	if headers:get(":status") == "101"
-		--[[ If the response lacks an |Upgrade| header field or the |Upgrade|
-		header field contains a value that is not an ASCII case-
-		insensitive match for the value "websocket", the client MUST
-		_Fail the WebSocket Connection_.]]
-		and headers:get("upgrade"):lower() == "websocket"
-		--[[ If the response lacks a |Connection| header field or the
-		|Connection| header field doesn't contain a token that is an
-		ASCII case-insensitive match for the value "Upgrade", the client
-		MUST _Fail the WebSocket Connection_.]]
-		and has(headers:get_split_as_sequence("connection"), "upgrade")
-		--[[ If the response lacks a |Sec-WebSocket-Accept| header field or
-		the |Sec-WebSocket-Accept| contains a value other than the
-		base64-encoded SHA-1 of the concatenation of the |Sec-WebSocket-
-		Key| (as a string, not base64-decoded) with the string "258EAFA5-
-		E914-47DA-95CA-C5AB0DC85B11" but ignoring any leading and
-		trailing whitespace, the client MUST _Fail the WebSocket
-		Connection_.]]
-		and trim(headers:get("sec-websocket-accept")) == base64_sha1(trim(req.headers:get("sec-websocket-key"))..magic)
-		--[[ If the response includes a |Sec-WebSocket-Extensions| header
-		field and this header field indicates the use of an extension
-		that was not present in the client's handshake (the server has
-		indicated an extension not requested by the client), the client
-		MUST _Fail the WebSocket Connection_.]]
-		-- For now, we don't support any extensions
-		and headers:get_split_as_sequence("sec-websocket-extensions").n == 0
-		--[[ If the response includes a |Sec-WebSocket-Protocol| header field
-		and this header field indicates the use of a subprotocol that was
-		not present in the client's handshake (the server has indicated a
-		subprotocol not requested by the client), the client MUST _Fail
-		the WebSocket Connection_.]]
-		and (not headers:has("sec-websocket-protocol")
-			or has_any(headers:get_split_as_sequence("sec-websocket-protocol"), req.headers:get_split_as_sequence("sec-websocket-protocol")))
+	--[[ If the response lacks an Upgrade header field or the Upgrade
+	header field contains a value that is not an ASCII case-
+	insensitive match for the value "websocket", the client MUST
+	Fail the WebSocket Connection]]
+	local upgrade = headers:get("upgrade")
+	if not upgrade or upgrade:lower() ~= "websocket" then
+		return nil, "upgrade header not websocket", ce.EINVAL
+	end
+
+	--[[ If the response lacks a Connection header field or the
+	Connection header field doesn't contain a token that is an
+	ASCII case-insensitive match for the value "Upgrade", the client
+	MUST Fail the WebSocket Connection]]
+	local has_connection_upgrade = false
+	local connection_header = headers:get_split_as_sequence("connection")
+	for i=1, connection_header.n do
+		if connection_header[i]:lower() == "upgrade" then
+			has_connection_upgrade = true
+			break
+		end
+	end
+	if not has_connection_upgrade then
+		return nil, "connection header doesn't contain upgrade", ce.EINVAL
+	end
+
+	--[[ If the response lacks a Sec-WebSocket-Accept header field or
+	the Sec-WebSocket-Accept contains a value other than the
+	base64-encoded SHA-1 of the concatenation of the Sec-WebSocket-
+	Key (as a string, not base64-decoded) with the string "258EAFA5-
+	E914-47DA-95CA-C5AB0DC85B11" but ignoring any leading and
+	trailing whitespace, the client MUST Fail the WebSocket Connection]]
+	local sec_websocket_accept = headers:get("sec-websocket-accept")
+	if sec_websocket_accept == nil or
+		trim(sec_websocket_accept) ~= base64_sha1(self.key .. magic)
 	then
-		-- Success!
-		print(stream)
-		local sock = stream.connection:take_socket()
-		print(sock)
-
-		local function send(data, opcode)
-			-- if self.readyState < 1 then
-			-- 	return nil, "WebSocket not open yet, unable to send data."
-			-- elseif self.readyState >= 2 then
-			-- 	return nil, "WebSocket closed, unable to send data."
-			-- end
-			if opcode == "text" or opcode == nil then
-				opcode = 0x1
-			elseif opcode == "binary" then
-				opcode = 0x2;
-			end
-			return sock:xwrite(build_frame{
-				FIN = true;
-				MASK = true; -- RFC 6455 6.1.5: If the data is being sent by the client, the frame(s) MUST be masked
-				opcode = opcode;
-				data = tostring(data);
-			}, "n")
-		end
-
-
-		-- function websocket_methods:close(code, reason)
-		-- 	if self.readyState < 2 then
-		-- 		code = code or 1000;
-		-- 		log("debug", "closing WebSocket with code %i: %s" , code , tostring(reason));
-		-- 		self.readyState = 2;
-		-- 		local handler = self.handler;
-		-- 		handler:write(frames.build_close(code, reason, true));
-		-- 		-- Do not close socket straight away, wait for acknowledgement from server.
-		-- 		self.close_timer = timer.add_task(close_timeout, close_timeout_cb, self);
-		-- 	elseif self.readyState == 2 then
-		-- 		log("debug", "tried to close a closing WebSocket, closing the raw socket.");
-		-- 		-- Stop timer
-		-- 		if self.close_timer then
-		-- 			timer.stop(self.close_timer);
-		-- 			self.close_timer = nil;
-		-- 		end
-		-- 		local handler = self.handler;
-		-- 		handler:close();
-		-- 	else
-		-- 		log("debug", "tried to close a closed WebSocket, ignoring.");
-		-- 	end
-		-- end
-
-		local new_fifo = require "fifo"
-		local cc = require "cqueues.condition"
-		local cond = cc.new()
-		local q = new_fifo()
-		q:setempty(function()
-			cond:wait()
-			return q:pop()
-		end)
-		local cq = cqueues.new()
-		cq:wrap(function()
-			local ok, err = read_loop(sock, function(type, data)
-				q:push({type, data})
-				cond:signal(1)
-			end, print)
-			if not ok then
-				error(err)
-			end
-		end)
-		local function get_next(f)
-			local ob = f:pop()
-			local type, data = ob[1], ob[2]
-			return type, data
-		end
-		local function each()
-			return get_next, q
-		end
-
-
-		cq:wrap(function()
-			for type, data in each() do
-				print("QWEWE", type, data)
-			end
-		end)
-		cq:wrap(function()
-			send("foo")
-			cqueues.sleep(1)
-			send("bar")
-			send("bar", "binary")
-		end)
-		assert(cq:loop())
-	else
-		print("FAIL")
-		headers:dump()
+		return nil, "sec-websocket-accept header incorrect", ce.EINVAL
 	end
+
+	--[[ If the response includes a Sec-WebSocket-Extensions header field and
+	this header field indicates the use of an extension that was not present
+	in the client's handshake (the server has indicated an extension not
+	requested by the client), the client MUST Fail the WebSocket Connection]]
+	-- For now, we don't support any extensions
+	if headers:has("sec-websocket-extensions") then
+		return nil, "extensions not supported", ce.EINVAL
+	end
+
+	--[[ If the response includes a Sec-WebSocket-Protocol header field and
+	this header field indicates the use of a subprotocol that was not present
+	in the client's handshake (the server has indicated a subprotocol not
+	requested by the client), the client MUST Fail the WebSocket Connection]]
+	if headers:has("sec-websocket-protocol") then
+		local has_matching_protocol = false
+		if self.protocols then
+			local swps = headers:get_split_as_sequence("sec-websocket-protocol")
+			for i=1, swps.n do
+				local p1 = swps[i]:lower()
+				for _, p2 in ipairs(self.protocols) do
+					if p1 == p2 then
+						has_matching_protocol = true
+						break
+					end
+				end
+				if has_matching_protocol then
+					break
+				end
+			end
+		end
+		if not has_matching_protocol then
+			return nil, "unexpected protocol", ce.EINVAL
+		end
+	end
+
+	-- Success!
+	self.socket = assert(stream.connection:take_socket())
+	self.readyState = 1
+
+	return true
+end
+
+function websocket_methods:connect(timeout)
+	assert(self.type == "client" and self.readyState == 0)
+	local headers, stream, errno = self.request:go(timeout)
+	if not headers then
+		return nil, stream, errno
+	end
+	return handle_websocket_response(self, headers, stream)
 end
 
 return {
 	new_from_uri_t = new_from_uri_t;
 	new_from_uri = new_from_uri;
+
+	build_frame = build_frame;
+	read_frame = read_frame;
+	build_close = build_close;
+	parse_close = parse_close;
 }
-
-
