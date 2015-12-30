@@ -227,12 +227,10 @@ function stream_methods:read_headers(timeout)
 	end
 	-- Use while loop for lua 5.1 compatibility
 	while true do
-		local k, v = self.connection:read_header(deadline and (deadline-monotime()))
+		local k, v, errno = self.connection:read_header(deadline and (deadline-monotime()))
 		if k == nil then
-			-- if it was an error, it will be repeated
-			local ok, err, errno2 = self.connection:read_headers_done(deadline and (deadline-monotime()))
-			if ok == nil then
-				return nil, err, errno2
+			if v ~= ce.EPIPE then
+				return nil, v, errno
 			end
 			break -- Success: End of headers.
 		end
@@ -241,6 +239,13 @@ function stream_methods:read_headers(timeout)
 			k = ":authority"
 		end
 		headers:append(k, v)
+	end
+
+	do
+		local ok, err, errno = self.connection:read_headers_done(deadline and (deadline-monotime()))
+		if ok == nil then
+			return nil, err, errno
+		end
 	end
 
 	-- if client is sends `Connection: close`, server knows it can close at end of response
