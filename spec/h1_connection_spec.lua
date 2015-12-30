@@ -239,7 +239,7 @@ describe("low level http 1 connection operations", function()
 			assert.same({nil, ce.EPIPE}, {s:read_header()})
 		end
 		do -- closed after new line
-			-- unknown if this it was going to be a header continuation or not
+			-- unknown if it was going to be a header continuation or not
 			local s, c = new_pair(1.1)
 			c = c:take_socket()
 			assert(c:xwrite("foo: bar\r\n", "bn"))
@@ -259,12 +259,16 @@ describe("low level http 1 connection operations", function()
 		end
 		do -- no field name
 			local s, c = new_pair(1.1)
-			assert(c:take_socket():xwrite(": fs\r\n\r\n", "bn"))
+			c = c:take_socket()
+			assert(c:xwrite(": fs\r\n\r\n", "bn"))
+			c:close()
 			assert.same({nil, "invalid header", ce.ENOMSG}, {s:read_header()})
 		end
 		do -- no colon
 			local s, c = new_pair(1.1)
-			assert(c:take_socket():xwrite("foo bar\r\n\r\n", "bn"))
+			c = c:take_socket()
+			assert(c:xwrite("foo bar\r\n\r\n", "bn"))
+			c:close()
 			assert.same({nil, "invalid header", ce.ENOMSG}, {s:read_header()})
 		end
 	end)
@@ -372,19 +376,20 @@ describe("high level http1 connection operations", function()
 		local cq = cqueues.new()
 		cq:wrap(function()
 			local stream = s:get_next_incoming_stream()
+			cq:wrap(function()
+				assert.same({nil, ce.ETIMEDOUT}, {s:get_next_incoming_stream(0.05)})
+			end)
 			cqueues.sleep(0.1)
 			stream:shutdown()
-		end)
-		cq:wrap(function()
-			cqueues.poll() -- yield so that other thread goes first
-			assert.same({nil, ce.ETIMEDOUT}, {s:get_next_incoming_stream(0.05)})
 		end)
 		assert(cq:loop())
 	end)
 	it(":get_next_incoming_stream returns nil, EPIPE when no data", function()
 		local s, c = new_pair(1.1)
 		c:close()
-		s:read_status_line() -- do a read option so we note the EOF
+		-- perform a read operation so we note the EOF
+		assert.same({nil, ce.EPIPE}, {s:read_status_line()})
+		-- now waiting for a stream should return EPIPE
 		assert.same({nil, ce.EPIPE}, {s:get_next_incoming_stream()})
 	end)
 end)
