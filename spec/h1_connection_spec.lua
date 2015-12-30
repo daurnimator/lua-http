@@ -225,52 +225,74 @@ describe("low level http 1 connection operations", function()
 			assert(cq:loop())
 		end
 	end)
-	it(":read_header should handle failure conditions", function()
-		do -- no data
+	describe(":read_header should handle failure conditions", function()
+		it("handles no data", function()
 			local s, c = new_pair(1.1)
 			c:close()
 			assert.same({nil, ce.EPIPE}, {s:read_header()})
-		end
-		do -- sudden connection close
+		end)
+		it("handles sudden connection close", function()
 			local s, c = new_pair(1.1)
 			c = c:take_socket()
 			assert(c:xwrite("foo", "bn"))
 			c:close()
 			assert.same({nil, ce.EPIPE}, {s:read_header()})
-		end
-		do -- closed after new line
+		end)
+		it("handles sudden connection close after field name", function()
+			local s, c = new_pair(1.1)
+			c = c:take_socket()
+			assert(c:xwrite("foo:", "bn"))
+			c:close()
+			assert.same({nil, ce.EPIPE}, {s:read_header()})
+		end)
+		it("handles sudden connection close after :", function()
+			local s, c = new_pair(1.1)
+			c = c:take_socket()
+			assert(c:xwrite("foo: ba", "bn"))
+			c:close()
+			assert.same({nil, ce.EPIPE}, {s:read_header()})
+		end)
+		it("handles has carriage return but no new line", function()
+			-- unknown if it was going to be a header continuation or not
+			local s, c = new_pair(1.1)
+			c = c:take_socket()
+			assert(c:xwrite("foo: bar\r", "bn"))
+			c:close()
+			assert.same({nil, ce.EPIPE}, {s:read_header()})
+		end)
+		it("handles closed after new line", function()
 			-- unknown if it was going to be a header continuation or not
 			local s, c = new_pair(1.1)
 			c = c:take_socket()
 			assert(c:xwrite("foo: bar\r\n", "bn"))
 			c:close()
 			assert.same({nil, ce.EPIPE}, {s:read_header()})
-		end
-		do -- timeout
+		end)
+		it("handles timeout", function()
 			local s, c = new_pair(1.1)
 			assert.same({nil, ce.ETIMEDOUT}, {s:read_header(0.01)})
 			c:close()
-		end
-		do -- connection reset
+		end)
+		it("handles connection reset", function()
 			local s, c = new_pair(1.1)
 			assert(s:write_body_plain("something that flushes"))
 			c:close()
 			assert.same({nil, "read: Connection reset by peer", ce.ECONNRESET}, {s:read_header()})
-		end
-		do -- no field name
+		end)
+		it("handles no field name", function()
 			local s, c = new_pair(1.1)
 			c = c:take_socket()
 			assert(c:xwrite(": fs\r\n\r\n", "bn"))
 			c:close()
 			assert.same({nil, ce.EPIPE}, {s:read_header()})
-		end
-		do -- no colon
+		end)
+		it("handles no colon", function()
 			local s, c = new_pair(1.1)
 			c = c:take_socket()
 			assert(c:xwrite("foo bar\r\n\r\n", "bn"))
 			c:close()
 			assert.same({nil, ce.EPIPE}, {s:read_header()})
-		end
+		end)
 	end)
 	it(":read_headers_done should handle failure conditions", function()
 		do -- no data
