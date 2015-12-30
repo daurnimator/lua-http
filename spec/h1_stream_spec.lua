@@ -3,6 +3,7 @@ describe("http1 stream", function()
 	local h1_connection = require "http.h1_connection"
 	local new_headers = require "http.headers".new
 	local cqueues = require "cqueues"
+	local ce = require "cqueues.errno"
 	local cs = require "cqueues.socket"
 	local cc = require "cqueues.condition"
 	local function assert_loop(cq, timeout)
@@ -93,14 +94,14 @@ describe("http1 stream", function()
 			assert(a:write_chunk("body", true))
 			assert(assert(a:get_headers()):get(":status") == "200")
 			assert(a:get_next_chunk() == "done")
-			assert(a:get_next_chunk() == nil)
+			assert.same({nil, ce.EPIPE}, {a:get_next_chunk()})
 		end)
 		cq:wrap(function()
 			local b = assert(server:get_next_incoming_stream())
 			assert(b:get_headers())
 			assert(b:write_continue())
 			assert(b:get_next_chunk() == "body")
-			assert(b:get_next_chunk() == nil)
+			assert.same({nil, ce.EPIPE}, {b:get_next_chunk()})
 			local h = new_headers()
 			h:append(":status", "200")
 			assert(b:write_headers(h, false))
