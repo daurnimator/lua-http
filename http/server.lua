@@ -64,7 +64,7 @@ local function wrap_socket(self, socket, deadline)
 			local proto = ssl:getAlpnSelected()
 			if proto == "h2" then
 				is_h2 = true
-			elseif proto == nil then
+			elseif proto == nil or proto == "http/1.1" then
 				is_h2 = false
 			else
 				return nil, "unexpected ALPN protocol: " .. proto
@@ -109,10 +109,12 @@ local function handle_client(conn, on_stream)
 	return true
 end
 
--- Pick h2 if available
-local function pick_h2(ssl, protos) -- luacheck: ignore 212
+-- Prefer whichever comes first
+local function alpn_select(ssl, protos) -- luacheck: ignore 212
 	for _, proto in ipairs(protos) do
-		if proto == "h2" then return "h2" end
+		if proto == "h2" or proto == "http/1.1" then
+			return proto
+		end
 	end
 	return nil
 end
@@ -121,7 +123,7 @@ end
 local function new_ctx(host)
 	local ctx = http_tls.new_server_context()
 	if ctx.setAlpnSelect then
-		ctx:setAlpnSelect(pick_h2)
+		ctx:setAlpnSelect(alpn_select)
 	end
 	local crt = x509.new()
 	-- serial needs to be unique or browsers will show uninformative error messages

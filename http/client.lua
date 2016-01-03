@@ -10,8 +10,10 @@ local default_h1_ctx = http_tls.new_client_context()
 local default_h2_ctx
 -- if ALPN is not supported; do not create h2 context
 if http_tls.has_alpn then
+	default_h1_ctx:setAlpnProtos({"http/1.1"})
+
 	default_h2_ctx = http_tls.new_client_context()
-	default_h2_ctx:setAlpnProtos({"h2"})
+	default_h2_ctx:setAlpnProtos({"h2", "http/1.1"})
 end
 
 local function connect(options, timeout)
