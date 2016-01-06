@@ -77,7 +77,7 @@ describe("http2 connection", function()
 		assert_loop(cq, TEST_TIMEOUT)
 		assert.truthy(cq:empty())
 	end)
-	pending("waits for peer flow #credits", function()
+	it("waits for peer flow #credits", function()
 		local c, s = cs.pair()
 		local cq = cqueues.new()
 		local client_stream
@@ -102,7 +102,8 @@ describe("http2 connection", function()
 				assert(client_stream.peer_flow_credits_increase:wait(TEST_TIMEOUT/2), "no stream credits")
 			end)
 			cond:wait() -- wait for above threads to get scheduled
-			assert(client_stream:write_chunk(("really long string"):rep(1e6), true))
+			assert(client_stream:write_chunk(("really long string"):rep(1e4), true))
+			assert_loop(c)
 			assert(c:close())
 		end)
 		local len = 0
