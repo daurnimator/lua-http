@@ -21,6 +21,47 @@ describe("http1 stream", function()
 		c = h1_connection.new(c, "client", version)
 		return s, c
 	end
+	it("Can read content-length delimited stream", function()
+		local server, client = new_pair(1.1)
+		local cq = cqueues.new()
+		cq:wrap(function()
+			do
+				local stream = client:new_stream()
+				local headers = new_headers()
+				headers:append(":method", "GET")
+				headers:append(":path", "/a")
+				headers:append("content-length", "100")
+				stream:write_headers(headers, false)
+				stream:write_chunk(("b"):rep(100), true)
+			end
+			do
+				local stream = client:new_stream()
+				local headers = new_headers()
+				headers:append(":method", "GET")
+				headers:append(":path", "/b")
+				headers:append("content-length", "0")
+				stream:write_headers(headers, true)
+			end
+		end)
+		cq:wrap(function()
+			do
+				local stream = server:get_next_incoming_stream()
+				local headers = assert(stream:read_headers())
+				local body = assert(stream:get_body_as_string())
+				assert.same(100, tonumber(headers:get("content-length")))
+				assert.same(100, #body)
+			end
+			do
+				local stream = server:get_next_incoming_stream()
+				local headers = assert(stream:read_headers())
+				local body = assert(stream:get_body_as_string())
+				assert.same(0, tonumber(headers:get("content-length")))
+				assert.same(0, #body)
+			end
+		end)
+		assert_loop(cq, TEST_TIMEOUT)
+		assert.truthy(cq:empty())
+	end)
 	it("allows pipelining", function()
 		local server, client = new_pair(1.1)
 		local cq = cqueues.new()
