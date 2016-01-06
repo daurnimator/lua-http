@@ -99,9 +99,9 @@ function stream_methods:write_body_from_file(file, timeout)
 			end
 			break
 		end
-		local ok, err2 = self:write_chunk(chunk, false, deadline and (deadline-monotime()))
+		local ok, err2, errno2 = self:write_chunk(chunk, false, deadline and (deadline-monotime()))
 		if not ok then
-			return nil, err2
+			return nil, err2, errno2
 		end
 	end
 	return self:write_chunk("", true, deadline and (deadline-monotime()))

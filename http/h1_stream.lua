@@ -374,12 +374,9 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		if status_code then
 			-- Should send status line
 			local reason_phrase = reason_phrases[status_code]
-			local ok, err = self.connection:write_status_line(self.connection.version, status_code, reason_phrase, deadline and (deadline-monotime()))
+			local ok, err, errno = self.connection:write_status_line(self.connection.version, status_code, reason_phrase, deadline and (deadline-monotime()))
 			if not ok then
-				if err == ce.EPIPE or err == ce.ETIMEDOUT then
-					return nil, err
-				end
-				error(err)
+				return nil, err, errno
 			end
 		end
 	else -- client
@@ -403,12 +400,9 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 			self.connection.pipeline:push(self)
 			self.connection.req_locked = self
 			-- write request line
-			local ok, err = self.connection:write_request_line(method, path, self.connection.version, deadline and (deadline-monotime()))
+			local ok, err, errno = self.connection:write_request_line(method, path, self.connection.version, deadline and (deadline-monotime()))
 			if not ok then
-				if err == ce.EPIPE or err == ce.ETIMEDOUT then
-					return nil, err
-				end
-				error(err)
+				return nil, err, errno
 			end
 			self:set_state("open")
 		else
@@ -522,12 +516,9 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 					connection_header.n = connection_header.n + 1
 					connection_header[connection_header.n] = "te"
 				end
-				local ok, err = self.connection:write_header("te", "gzip", deadline and (deadline-monotime()))
+				local ok, err, errno = self.connection:write_header("te", "gzip", deadline and (deadline-monotime()))
 				if not ok then
-					if err == ce.EPIPE or err == ce.ETIMEDOUT then
-						return nil, err
-					end
-					error(err)
+					return nil, err, errno
 				end
 			else -- server
 				-- Whether to use transfer-encoding: gzip
@@ -558,23 +549,17 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 
 	for name, value in headers:each() do
 		if not ignore_fields[name] then
-			local ok, err = self.connection:write_header(name, value, deadline and (deadline-monotime()))
+			local ok, err, errno = self.connection:write_header(name, value, deadline and (deadline-monotime()))
 			if not ok then
-				if err == ce.EPIPE or err == ce.ETIMEDOUT then
-					return nil, err
-				end
-				error(err)
+				return nil, err, errno
 			end
 		elseif name == ":authority" then
 			-- for CONNECT requests, :authority is the path
 			if self.req_method ~= "CONNECT" then
 				-- otherwise it's the Host header
-				local ok, err = self.connection:write_header("host", value, deadline and (deadline-monotime()))
+				local ok, err, errno = self.connection:write_header("host", value, deadline and (deadline-monotime()))
 				if not ok then
-					if err == ce.EPIPE or err == ce.ETIMEDOUT then
-						return nil, err
-					end
-					error(err)
+					return nil, err, errno
 				end
 			end
 		end
@@ -588,50 +573,35 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 			connection_header[connection_header.n] = "transfer-encoding"
 		end
 		local value = table.concat(transfer_encoding_header, ",", 1, transfer_encoding_header.n)
-		local ok, err = self.connection:write_header("transfer-encoding", value, deadline and (deadline-monotime()))
+		local ok, err, errno = self.connection:write_header("transfer-encoding", value, deadline and (deadline-monotime()))
 		if not ok then
-			if err == ce.EPIPE or err == ce.ETIMEDOUT then
-				return nil, err
-			end
-			error(err)
+			return nil, err, errno
 		end
 	elseif cl then
-		local ok, err = self.connection:write_header("content-length", cl, deadline and (deadline-monotime()))
+		local ok, err, errno = self.connection:write_header("content-length", cl, deadline and (deadline-monotime()))
 		if not ok then
-			if err == ce.EPIPE or err == ce.ETIMEDOUT then
-				return nil, err
-			end
-			error(err)
+			return nil, err, errno
 		end
 	end
 	if connection_header.n > 0 then
 		local value = table.concat(connection_header, ",", 1, connection_header.n)
-		local ok, err = self.connection:write_header("connection", value, deadline and (deadline-monotime()))
+		local ok, err, errno = self.connection:write_header("connection", value, deadline and (deadline-monotime()))
 		if not ok then
-			if err == ce.EPIPE or err == ce.ETIMEDOUT then
-				return nil, err
-			end
-			error(err)
+			return nil, err, errno
 		end
 	end
 
 	do
-		local ok, err = self.connection:write_headers_done(deadline and (deadline-monotime()))
+		local ok, err, errno = self.connection:write_headers_done(deadline and (deadline-monotime()))
 		if not ok then
-			if err == ce.EPIPE or err == ce.ETIMEDOUT then
-				return nil, err
-			end
-			error(err)
+			return nil, err, errno
 		end
 	end
 
 	if end_stream then
-		local ok, err = self:write_chunk("", true)
+		local ok, err, errno = self:write_chunk("", true)
 		if not ok then
-			if err == ce.EPIPE or err == ce.ETIMEDOUT then
-				return nil, err
-			end
-			error(err)
+			return nil, err, errno
 		end
 	end
 
@@ -735,41 +705,29 @@ function stream_methods:write_chunk(chunk, end_stream, timeout)
 	if self.body_write_type == "chunked" then
 		local deadline = timeout and (monotime()+timeout)
 		if #chunk > 0 then
-			local ok, err = self.connection:write_body_chunk(chunk, nil, timeout)
+			local ok, err, errno = self.connection:write_body_chunk(chunk, nil, timeout)
 			if not ok then
-				if err == ce.EPIPE or err == ce.ETIMEDOUT then
-					return nil, err
-				end
-				error(err)
+				return nil, err, errno
 			end
 			timeout = deadline and (deadline-monotime())
 		end
 		if end_stream then
-			local ok, err = self.connection:write_body_last_chunk(nil, timeout)
+			local ok, err, errno = self.connection:write_body_last_chunk(nil, timeout)
 			if not ok then
-				if err == ce.EPIPE or err == ce.ETIMEDOUT then
-					return nil, err
-				end
-				error(err)
+				return nil, err, errno
 			end
 			-- TODO: trailers?
 			timeout = deadline and (deadline-monotime())
-			ok, err = self.connection:write_headers_done(timeout)
+			ok, err, errno = self.connection:write_headers_done(timeout)
 			if not ok then
-				if err == ce.EPIPE or err == ce.ETIMEDOUT then
-					return nil, err
-				end
-				error(err)
+				return nil, err, errno
 			end
 		end
 	elseif self.body_write_type == "length" then
 		if #chunk > 0 then
-			local ok, err = self.connection:write_body_plain(chunk, timeout)
+			local ok, err, errno = self.connection:write_body_plain(chunk, timeout)
 			if not ok then
-				if err == ce.EPIPE or err == ce.ETIMEDOUT then
-					return nil, err
-				end
-				error(err)
+				return nil, err, errno
 			end
 			self.body_write_left = self.body_write_left - #chunk
 		end
@@ -778,12 +736,9 @@ function stream_methods:write_chunk(chunk, end_stream, timeout)
 		end
 	elseif self.body_write_type == "close" then
 		if #chunk > 0 then
-			local ok, err = self.connection:write_body_plain(chunk, timeout)
+			local ok, err, errno = self.connection:write_body_plain(chunk, timeout)
 			if not ok then
-				if err == ce.EPIPE or err == ce.ETIMEDOUT then
-					return nil, err
-				end
-				error(err)
+				return nil, err, errno
 			end
 		end
 	elseif self.body_write_type ~= "missing" then
