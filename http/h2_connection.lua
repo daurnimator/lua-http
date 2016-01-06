@@ -347,9 +347,9 @@ function connection_methods:get_next_incoming_stream(timeout)
 		end
 		local which = cqueues.poll(self, self.new_streams_cond, self.recv_goaway, timeout)
 		if which == self then
-			local ok, err = self:step(0)
+			local ok, err, errno = self:step(0)
 			if not ok then
-				return nil, err
+				return nil, err, errno
 			end
 		elseif which == timeout then
 			return nil, ce.ETIMEDOUT
@@ -431,7 +431,10 @@ function connection_methods:ping(timeout)
 		timeout = deadline and (deadline-monotime())
 		local which = cqueues.poll(self, cond, timeout)
 		if which == self then
-			assert(self:step(0))
+			local ok, err, errno = self:step(0)
+			if not ok then
+				return nil, err, errno
+			end
 		elseif which == timeout then
 			return nil, ce.ETIMEDOUT
 		end
@@ -478,9 +481,9 @@ function connection_methods:settings(tbl, timeout)
 		timeout = deadline and (deadline-monotime())
 		local which = cqueues.poll(self, self.send_settings_ack_cond, timeout)
 		if which == self then
-			local ok2, err2 = self:step(0)
+			local ok2, err2, errno2 = self:step(0)
 			if not ok2 then
-				return nil, err2
+				return nil, err2, errno2
 			end
 		elseif which ~= self.send_settings_ack_cond then
 			self:write_goaway_frame(nil, h2_error.errors.SETTINGS_TIMEOUT.code, "timeout exceeded")

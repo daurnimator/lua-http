@@ -895,9 +895,9 @@ function stream_methods:get_headers(timeout)
 		end
 		local which = cqueues.poll(self.connection, self.recv_headers_cond, timeout)
 		if which == self.connection then
-			local ok, err = self.connection:step(0)
+			local ok, err, errno = self.connection:step(0)
 			if not ok then
-				return nil, err
+				return nil, err, errno
 			end
 		elseif which == timeout then
 			return nil, ce.ETIMEDOUT
@@ -919,9 +919,9 @@ function stream_methods:get_next_chunk(timeout)
 		end
 		local which = cqueues.poll(self.connection, self.chunk_cond, timeout)
 		if which == self.connection then
-			local ok, err = self.connection:step(0)
+			local ok, err, errno = self.connection:step(0)
 			if not ok then
-				return nil, err
+				return nil, err, errno
 			end
 		elseif which == timeout then
 			return nil, ce.ETIMEDOUT
