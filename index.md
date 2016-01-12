@@ -301,6 +301,44 @@ a `http.h2_stream` has the following methods:
 
 ## http.headers
 
+An ordered list of header fields.
+Each field has a *name*, a *value* and a *never_index* flag that indicates if the header field is potentially sensitive data.
+
+Each headers object has an index by field name to efficiently retrieve values by key. Keep in mind that there can be multiple values for a given field name. (e.g. an HTTP server may send two `Set-Cookie` headers).
+
+### `new()` {#http.headers.new}
+
+Creates and returns a new headers object.
+
+
+### `headers:len()` {#http.headers:len}
+
+### `headers:clone()` {#http.headers:clone}
+
+### `headers:append(name, value, never_index)` {#http.headers:append}
+
+### `headers:each()` {#http.headers:each}
+
+### `headers:has(name)` {#http.headers:has}
+
+### `headers:delete(name)` {#http.headers:delete}
+
+### `headers:geti(i)` {#http.headers:geti}
+
+### `headers:get_as_sequence(name)` {#http.headers:get_as_sequence}
+
+### `headers:get(name)` {#http.headers:get}
+
+### `headers:get_comma_separated(name)` {#http.headers:get_comma_separated}
+
+### `headers:get_split_as_sequence(name)` {#http.headers:get_split_as_sequence}
+
+### `headers:modifyi(i, value, never_index)` {#http.headers:modifyi}
+
+### `headers:upsert(name, value, never_index)` {#http.headers:upsert}
+
+### `headers:sort()` {#http.headers:sort}
+
 
 ## http.hpack
 
