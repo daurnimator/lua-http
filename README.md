@@ -6,6 +6,11 @@
   - Compatible with Lua 5.1, 5.2, 5.3 and [LuaJIT](http://luajit.org/)
 
 
+## Documentation
+
+Can be found at [https://daurnimator.github.io/lua-http/](https://daurnimator.github.io/lua-http/)
+
+
 # Status
 
 This project is a work in progress and not ready for production use.
@@ -91,7 +96,7 @@ If using lua 5.1 you will need
 
 Documentation is written in markdown and intended to be consumed by [pandoc](http://pandoc.org/)
 
-  - To generate HTML documentation:
+  - To generate self-contained HTML documentation:
     ```
     $ pandoc -t html5 --template=doc/template.html --section-divs --self-contained --toc -c doc/site.css doc/index.md doc/metadata.yaml
     ```
