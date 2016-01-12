@@ -1,9 +1,3 @@
-
----
-title: lua-http
-subtitle: HTTP library for Lua
-...
-
 # Intro
 
 
