@@ -86,3 +86,12 @@ If using lua 5.1 you will need
     ```
     $ luarocks make http-scm-0.rockspec
     ```
+
+## Generating documentation
+
+Documentation is written in markdown and intended to be consumed by [pandoc](http://pandoc.org/)
+
+  - To generate HTML documentation:
+    ```
+    $ pandoc -s -t html5 --toc -c site/site.css -i doc/index.md
+    ```
