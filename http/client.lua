@@ -1,5 +1,6 @@
 local monotime = require "cqueues".monotime
 local cs = require "cqueues.socket"
+local ce = require "cqueues.errno"
 local http_tls = require "http.tls"
 local new_h1_connection = require "http.h1_connection".new
 local new_h2_connection = require "http.h2_connection".new
@@ -16,15 +17,30 @@ if http_tls.has_alpn then
 	default_h2_ctx:setAlpnProtos({"h2", "http/1.1"})
 end
 
+local function onerror(socket, op, why, lvl) -- luacheck: ignore 212
+	if why == ce.EPIPE or why == ce.ETIMEDOUT then
+		return why
+	end
+	return string.format("%s: %s", op, ce.strerror(why)), why
+end
+
 local function connect(options, timeout)
 	local deadline = timeout and (monotime()+timeout)
-	local s = assert(cs.connect({
-		host = options.host;
-		port = options.port;
-		sendname = options.sendname;
-		v6only = options.v6only;
-		nodelay = true;
-	}))
+	local s do
+		local errno
+		s, errno = cs.connect {
+			family = options.family;
+			host = options.host;
+			port = options.port;
+			sendname = options.sendname;
+			v6only = options.v6only;
+			nodelay = true;
+		}
+		if s == nil then
+			return nil, ce.strerror(errno), errno
+		end
+	end
+	s:onerror(onerror)
 	local tls = options.tls
 	local version = options.version
 	if tls then
@@ -39,7 +55,10 @@ local function connect(options, timeout)
 				tls = default_h2_ctx or default_h1_ctx
 			end
 		end
-		assert(s:starttls(tls, timeout))
+		local ok, err, errno = s:starttls(tls, timeout)
+		if not ok then
+			return nil, err, errno
+		end
 	end
 	if version == nil then
 		if tls then
