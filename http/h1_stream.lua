@@ -481,8 +481,8 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 				-- for HTTP/1.1, we can fall-back to a chunked encoding
 					-- chunked is mandatory to implement in HTTP/1.1
 					-- this requires amending the transfer-encoding header
-				-- for a HTTP/1.0 server, we fall-back to closing the connection at the end of the stream
-				-- else is a HTTP/1.0 client with `connection: keep-alive` but no other header indicating the body form.
+				-- for an HTTP/1.0 server, we fall-back to closing the connection at the end of the stream
+				-- else is an HTTP/1.0 client with `connection: keep-alive` but no other header indicating the body form.
 					-- this cannot be reasonably handled, so throw an error.
 			if transfer_encoding_header[transfer_encoding_header.n] == "chunked" then
 				self.body_write_type = "chunked"

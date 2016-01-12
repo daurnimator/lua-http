@@ -119,7 +119,7 @@ local function new_connection(socket, conn_type, settings, timeout)
 			return nil, err
 		end
 		if not ok then
-			h2_error.errors.PROTOCOL_ERROR("invalid connection preface. not a http2 client?")
+			h2_error.errors.PROTOCOL_ERROR("invalid connection preface. not an http2 client?")
 		end
 	else
 		error('invalid connection type. must be "client" or "server"')

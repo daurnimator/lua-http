@@ -1,4 +1,4 @@
--- This module implements the socket level functionality needed for a HTTP 1 connection
+-- This module implements the socket level functionality needed for an HTTP 1 connection
 
 local cqueues = require "cqueues"
 local monotime = cqueues.monotime

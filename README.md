@@ -22,7 +22,7 @@ This project is a work in progress and not ready for production use.
   - [ ] [`socket.http`](http://w3.impa.br/~diego/software/luasocket/http.html) compatibility layer
   - [x] Prosody [`net.http`](https://prosody.im/doc/developers/net/http) compatibility layer
   - [x] Handle redirects
-  - [ ] Be able to use a HTTP proxy
+  - [ ] Be able to use an HTTP proxy
   - [x] Compression (e.g. gzip)
   - [ ] Websockets
 

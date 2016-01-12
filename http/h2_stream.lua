@@ -311,7 +311,7 @@ local function validate_headers(headers, is_request, nth_header, ended_stream)
 				return nil, h2_errors.PROTOCOL_ERROR:traceback("Trailers MUST be at end of stream", true)
 			end
 		elseif nth_header > 2 then
-			return nil, h2_errors.PROTOCOL_ERROR:traceback("A HTTP request consists of maximum 2 HEADER blocks", true)
+			return nil, h2_errors.PROTOCOL_ERROR:traceback("An HTTP request consists of maximum 2 HEADER blocks", true)
 		end
 	else
 		--[[ For HTTP/2 responses, a single :status pseudo-header field is

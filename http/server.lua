@@ -39,7 +39,7 @@ local function is_tls_client_hello(socket, timeout)
 	return use_tls
 end
 
--- Wrap a bare cqueues socket in a http connection of a suitable version
+-- Wrap a bare cqueues socket in an HTTP connection of a suitable version
 -- Starts TLS if necessary
 -- this function *should never throw*
 local function wrap_socket(self, socket, deadline)
@@ -71,7 +71,7 @@ local function wrap_socket(self, socket, deadline)
 			end
 		end
 	end
-	-- Still not sure if incoming connection is a http1 or http2 connection
+	-- Still not sure if incoming connection is an HTTP1 or HTTP2 connection
 	-- Need to sniff for the h2 connection preface to find out for sure
 	if is_h2 == nil then
 		local err, errno
