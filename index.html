@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="pandoc">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>lua-http</title>
+  <style type="text/css">code{white-space: pre;}</style>
+  <style type="text/css">
+div.sourceCode { overflow-x: auto; }
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code > span.dt { color: #902000; } /* DataType */
+code > span.dv { color: #40a070; } /* DecVal */
+code > span.bn { color: #40a070; } /* BaseN */
+code > span.fl { color: #40a070; } /* Float */
+code > span.ch { color: #4070a0; } /* Char */
+code > span.st { color: #4070a0; } /* String */
+code > span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code > span.ot { color: #007020; } /* Other */
+code > span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code > span.fu { color: #06287e; } /* Function */
+code > span.er { color: #ff0000; font-weight: bold; } /* Error */
+code > span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+code > span.cn { color: #880000; } /* Constant */
+code > span.sc { color: #4070a0; } /* SpecialChar */
+code > span.vs { color: #4070a0; } /* VerbatimString */
+code > span.ss { color: #bb6688; } /* SpecialString */
+code > span.im { } /* Import */
+code > span.va { color: #19177c; } /* Variable */
+code > span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code > span.op { color: #666666; } /* Operator */
+code > span.bu { } /* BuiltIn */
+code > span.ex { } /* Extension */
+code > span.pp { color: #bc7a00; } /* Preprocessor */
+code > span.at { color: #7d9029; } /* Attribute */
+code > span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code > span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code > span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+  </style>
+  <link rel="stylesheet" href="site.css">
+  <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
+  <![endif]-->
+</head>
+<body>
+<div class="meta">
+<header>
+<h1 class="title">lua-http</h1>
+<h1 class="subtitle">HTTP library for Lua</h1>
+</header>
+<nav id="TOC">
+<ul>
+<li><a href="#introduction">Introduction</a><ul>
+<li><a href="#conventions">Conventions</a><ul>
+<li><a href="#errors">Errors</a></li>
+</ul></li>
+<li><a href="#terminology">Terminology</a></li>
+<li><a href="#common-use-cases">Common use cases</a></li>
+<li><a href="#asynchronous-operation">Asynchronous Operation</a></li>
+</ul></li>
+<li><a href="#modules">Modules</a><ul>
+<li><a href="#http.bit">http.bit</a><ul>
+<li><a href="#banda-b"><code id="http.bit.band">band(a, b)</code></a></li>
+<li><a href="#bora-b"><code id="http.bit.bor">bor(a, b)</code></a></li>
+<li><a href="#bxora-b"><code id="http.bit.bxor">bxor(a, b)</code></a></li>
+<li><a href="#http.bit-example">Example</a></li>
+</ul></li>
+<li><a href="#http.client">http.client</a><ul>
+<li><a href="#connectoptions-timeout"><code id="http.client.connect">connect(options, timeout)</code></a></li>
+<li><a href="#http.client-example">Example</a></li>
+</ul></li>
+<li><a href="#http.h1_connection">http.h1_connection</a></li>
+<li><a href="#http.h1_reason_phrases">http.h1_reason_phrases</a><ul>
+<li><a href="#http.h1_reason_phrases-example">Example</a></li>
+</ul></li>
+<li><a href="#http.h1_stream">http.h1_stream</a></li>
+<li><a href="#http.h2_connection">http.h2_connection</a></li>
+<li><a href="#http.h2_error">http.h2_error</a></li>
+<li><a href="#http.h2_stream">http.h2_stream</a></li>
+<li><a href="#http.headers">http.headers</a></li>
+<li><a href="#http.hpack">http.hpack</a></li>
+<li><a href="#http.request">http.request</a><ul>
+<li><a href="#new_from_uriuri"><code id="http.request.new_from_uri">new_from_uri(uri)</code></a></li>
+</ul></li>
+<li><a href="#http.server">http.server</a></li>
+<li><a href="#http.stream_common">http.stream_common</a></li>
+<li><a href="#http.tls">http.tls</a></li>
+<li><a href="#http.util">http.util</a></li>
+<li><a href="#http.zlib">http.zlib</a><ul>
+<li><a href="#engine"><code id="http.zlib.engine">engine</code></a></li>
+<li><a href="#inflate"><code id="http.zlib.inflate">inflate()</code></a></li>
+<li><a href="#deflate"><code id="http.zlib.deflate">deflate()</code></a></li>
+<li><a href="#http.zlib-example">Example</a></li>
+</ul></li>
+<li><a href="#http.compat.prosody">http.compat.prosody</a><ul>
+<li><a href="#requesturl-ex-callback"><code id="http.compat.prosody.request">request(url, ex, callback)</code></a></li>
+<li><a href="#http.compat.prosody-example">Example</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#links">Links</a></li>
+</ul>
+</nav>
+</div>
+<main>
+<section id="introduction" class="level1">
+<h1>Introduction</h1>
+<section id="conventions" class="level2">
+<h2>Conventions</h2>
+<p>Operations that may block the current thread take an optional timeout.</p>
+<p>HTTP 1 request and status line fields are passed around inside of <a href="#http.headers">headers</a> objects under keys <code>&quot;:authority&quot;</code>, <code>&quot;:method&quot;</code>, <code>&quot;:path&quot;</code>, <code>&quot;:scheme&quot;</code> and <code>&quot;:status&quot;</code> as defined in HTTP 2. As such, they are all kept in string form (important to remember for the <code>:status</code> field).</p>
+<p>Header fields should always be used with lower case keys.</p>
+<section id="errors" class="level3">
+<h3>Errors</h3>
+<p>Invalid function parameters will throw a lua error (if validated).</p>
+<p>Errors are returned as <code>nil, error, errno</code> unless noted otherwise.</p>
+<p>Some HTTP 2 operations return/throw special <a href="#http.h2_error">http 2 error objects</a>.</p>
+</section>
+</section>
+<section id="terminology" class="level2">
+<h2>Terminology</h2>
+<p>Much lua-http terminology is borrowed from HTTP 2.</p>
+<p>A &quot;connection&quot; is an abstraction over the underlying socket.</p>
+<p>A &quot;stream&quot; is a request/response on a connection.</p>
+</section>
+<section id="common-use-cases" class="level2">
+<h2>Common use cases</h2>
+<p>The highest level interface for clients is <a href="#http.request"><code>http.request</code></a>. By constructing a request object from a uri using <a href="#http.request.new_from_uri"><code>new_from_uri</code></a> and immediately evaluating it, you can easily fetch an HTTP resource.</p>
+<div class="sourceCode"><pre class="sourceCode lua"><code class="sourceCode lua"><span class="kw">local</span> http_request <span class="ot">=</span> <span class="fu">require</span> <span class="st">&quot;http.request&quot;</span>
+<span class="kw">local</span> headers<span class="ot">,</span> stream <span class="ot">=</span> <span class="fu">assert</span><span class="ot">(</span>http_request<span class="ot">.</span>new_from_uri<span class="ot">(</span><span class="st">&quot;http://example.com&quot;</span><span class="ot">)</span>:go<span class="ot">())</span>
+<span class="kw">local</span> body <span class="ot">=</span> <span class="fu">assert</span><span class="ot">(</span>stream:get_body_as_string<span class="ot">())</span>
+<span class="kw">if</span> headers:get <span class="st">&quot;:status&quot;</span> <span class="ot">~=</span> <span class="st">&quot;200&quot;</span> <span class="kw">then</span>
+    <span class="fu">error</span><span class="ot">(</span>body<span class="ot">)</span>
+<span class="kw">end</span>
+<span class="fu">print</span><span class="ot">(</span>body<span class="ot">)</span></code></pre></div>
+</section>
+<section id="asynchronous-operation" class="level2">
+<h2>Asynchronous Operation</h2>
+<p>All lua-http operations include DNS lookup, connection, TLS negotiation, and read/write operations are asynchronous when run inside of a cqueue. <a href="http://25thandclement.com/~william/projects/cqueues.html">Cqueues</a> is a lua library that allows for composable event loops. Cqueues can be integrated with almost any main loop or event library you may encounter (see <a href="https://github.com/wahern/cqueues/wiki/Integrations-with-other-main-loops">here</a> for more information + samples), and hence lua-http can be asynchronous in any place you write lua!</p>
+</section>
+</section>
+<section id="modules" class="level1">
+<h1>Modules</h1>
+<section id="http.bit" class="level2">
+<h2>http.bit</h2>
+<p>An abstraction layer over the various lua bit libraries.</p>
+<p>Results are only consistent between underlying implementations when parameters and results are in the range of <code>0</code> to <code>0x7fffffff</code>.</p>
+<section id="banda-b" class="level3">
+<h3><code id="http.bit.band">band(a, b)</code></h3>
+</section>
+<section id="bora-b" class="level3">
+<h3><code id="http.bit.bor">bor(a, b)</code></h3>
+</section>
+<section id="bxora-b" class="level3">
+<h3><code id="http.bit.bxor">bxor(a, b)</code></h3>
+</section>
+<section id="http.bit-example" class="level3">
+<h3>Example</h3>
+<div class="sourceCode"><pre class="sourceCode lua"><code class="sourceCode lua"><span class="kw">local</span> bit <span class="ot">=</span> <span class="fu">require</span> <span class="st">&quot;http.bit&quot;</span>
+<span class="fu">print</span><span class="ot">(</span>bit<span class="ot">.</span>band<span class="ot">(</span><span class="dv">1</span><span class="ot">,</span> <span class="dv">3</span><span class="ot">))</span> <span class="co">--&gt; 1</span></code></pre></div>
+</section>
+</section>
+<section id="http.client" class="level2">
+<h2>http.client</h2>
+<p>Deals with obtaining a connection to an HTTP server.</p>
+<section id="connectoptions-timeout" class="level3">
+<h3><code id="http.client.connect">connect(options, timeout)</code></h3>
+<p>Creates a new connection to an HTTP server. Can try to negotiate HTTP2 if possible, but</p>
+<ul>
+<li><p><code>options</code> is a table containing:</p>
+<ul>
+<li><p><code>family</code> (integer, optional): socket family to use.<br />
+defaults to <code>AF_INET</code></p></li>
+<li><p><code>host</code> (string): host to connect to.<br />
+may be either a hostname or an ip address</p></li>
+<li><p><code>port</code> (string|integer): port to connect to in numeric form<br />
+e.g. <code>&quot;80&quot;</code> or <code>80</code></p></li>
+<li><p><code>sendname</code> (string|boolean, optional): the tls SNI host to send<br />
+defaults to <code>true</code><br />
+<code>true</code> indicates to copy the <code>host</code> field<br />
+<code>false</code> disables SNI</p></li>
+<li><p><code>v6only</code> (boolean, optional): if the <code>IPV6_V6ONLY</code> flag should be set on the underlying socket.<br />
+defaults to <code>false</code></p></li>
+<li><p><code>tls</code> (boolean|userdata, optional): the <code>SSL_CTX*</code> to use, or a boolean to indicate the default<br />
+defaults to <code>true</code><br />
+<code>true</code> indicates to use the default TLS settings, see <a href="#http.tls"><code>http.tls</code></a> for information.<br />
+<code>false</code> means do not negotiate tls</p></li>
+<li><code>version</code> (nil|1.0|1.1|2): HTTP version to use.
+<ul>
+<li><code>nil</code>: attempts HTTP 2 and falls back to HTTP 1.1</li>
+<li><code>1.0</code></li>
+<li><code>1.1</code></li>
+<li><code>2</code></li>
+</ul></li>
+<li><p><code>h2_settings</code> (table, optional): HTTP 2 settings to use<br />
+See <a href="#http.h2_connection"><code>http.h2_connection</code></a> for details</p></li>
+</ul></li>
+<li><p><code>timeout</code> (optional) is the maximum amount of time (in seconds) to allow for connection to be established.</p>
+<p>This includes time for DNS lookup, connection, TLS negotiation (if tls enabled) and in the case of HTTP2: settings exchange.</p></li>
+</ul>
+</section>
+<section id="http.client-example" class="level3">
+<h3>Example</h3>
+<p>Connect to a local http server running on port 8000</p>
+<div class="sourceCode"><pre class="sourceCode lua"><code class="sourceCode lua"><span class="kw">local</span> http_client <span class="ot">=</span> <span class="fu">require</span> <span class="st">&quot;http.client&quot;</span>
+<span class="kw">local</span> myconnection <span class="ot">=</span> http_client<span class="ot">.</span>connect <span class="ot">{</span>
+    host <span class="ot">=</span> <span class="st">&quot;localhost&quot;</span><span class="ot">;</span>
+    port <span class="ot">=</span> <span class="dv">8000</span><span class="ot">;</span>
+    tls <span class="ot">=</span> <span class="kw">false</span><span class="ot">;</span>
+<span class="ot">}</span></code></pre></div>
+</section>
+</section>
+<section id="http.h1_connection" class="level2">
+<h2>http.h1_connection</h2>
+</section>
+<section id="http.h1_reason_phrases" class="level2">
+<h2>http.h1_reason_phrases</h2>
+<p>A table mapping from status codes (as strings) to reason phrases for HTTP 1.</p>
+<p>Unknown status codes return <code>&quot;Unassigned&quot;</code></p>
+<section id="http.h1_reason_phrases-example" class="level3">
+<h3>Example</h3>
+<div class="sourceCode"><pre class="sourceCode lua"><code class="sourceCode lua"><span class="kw">local</span> reason_phrases <span class="ot">=</span> <span class="fu">require</span> <span class="st">&quot;http.h1_reason_phrases&quot;</span>
+<span class="fu">print</span><span class="ot">(</span>reason_phrases<span class="ot">[</span><span class="st">&quot;200&quot;</span><span class="ot">])</span> <span class="co">--&gt; &quot;OK&quot;</span>
+<span class="fu">print</span><span class="ot">(</span>reason_phrases<span class="ot">[</span><span class="st">&quot;342&quot;</span><span class="ot">])</span> <span class="co">--&gt; &quot;Unassigned&quot;</span></code></pre></div>
+</section>
+</section>
+<section id="http.h1_stream" class="level2">
+<h2>http.h1_stream</h2>
+</section>
+<section id="http.h2_connection" class="level2">
+<h2>http.h2_connection</h2>
+</section>
+<section id="http.h2_error" class="level2">
+<h2>http.h2_error</h2>
+</section>
+<section id="http.h2_stream" class="level2">
+<h2>http.h2_stream</h2>
+</section>
+<section id="http.headers" class="level2">
+<h2>http.headers</h2>
+</section>
+<section id="http.hpack" class="level2">
+<h2>http.hpack</h2>
+</section>
+<section id="http.request" class="level2">
+<h2>http.request</h2>
+<section id="new_from_uriuri" class="level3">
+<h3><code id="http.request.new_from_uri">new_from_uri(uri)</code></h3>
+</section>
+</section>
+<section id="http.server" class="level2">
+<h2>http.server</h2>
+</section>
+<section id="http.stream_common" class="level2">
+<h2>http.stream_common</h2>
+</section>
+<section id="http.tls" class="level2">
+<h2>http.tls</h2>
+</section>
+<section id="http.util" class="level2">
+<h2>http.util</h2>
+</section>
+<section id="http.zlib" class="level2">
+<h2>http.zlib</h2>
+<p>An abstraction layer over the various lua zlib libraries.</p>
+<section id="engine" class="level3">
+<h3><code id="http.zlib.engine">engine</code></h3>
+<p>Currently either <a href="https://github.com/brimworks/lua-zlib"><code>&quot;lua-zlib&quot;</code></a> or <a href="https://github.com/LuaDist/lzlib"><code>&quot;lzlib&quot;</code></a></p>
+</section>
+<section id="inflate" class="level3">
+<h3><code id="http.zlib.inflate">inflate()</code></h3>
+<p>Returns a function that inflates (uncompresses) a zlib stream.</p>
+<p>The function takes a string of compressed data and an end of stream flag, it returns the uncompressed data as a string. It will throw an error if the stream is invalid</p>
+</section>
+<section id="deflate" class="level3">
+<h3><code id="http.zlib.deflate">deflate()</code></h3>
+<p>Returns a function that deflates (compresses) a zlib stream.</p>
+<p>The function takes a string of uncompressed data and an end of stream flag, it returns the compressed data as a string.</p>
+</section>
+<section id="http.zlib-example" class="level3">
+<h3>Example</h3>
+<div class="sourceCode"><pre class="sourceCode lua"><code class="sourceCode lua"><span class="kw">local</span> zlib <span class="ot">=</span> <span class="fu">require</span> <span class="st">&quot;http.zlib&quot;</span>
+<span class="kw">local</span> original <span class="ot">=</span> <span class="st">&quot;the racecar raced around the racecar track&quot;</span>
+<span class="kw">local</span> deflate <span class="ot">=</span> zlib<span class="ot">.</span>deflate<span class="ot">()</span>
+<span class="kw">local</span> compressed <span class="ot">=</span> deflate<span class="ot">(</span>original<span class="ot">,</span> <span class="kw">true</span><span class="ot">)</span>
+<span class="fu">print</span><span class="ot">(#</span>original<span class="ot">,</span> <span class="ot">#</span>compressed<span class="ot">)</span> <span class="co">-- compressed should be smaller</span>
+<span class="kw">local</span> inflate <span class="ot">=</span> zlib<span class="ot">.</span>inflate<span class="ot">()</span>
+<span class="kw">local</span> uncompressed <span class="ot">=</span> inflate<span class="ot">(</span>compressed<span class="ot">,</span> <span class="kw">true</span><span class="ot">)</span>
+<span class="fu">assert</span><span class="ot">(</span>original <span class="ot">==</span> uncompressed<span class="ot">)</span></code></pre></div>
+</section>
+</section>
+<section id="http.compat.prosody" class="level2">
+<h2>http.compat.prosody</h2>
+<p>Provides usage similar to <a href="https://prosody.im/doc/developers/net/http">prosody's net.http</a></p>
+<section id="requesturl-ex-callback" class="level3">
+<h3><code id="http.compat.prosody.request">request(url, ex, callback)</code></h3>
+<p>A few key differences to the prosody <code>net.http.request</code>:</p>
+<ul>
+<li>must be called from within a running cqueue</li>
+<li>The callback may be called from a different thread in the cqueue</li>
+<li>The returned object will be a <a href="#http.request"><code>http.request</code></a> object
+<ul>
+<li>This object is passed to the callback on errors and as the 4th argument on success</li>
+</ul></li>
+<li>The default user-agent will be from lua-http (rather than <code>&quot;Prosody XMPP Server&quot;</code>)</li>
+<li>lua-http features (such as HTTP2) will be used where possible</li>
+</ul>
+</section>
+<section id="http.compat.prosody-example" class="level3">
+<h3>Example</h3>
+<div class="sourceCode"><pre class="sourceCode lua"><code class="sourceCode lua"><span class="kw">local</span> prosody_http <span class="ot">=</span> <span class="fu">require</span> <span class="st">&quot;http.compat.prosody&quot;</span>
+<span class="kw">local</span> cqueues <span class="ot">=</span> <span class="fu">require</span> <span class="st">&quot;cqueues&quot;</span>
+<span class="kw">local</span> cq <span class="ot">=</span> cqueues<span class="ot">.</span>new<span class="ot">()</span>
+cq:wrap<span class="ot">(</span><span class="kw">function</span><span class="ot">()</span>
+    prosody_http<span class="ot">.</span>request<span class="ot">(</span><span class="st">&quot;http://httpbin.org/ip&quot;</span><span class="ot">,</span> <span class="ot">{},</span> <span class="kw">function</span><span class="ot">(</span>b<span class="ot">,</span> c<span class="ot">,</span> r<span class="ot">)</span>
+        <span class="fu">print</span><span class="ot">(</span>c<span class="ot">)</span> <span class="co">--&gt; 200</span>
+        <span class="fu">print</span><span class="ot">(</span>b<span class="ot">)</span> <span class="co">--&gt; {&quot;origin&quot;: &quot;123.123.123.123&quot;}</span>
+    <span class="kw">end</span><span class="ot">)</span>
+<span class="kw">end</span><span class="ot">)</span>
+<span class="fu">assert</span><span class="ot">(</span>cq:loop<span class="ot">())</span></code></pre></div>
+</section>
+</section>
+</section>
+<section id="links" class="level1">
+<h1>Links</h1>
+<ul>
+<li><a href="https://github.com/daurnimator/lua-http">Github</a></li>
+<li><a href="https://github.com/daurnimator/lua-http/issues">Issue tracker</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>
