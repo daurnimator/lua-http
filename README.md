@@ -93,5 +93,5 @@ Documentation is written in markdown and intended to be consumed by [pandoc](htt
 
   - To generate HTML documentation:
     ```
-    $ pandoc -s -t html5 --toc -c site/site.css doc/index.md doc/metadata.yaml
+    $ pandoc -t html5 --template=doc/template.html --section-divs --self-contained --toc -c doc/site.css doc/index.md doc/metadata.yaml
     ```
