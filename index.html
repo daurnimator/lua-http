@@ -61,7 +61,9 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#errors">Errors</a></li>
 </ul></li>
 <li><a href="#terminology">Terminology</a></li>
-<li><a href="#common-use-cases">Common use cases</a></li>
+<li><a href="#common-use-cases">Common use cases</a><ul>
+<li><a href="#retrieving-a-document">Retrieving a document</a></li>
+</ul></li>
 <li><a href="#asynchronous-operation">Asynchronous Operation</a></li>
 </ul></li>
 <li><a href="#modules">Modules</a><ul>
@@ -75,21 +77,116 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#connectoptions-timeout"><code id="http.client.connect">connect(options, timeout)</code></a></li>
 <li><a href="#http.client-example">Example</a></li>
 </ul></li>
-<li><a href="#http.h1_connection">http.h1_connection</a></li>
+<li><a href="#http.h1_connection">http.h1_connection</a><ul>
+<li><a href="#h1_connectionchecktls"><code id="http.h1_connection:checktls">h1_connection:checktls()</code></a></li>
+<li><a href="#h1_connectionlocalname"><code id="http.h1_connection:localname">h1_connection:localname()</code></a></li>
+<li><a href="#h1_connectionpeername"><code id="http.h1_connection:peername">h1_connection:peername()</code></a></li>
+<li><a href="#h1_connectionclearerr..."><code id="http.h1_connection:clearerr">h1_connection:clearerr(...)</code></a></li>
+<li><a href="#h1_connectiontake_socket"><code id="http.h1_connection:take_socket">h1_connection:take_socket()</code></a></li>
+<li><a href="#h1_connectionshutdowndir"><code id="http.h1_connection:shutdown">h1_connection:shutdown(dir)</code></a></li>
+<li><a href="#h1_connectionclose"><code id="http.h1_connection:close">h1_connection:close()</code></a></li>
+<li><a href="#h1_connectionnew_stream"><code id="http.h1_connection:new_stream">h1_connection:new_stream()</code></a></li>
+<li><a href="#h1_connectionget_next_incoming_streamtimeout"><code id="http.h1_connection:get_next_incoming_stream">h1_connection:get_next_incoming_stream(timeout)</code></a></li>
+<li><a href="#h1_connectionread_request_linetimeout"><code id="http.h1_connection:read_request_line">h1_connection:read_request_line(timeout)</code></a></li>
+<li><a href="#h1_connectionread_status_linetimeout"><code id="http.h1_connection:read_status_line">h1_connection:read_status_line(timeout)</code></a></li>
+<li><a href="#h1_connectionread_headertimeout"><code id="http.h1_connection:read_header">h1_connection:read_header(timeout)</code></a></li>
+<li><a href="#h1_connectionread_headers_donetimeout"><code id="http.h1_connection:read_headers_done">h1_connection:read_headers_done(timeout)</code></a></li>
+<li><a href="#h1_connectionread_body_by_lengthlen-timeout"><code id="http.h1_connection:read_body_by_length">h1_connection:read_body_by_length(len, timeout)</code></a></li>
+<li><a href="#h1_connectionread_body_till_closetimeout"><code id="http.h1_connection:read_body_till_close">h1_connection:read_body_till_close(timeout)</code></a></li>
+<li><a href="#h1_connectionread_body_chunktimeout"><code id="http.h1_connection:read_body_chunk">h1_connection:read_body_chunk(timeout)</code></a></li>
+<li><a href="#h1_connectionwrite_request_linemethod-path-httpversion-timeout"><code id="http.h1_connection:write_request_line">h1_connection:write_request_line(method, path, httpversion, timeout)</code></a></li>
+<li><a href="#h1_connectionwrite_status_linehttpversion-status_code-reason_phrase-timeout"><code id="http.h1_connection:write_status_line">h1_connection:write_status_line(httpversion, status_code, reason_phrase, timeout)</code></a></li>
+<li><a href="#h1_connectionwrite_headerk-v-timeout"><code id="http.h1_connection:write_header">h1_connection:write_header(k, v, timeout)</code></a></li>
+<li><a href="#h1_connectionwrite_headers_donetimeout"><code id="http.h1_connection:write_headers_done">h1_connection:write_headers_done(timeout)</code></a></li>
+<li><a href="#h1_connectionwrite_body_chunkchunk-chunk_ext-timeout"><code id="http.h1_connection:write_body_chunk">h1_connection:write_body_chunk(chunk, chunk_ext, timeout)</code></a></li>
+<li><a href="#h1_connectionwrite_body_last_chunkchunk_ext-timeout"><code id="http.h1_connection:write_body_last_chunk">h1_connection:write_body_last_chunk(chunk_ext, timeout)</code></a></li>
+<li><a href="#h1_connectionwrite_body_plainbody-timeout"><code id="http.h1_connection:write_body_plain">h1_connection:write_body_plain(body, timeout)</code></a></li>
+</ul></li>
 <li><a href="#http.h1_reason_phrases">http.h1_reason_phrases</a><ul>
 <li><a href="#http.h1_reason_phrases-example">Example</a></li>
 </ul></li>
-<li><a href="#http.h1_stream">http.h1_stream</a></li>
-<li><a href="#http.h2_connection">http.h2_connection</a></li>
+<li><a href="#http.h1_stream">http.h1_stream</a><ul>
+<li><a href="#h1_streamset_statenew"><code id="http.h1_stream:set_state">h1_stream:set_state(new)</code></a></li>
+<li><a href="#h1_streamread_headerstimeout"><code id="http.h1_stream:read_headers">h1_stream:read_headers(timeout)</code></a></li>
+</ul></li>
+<li><a href="#http.h2_connection">http.h2_connection</a><ul>
+<li><a href="#h2_connectionpollfd"><code id="http.h2_connection:pollfd">h2_connection:pollfd()</code></a></li>
+<li><a href="#h2_connectionevents"><code id="http.h2_connection:events">h2_connection:events()</code></a></li>
+<li><a href="#h2_connectiontimeout"><code id="http.h2_connection:timeout">h2_connection:timeout()</code></a></li>
+<li><a href="#h2_connectionempty"><code id="http.h2_connection:empty">h2_connection:empty()</code></a></li>
+<li><a href="#h2_connectionsteptimeout"><code id="http.h2_connection:step">h2_connection:step(timeout)</code></a></li>
+<li><a href="#h2_connectionlooptimeout"><code id="http.h2_connection:loop">h2_connection:loop(timeout)</code></a></li>
+<li><a href="#h2_connectionchecktls"><code id="http.h2_connection:checktls">h2_connection:checktls()</code></a></li>
+<li><a href="#h2_connectionlocalname"><code id="http.h2_connection:localname">h2_connection:localname()</code></a></li>
+<li><a href="#h2_connectionpeername"><code id="http.h2_connection:peername">h2_connection:peername()</code></a></li>
+<li><a href="#h2_connectionshutdown"><code id="http.h2_connection:shutdown">h2_connection:shutdown()</code></a></li>
+<li><a href="#h2_connectionclose"><code id="http.h2_connection:close">h2_connection:close()</code></a></li>
+<li><a href="#h2_connectionnew_streamid"><code id="http.h2_connection:new_stream">h2_connection:new_stream(id)</code></a></li>
+<li><a href="#h2_connectionget_next_incoming_streamtimeout"><code id="http.h2_connection:get_next_incoming_stream">h2_connection:get_next_incoming_stream(timeout)</code></a></li>
+<li><a href="#h2_connectionread_http2_frametimeout"><code id="http.h2_connection:read_http2_frame">h2_connection:read_http2_frame(timeout)</code></a></li>
+<li><a href="#h2_connectionwrite_http2_frametyp-flags-streamid-payload-timeout"><code id="http.h2_connection:write_http2_frame">h2_connection:write_http2_frame(typ, flags, streamid, payload, timeout)</code></a></li>
+<li><a href="#h2_connectionpingtimeout"><code id="http.h2_connection:ping">h2_connection:ping(timeout)</code></a></li>
+<li><a href="#h2_connectionwrite_window_updateinc-timeout"><code id="http.h2_connection:write_window_update">h2_connection:write_window_update(inc, timeout)</code></a></li>
+<li><a href="#h2_connectionwrite_goaway_framelast_stream_id-err_code-debug_msg"><code id="http.h2_connection:write_goaway_frame">h2_connection:write_goaway_frame(last_stream_id, err_code, debug_msg)</code></a></li>
+<li><a href="#h2_connectionset_peer_settingspeer_settings"><code id="http.h2_connection:set_peer_settings">h2_connection:set_peer_settings(peer_settings)</code></a></li>
+<li><a href="#h2_connectionack_settings"><code id="http.h2_connection:ack_settings">h2_connection:ack_settings()</code></a></li>
+<li><a href="#h2_connectionsettingstbl-timeout"><code id="http.h2_connection:settings">h2_connection:settings(tbl, timeout)</code></a></li>
+</ul></li>
 <li><a href="#http.h2_error">http.h2_error</a></li>
-<li><a href="#http.h2_stream">http.h2_stream</a></li>
-<li><a href="#http.headers">http.headers</a></li>
+<li><a href="#http.h2_stream">http.h2_stream</a><ul>
+<li><a href="#h2_streamset_statenew"><code id="http.h2_stream:set_state">h2_stream:set_state(new)</code></a></li>
+<li><a href="#h2_streamreprioritisechild-exclusive"><code id="http.h2_stream:reprioritise">h2_stream:reprioritise(child, exclusive)</code></a></li>
+<li><a href="#h2_streamwrite_http2_frametyp-flags-payload-timeout"><code id="http.h2_stream:write_http2_frame">h2_stream:write_http2_frame(typ, flags, payload, timeout)</code></a></li>
+<li><a href="#h2_streamwrite_data_framepayload-end_stream-padded-timeout"><code id="http.h2_stream:write_data_frame">h2_stream:write_data_frame(payload, end_stream, padded, timeout)</code></a></li>
+<li><a href="#h2_streamwrite_headers_framepayload-end_stream-end_headers-padded-exclusive-stream_dep-weight-timeout"><code id="http.h2_stream:write_headers_frame">h2_stream:write_headers_frame(payload, end_stream, end_headers, padded, exclusive, stream_dep, weight, timeout)</code></a></li>
+<li><a href="#h2_streamwrite_rst_streamerr_code-timeout"><code id="http.h2_stream:write_rst_stream">h2_stream:write_rst_stream(err_code, timeout)</code></a></li>
+<li><a href="#h2_streamwrite_settings_frameack-settings-timeout"><code id="http.h2_stream:write_settings_frame">h2_stream:write_settings_frame(ACK, settings, timeout)</code></a></li>
+<li><a href="#h2_streamwrite_ping_frameack-payload-timeout"><code id="http.h2_stream:write_ping_frame">h2_stream:write_ping_frame(ACK, payload, timeout)</code></a></li>
+<li><a href="#h2_streamwrite_goaway_framelast_streamid-err_code-debug_msg-timeout"><code id="http.h2_stream:write_goaway_frame">h2_stream:write_goaway_frame(last_streamid, err_code, debug_msg, timeout)</code></a></li>
+<li><a href="#h2_streamwrite_window_update_frameinc-timeout"><code id="http.h2_stream:write_window_update_frame">h2_stream:write_window_update_frame(inc, timeout)</code></a></li>
+<li><a href="#h2_streamwrite_window_updateinc"><code id="http.h2_stream:write_window_update">h2_stream:write_window_update(inc)</code></a></li>
+<li><a href="#h2_streamwrite_continuation_framepayload-end_headers-timeout"><code id="http.h2_stream:write_continuation_frame">h2_stream:write_continuation_frame(payload, end_headers, timeout)</code></a></li>
+</ul></li>
+<li><a href="#http.headers">http.headers</a><ul>
+<li><a href="#new"><code id="http.headers.new">new()</code></a></li>
+<li><a href="#headerslen"><code id="http.headers:len">headers:len()</code></a></li>
+<li><a href="#headersclone"><code id="http.headers:clone">headers:clone()</code></a></li>
+<li><a href="#headersappendname-value-never_index"><code id="http.headers:append">headers:append(name, value, never_index)</code></a></li>
+<li><a href="#headerseach"><code id="http.headers:each">headers:each()</code></a></li>
+<li><a href="#headershasname"><code id="http.headers:has">headers:has(name)</code></a></li>
+<li><a href="#headersdeletename"><code id="http.headers:delete">headers:delete(name)</code></a></li>
+<li><a href="#headersgetii"><code id="http.headers:geti">headers:geti(i)</code></a></li>
+<li><a href="#headersget_as_sequencename"><code id="http.headers:get_as_sequence">headers:get_as_sequence(name)</code></a></li>
+<li><a href="#headersgetname"><code id="http.headers:get">headers:get(name)</code></a></li>
+<li><a href="#headersget_comma_separatedname"><code id="http.headers:get_comma_separated">headers:get_comma_separated(name)</code></a></li>
+<li><a href="#headersget_split_as_sequencename"><code id="http.headers:get_split_as_sequence">headers:get_split_as_sequence(name)</code></a></li>
+<li><a href="#headersmodifyii-value-never_index"><code id="http.headers:modifyi">headers:modifyi(i, value, never_index)</code></a></li>
+<li><a href="#headersupsertname-value-never_index"><code id="http.headers:upsert">headers:upsert(name, value, never_index)</code></a></li>
+<li><a href="#headerssort"><code id="http.headers:sort">headers:sort()</code></a></li>
+</ul></li>
 <li><a href="#http.hpack">http.hpack</a></li>
 <li><a href="#http.request">http.request</a><ul>
 <li><a href="#new_from_uriuri"><code id="http.request.new_from_uri">new_from_uri(uri)</code></a></li>
+<li><a href="#requestgotimeout"><code id="http.request:timeout">request:go(timeout)</code></a></li>
 </ul></li>
 <li><a href="#http.server">http.server</a></li>
-<li><a href="#http.stream_common">http.stream_common</a></li>
+<li><a href="#http.stream_common">http.stream_common</a><ul>
+<li><a href="#streamchecktls"><code id="http.stream_common:checktls">stream:checktls()</code></a></li>
+<li><a href="#streamlocalname"><code id="http.stream_common:localname">stream:localname()</code></a></li>
+<li><a href="#streampeername"><code id="http.stream_common:peername">stream:peername()</code></a></li>
+<li><a href="#streamget_headerstimeout"><code id="http.stream_common:get_headers">stream:get_headers(timeout)</code></a></li>
+<li><a href="#streamwrite_headersheaders-end_stream-timeout"><code id="http.stream_common:write_headers">stream:write_headers(headers, end_stream, timeout)</code></a></li>
+<li><a href="#streamwrite_continuetimeout"><code id="http.stream_common:write_continue">stream:write_continue(timeout)</code></a></li>
+<li><a href="#streamget_next_chunktimeout"><code id="http.stream_common:get_next_chunk">stream:get_next_chunk(timeout)</code></a></li>
+<li><a href="#streameach_chunk"><code id="http.stream_common:each_chunk">stream:each_chunk()</code></a></li>
+<li><a href="#streamget_body_as_stringtimeout"><code id="http.stream_common:get_body_as_string">stream:get_body_as_string(timeout)</code></a></li>
+<li><a href="#streamsave_body_to_filefile-timeout"><code id="http.stream_common:save_body_to_file">stream:save_body_to_file(file, timeout)</code></a></li>
+<li><a href="#streamget_body_as_filetimeout"><code id="http.stream_common:get_body_as_file">stream:get_body_as_file(timeout)</code></a></li>
+<li><a href="#streamwrite_chunkchunk-end_stream-timeout"><code id="http.stream_common:write_chunk">stream:write_chunk(chunk, end_stream, timeout)</code></a></li>
+<li><a href="#streamwrite_body_from_stringstr-timeout"><code id="http.stream_common:write_body_from_string">stream:write_body_from_string(str, timeout)</code></a></li>
+<li><a href="#streamwrite_body_from_filefile-timeout"><code id="http.stream_common:write_body_from_file">stream:write_body_from_file(file, timeout)</code></a></li>
+<li><a href="#streamshutdown"><code id="http.stream_common:shutdown">stream:shutdown()</code></a></li>
+</ul></li>
 <li><a href="#http.tls">http.tls</a></li>
 <li><a href="#http.util">http.util</a></li>
 <li><a href="#http.zlib">http.zlib</a><ul>
@@ -110,9 +207,10 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <main>
 <section id="introduction" class="level1">
 <h1>Introduction</h1>
+<p>lua-http is an HTTP library for Lua, it supports: both client and server operations, both HTTP 1 and HTTP 2.</p>
 <section id="conventions" class="level2">
 <h2>Conventions</h2>
-<p>Operations that may block the current thread take an optional timeout.</p>
+<p>Operations that may block the current coroutine take an optional timeout.</p>
 <p>HTTP 1 request and status line fields are passed around inside of <a href="#http.headers">headers</a> objects under keys <code>&quot;:authority&quot;</code>, <code>&quot;:method&quot;</code>, <code>&quot;:path&quot;</code>, <code>&quot;:scheme&quot;</code> and <code>&quot;:status&quot;</code> as defined in HTTP 2. As such, they are all kept in string form (important to remember for the <code>:status</code> field).</p>
 <p>Header fields should always be used with lower case keys.</p>
 <section id="errors" class="level3">
@@ -125,11 +223,13 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <section id="terminology" class="level2">
 <h2>Terminology</h2>
 <p>Much lua-http terminology is borrowed from HTTP 2.</p>
-<p>A &quot;connection&quot; is an abstraction over the underlying socket.</p>
-<p>A &quot;stream&quot; is a request/response on a connection.</p>
+<p>A &quot;connection&quot; is an abstraction over the underlying socket. lua-http has two connection types: one for HTTP 1, one for HTTP 2.</p>
+<p>A &quot;stream&quot; is a request/response on a connection. lua-http has two stream types: one for HTTP 1 based streams, and one for HTTP 2 based streams. They share a lowest common denominator interface, see (#http.stream_common).</p>
 </section>
 <section id="common-use-cases" class="level2">
 <h2>Common use cases</h2>
+<section id="retrieving-a-document" class="level3">
+<h3>Retrieving a document</h3>
 <p>The highest level interface for clients is <a href="#http.request"><code>http.request</code></a>. By constructing a request object from a uri using <a href="#http.request.new_from_uri"><code>new_from_uri</code></a> and immediately evaluating it, you can easily fetch an HTTP resource.</p>
 <div class="sourceCode"><pre class="sourceCode lua"><code class="sourceCode lua"><span class="kw">local</span> http_request <span class="ot">=</span> <span class="fu">require</span> <span class="st">&quot;http.request&quot;</span>
 <span class="kw">local</span> headers<span class="ot">,</span> stream <span class="ot">=</span> <span class="fu">assert</span><span class="ot">(</span>http_request<span class="ot">.</span>new_from_uri<span class="ot">(</span><span class="st">&quot;http://example.com&quot;</span><span class="ot">)</span>:go<span class="ot">())</span>
@@ -138,6 +238,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
     <span class="fu">error</span><span class="ot">(</span>body<span class="ot">)</span>
 <span class="kw">end</span>
 <span class="fu">print</span><span class="ot">(</span>body<span class="ot">)</span></code></pre></div>
+</section>
 </section>
 <section id="asynchronous-operation" class="level2">
 <h2>Asynchronous Operation</h2>
@@ -217,6 +318,75 @@ See <a href="#http.h2_connection"><code>http.h2_connection</code></a> for detail
 </section>
 <section id="http.h1_connection" class="level2">
 <h2>http.h1_connection</h2>
+<section id="h1_connectionchecktls" class="level3">
+<h3><code id="http.h1_connection:checktls">h1_connection:checktls()</code></h3>
+</section>
+<section id="h1_connectionlocalname" class="level3">
+<h3><code id="http.h1_connection:localname">h1_connection:localname()</code></h3>
+</section>
+<section id="h1_connectionpeername" class="level3">
+<h3><code id="http.h1_connection:peername">h1_connection:peername()</code></h3>
+</section>
+<section id="h1_connectionclearerr..." class="level3">
+<h3><code id="http.h1_connection:clearerr">h1_connection:clearerr(...)</code></h3>
+</section>
+<section id="h1_connectiontake_socket" class="level3">
+<h3><code id="http.h1_connection:take_socket">h1_connection:take_socket()</code></h3>
+</section>
+<section id="h1_connectionshutdowndir" class="level3">
+<h3><code id="http.h1_connection:shutdown">h1_connection:shutdown(dir)</code></h3>
+</section>
+<section id="h1_connectionclose" class="level3">
+<h3><code id="http.h1_connection:close">h1_connection:close()</code></h3>
+</section>
+<section id="h1_connectionnew_stream" class="level3">
+<h3><code id="http.h1_connection:new_stream">h1_connection:new_stream()</code></h3>
+</section>
+<section id="h1_connectionget_next_incoming_streamtimeout" class="level3">
+<h3><code id="http.h1_connection:get_next_incoming_stream">h1_connection:get_next_incoming_stream(timeout)</code></h3>
+</section>
+<section id="h1_connectionread_request_linetimeout" class="level3">
+<h3><code id="http.h1_connection:read_request_line">h1_connection:read_request_line(timeout)</code></h3>
+</section>
+<section id="h1_connectionread_status_linetimeout" class="level3">
+<h3><code id="http.h1_connection:read_status_line">h1_connection:read_status_line(timeout)</code></h3>
+</section>
+<section id="h1_connectionread_headertimeout" class="level3">
+<h3><code id="http.h1_connection:read_header">h1_connection:read_header(timeout)</code></h3>
+</section>
+<section id="h1_connectionread_headers_donetimeout" class="level3">
+<h3><code id="http.h1_connection:read_headers_done">h1_connection:read_headers_done(timeout)</code></h3>
+</section>
+<section id="h1_connectionread_body_by_lengthlen-timeout" class="level3">
+<h3><code id="http.h1_connection:read_body_by_length">h1_connection:read_body_by_length(len, timeout)</code></h3>
+</section>
+<section id="h1_connectionread_body_till_closetimeout" class="level3">
+<h3><code id="http.h1_connection:read_body_till_close">h1_connection:read_body_till_close(timeout)</code></h3>
+</section>
+<section id="h1_connectionread_body_chunktimeout" class="level3">
+<h3><code id="http.h1_connection:read_body_chunk">h1_connection:read_body_chunk(timeout)</code></h3>
+</section>
+<section id="h1_connectionwrite_request_linemethod-path-httpversion-timeout" class="level3">
+<h3><code id="http.h1_connection:write_request_line">h1_connection:write_request_line(method, path, httpversion, timeout)</code></h3>
+</section>
+<section id="h1_connectionwrite_status_linehttpversion-status_code-reason_phrase-timeout" class="level3">
+<h3><code id="http.h1_connection:write_status_line">h1_connection:write_status_line(httpversion, status_code, reason_phrase, timeout)</code></h3>
+</section>
+<section id="h1_connectionwrite_headerk-v-timeout" class="level3">
+<h3><code id="http.h1_connection:write_header">h1_connection:write_header(k, v, timeout)</code></h3>
+</section>
+<section id="h1_connectionwrite_headers_donetimeout" class="level3">
+<h3><code id="http.h1_connection:write_headers_done">h1_connection:write_headers_done(timeout)</code></h3>
+</section>
+<section id="h1_connectionwrite_body_chunkchunk-chunk_ext-timeout" class="level3">
+<h3><code id="http.h1_connection:write_body_chunk">h1_connection:write_body_chunk(chunk, chunk_ext, timeout)</code></h3>
+</section>
+<section id="h1_connectionwrite_body_last_chunkchunk_ext-timeout" class="level3">
+<h3><code id="http.h1_connection:write_body_last_chunk">h1_connection:write_body_last_chunk(chunk_ext, timeout)</code></h3>
+</section>
+<section id="h1_connectionwrite_body_plainbody-timeout" class="level3">
+<h3><code id="http.h1_connection:write_body_plain">h1_connection:write_body_plain(body, timeout)</code></h3>
+</section>
 </section>
 <section id="http.h1_reason_phrases" class="level2">
 <h2>http.h1_reason_phrases</h2>
@@ -231,18 +401,174 @@ See <a href="#http.h2_connection"><code>http.h2_connection</code></a> for detail
 </section>
 <section id="http.h1_stream" class="level2">
 <h2>http.h1_stream</h2>
+<p>In addition to the functions from <a href="#http.stream_common">http.stream_common</a>, a <code>http.h1_stream</code> has the following methods:</p>
+<section id="h1_streamset_statenew" class="level3">
+<h3><code id="http.h1_stream:set_state">h1_stream:set_state(new)</code></h3>
+</section>
+<section id="h1_streamread_headerstimeout" class="level3">
+<h3><code id="http.h1_stream:read_headers">h1_stream:read_headers(timeout)</code></h3>
+</section>
 </section>
 <section id="http.h2_connection" class="level2">
 <h2>http.h2_connection</h2>
+<p>An HTTP 2 connection can have multiple streams active and transmitting data at once, hence a <code>http.h2_connection</code> acts much like a scheduler.</p>
+<section id="h2_connectionpollfd" class="level3">
+<h3><code id="http.h2_connection:pollfd">h2_connection:pollfd()</code></h3>
+</section>
+<section id="h2_connectionevents" class="level3">
+<h3><code id="http.h2_connection:events">h2_connection:events()</code></h3>
+</section>
+<section id="h2_connectiontimeout" class="level3">
+<h3><code id="http.h2_connection:timeout">h2_connection:timeout()</code></h3>
+</section>
+<section id="h2_connectionempty" class="level3">
+<h3><code id="http.h2_connection:empty">h2_connection:empty()</code></h3>
+</section>
+<section id="h2_connectionsteptimeout" class="level3">
+<h3><code id="http.h2_connection:step">h2_connection:step(timeout)</code></h3>
+</section>
+<section id="h2_connectionlooptimeout" class="level3">
+<h3><code id="http.h2_connection:loop">h2_connection:loop(timeout)</code></h3>
+</section>
+<section id="h2_connectionchecktls" class="level3">
+<h3><code id="http.h2_connection:checktls">h2_connection:checktls()</code></h3>
+</section>
+<section id="h2_connectionlocalname" class="level3">
+<h3><code id="http.h2_connection:localname">h2_connection:localname()</code></h3>
+</section>
+<section id="h2_connectionpeername" class="level3">
+<h3><code id="http.h2_connection:peername">h2_connection:peername()</code></h3>
+</section>
+<section id="h2_connectionshutdown" class="level3">
+<h3><code id="http.h2_connection:shutdown">h2_connection:shutdown()</code></h3>
+</section>
+<section id="h2_connectionclose" class="level3">
+<h3><code id="http.h2_connection:close">h2_connection:close()</code></h3>
+</section>
+<section id="h2_connectionnew_streamid" class="level3">
+<h3><code id="http.h2_connection:new_stream">h2_connection:new_stream(id)</code></h3>
+</section>
+<section id="h2_connectionget_next_incoming_streamtimeout" class="level3">
+<h3><code id="http.h2_connection:get_next_incoming_stream">h2_connection:get_next_incoming_stream(timeout)</code></h3>
+</section>
+<section id="h2_connectionread_http2_frametimeout" class="level3">
+<h3><code id="http.h2_connection:read_http2_frame">h2_connection:read_http2_frame(timeout)</code></h3>
+</section>
+<section id="h2_connectionwrite_http2_frametyp-flags-streamid-payload-timeout" class="level3">
+<h3><code id="http.h2_connection:write_http2_frame">h2_connection:write_http2_frame(typ, flags, streamid, payload, timeout)</code></h3>
+</section>
+<section id="h2_connectionpingtimeout" class="level3">
+<h3><code id="http.h2_connection:ping">h2_connection:ping(timeout)</code></h3>
+</section>
+<section id="h2_connectionwrite_window_updateinc-timeout" class="level3">
+<h3><code id="http.h2_connection:write_window_update">h2_connection:write_window_update(inc, timeout)</code></h3>
+</section>
+<section id="h2_connectionwrite_goaway_framelast_stream_id-err_code-debug_msg" class="level3">
+<h3><code id="http.h2_connection:write_goaway_frame">h2_connection:write_goaway_frame(last_stream_id, err_code, debug_msg)</code></h3>
+</section>
+<section id="h2_connectionset_peer_settingspeer_settings" class="level3">
+<h3><code id="http.h2_connection:set_peer_settings">h2_connection:set_peer_settings(peer_settings)</code></h3>
+</section>
+<section id="h2_connectionack_settings" class="level3">
+<h3><code id="http.h2_connection:ack_settings">h2_connection:ack_settings()</code></h3>
+</section>
+<section id="h2_connectionsettingstbl-timeout" class="level3">
+<h3><code id="http.h2_connection:settings">h2_connection:settings(tbl, timeout)</code></h3>
+</section>
 </section>
 <section id="http.h2_error" class="level2">
 <h2>http.h2_error</h2>
 </section>
 <section id="http.h2_stream" class="level2">
 <h2>http.h2_stream</h2>
+<p>In addition to the functions from <a href="#http.stream_common">http.stream_common</a>, a <code>http.h2_stream</code> has the following methods:</p>
+<section id="h2_streamset_statenew" class="level3">
+<h3><code id="http.h2_stream:set_state">h2_stream:set_state(new)</code></h3>
+</section>
+<section id="h2_streamreprioritisechild-exclusive" class="level3">
+<h3><code id="http.h2_stream:reprioritise">h2_stream:reprioritise(child, exclusive)</code></h3>
+</section>
+<section id="h2_streamwrite_http2_frametyp-flags-payload-timeout" class="level3">
+<h3><code id="http.h2_stream:write_http2_frame">h2_stream:write_http2_frame(typ, flags, payload, timeout)</code></h3>
+</section>
+<section id="h2_streamwrite_data_framepayload-end_stream-padded-timeout" class="level3">
+<h3><code id="http.h2_stream:write_data_frame">h2_stream:write_data_frame(payload, end_stream, padded, timeout)</code></h3>
+</section>
+<section id="h2_streamwrite_headers_framepayload-end_stream-end_headers-padded-exclusive-stream_dep-weight-timeout" class="level3">
+<h3><code id="http.h2_stream:write_headers_frame">h2_stream:write_headers_frame(payload, end_stream, end_headers, padded, exclusive, stream_dep, weight, timeout)</code></h3>
+</section>
+<section id="h2_streamwrite_rst_streamerr_code-timeout" class="level3">
+<h3><code id="http.h2_stream:write_rst_stream">h2_stream:write_rst_stream(err_code, timeout)</code></h3>
+</section>
+<section id="h2_streamwrite_settings_frameack-settings-timeout" class="level3">
+<h3><code id="http.h2_stream:write_settings_frame">h2_stream:write_settings_frame(ACK, settings, timeout)</code></h3>
+</section>
+<section id="h2_streamwrite_ping_frameack-payload-timeout" class="level3">
+<h3><code id="http.h2_stream:write_ping_frame">h2_stream:write_ping_frame(ACK, payload, timeout)</code></h3>
+</section>
+<section id="h2_streamwrite_goaway_framelast_streamid-err_code-debug_msg-timeout" class="level3">
+<h3><code id="http.h2_stream:write_goaway_frame">h2_stream:write_goaway_frame(last_streamid, err_code, debug_msg, timeout)</code></h3>
+</section>
+<section id="h2_streamwrite_window_update_frameinc-timeout" class="level3">
+<h3><code id="http.h2_stream:write_window_update_frame">h2_stream:write_window_update_frame(inc, timeout)</code></h3>
+</section>
+<section id="h2_streamwrite_window_updateinc" class="level3">
+<h3><code id="http.h2_stream:write_window_update">h2_stream:write_window_update(inc)</code></h3>
+</section>
+<section id="h2_streamwrite_continuation_framepayload-end_headers-timeout" class="level3">
+<h3><code id="http.h2_stream:write_continuation_frame">h2_stream:write_continuation_frame(payload, end_headers, timeout)</code></h3>
+</section>
 </section>
 <section id="http.headers" class="level2">
 <h2>http.headers</h2>
+<p>An ordered list of header fields. Each field has a <em>name</em>, a <em>value</em> and a <em>never_index</em> flag that indicates if the header field is potentially sensitive data.</p>
+<p>Each headers object has an index by field name to efficiently retrieve values by key. Keep in mind that there can be multiple values for a given field name. (e.g. an HTTP server may send two <code>Set-Cookie</code> headers).</p>
+<section id="new" class="level3">
+<h3><code id="http.headers.new">new()</code></h3>
+<p>Creates and returns a new headers object.</p>
+</section>
+<section id="headerslen" class="level3">
+<h3><code id="http.headers:len">headers:len()</code></h3>
+</section>
+<section id="headersclone" class="level3">
+<h3><code id="http.headers:clone">headers:clone()</code></h3>
+</section>
+<section id="headersappendname-value-never_index" class="level3">
+<h3><code id="http.headers:append">headers:append(name, value, never_index)</code></h3>
+</section>
+<section id="headerseach" class="level3">
+<h3><code id="http.headers:each">headers:each()</code></h3>
+</section>
+<section id="headershasname" class="level3">
+<h3><code id="http.headers:has">headers:has(name)</code></h3>
+</section>
+<section id="headersdeletename" class="level3">
+<h3><code id="http.headers:delete">headers:delete(name)</code></h3>
+</section>
+<section id="headersgetii" class="level3">
+<h3><code id="http.headers:geti">headers:geti(i)</code></h3>
+</section>
+<section id="headersget_as_sequencename" class="level3">
+<h3><code id="http.headers:get_as_sequence">headers:get_as_sequence(name)</code></h3>
+</section>
+<section id="headersgetname" class="level3">
+<h3><code id="http.headers:get">headers:get(name)</code></h3>
+</section>
+<section id="headersget_comma_separatedname" class="level3">
+<h3><code id="http.headers:get_comma_separated">headers:get_comma_separated(name)</code></h3>
+</section>
+<section id="headersget_split_as_sequencename" class="level3">
+<h3><code id="http.headers:get_split_as_sequence">headers:get_split_as_sequence(name)</code></h3>
+</section>
+<section id="headersmodifyii-value-never_index" class="level3">
+<h3><code id="http.headers:modifyi">headers:modifyi(i, value, never_index)</code></h3>
+</section>
+<section id="headersupsertname-value-never_index" class="level3">
+<h3><code id="http.headers:upsert">headers:upsert(name, value, never_index)</code></h3>
+</section>
+<section id="headerssort" class="level3">
+<h3><code id="http.headers:sort">headers:sort()</code></h3>
+</section>
 </section>
 <section id="http.hpack" class="level2">
 <h2>http.hpack</h2>
@@ -251,6 +577,12 @@ See <a href="#http.h2_connection"><code>http.h2_connection</code></a> for detail
 <h2>http.request</h2>
 <section id="new_from_uriuri" class="level3">
 <h3><code id="http.request.new_from_uri">new_from_uri(uri)</code></h3>
+<p>Creates a new <code>http.request</code> object from the given URI.</p>
+</section>
+<section id="requestgotimeout" class="level3">
+<h3><code id="http.request:timeout">request:go(timeout)</code></h3>
+<p>Performs the request.</p>
+<p>The request object is <strong>not</strong> invalidated; and can be reused for a new request. On success, returns the response <a href="#http.headers"><code>headers</code></a> and a <a href="#http.stream_common"><code>stream</code></a>.</p>
 </section>
 </section>
 <section id="http.server" class="level2">
@@ -258,6 +590,53 @@ See <a href="#http.h2_connection"><code>http.h2_connection</code></a> for detail
 </section>
 <section id="http.stream_common" class="level2">
 <h2>http.stream_common</h2>
+<p>Common functions for streams (no matter the underlying protocol version).</p>
+<p>All stream types expose the functions:</p>
+<section id="streamchecktls" class="level3">
+<h3><code id="http.stream_common:checktls">stream:checktls()</code></h3>
+</section>
+<section id="streamlocalname" class="level3">
+<h3><code id="http.stream_common:localname">stream:localname()</code></h3>
+</section>
+<section id="streampeername" class="level3">
+<h3><code id="http.stream_common:peername">stream:peername()</code></h3>
+</section>
+<section id="streamget_headerstimeout" class="level3">
+<h3><code id="http.stream_common:get_headers">stream:get_headers(timeout)</code></h3>
+</section>
+<section id="streamwrite_headersheaders-end_stream-timeout" class="level3">
+<h3><code id="http.stream_common:write_headers">stream:write_headers(headers, end_stream, timeout)</code></h3>
+</section>
+<section id="streamwrite_continuetimeout" class="level3">
+<h3><code id="http.stream_common:write_continue">stream:write_continue(timeout)</code></h3>
+</section>
+<section id="streamget_next_chunktimeout" class="level3">
+<h3><code id="http.stream_common:get_next_chunk">stream:get_next_chunk(timeout)</code></h3>
+</section>
+<section id="streameach_chunk" class="level3">
+<h3><code id="http.stream_common:each_chunk">stream:each_chunk()</code></h3>
+</section>
+<section id="streamget_body_as_stringtimeout" class="level3">
+<h3><code id="http.stream_common:get_body_as_string">stream:get_body_as_string(timeout)</code></h3>
+</section>
+<section id="streamsave_body_to_filefile-timeout" class="level3">
+<h3><code id="http.stream_common:save_body_to_file">stream:save_body_to_file(file, timeout)</code></h3>
+</section>
+<section id="streamget_body_as_filetimeout" class="level3">
+<h3><code id="http.stream_common:get_body_as_file">stream:get_body_as_file(timeout)</code></h3>
+</section>
+<section id="streamwrite_chunkchunk-end_stream-timeout" class="level3">
+<h3><code id="http.stream_common:write_chunk">stream:write_chunk(chunk, end_stream, timeout)</code></h3>
+</section>
+<section id="streamwrite_body_from_stringstr-timeout" class="level3">
+<h3><code id="http.stream_common:write_body_from_string">stream:write_body_from_string(str, timeout)</code></h3>
+</section>
+<section id="streamwrite_body_from_filefile-timeout" class="level3">
+<h3><code id="http.stream_common:write_body_from_file">stream:write_body_from_file(file, timeout)</code></h3>
+</section>
+<section id="streamshutdown" class="level3">
+<h3><code id="http.stream_common:shutdown">stream:shutdown()</code></h3>
+</section>
 </section>
 <section id="http.tls" class="level2">
 <h2>http.tls</h2>
