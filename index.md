@@ -567,8 +567,8 @@ If the authority has no port component, will attempt to use the default for the 
 
 ```lua
 local http_util = require "http.util"
-print(http_util.split_authority("localhost:8000", "http")) --> `"localhost", 8000`
-print(http_util.split_authority("example.com", "https")) --> `"localhost", 443`
+print(http_util.split_authority("localhost:8000", "http")) --> "localhost", 8000
+print(http_util.split_authority("example.com", "https")) --> "localhost", 443
 ```
 
 
