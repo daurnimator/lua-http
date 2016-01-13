@@ -1,5 +1,21 @@
 describe("http.util module", function()
+	local unpack = table.unpack or unpack -- luacheck: ignore 113
 	local util = require "http.util"
+	it("decodeURI doesn't decode blacklisted characters", function()
+		assert.same("%24", util.decodeURI("%24"))
+		local s = util.encodeURIComponent("#$&+,/:;=?@")
+		assert.same(s, util.decodeURI(s))
+	end)
+	it("decodeURIComponent round-trips with encodeURIComponent", function()
+		local allchars do
+			local t = {}
+			for i=0, 255 do
+				t[i] = i
+			end
+			allchars = string.char(unpack(t, 0, 255))
+		end
+		assert.same(allchars, util.decodeURIComponent(util.encodeURIComponent(allchars)))
+	end)
 	it("split_header works correctly", function()
 		-- nil
 		assert.same({n=0}, util.split_header(nil))

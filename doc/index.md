@@ -551,6 +551,10 @@ A set (table with string keys and values of `true`) containing the [ciphers bann
 
 ### `encodeURIComponent(str)` <!-- --> {#http.util.encodeURIComponent}
 
+### `decodeURI(str)` <!-- --> {#http.util.decodeURI}
+
+### `decodeURIComponent(str)` <!-- --> {#http.util.decodeURIComponent}
+
 ### `resolve_relative_path(orig_path, relative_path)` <!-- --> {#http.util.resolve_relative_path}
 
 ### `scheme_to_port` <!-- --> {#http.util.scheme_to_port}

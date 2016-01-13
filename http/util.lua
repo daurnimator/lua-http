@@ -16,6 +16,37 @@ local function encodeURIComponent(str)
 	return (str:gsub("[^%w%-_%.%!%~%*%'%(%)]", char_to_pchar))
 end
 
+-- decodeURI unescapes url encoded characters
+-- excluding for characters that are special in urls
+local decodeURI do
+	-- Keep the blacklist in numeric form.
+	-- This means we can skip case normalisation of the hex characters
+	local decodeURI_blacklist = {}
+	for char in ("#$&+,/:;=?@"):gmatch(".") do
+		decodeURI_blacklist[string.byte(char)] = true
+	end
+	local function decodeURI_helper(str)
+		local x = tonumber(str, 16)
+		if not decodeURI_blacklist[x] then
+			return string.char(x)
+		end
+		-- return nothing; gsub will not perform the replacement
+	end
+	function decodeURI(str)
+		return (str:gsub("%%(%x%x)", decodeURI_helper))
+	end
+end
+
+-- Converts a hex string to a character
+local function pchar_to_char(str)
+	return string.char(tonumber(str, 16))
+end
+
+-- decodeURIComponent unescapes *all* url encoded characters
+local function decodeURIComponent(str)
+	return (str:gsub("%%(%x%x)", pchar_to_char))
+end
+
 -- Resolves a relative path
 local function resolve_relative_path(orig_path, relative_path)
 	local t, i = {}, 0
@@ -138,6 +169,8 @@ end
 return {
 	encodeURI = encodeURI;
 	encodeURIComponent = encodeURIComponent;
+	decodeURI = decodeURI;
+	decodeURIComponent = decodeURIComponent;
 	resolve_relative_path = resolve_relative_path;
 	scheme_to_port = scheme_to_port;
 	split_authority = split_authority;
