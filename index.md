@@ -65,11 +65,11 @@ An abstraction layer over the various lua bit libraries.
 Results are only consistent between underlying implementations when parameters and results are in the range of `0` to `0x7fffffff`.
 
 
-### `band(a, b)` {#http.bit.band}
+### `band(a, b)` <!-- --> {#http.bit.band}
 
-### `bor(a, b)` {#http.bit.bor}
+### `bor(a, b)` <!-- --> {#http.bit.bor}
 
-### `bxor(a, b)` {#http.bit.bxor}
+### `bxor(a, b)` <!-- --> {#http.bit.bxor}
 
 
 ### Example {#http.bit-example}
@@ -85,7 +85,7 @@ print(bit.band(1, 3)) --> 1
 Deals with obtaining a connection to an HTTP server.
 
 
-### `connect(options, timeout)` {#http.client.connect}
+### `connect(options, timeout)` <!-- --> {#http.client.connect}
 
 Creates a new connection to an HTTP server.
 Can try to negotiate HTTP2 if possible, but 
@@ -145,51 +145,51 @@ local myconnection = http_client.connect {
 
 ## http.h1_connection
 
-### `h1_connection:checktls()` {#http.h1_connection:checktls}
+### `h1_connection:checktls()` <!-- --> {#http.h1_connection:checktls}
 
-### `h1_connection:localname()` {#http.h1_connection:localname}
+### `h1_connection:localname()` <!-- --> {#http.h1_connection:localname}
 
-### `h1_connection:peername()` {#http.h1_connection:peername}
+### `h1_connection:peername()` <!-- --> {#http.h1_connection:peername}
 
-### `h1_connection:clearerr(...)` {#http.h1_connection:clearerr}
+### `h1_connection:clearerr(...)` <!-- --> {#http.h1_connection:clearerr}
 
-### `h1_connection:take_socket()` {#http.h1_connection:take_socket}
+### `h1_connection:take_socket()` <!-- --> {#http.h1_connection:take_socket}
 
-### `h1_connection:shutdown(dir)` {#http.h1_connection:shutdown}
+### `h1_connection:shutdown(dir)` <!-- --> {#http.h1_connection:shutdown}
 
-### `h1_connection:close()` {#http.h1_connection:close}
+### `h1_connection:close()` <!-- --> {#http.h1_connection:close}
 
-### `h1_connection:new_stream()` {#http.h1_connection:new_stream}
+### `h1_connection:new_stream()` <!-- --> {#http.h1_connection:new_stream}
 
-### `h1_connection:get_next_incoming_stream(timeout)` {#http.h1_connection:get_next_incoming_stream}
+### `h1_connection:get_next_incoming_stream(timeout)` <!-- --> {#http.h1_connection:get_next_incoming_stream}
 
-### `h1_connection:read_request_line(timeout)` {#http.h1_connection:read_request_line}
+### `h1_connection:read_request_line(timeout)` <!-- --> {#http.h1_connection:read_request_line}
 
-### `h1_connection:read_status_line(timeout)` {#http.h1_connection:read_status_line}
+### `h1_connection:read_status_line(timeout)` <!-- --> {#http.h1_connection:read_status_line}
 
-### `h1_connection:read_header(timeout)` {#http.h1_connection:read_header}
+### `h1_connection:read_header(timeout)` <!-- --> {#http.h1_connection:read_header}
 
-### `h1_connection:read_headers_done(timeout)` {#http.h1_connection:read_headers_done}
+### `h1_connection:read_headers_done(timeout)` <!-- --> {#http.h1_connection:read_headers_done}
 
-### `h1_connection:read_body_by_length(len, timeout)` {#http.h1_connection:read_body_by_length}
+### `h1_connection:read_body_by_length(len, timeout)` <!-- --> {#http.h1_connection:read_body_by_length}
 
-### `h1_connection:read_body_till_close(timeout)` {#http.h1_connection:read_body_till_close}
+### `h1_connection:read_body_till_close(timeout)` <!-- --> {#http.h1_connection:read_body_till_close}
 
-### `h1_connection:read_body_chunk(timeout)` {#http.h1_connection:read_body_chunk}
+### `h1_connection:read_body_chunk(timeout)` <!-- --> {#http.h1_connection:read_body_chunk}
 
-### `h1_connection:write_request_line(method, path, httpversion, timeout)` {#http.h1_connection:write_request_line}
+### `h1_connection:write_request_line(method, path, httpversion, timeout)` <!-- --> {#http.h1_connection:write_request_line}
 
-### `h1_connection:write_status_line(httpversion, status_code, reason_phrase, timeout)` {#http.h1_connection:write_status_line}
+### `h1_connection:write_status_line(httpversion, status_code, reason_phrase, timeout)` <!-- --> {#http.h1_connection:write_status_line}
 
-### `h1_connection:write_header(k, v, timeout)` {#http.h1_connection:write_header}
+### `h1_connection:write_header(k, v, timeout)` <!-- --> {#http.h1_connection:write_header}
 
-### `h1_connection:write_headers_done(timeout)` {#http.h1_connection:write_headers_done}
+### `h1_connection:write_headers_done(timeout)` <!-- --> {#http.h1_connection:write_headers_done}
 
-### `h1_connection:write_body_chunk(chunk, chunk_ext, timeout)` {#http.h1_connection:write_body_chunk}
+### `h1_connection:write_body_chunk(chunk, chunk_ext, timeout)` <!-- --> {#http.h1_connection:write_body_chunk}
 
-### `h1_connection:write_body_last_chunk(chunk_ext, timeout)` {#http.h1_connection:write_body_last_chunk}
+### `h1_connection:write_body_last_chunk(chunk_ext, timeout)` <!-- --> {#http.h1_connection:write_body_last_chunk}
 
-### `h1_connection:write_body_plain(body, timeout)` {#http.h1_connection:write_body_plain}
+### `h1_connection:write_body_plain(body, timeout)` <!-- --> {#http.h1_connection:write_body_plain}
 
 
 ## http.h1_reason_phrases
@@ -213,9 +213,9 @@ print(reason_phrases["342"]) --> "Unassigned"
 In addition to the functions from [http.stream_common](#http.stream_common),
 a `http.h1_stream` has the following methods:
 
-### `h1_stream:set_state(new)` {#http.h1_stream:set_state}
+### `h1_stream:set_state(new)` <!-- --> {#http.h1_stream:set_state}
 
-### `h1_stream:read_headers(timeout)` {#http.h1_stream:read_headers}
+### `h1_stream:read_headers(timeout)` <!-- --> {#http.h1_stream:read_headers}
 
 
 ## http.h2_connection
@@ -223,47 +223,47 @@ a `http.h1_stream` has the following methods:
 An HTTP 2 connection can have multiple streams active and transmitting data at once,
 hence a `http.h2_connection` acts much like a scheduler.
 
-### `h2_connection:pollfd()` {#http.h2_connection:pollfd}
+### `h2_connection:pollfd()` <!-- --> {#http.h2_connection:pollfd}
 
-### `h2_connection:events()` {#http.h2_connection:events}
+### `h2_connection:events()` <!-- --> {#http.h2_connection:events}
 
-### `h2_connection:timeout()` {#http.h2_connection:timeout}
+### `h2_connection:timeout()` <!-- --> {#http.h2_connection:timeout}
 
-### `h2_connection:empty()` {#http.h2_connection:empty}
+### `h2_connection:empty()` <!-- --> {#http.h2_connection:empty}
 
-### `h2_connection:step(timeout)` {#http.h2_connection:step}
+### `h2_connection:step(timeout)` <!-- --> {#http.h2_connection:step}
 
-### `h2_connection:loop(timeout)` {#http.h2_connection:loop}
+### `h2_connection:loop(timeout)` <!-- --> {#http.h2_connection:loop}
 
-### `h2_connection:checktls()` {#http.h2_connection:checktls}
+### `h2_connection:checktls()` <!-- --> {#http.h2_connection:checktls}
 
-### `h2_connection:localname()` {#http.h2_connection:localname}
+### `h2_connection:localname()` <!-- --> {#http.h2_connection:localname}
 
-### `h2_connection:peername()` {#http.h2_connection:peername}
+### `h2_connection:peername()` <!-- --> {#http.h2_connection:peername}
 
-### `h2_connection:shutdown()` {#http.h2_connection:shutdown}
+### `h2_connection:shutdown()` <!-- --> {#http.h2_connection:shutdown}
 
-### `h2_connection:close()` {#http.h2_connection:close}
+### `h2_connection:close()` <!-- --> {#http.h2_connection:close}
 
-### `h2_connection:new_stream(id)` {#http.h2_connection:new_stream}
+### `h2_connection:new_stream(id)` <!-- --> {#http.h2_connection:new_stream}
 
-### `h2_connection:get_next_incoming_stream(timeout)` {#http.h2_connection:get_next_incoming_stream}
+### `h2_connection:get_next_incoming_stream(timeout)` <!-- --> {#http.h2_connection:get_next_incoming_stream}
 
-### `h2_connection:read_http2_frame(timeout)` {#http.h2_connection:read_http2_frame}
+### `h2_connection:read_http2_frame(timeout)` <!-- --> {#http.h2_connection:read_http2_frame}
 
-### `h2_connection:write_http2_frame(typ, flags, streamid, payload, timeout)` {#http.h2_connection:write_http2_frame}
+### `h2_connection:write_http2_frame(typ, flags, streamid, payload, timeout)` <!-- --> {#http.h2_connection:write_http2_frame}
 
-### `h2_connection:ping(timeout)` {#http.h2_connection:ping}
+### `h2_connection:ping(timeout)` <!-- --> {#http.h2_connection:ping}
 
-### `h2_connection:write_window_update(inc, timeout)` {#http.h2_connection:write_window_update}
+### `h2_connection:write_window_update(inc, timeout)` <!-- --> {#http.h2_connection:write_window_update}
 
-### `h2_connection:write_goaway_frame(last_stream_id, err_code, debug_msg)` {#http.h2_connection:write_goaway_frame}
+### `h2_connection:write_goaway_frame(last_stream_id, err_code, debug_msg)` <!-- --> {#http.h2_connection:write_goaway_frame}
 
-### `h2_connection:set_peer_settings(peer_settings)` {#http.h2_connection:set_peer_settings}
+### `h2_connection:set_peer_settings(peer_settings)` <!-- --> {#http.h2_connection:set_peer_settings}
 
-### `h2_connection:ack_settings()` {#http.h2_connection:ack_settings}
+### `h2_connection:ack_settings()` <!-- --> {#http.h2_connection:ack_settings}
 
-### `h2_connection:settings(tbl, timeout)` {#http.h2_connection:settings}
+### `h2_connection:settings(tbl, timeout)` <!-- --> {#http.h2_connection:settings}
 
 
 ## http.h2_error
@@ -274,29 +274,29 @@ hence a `http.h2_connection` acts much like a scheduler.
 In addition to the functions from [http.stream_common](#http.stream_common),
 a `http.h2_stream` has the following methods:
 
-### `h2_stream:set_state(new)` {#http.h2_stream:set_state}
+### `h2_stream:set_state(new)` <!-- --> {#http.h2_stream:set_state}
 
-### `h2_stream:reprioritise(child, exclusive)` {#http.h2_stream:reprioritise}
+### `h2_stream:reprioritise(child, exclusive)` <!-- --> {#http.h2_stream:reprioritise}
 
-### `h2_stream:write_http2_frame(typ, flags, payload, timeout)` {#http.h2_stream:write_http2_frame}
+### `h2_stream:write_http2_frame(typ, flags, payload, timeout)` <!-- --> {#http.h2_stream:write_http2_frame}
 
-### `h2_stream:write_data_frame(payload, end_stream, padded, timeout)` {#http.h2_stream:write_data_frame}
+### `h2_stream:write_data_frame(payload, end_stream, padded, timeout)` <!-- --> {#http.h2_stream:write_data_frame}
 
-### `h2_stream:write_headers_frame(payload, end_stream, end_headers, padded, exclusive, stream_dep, weight, timeout)` {#http.h2_stream:write_headers_frame}
+### `h2_stream:write_headers_frame(payload, end_stream, end_headers, padded, exclusive, stream_dep, weight, timeout)` <!-- --> {#http.h2_stream:write_headers_frame}
 
-### `h2_stream:write_rst_stream(err_code, timeout)` {#http.h2_stream:write_rst_stream}
+### `h2_stream:write_rst_stream(err_code, timeout)` <!-- --> {#http.h2_stream:write_rst_stream}
 
-### `h2_stream:write_settings_frame(ACK, settings, timeout)` {#http.h2_stream:write_settings_frame}
+### `h2_stream:write_settings_frame(ACK, settings, timeout)` <!-- --> {#http.h2_stream:write_settings_frame}
 
-### `h2_stream:write_ping_frame(ACK, payload, timeout)` {#http.h2_stream:write_ping_frame}
+### `h2_stream:write_ping_frame(ACK, payload, timeout)` <!-- --> {#http.h2_stream:write_ping_frame}
 
-### `h2_stream:write_goaway_frame(last_streamid, err_code, debug_msg, timeout)` {#http.h2_stream:write_goaway_frame}
+### `h2_stream:write_goaway_frame(last_streamid, err_code, debug_msg, timeout)` <!-- --> {#http.h2_stream:write_goaway_frame}
 
-### `h2_stream:write_window_update_frame(inc, timeout)` {#http.h2_stream:write_window_update_frame}
+### `h2_stream:write_window_update_frame(inc, timeout)` <!-- --> {#http.h2_stream:write_window_update_frame}
 
-### `h2_stream:write_window_update(inc)` {#http.h2_stream:write_window_update}
+### `h2_stream:write_window_update(inc)` <!-- --> {#http.h2_stream:write_window_update}
 
-### `h2_stream:write_continuation_frame(payload, end_headers, timeout)` {#http.h2_stream:write_continuation_frame}
+### `h2_stream:write_continuation_frame(payload, end_headers, timeout)` <!-- --> {#http.h2_stream:write_continuation_frame}
 
 
 ## http.headers
@@ -306,38 +306,38 @@ Each field has a *name*, a *value* and a *never_index* flag that indicates if th
 
 Each headers object has an index by field name to efficiently retrieve values by key. Keep in mind that there can be multiple values for a given field name. (e.g. an HTTP server may send two `Set-Cookie` headers).
 
-### `new()` {#http.headers.new}
+### `new()` <!-- --> {#http.headers.new}
 
 Creates and returns a new headers object.
 
 
-### `headers:len()` {#http.headers:len}
+### `headers:len()` <!-- --> {#http.headers:len}
 
-### `headers:clone()` {#http.headers:clone}
+### `headers:clone()` <!-- --> {#http.headers:clone}
 
-### `headers:append(name, value, never_index)` {#http.headers:append}
+### `headers:append(name, value, never_index)` <!-- --> {#http.headers:append}
 
-### `headers:each()` {#http.headers:each}
+### `headers:each()` <!-- --> {#http.headers:each}
 
-### `headers:has(name)` {#http.headers:has}
+### `headers:has(name)` <!-- --> {#http.headers:has}
 
-### `headers:delete(name)` {#http.headers:delete}
+### `headers:delete(name)` <!-- --> {#http.headers:delete}
 
-### `headers:geti(i)` {#http.headers:geti}
+### `headers:geti(i)` <!-- --> {#http.headers:geti}
 
-### `headers:get_as_sequence(name)` {#http.headers:get_as_sequence}
+### `headers:get_as_sequence(name)` <!-- --> {#http.headers:get_as_sequence}
 
-### `headers:get(name)` {#http.headers:get}
+### `headers:get(name)` <!-- --> {#http.headers:get}
 
-### `headers:get_comma_separated(name)` {#http.headers:get_comma_separated}
+### `headers:get_comma_separated(name)` <!-- --> {#http.headers:get_comma_separated}
 
-### `headers:get_split_as_sequence(name)` {#http.headers:get_split_as_sequence}
+### `headers:get_split_as_sequence(name)` <!-- --> {#http.headers:get_split_as_sequence}
 
-### `headers:modifyi(i, value, never_index)` {#http.headers:modifyi}
+### `headers:modifyi(i, value, never_index)` <!-- --> {#http.headers:modifyi}
 
-### `headers:upsert(name, value, never_index)` {#http.headers:upsert}
+### `headers:upsert(name, value, never_index)` <!-- --> {#http.headers:upsert}
 
-### `headers:sort()` {#http.headers:sort}
+### `headers:sort()` <!-- --> {#http.headers:sort}
 
 
 ## http.hpack
@@ -345,11 +345,11 @@ Creates and returns a new headers object.
 
 ## http.request
 
-### `new_from_uri(uri)` {#http.request.new_from_uri}
+### `new_from_uri(uri)` <!-- --> {#http.request.new_from_uri}
 
 Creates a new `http.request` object from the given URI.
 
-### `request:go(timeout)` {#http.request:timeout}
+### `request:go(timeout)` <!-- --> {#http.request:timeout}
 
 Performs the request.
 
@@ -366,35 +366,35 @@ Common functions for streams (no matter the underlying protocol version).
 
 All stream types expose the functions:
 
-### `stream:checktls()` {#http.stream_common:checktls}
+### `stream:checktls()` <!-- --> {#http.stream_common:checktls}
 
-### `stream:localname()` {#http.stream_common:localname}
+### `stream:localname()` <!-- --> {#http.stream_common:localname}
 
-### `stream:peername()` {#http.stream_common:peername}
+### `stream:peername()` <!-- --> {#http.stream_common:peername}
 
-### `stream:get_headers(timeout)` {#http.stream_common:get_headers}
+### `stream:get_headers(timeout)` <!-- --> {#http.stream_common:get_headers}
 
-### `stream:write_headers(headers, end_stream, timeout)` {#http.stream_common:write_headers}
+### `stream:write_headers(headers, end_stream, timeout)` <!-- --> {#http.stream_common:write_headers}
 
-### `stream:write_continue(timeout)` {#http.stream_common:write_continue}
+### `stream:write_continue(timeout)` <!-- --> {#http.stream_common:write_continue}
 
-### `stream:get_next_chunk(timeout)` {#http.stream_common:get_next_chunk}
+### `stream:get_next_chunk(timeout)` <!-- --> {#http.stream_common:get_next_chunk}
 
-### `stream:each_chunk()` {#http.stream_common:each_chunk}
+### `stream:each_chunk()` <!-- --> {#http.stream_common:each_chunk}
 
-### `stream:get_body_as_string(timeout)` {#http.stream_common:get_body_as_string}
+### `stream:get_body_as_string(timeout)` <!-- --> {#http.stream_common:get_body_as_string}
 
-### `stream:save_body_to_file(file, timeout)` {#http.stream_common:save_body_to_file}
+### `stream:save_body_to_file(file, timeout)` <!-- --> {#http.stream_common:save_body_to_file}
 
-### `stream:get_body_as_file(timeout)` {#http.stream_common:get_body_as_file}
+### `stream:get_body_as_file(timeout)` <!-- --> {#http.stream_common:get_body_as_file}
 
-### `stream:write_chunk(chunk, end_stream, timeout)` {#http.stream_common:write_chunk}
+### `stream:write_chunk(chunk, end_stream, timeout)` <!-- --> {#http.stream_common:write_chunk}
 
-### `stream:write_body_from_string(str, timeout)` {#http.stream_common:write_body_from_string}
+### `stream:write_body_from_string(str, timeout)` <!-- --> {#http.stream_common:write_body_from_string}
 
-### `stream:write_body_from_file(file, timeout)` {#http.stream_common:write_body_from_file}
+### `stream:write_body_from_file(file, timeout)` <!-- --> {#http.stream_common:write_body_from_file}
 
-### `stream:shutdown()` {#http.stream_common:shutdown}
+### `stream:shutdown()` <!-- --> {#http.stream_common:shutdown}
 
 
 ## http.tls
@@ -408,12 +408,12 @@ All stream types expose the functions:
 An abstraction layer over the various lua zlib libraries.
 
 
-### `engine` {#http.zlib.engine}
+### `engine` <!-- --> {#http.zlib.engine}
 
 Currently either [`"lua-zlib"`](https://github.com/brimworks/lua-zlib) or [`"lzlib"`](https://github.com/LuaDist/lzlib)
 
 
-### `inflate()` {#http.zlib.inflate}
+### `inflate()` <!-- --> {#http.zlib.inflate}
 
 Returns a function that inflates (uncompresses) a zlib stream.
 
@@ -422,7 +422,7 @@ it returns the uncompressed data as a string.
 It will throw an error if the stream is invalid
 
 
-### `deflate()` {#http.zlib.deflate}
+### `deflate()` <!-- --> {#http.zlib.deflate}
 
 Returns a function that deflates (compresses) a zlib stream.
 
@@ -449,7 +449,7 @@ assert(original == uncompressed)
 Provides usage similar to [prosody's net.http](https://prosody.im/doc/developers/net/http)
 
 
-### `request(url, ex, callback)` {#http.compat.prosody.request}
+### `request(url, ex, callback)` <!-- --> {#http.compat.prosody.request}
 
 A few key differences to the prosody `net.http.request`:
 
