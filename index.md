@@ -268,6 +268,54 @@ hence a `http.h2_connection` acts much like a scheduler.
 
 ## http.h2_error
 
+A type of error object that encapsulates HTTP 2 error information.
+A `http.h2_error` object has fields:
+
+  - `name`: The error `name`: a short identifier for this error
+  - `code`: The error code
+  - `description`: The description of the error code
+  - `message`: An error message
+  - `traceback`: A traceback taken at the point the error was thrown
+  - `stream_error`: A boolean that indicates if this is a stream level or protocol level error
+
+
+### `errors` <!-- --> {#http.h2_error.errors}
+
+A table containing errors [as defined by the HTTP 2 specification](https://http2.github.io/http2-spec/#iana-errors).
+It can be indexed by error name (e.g. `errors.PROTOCOL_ERROR`) or numeric code (e.g. `errors[0x1]`).
+
+
+### `is(ob)` <!-- --> {#http.h2_error.is}
+
+Returns a boolean indicating if the object `ob` is a `http.h2_error` object
+
+
+### `h2_error:new(ob)` <!-- --> {#http.h2_error:new}
+
+Creates a new error object from the passed table.
+The table should have the form of an error object i.e. with fields `name`, `code`, `message`, `traceback`, etc.
+
+Fields `name`, `code` and `description` are inherited from the parent `h2_error` object if not specified.
+
+`stream_error` defaults to `false.
+
+
+### `h2_error:traceback(message, stream_error, lvl)` <!-- --> {#http.h2_error:traceback}
+
+Creates a new error object, recording a traceback from the current thread.
+
+
+### `h2_error:error(message, stream_error, lvl)` <!-- --> {#http.h2_error:error}
+
+Creates and throws a new error.
+
+
+### `h2_error:assert(cond, ...)` <!-- --> {#http.h2_error:assert}
+
+If `cond` is truthy, returns `cond, ...`
+
+If `cond` is falsy (i.e. `false` or `nil`), throws an error with the first element of `...` as the `message`.
+
 
 ## http.h2_stream
 
@@ -342,6 +390,42 @@ Creates and returns a new headers object.
 
 ## http.hpack
 
+### `new(SETTINGS_HEADER_TABLE_SIZE)` <!-- --> {#http.hpack.new}
+
+### `hpack_context:append_data(val)` <!-- --> {#http.hpack:append_data}
+
+### `hpack_context:render_data()` <!-- --> {#http.hpack:render_data}
+
+### `hpack_context:clear_data()` <!-- --> {#http.hpack:clear_data}
+
+### `hpack_context:evict_from_dynamic_table()` <!-- --> {#http.hpack:evict_from_dynamic_table}
+
+### `hpack_context:dynamic_table_tostring()` <!-- --> {#http.hpack:dynamic_table_tostring}
+
+### `hpack_context:set_max_dynamic_table_size(SETTINGS_HEADER_TABLE_SIZE)` <!-- --> {#http.hpack:set_max_dynamic_table_size}
+
+### `hpack_context:encode_max_size(val)` <!-- --> {#http.hpack:encode_max_size}
+
+### `hpack_context:resize_dynamic_table(new_size)` <!-- --> {#http.hpack:resize_dynamic_table}
+
+### `hpack_context:add_to_dynamic_table(name, value, k) -- luacheck: ignore 212` <!-- --> {#http.hpack:add_to_dynamic_table}
+
+### `hpack_context:dynamic_table_id_to_index(id)` <!-- --> {#http.hpack:dynamic_table_id_to_index}
+
+### `hpack_context:lookup_pair_index(k)` <!-- --> {#http.hpack:lookup_pair_index}
+
+### `hpack_context:lookup_name_index(name)` <!-- --> {#http.hpack:lookup_name_index}
+
+### `hpack_context:lookup_index(index, allow_single)` <!-- --> {#http.hpack:lookup_index}
+
+### `hpack_context:add_header_indexed(name, value, huffman)` <!-- --> {#http.hpack:add_header_indexed}
+
+### `hpack_context:add_header_never_indexed(name, value, huffman)` <!-- --> {#http.hpack:add_header_never_indexed}
+
+### `hpack_context:encode_headers(headers)` <!-- --> {#http.hpack:encode_headers}
+
+### `hpack_context:decode_headers(payload, header_list, pos)` <!-- --> {#http.hpack:decode_headers}
+
 
 ## http.request
 
@@ -399,8 +483,73 @@ All stream types expose the functions:
 
 ## http.tls
 
+### `has_alpn` <!-- --> {#http.tls.has_alpn}
+
+Boolean indicating if ALPN is available in the current environment.
+
+It may be disabled if OpenSSL was compiled without ALPN support, or is an old version.
+
+
+### `modern_cipher_list` <!-- --> {#http.tls.modern_cipher_list}
+
+The [Mozilla "Modern" cipher list](https://wiki.mozilla.org/Security/Server_Side_TLS#Modern_compatibility) as a colon seperated list, ready to pass to OpenSSL
+
+
+### `banned_ciphers` <!-- --> {#http.tls.banned_ciphers}
+
+A set (table with string keys and values of `true`) containing the [ciphers banned in HTTP 2](https://http2.github.io/http2-spec/#BadCipherSuites)
+
+
+### `new_client_context()` <!-- --> {#http.tls.new_client_context}
+
+### `new_server_context()` <!-- --> {#http.tls.new_server_context}
+
 
 ## http.util
+
+### `encodeURI(str)` <!-- --> {#http.util.encodeURI}
+
+### `encodeURIComponent(str)` <!-- --> {#http.util.encodeURIComponent}
+
+### `resolve_relative_path(orig_path, relative_path)` <!-- --> {#http.util.resolve_relative_path}
+
+### `scheme_to_port` <!-- --> {#http.util.scheme_to_port}
+
+Map from schemes (as strings) to default ports (as integers).
+
+
+### `split_authority(authority, scheme)` <!-- --> {#http.util.split_authority}
+
+Splits an `authority` into host and port components.
+If the authority has no port component, will attempt to use the default for the `scheme`.
+
+#### Example
+
+```lua
+local http_util = require "http.util"
+print(http_util.split_authority("localhost:8000", "http")) --> `"localhost", 8000`
+print(http_util.split_authority("example.com", "https")) --> `"localhost", 443`
+```
+
+
+### `to_authority(host, port, scheme)` <!-- --> {#http.util.to_authority}
+
+Joins the `host` and `port` to create a valid authority component.
+Omits the port if it is the default for the `scheme`.
+
+
+### `split_header(str)` <!-- --> {#http.util.split_header}
+
+Many HTTP headers are specified to be comma seperated elements with optional whitespace. This function returns a table with a sequence of these elements.
+
+The returned table has an `n` field containing the number of elements.
+
+
+### `imf_date(time)` <!-- --> {#http.util.imf_date}
+
+Returns the time in HTTP prefered date format (See [RFC 7231 section 7.1.1.1](https://tools.ietf.org/html/rfc7231#section-7.1.1.1))
+
+`time` defaults to the current time
 
 
 ## http.zlib

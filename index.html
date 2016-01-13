@@ -132,7 +132,14 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.h2_connection:ack_settings"><code>h2_connection:ack_settings()</code> <!-- --></a></li>
 <li><a href="#http.h2_connection:settings"><code>h2_connection:settings(tbl, timeout)</code> <!-- --></a></li>
 </ul></li>
-<li><a href="#http.h2_error">http.h2_error</a></li>
+<li><a href="#http.h2_error">http.h2_error</a><ul>
+<li><a href="#http.h2_error.errors"><code>errors</code> <!-- --></a></li>
+<li><a href="#http.h2_error.is"><code>is(ob)</code> <!-- --></a></li>
+<li><a href="#http.h2_error:new"><code>h2_error:new(ob)</code> <!-- --></a></li>
+<li><a href="#http.h2_error:traceback"><code>h2_error:traceback(message, stream_error, lvl)</code> <!-- --></a></li>
+<li><a href="#http.h2_error:error"><code>h2_error:error(message, stream_error, lvl)</code> <!-- --></a></li>
+<li><a href="#http.h2_error:assert"><code>h2_error:assert(cond, ...)</code> <!-- --></a></li>
+</ul></li>
 <li><a href="#http.h2_stream">http.h2_stream</a><ul>
 <li><a href="#http.h2_stream:set_state"><code>h2_stream:set_state(new)</code> <!-- --></a></li>
 <li><a href="#http.h2_stream:reprioritise"><code>h2_stream:reprioritise(child, exclusive)</code> <!-- --></a></li>
@@ -164,7 +171,26 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.headers:upsert"><code>headers:upsert(name, value, never_index)</code> <!-- --></a></li>
 <li><a href="#http.headers:sort"><code>headers:sort()</code> <!-- --></a></li>
 </ul></li>
-<li><a href="#http.hpack">http.hpack</a></li>
+<li><a href="#http.hpack">http.hpack</a><ul>
+<li><a href="#http.hpack.new"><code>new(SETTINGS_HEADER_TABLE_SIZE)</code> <!-- --></a></li>
+<li><a href="#http.hpack:append_data"><code>hpack_context:append_data(val)</code> <!-- --></a></li>
+<li><a href="#http.hpack:render_data"><code>hpack_context:render_data()</code> <!-- --></a></li>
+<li><a href="#http.hpack:clear_data"><code>hpack_context:clear_data()</code> <!-- --></a></li>
+<li><a href="#http.hpack:evict_from_dynamic_table"><code>hpack_context:evict_from_dynamic_table()</code> <!-- --></a></li>
+<li><a href="#http.hpack:dynamic_table_tostring"><code>hpack_context:dynamic_table_tostring()</code> <!-- --></a></li>
+<li><a href="#http.hpack:set_max_dynamic_table_size"><code>hpack_context:set_max_dynamic_table_size(SETTINGS_HEADER_TABLE_SIZE)</code> <!-- --></a></li>
+<li><a href="#http.hpack:encode_max_size"><code>hpack_context:encode_max_size(val)</code> <!-- --></a></li>
+<li><a href="#http.hpack:resize_dynamic_table"><code>hpack_context:resize_dynamic_table(new_size)</code> <!-- --></a></li>
+<li><a href="#http.hpack:add_to_dynamic_table"><code>hpack_context:add_to_dynamic_table(name, value, k) -- luacheck: ignore 212</code> <!-- --></a></li>
+<li><a href="#http.hpack:dynamic_table_id_to_index"><code>hpack_context:dynamic_table_id_to_index(id)</code> <!-- --></a></li>
+<li><a href="#http.hpack:lookup_pair_index"><code>hpack_context:lookup_pair_index(k)</code> <!-- --></a></li>
+<li><a href="#http.hpack:lookup_name_index"><code>hpack_context:lookup_name_index(name)</code> <!-- --></a></li>
+<li><a href="#http.hpack:lookup_index"><code>hpack_context:lookup_index(index, allow_single)</code> <!-- --></a></li>
+<li><a href="#http.hpack:add_header_indexed"><code>hpack_context:add_header_indexed(name, value, huffman)</code> <!-- --></a></li>
+<li><a href="#http.hpack:add_header_never_indexed"><code>hpack_context:add_header_never_indexed(name, value, huffman)</code> <!-- --></a></li>
+<li><a href="#http.hpack:encode_headers"><code>hpack_context:encode_headers(headers)</code> <!-- --></a></li>
+<li><a href="#http.hpack:decode_headers"><code>hpack_context:decode_headers(payload, header_list, pos)</code> <!-- --></a></li>
+</ul></li>
 <li><a href="#http.request">http.request</a><ul>
 <li><a href="#http.request.new_from_uri"><code>new_from_uri(uri)</code> <!-- --></a></li>
 <li><a href="#http.request:timeout"><code>request:go(timeout)</code> <!-- --></a></li>
@@ -187,8 +213,23 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.stream_common:write_body_from_file"><code>stream:write_body_from_file(file, timeout)</code> <!-- --></a></li>
 <li><a href="#http.stream_common:shutdown"><code>stream:shutdown()</code> <!-- --></a></li>
 </ul></li>
-<li><a href="#http.tls">http.tls</a></li>
-<li><a href="#http.util">http.util</a></li>
+<li><a href="#http.tls">http.tls</a><ul>
+<li><a href="#http.tls.has_alpn"><code>has_alpn</code> <!-- --></a></li>
+<li><a href="#http.tls.modern_cipher_list"><code>modern_cipher_list</code> <!-- --></a></li>
+<li><a href="#http.tls.banned_ciphers"><code>banned_ciphers</code> <!-- --></a></li>
+<li><a href="#http.tls.new_client_context"><code>new_client_context()</code> <!-- --></a></li>
+<li><a href="#http.tls.new_server_context"><code>new_server_context()</code> <!-- --></a></li>
+</ul></li>
+<li><a href="#http.util">http.util</a><ul>
+<li><a href="#http.util.encodeURI"><code>encodeURI(str)</code> <!-- --></a></li>
+<li><a href="#http.util.encodeURIComponent"><code>encodeURIComponent(str)</code> <!-- --></a></li>
+<li><a href="#http.util.resolve_relative_path"><code>resolve_relative_path(orig_path, relative_path)</code> <!-- --></a></li>
+<li><a href="#http.util.scheme_to_port"><code>scheme_to_port</code> <!-- --></a></li>
+<li><a href="#http.util.split_authority"><code>split_authority(authority, scheme)</code> <!-- --></a></li>
+<li><a href="#http.util.to_authority"><code>to_authority(host, port, scheme)</code> <!-- --></a></li>
+<li><a href="#http.util.split_header"><code>split_header(str)</code> <!-- --></a></li>
+<li><a href="#http.util.imf_date"><code>imf_date(time)</code> <!-- --></a></li>
+</ul></li>
 <li><a href="#http.zlib">http.zlib</a><ul>
 <li><a href="#http.zlib.engine"><code>engine</code> <!-- --></a></li>
 <li><a href="#http.zlib.inflate"><code>inflate()</code> <!-- --></a></li>
@@ -478,6 +519,42 @@ See <a href="#http.h2_connection"><code>http.h2_connection</code></a> for detail
 </section>
 <section id="http.h2_error" class="level2">
 <h2>http.h2_error</h2>
+<p>A type of error object that encapsulates HTTP 2 error information. A <code>http.h2_error</code> object has fields:</p>
+<ul>
+<li><code>name</code>: The error <code>name</code>: a short identifier for this error</li>
+<li><code>code</code>: The error code</li>
+<li><code>description</code>: The description of the error code</li>
+<li><code>message</code>: An error message</li>
+<li><code>traceback</code>: A traceback taken at the point the error was thrown</li>
+<li><code>stream_error</code>: A boolean that indicates if this is a stream level or protocol level error</li>
+</ul>
+<section id="http.h2_error.errors" class="level3">
+<h3><code>errors</code> <!-- --></h3>
+<p>A table containing errors <a href="https://http2.github.io/http2-spec/#iana-errors">as defined by the HTTP 2 specification</a>. It can be indexed by error name (e.g. <code>errors.PROTOCOL_ERROR</code>) or numeric code (e.g. <code>errors[0x1]</code>).</p>
+</section>
+<section id="http.h2_error.is" class="level3">
+<h3><code>is(ob)</code> <!-- --></h3>
+<p>Returns a boolean indicating if the object <code>ob</code> is a <code>http.h2_error</code> object</p>
+</section>
+<section id="http.h2_error:new" class="level3">
+<h3><code>h2_error:new(ob)</code> <!-- --></h3>
+<p>Creates a new error object from the passed table. The table should have the form of an error object i.e. with fields <code>name</code>, <code>code</code>, <code>message</code>, <code>traceback</code>, etc.</p>
+<p>Fields <code>name</code>, <code>code</code> and <code>description</code> are inherited from the parent <code>h2_error</code> object if not specified.</p>
+<p><code>stream_error</code> defaults to `false.</p>
+</section>
+<section id="http.h2_error:traceback" class="level3">
+<h3><code>h2_error:traceback(message, stream_error, lvl)</code> <!-- --></h3>
+<p>Creates a new error object, recording a traceback from the current thread.</p>
+</section>
+<section id="http.h2_error:error" class="level3">
+<h3><code>h2_error:error(message, stream_error, lvl)</code> <!-- --></h3>
+<p>Creates and throws a new error.</p>
+</section>
+<section id="http.h2_error:assert" class="level3">
+<h3><code>h2_error:assert(cond, ...)</code> <!-- --></h3>
+<p>If <code>cond</code> is truthy, returns <code>cond, ...</code></p>
+<p>If <code>cond</code> is falsy (i.e. <code>false</code> or <code>nil</code>), throws an error with the first element of <code>...</code> as the <code>message</code>.</p>
+</section>
 </section>
 <section id="http.h2_stream" class="level2">
 <h2>http.h2_stream</h2>
@@ -572,6 +649,60 @@ See <a href="#http.h2_connection"><code>http.h2_connection</code></a> for detail
 </section>
 <section id="http.hpack" class="level2">
 <h2>http.hpack</h2>
+<section id="http.hpack.new" class="level3">
+<h3><code>new(SETTINGS_HEADER_TABLE_SIZE)</code> <!-- --></h3>
+</section>
+<section id="http.hpack:append_data" class="level3">
+<h3><code>hpack_context:append_data(val)</code> <!-- --></h3>
+</section>
+<section id="http.hpack:render_data" class="level3">
+<h3><code>hpack_context:render_data()</code> <!-- --></h3>
+</section>
+<section id="http.hpack:clear_data" class="level3">
+<h3><code>hpack_context:clear_data()</code> <!-- --></h3>
+</section>
+<section id="http.hpack:evict_from_dynamic_table" class="level3">
+<h3><code>hpack_context:evict_from_dynamic_table()</code> <!-- --></h3>
+</section>
+<section id="http.hpack:dynamic_table_tostring" class="level3">
+<h3><code>hpack_context:dynamic_table_tostring()</code> <!-- --></h3>
+</section>
+<section id="http.hpack:set_max_dynamic_table_size" class="level3">
+<h3><code>hpack_context:set_max_dynamic_table_size(SETTINGS_HEADER_TABLE_SIZE)</code> <!-- --></h3>
+</section>
+<section id="http.hpack:encode_max_size" class="level3">
+<h3><code>hpack_context:encode_max_size(val)</code> <!-- --></h3>
+</section>
+<section id="http.hpack:resize_dynamic_table" class="level3">
+<h3><code>hpack_context:resize_dynamic_table(new_size)</code> <!-- --></h3>
+</section>
+<section id="http.hpack:add_to_dynamic_table" class="level3">
+<h3><code>hpack_context:add_to_dynamic_table(name, value, k) -- luacheck: ignore 212</code> <!-- --></h3>
+</section>
+<section id="http.hpack:dynamic_table_id_to_index" class="level3">
+<h3><code>hpack_context:dynamic_table_id_to_index(id)</code> <!-- --></h3>
+</section>
+<section id="http.hpack:lookup_pair_index" class="level3">
+<h3><code>hpack_context:lookup_pair_index(k)</code> <!-- --></h3>
+</section>
+<section id="http.hpack:lookup_name_index" class="level3">
+<h3><code>hpack_context:lookup_name_index(name)</code> <!-- --></h3>
+</section>
+<section id="http.hpack:lookup_index" class="level3">
+<h3><code>hpack_context:lookup_index(index, allow_single)</code> <!-- --></h3>
+</section>
+<section id="http.hpack:add_header_indexed" class="level3">
+<h3><code>hpack_context:add_header_indexed(name, value, huffman)</code> <!-- --></h3>
+</section>
+<section id="http.hpack:add_header_never_indexed" class="level3">
+<h3><code>hpack_context:add_header_never_indexed(name, value, huffman)</code> <!-- --></h3>
+</section>
+<section id="http.hpack:encode_headers" class="level3">
+<h3><code>hpack_context:encode_headers(headers)</code> <!-- --></h3>
+</section>
+<section id="http.hpack:decode_headers" class="level3">
+<h3><code>hpack_context:decode_headers(payload, header_list, pos)</code> <!-- --></h3>
+</section>
 </section>
 <section id="http.request" class="level2">
 <h2>http.request</h2>
@@ -640,9 +771,65 @@ See <a href="#http.h2_connection"><code>http.h2_connection</code></a> for detail
 </section>
 <section id="http.tls" class="level2">
 <h2>http.tls</h2>
+<section id="http.tls.has_alpn" class="level3">
+<h3><code>has_alpn</code> <!-- --></h3>
+<p>Boolean indicating if ALPN is available in the current environment.</p>
+<p>It may be disabled if OpenSSL was compiled without ALPN support, or is an old version.</p>
+</section>
+<section id="http.tls.modern_cipher_list" class="level3">
+<h3><code>modern_cipher_list</code> <!-- --></h3>
+<p>The <a href="https://wiki.mozilla.org/Security/Server_Side_TLS#Modern_compatibility">Mozilla &quot;Modern&quot; cipher list</a> as a colon seperated list, ready to pass to OpenSSL</p>
+</section>
+<section id="http.tls.banned_ciphers" class="level3">
+<h3><code>banned_ciphers</code> <!-- --></h3>
+<p>A set (table with string keys and values of <code>true</code>) containing the <a href="https://http2.github.io/http2-spec/#BadCipherSuites">ciphers banned in HTTP 2</a></p>
+</section>
+<section id="http.tls.new_client_context" class="level3">
+<h3><code>new_client_context()</code> <!-- --></h3>
+</section>
+<section id="http.tls.new_server_context" class="level3">
+<h3><code>new_server_context()</code> <!-- --></h3>
+</section>
 </section>
 <section id="http.util" class="level2">
 <h2>http.util</h2>
+<section id="http.util.encodeURI" class="level3">
+<h3><code>encodeURI(str)</code> <!-- --></h3>
+</section>
+<section id="http.util.encodeURIComponent" class="level3">
+<h3><code>encodeURIComponent(str)</code> <!-- --></h3>
+</section>
+<section id="http.util.resolve_relative_path" class="level3">
+<h3><code>resolve_relative_path(orig_path, relative_path)</code> <!-- --></h3>
+</section>
+<section id="http.util.scheme_to_port" class="level3">
+<h3><code>scheme_to_port</code> <!-- --></h3>
+<p>Map from schemes (as strings) to default ports (as integers).</p>
+</section>
+<section id="http.util.split_authority" class="level3">
+<h3><code>split_authority(authority, scheme)</code> <!-- --></h3>
+<p>Splits an <code>authority</code> into host and port components. If the authority has no port component, will attempt to use the default for the <code>scheme</code>.</p>
+<section id="example" class="level4">
+<h4>Example</h4>
+<div class="sourceCode"><pre class="sourceCode lua"><code class="sourceCode lua"><span class="kw">local</span> http_util <span class="ot">=</span> <span class="fu">require</span> <span class="st">&quot;http.util&quot;</span>
+<span class="fu">print</span><span class="ot">(</span>http_util<span class="ot">.</span>split_authority<span class="ot">(</span><span class="st">&quot;localhost:8000&quot;</span><span class="ot">,</span> <span class="st">&quot;http&quot;</span><span class="ot">))</span> <span class="co">--&gt; `&quot;localhost&quot;, 8000`</span>
+<span class="fu">print</span><span class="ot">(</span>http_util<span class="ot">.</span>split_authority<span class="ot">(</span><span class="st">&quot;example.com&quot;</span><span class="ot">,</span> <span class="st">&quot;https&quot;</span><span class="ot">))</span> <span class="co">--&gt; `&quot;localhost&quot;, 443`</span></code></pre></div>
+</section>
+</section>
+<section id="http.util.to_authority" class="level3">
+<h3><code>to_authority(host, port, scheme)</code> <!-- --></h3>
+<p>Joins the <code>host</code> and <code>port</code> to create a valid authority component. Omits the port if it is the default for the <code>scheme</code>.</p>
+</section>
+<section id="http.util.split_header" class="level3">
+<h3><code>split_header(str)</code> <!-- --></h3>
+<p>Many HTTP headers are specified to be comma seperated elements with optional whitespace. This function returns a table with a sequence of these elements.</p>
+<p>The returned table has an <code>n</code> field containing the number of elements.</p>
+</section>
+<section id="http.util.imf_date" class="level3">
+<h3><code>imf_date(time)</code> <!-- --></h3>
+<p>Returns the time in HTTP prefered date format (See <a href="https://tools.ietf.org/html/rfc7231#section-7.1.1.1">RFC 7231 section 7.1.1.1</a>)</p>
+<p><code>time</code> defaults to the current time</p>
+</section>
 </section>
 <section id="http.zlib" class="level2">
 <h2>http.zlib</h2>
