@@ -76,7 +76,7 @@ All stream types expose the fields and functions:
 
 ### `stream.connection` <!-- --> {#stream.connection}
 
-The underlying http connection object
+The underlying [*connection*](#connection) object
 
 
 ### `stream:get_headers(timeout)` <!-- --> {#stream:get_headers}
@@ -179,6 +179,8 @@ local myconnection = http_client.connect {
 
 ## http.h1_connection
 
+### `new(socket, conn_type, version)` <!-- --> {#http.h1_connection.new}
+
 ### `h1_connection:checktls()` <!-- --> {#http.h1_connection:checktls}
 
 ### `h1_connection:localname()` <!-- --> {#http.h1_connection:localname}
@@ -256,6 +258,8 @@ a `http.h1_stream` has the following methods:
 
 An HTTP 2 connection can have multiple streams active and transmitting data at once,
 hence a `http.h2_connection` acts much like a scheduler.
+
+### `new(socket, conn_type, settings, timeout)` <!-- --> {#http.h2_connection.new}
 
 ### `h2_connection:pollfd()` <!-- --> {#http.h2_connection:pollfd}
 
@@ -477,6 +481,8 @@ On success, returns the response [*headers*](#http.headers) and a [*stream*](#st
 
 ## http.server
 
+### `listen(options)` <!-- --> {#http.client.connect}
+
 
 ## http.stream_common
 
@@ -545,6 +551,28 @@ A set (table with string keys and values of `true`) containing the [ciphers bann
 
 ### `encodeURIComponent(str)` <!-- --> {#http.util.encodeURIComponent}
 
+### `decodeURI(str)` <!-- --> {#http.util.decodeURI}
+
+### `decodeURIComponent(str)` <!-- --> {#http.util.decodeURIComponent}
+
+### `query_args(str)` <!-- --> {#http.util.query_args}
+
+Returns an iterator over the pairs in `str`
+
+#### Example
+
+```lua
+local http_util = require "http.util"
+for name, value in http_util.query_args("foo=bar&baz=qux") do
+	print(name, value)
+end
+--[[ prints:
+"foo", "bar"
+"baz", "qux"
+]]
+```
+
+
 ### `resolve_relative_path(orig_path, relative_path)` <!-- --> {#http.util.resolve_relative_path}
 
 ### `scheme_to_port` <!-- --> {#http.util.scheme_to_port}
@@ -561,8 +589,8 @@ If the authority has no port component, will attempt to use the default for the 
 
 ```lua
 local http_util = require "http.util"
-print(http_util.split_authority("localhost:8000", "http")) --> `"localhost", 8000`
-print(http_util.split_authority("example.com", "https")) --> `"localhost", 443`
+print(http_util.split_authority("localhost:8000", "http")) --> "localhost", 8000
+print(http_util.split_authority("example.com", "https")) --> "localhost", 443
 ```
 
 

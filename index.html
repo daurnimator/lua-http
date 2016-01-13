@@ -92,6 +92,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.client-example">Example</a></li>
 </ul></li>
 <li><a href="#http.h1_connection">http.h1_connection</a><ul>
+<li><a href="#http.h1_connection.new"><code>new(socket, conn_type, version)</code> <!-- --></a></li>
 <li><a href="#http.h1_connection:checktls"><code>h1_connection:checktls()</code> <!-- --></a></li>
 <li><a href="#http.h1_connection:localname"><code>h1_connection:localname()</code> <!-- --></a></li>
 <li><a href="#http.h1_connection:peername"><code>h1_connection:peername()</code> <!-- --></a></li>
@@ -124,6 +125,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.h1_stream:read_headers"><code>h1_stream:read_headers(timeout)</code> <!-- --></a></li>
 </ul></li>
 <li><a href="#http.h2_connection">http.h2_connection</a><ul>
+<li><a href="#http.h2_connection.new"><code>new(socket, conn_type, settings, timeout)</code> <!-- --></a></li>
 <li><a href="#http.h2_connection:pollfd"><code>h2_connection:pollfd()</code> <!-- --></a></li>
 <li><a href="#http.h2_connection:events"><code>h2_connection:events()</code> <!-- --></a></li>
 <li><a href="#http.h2_connection:timeout"><code>h2_connection:timeout()</code> <!-- --></a></li>
@@ -209,7 +211,9 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.request.new_from_uri"><code>new_from_uri(uri)</code> <!-- --></a></li>
 <li><a href="#http.request:timeout"><code>request:go(timeout)</code> <!-- --></a></li>
 </ul></li>
-<li><a href="#http.server">http.server</a></li>
+<li><a href="#http.server">http.server</a><ul>
+<li><a href="#http.client.connect"><code>listen(options)</code> <!-- --></a></li>
+</ul></li>
 <li><a href="#http.stream_common">http.stream_common</a><ul>
 <li><a href="#http.stream_common:checktls"><code>stream:checktls()</code> <!-- --></a></li>
 <li><a href="#http.stream_common:localname"><code>stream:localname()</code> <!-- --></a></li>
@@ -232,6 +236,9 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.util">http.util</a><ul>
 <li><a href="#http.util.encodeURI"><code>encodeURI(str)</code> <!-- --></a></li>
 <li><a href="#http.util.encodeURIComponent"><code>encodeURIComponent(str)</code> <!-- --></a></li>
+<li><a href="#http.util.decodeURI"><code>decodeURI(str)</code> <!-- --></a></li>
+<li><a href="#http.util.decodeURIComponent"><code>decodeURIComponent(str)</code> <!-- --></a></li>
+<li><a href="#http.util.query_args"><code>query_args(str)</code> <!-- --></a></li>
 <li><a href="#http.util.resolve_relative_path"><code>resolve_relative_path(orig_path, relative_path)</code> <!-- --></a></li>
 <li><a href="#http.util.scheme_to_port"><code>scheme_to_port</code> <!-- --></a></li>
 <li><a href="#http.util.split_authority"><code>split_authority(authority, scheme)</code> <!-- --></a></li>
@@ -314,7 +321,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <p>All stream types expose the fields and functions:</p>
 <section id="stream.connection" class="level3">
 <h3><code>stream.connection</code> <!-- --></h3>
-<p>The underlying http connection object</p>
+<p>The underlying <a href="#connection"><em>connection</em></a> object</p>
 </section>
 <section id="stream:get_headers" class="level3">
 <h3><code>stream:get_headers(timeout)</code> <!-- --></h3>
@@ -406,6 +413,9 @@ See <a href="#http.h2_connection"><code>http.h2_connection</code></a> for detail
 </section>
 <section id="http.h1_connection" class="level2">
 <h2>http.h1_connection</h2>
+<section id="http.h1_connection.new" class="level3">
+<h3><code>new(socket, conn_type, version)</code> <!-- --></h3>
+</section>
 <section id="http.h1_connection:checktls" class="level3">
 <h3><code>h1_connection:checktls()</code> <!-- --></h3>
 </section>
@@ -500,6 +510,9 @@ See <a href="#http.h2_connection"><code>http.h2_connection</code></a> for detail
 <section id="http.h2_connection" class="level2">
 <h2>http.h2_connection</h2>
 <p>An HTTP 2 connection can have multiple streams active and transmitting data at once, hence a <code>http.h2_connection</code> acts much like a scheduler.</p>
+<section id="http.h2_connection.new" class="level3">
+<h3><code>new(socket, conn_type, settings, timeout)</code> <!-- --></h3>
+</section>
 <section id="http.h2_connection:pollfd" class="level3">
 <h3><code>h2_connection:pollfd()</code> <!-- --></h3>
 </section>
@@ -765,6 +778,9 @@ See <a href="#http.h2_connection"><code>http.h2_connection</code></a> for detail
 </section>
 <section id="http.server" class="level2">
 <h2>http.server</h2>
+<section id="http.client.connect" class="level3">
+<h3><code>listen(options)</code> <!-- --></h3>
+</section>
 </section>
 <section id="http.stream_common" class="level2">
 <h2>http.stream_common</h2>
@@ -834,6 +850,27 @@ See <a href="#http.h2_connection"><code>http.h2_connection</code></a> for detail
 <section id="http.util.encodeURIComponent" class="level3">
 <h3><code>encodeURIComponent(str)</code> <!-- --></h3>
 </section>
+<section id="http.util.decodeURI" class="level3">
+<h3><code>decodeURI(str)</code> <!-- --></h3>
+</section>
+<section id="http.util.decodeURIComponent" class="level3">
+<h3><code>decodeURIComponent(str)</code> <!-- --></h3>
+</section>
+<section id="http.util.query_args" class="level3">
+<h3><code>query_args(str)</code> <!-- --></h3>
+<p>Returns an iterator over the pairs in <code>str</code></p>
+<section id="example" class="level4">
+<h4>Example</h4>
+<div class="sourceCode"><pre class="sourceCode lua"><code class="sourceCode lua"><span class="kw">local</span> http_util <span class="ot">=</span> <span class="fu">require</span> <span class="st">&quot;http.util&quot;</span>
+<span class="kw">for</span> name<span class="ot">,</span> value <span class="kw">in</span> http_util<span class="ot">.</span>query_args<span class="ot">(</span><span class="st">&quot;foo=bar&amp;baz=qux&quot;</span><span class="ot">)</span> <span class="kw">do</span>
+    <span class="fu">print</span><span class="ot">(</span>name<span class="ot">,</span> value<span class="ot">)</span>
+<span class="kw">end</span>
+<span class="co">--[[ prints:</span>
+<span class="co">&quot;foo&quot;, &quot;bar&quot;</span>
+<span class="co">&quot;baz&quot;, &quot;qux&quot;</span>
+<span class="co">]]</span></code></pre></div>
+</section>
+</section>
 <section id="http.util.resolve_relative_path" class="level3">
 <h3><code>resolve_relative_path(orig_path, relative_path)</code> <!-- --></h3>
 </section>
@@ -844,11 +881,11 @@ See <a href="#http.h2_connection"><code>http.h2_connection</code></a> for detail
 <section id="http.util.split_authority" class="level3">
 <h3><code>split_authority(authority, scheme)</code> <!-- --></h3>
 <p>Splits an <code>authority</code> into host and port components. If the authority has no port component, will attempt to use the default for the <code>scheme</code>.</p>
-<section id="example" class="level4">
+<section id="example-1" class="level4">
 <h4>Example</h4>
 <div class="sourceCode"><pre class="sourceCode lua"><code class="sourceCode lua"><span class="kw">local</span> http_util <span class="ot">=</span> <span class="fu">require</span> <span class="st">&quot;http.util&quot;</span>
-<span class="fu">print</span><span class="ot">(</span>http_util<span class="ot">.</span>split_authority<span class="ot">(</span><span class="st">&quot;localhost:8000&quot;</span><span class="ot">,</span> <span class="st">&quot;http&quot;</span><span class="ot">))</span> <span class="co">--&gt; `&quot;localhost&quot;, 8000`</span>
-<span class="fu">print</span><span class="ot">(</span>http_util<span class="ot">.</span>split_authority<span class="ot">(</span><span class="st">&quot;example.com&quot;</span><span class="ot">,</span> <span class="st">&quot;https&quot;</span><span class="ot">))</span> <span class="co">--&gt; `&quot;localhost&quot;, 443`</span></code></pre></div>
+<span class="fu">print</span><span class="ot">(</span>http_util<span class="ot">.</span>split_authority<span class="ot">(</span><span class="st">&quot;localhost:8000&quot;</span><span class="ot">,</span> <span class="st">&quot;http&quot;</span><span class="ot">))</span> <span class="co">--&gt; &quot;localhost&quot;, 8000</span>
+<span class="fu">print</span><span class="ot">(</span>http_util<span class="ot">.</span>split_authority<span class="ot">(</span><span class="st">&quot;example.com&quot;</span><span class="ot">,</span> <span class="st">&quot;https&quot;</span><span class="ot">))</span> <span class="co">--&gt; &quot;localhost&quot;, 443</span></code></pre></div>
 </section>
 </section>
 <section id="http.util.to_authority" class="level3">
