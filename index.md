@@ -555,6 +555,24 @@ A set (table with string keys and values of `true`) containing the [ciphers bann
 
 ### `decodeURIComponent(str)` <!-- --> {#http.util.decodeURIComponent}
 
+### `query_args(str)` <!-- --> {#http.util.query_args}
+
+Returns an iterator over the pairs in `str`
+
+#### Example
+
+```lua
+local http_util = require "http.util"
+for name, value in http_util.query_args("foo=bar&baz=qux") do
+	print(name, value)
+end
+--[[ prints:
+"foo", "bar"
+"baz", "qux"
+]]
+```
+
+
 ### `resolve_relative_path(orig_path, relative_path)` <!-- --> {#http.util.resolve_relative_path}
 
 ### `scheme_to_port` <!-- --> {#http.util.scheme_to_port}
