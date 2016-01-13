@@ -209,6 +209,16 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 </ul></li>
 <li><a href="#http.request">http.request</a><ul>
 <li><a href="#http.request.new_from_uri"><code>new_from_uri(uri)</code> <!-- --></a></li>
+<li><a href="#http.request.host"><code>request.host</code> <!-- --></a></li>
+<li><a href="#http.request.port"><code>request.port</code> <!-- --></a></li>
+<li><a href="#http.request.tls"><code>request.tls</code> <!-- --></a></li>
+<li><a href="#http.request.sendname"><code>request.sendname</code> <!-- --></a></li>
+<li><a href="#http.request.version"><code>request.version</code> <!-- --></a></li>
+<li><a href="#http.request.headers"><code>request.headers</code> <!-- --></a></li>
+<li><a href="#http.request.follow_redirects"><code>request.follow_redirects</code> <!-- --></a></li>
+<li><a href="#http.request.max_redirects"><code>request.max_redirects</code> <!-- --></a></li>
+<li><a href="#http.request.expect_100_timeout"><code>request.expect_100_timeout</code> <!-- --></a></li>
+<li><a href="#http.request:set_body"><code>request:set_body(body)</code> <!-- --></a></li>
 <li><a href="#http.request:timeout"><code>request:go(timeout)</code> <!-- --></a></li>
 </ul></li>
 <li><a href="#http.server">http.server</a><ul>
@@ -769,6 +779,51 @@ See <a href="#http.h2_connection"><code>http.h2_connection</code></a> for detail
 <section id="http.request.new_from_uri" class="level3">
 <h3><code>new_from_uri(uri)</code> <!-- --></h3>
 <p>Creates a new <code>http.request</code> object from the given URI.</p>
+</section>
+<section id="http.request.host" class="level3">
+<h3><code>request.host</code> <!-- --></h3>
+<p>The host this request should be sent to.</p>
+</section>
+<section id="http.request.port" class="level3">
+<h3><code>request.port</code> <!-- --></h3>
+<p>The port this request should be sent to.</p>
+</section>
+<section id="http.request.tls" class="level3">
+<h3><code>request.tls</code> <!-- --></h3>
+<p>A boolean indicating if TLS should be used, or an <code>SSL_CTX*</code> to use.</p>
+</section>
+<section id="http.request.sendname" class="level3">
+<h3><code>request.sendname</code> <!-- --></h3>
+<p>The TLS SNI host name used.</p>
+</section>
+<section id="http.request.version" class="level3">
+<h3><code>request.version</code> <!-- --></h3>
+<p>The HTTP version to use; leave as <code>nil</code> to auto-select.</p>
+</section>
+<section id="http.request.headers" class="level3">
+<h3><code>request.headers</code> <!-- --></h3>
+<p>A <a href="#http.headers"><code>http.headers</code></a> object of headers that will be sent in the request.</p>
+</section>
+<section id="http.request.follow_redirects" class="level3">
+<h3><code>request.follow_redirects</code> <!-- --></h3>
+<p>Boolean indicating if <code>:go()</code> should follow redirects. Defaults to <code>true</code>.</p>
+</section>
+<section id="http.request.max_redirects" class="level3">
+<h3><code>request.max_redirects</code> <!-- --></h3>
+<p>Maximum number of redirects to follow before giving up. Defaults to <code>5</code>. Set to <code>false</code> to not give up.</p>
+</section>
+<section id="http.request.expect_100_timeout" class="level3">
+<h3><code>request.expect_100_timeout</code> <!-- --></h3>
+<p>Number of seconds to wait for a 100 Continue response before proceeding to send a request body. Defaults to <code>1</code>.</p>
+</section>
+<section id="http.request:set_body" class="level3">
+<h3><code>request:set_body(body)</code> <!-- --></h3>
+<p>Allows setting a request body. <code>body</code> may be a string, function or lua file object.</p>
+<ul>
+<li>If <code>body</code> is a string it will be sent as given.</li>
+<li>If <code>body</code> is a function, it will be called repeatedly with the current time remaining and should return chunks of the request body as a string or <code>nil</code> if done.</li>
+<li>If <code>body</code> is a lua file object, it will be <a href="http://www.lua.org/manual/5.3/manual.html#pdf-file:seek"><code>:seek</code>'d</a> to the start, then sent as a body. Any errors encountered during file operations <em>will be thrown</em>.</li>
+</ul>
 </section>
 <section id="http.request:timeout" class="level3">
 <h3><code>request:go(timeout)</code> <!-- --></h3>
