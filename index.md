@@ -471,6 +471,65 @@ Creates and returns a new headers object.
 
 Creates a new `http.request` object from the given URI.
 
+
+### `request.host` <!-- --> {#http.request.host}
+
+The host this request should be sent to.
+
+
+### `request.port` <!-- --> {#http.request.port}
+
+The port this request should be sent to.
+
+
+### `request.tls` <!-- --> {#http.request.tls}
+
+A boolean indicating if TLS should be used, or an `SSL_CTX*` to use.
+
+
+### `request.sendname` <!-- --> {#http.request.sendname}
+
+The TLS SNI host name used.
+
+
+### `request.version` <!-- --> {#http.request.version}
+
+The HTTP version to use; leave as `nil` to auto-select.
+
+
+### `request.headers` <!-- --> {#http.request.headers}
+
+A [`http.headers`](#http.headers) object of headers that will be sent in the request.
+
+
+### `request.follow_redirects` <!-- --> {#http.request.follow_redirects}
+
+Boolean indicating if `:go()` should follow redirects.
+Defaults to `true`.
+
+
+### `request.max_redirects` <!-- --> {#http.request.max_redirects}
+
+Maximum number of redirects to follow before giving up.
+Defaults to `5`.
+Set to `false` to not give up.
+
+
+### `request.expect_100_timeout` <!-- --> {#http.request.expect_100_timeout}
+
+Number of seconds to wait for a 100 Continue response before proceeding to send a request body.
+Defaults to `1`.
+
+
+### `request:set_body(body)` <!-- --> {#http.request:set_body}
+
+Allows setting a request body. `body` may be a string, function or lua file object.
+
+  - If `body` is a string it will be sent as given.
+  - If `body` is a function, it will be called repeatedly with the current time remaining and should return chunks of the request body as a string or `nil` if done.
+  - If `body` is a lua file object, it will be [`:seek`'d](http://www.lua.org/manual/5.3/manual.html#pdf-file:seek) to the start, then sent as a body. Any errors encountered during file operations *will be thrown*.
+
+
 ### `request:go(timeout)` <!-- --> {#http.request:timeout}
 
 Performs the request.
