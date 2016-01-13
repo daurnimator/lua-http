@@ -29,7 +29,7 @@ lua-http has two connection types: one for HTTP 1, one for HTTP 2.
 
 A "stream" is a request/response on a connection.
 lua-http has two stream types: one for HTTP 1 based streams, and one for HTTP 2 based streams.
-They share a lowest common denominator interface, see (#http.stream_common).
+They share a lowest common denominator interface, see (#stream).
 
 
 ## Common use cases
@@ -55,6 +55,7 @@ All lua-http operations include DNS lookup, connection, TLS negotiation, and rea
 [Cqueues](http://25thandclement.com/~william/projects/cqueues.html) is a lua library that allows for composable event loops.
 Cqueues can be integrated with almost any main loop or event library you may encounter (see [here](https://github.com/wahern/cqueues/wiki/Integrations-with-other-main-loops) for more information + samples), and hence lua-http can be asynchronous in any place you write lua!
 
+
 # Interfaces
 
 ## connection
@@ -72,7 +73,8 @@ The HTTP version as a number
 
 ## stream
 
-All stream types expose the fields and functions:
+All stream types expose the following fields and functions.
+These are extended via the functions in [http.stream_common](#http.stream_common).
 
 ### `stream.connection` <!-- --> {#stream.connection}
 

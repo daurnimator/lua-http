@@ -291,7 +291,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <h2>Terminology</h2>
 <p>Much lua-http terminology is borrowed from HTTP 2.</p>
 <p>A &quot;connection&quot; is an abstraction over the underlying socket. lua-http has two connection types: one for HTTP 1, one for HTTP 2.</p>
-<p>A &quot;stream&quot; is a request/response on a connection. lua-http has two stream types: one for HTTP 1 based streams, and one for HTTP 2 based streams. They share a lowest common denominator interface, see (#http.stream_common).</p>
+<p>A &quot;stream&quot; is a request/response on a connection. lua-http has two stream types: one for HTTP 1 based streams, and one for HTTP 2 based streams. They share a lowest common denominator interface, see (#stream).</p>
 </section>
 <section id="common-use-cases" class="level2">
 <h2>Common use cases</h2>
@@ -328,7 +328,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 </section>
 <section id="stream" class="level2">
 <h2>stream</h2>
-<p>All stream types expose the fields and functions:</p>
+<p>All stream types expose the following fields and functions. These are extended via the functions in <a href="#http.stream_common">http.stream_common</a>.</p>
 <section id="stream.connection" class="level3">
 <h3><code>stream.connection</code> <!-- --></h3>
 <p>The underlying <a href="#connection"><em>connection</em></a> object</p>
