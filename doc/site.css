@@ -127,7 +127,7 @@ body {
     font-size: 1rem;
     line-height: 1.5rem
 }
-@media(min-width: 600px) {
+@media(min-width: 700px) {
     .meta {
         position: fixed;
         width: 300px;
