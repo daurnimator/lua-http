@@ -76,7 +76,7 @@ All stream types expose the fields and functions:
 
 ### `stream.connection` <!-- --> {#stream.connection}
 
-The underlying http connection object
+The underlying [*connection*](#connection) object
 
 
 ### `stream:get_headers(timeout)` <!-- --> {#stream:get_headers}
@@ -179,6 +179,8 @@ local myconnection = http_client.connect {
 
 ## http.h1_connection
 
+### `new(socket, conn_type, version)` <!-- --> {#http.h1_connection.new}
+
 ### `h1_connection:checktls()` <!-- --> {#http.h1_connection:checktls}
 
 ### `h1_connection:localname()` <!-- --> {#http.h1_connection:localname}
@@ -256,6 +258,8 @@ a `http.h1_stream` has the following methods:
 
 An HTTP 2 connection can have multiple streams active and transmitting data at once,
 hence a `http.h2_connection` acts much like a scheduler.
+
+### `new(socket, conn_type, settings, timeout)` <!-- --> {#http.h2_connection.new}
 
 ### `h2_connection:pollfd()` <!-- --> {#http.h2_connection:pollfd}
 
