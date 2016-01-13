@@ -507,6 +507,50 @@ A set (table with string keys and values of `true`) containing the [ciphers bann
 
 ## http.util
 
+### `encodeURI(str)` <!-- --> {#http.util.encodeURI}
+
+### `encodeURIComponent(str)` <!-- --> {#http.util.encodeURIComponent}
+
+### `resolve_relative_path(orig_path, relative_path)` <!-- --> {#http.util.resolve_relative_path}
+
+### `scheme_to_port` <!-- --> {#http.util.scheme_to_port}
+
+Map from schemes (as strings) to default ports (as integers).
+
+
+### `split_authority(authority, scheme)` <!-- --> {#http.util.split_authority}
+
+Splits an `authority` into host and port components.
+If the authority has no port component, will attempt to use the default for the `scheme`.
+
+#### Example
+
+```lua
+local http_util = require "http.util"
+print(http_util.split_authority("localhost:8000", "http")) --> `"localhost", 8000`
+print(http_util.split_authority("example.com", "https")) --> `"localhost", 443`
+```
+
+
+### `to_authority(host, port, scheme)` <!-- --> {#http.util.to_authority}
+
+Joins the `host` and `port` to create a valid authority component.
+Omits the port if it is the default for the `scheme`.
+
+
+### `split_header(str)` <!-- --> {#http.util.split_header}
+
+Many HTTP headers are specified to be comma seperated elements with optional whitespace. This function returns a table with a sequence of these elements.
+
+The returned table has an `n` field containing the number of elements.
+
+
+### `imf_date(time)` <!-- --> {#http.util.imf_date}
+
+Returns the time in HTTP prefered date format (See [RFC 7231 section 7.1.1.1](https://tools.ietf.org/html/rfc7231#section-7.1.1.1))
+
+`time` defaults to the current time
+
 
 ## http.zlib
 
