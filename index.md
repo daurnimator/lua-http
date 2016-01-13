@@ -481,6 +481,8 @@ On success, returns the response [*headers*](#http.headers) and a [*stream*](#st
 
 ## http.server
 
+### `listen(options)` <!-- --> {#http.client.connect}
+
 
 ## http.stream_common
 
