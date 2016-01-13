@@ -66,6 +66,20 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 </ul></li>
 <li><a href="#asynchronous-operation">Asynchronous Operation</a></li>
 </ul></li>
+<li><a href="#interfaces">Interfaces</a><ul>
+<li><a href="#connection">connection</a><ul>
+<li><a href="#connection.type"><code>connection.type</code> <!-- --></a></li>
+<li><a href="#connection.version"><code>connection.version</code> <!-- --></a></li>
+</ul></li>
+<li><a href="#stream">stream</a><ul>
+<li><a href="#stream.connection"><code>stream.connection</code> <!-- --></a></li>
+<li><a href="#stream:get_headers"><code>stream:get_headers(timeout)</code> <!-- --></a></li>
+<li><a href="#stream:write_headers"><code>stream:write_headers(headers, end_stream, timeout)</code> <!-- --></a></li>
+<li><a href="#stream:get_next_chunk"><code>stream:get_next_chunk(timeout)</code> <!-- --></a></li>
+<li><a href="#stream:write_chunk"><code>stream:write_chunk(chunk, end_stream, timeout)</code> <!-- --></a></li>
+<li><a href="#stream:shutdown"><code>stream:shutdown()</code> <!-- --></a></li>
+</ul></li>
+</ul></li>
 <li><a href="#modules">Modules</a><ul>
 <li><a href="#http.bit">http.bit</a><ul>
 <li><a href="#http.bit.band"><code>band(a, b)</code> <!-- --></a></li>
@@ -200,18 +214,13 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.stream_common:checktls"><code>stream:checktls()</code> <!-- --></a></li>
 <li><a href="#http.stream_common:localname"><code>stream:localname()</code> <!-- --></a></li>
 <li><a href="#http.stream_common:peername"><code>stream:peername()</code> <!-- --></a></li>
-<li><a href="#http.stream_common:get_headers"><code>stream:get_headers(timeout)</code> <!-- --></a></li>
-<li><a href="#http.stream_common:write_headers"><code>stream:write_headers(headers, end_stream, timeout)</code> <!-- --></a></li>
 <li><a href="#http.stream_common:write_continue"><code>stream:write_continue(timeout)</code> <!-- --></a></li>
-<li><a href="#http.stream_common:get_next_chunk"><code>stream:get_next_chunk(timeout)</code> <!-- --></a></li>
 <li><a href="#http.stream_common:each_chunk"><code>stream:each_chunk()</code> <!-- --></a></li>
 <li><a href="#http.stream_common:get_body_as_string"><code>stream:get_body_as_string(timeout)</code> <!-- --></a></li>
 <li><a href="#http.stream_common:save_body_to_file"><code>stream:save_body_to_file(file, timeout)</code> <!-- --></a></li>
 <li><a href="#http.stream_common:get_body_as_file"><code>stream:get_body_as_file(timeout)</code> <!-- --></a></li>
-<li><a href="#http.stream_common:write_chunk"><code>stream:write_chunk(chunk, end_stream, timeout)</code> <!-- --></a></li>
 <li><a href="#http.stream_common:write_body_from_string"><code>stream:write_body_from_string(str, timeout)</code> <!-- --></a></li>
 <li><a href="#http.stream_common:write_body_from_file"><code>stream:write_body_from_file(file, timeout)</code> <!-- --></a></li>
-<li><a href="#http.stream_common:shutdown"><code>stream:shutdown()</code> <!-- --></a></li>
 </ul></li>
 <li><a href="#http.tls">http.tls</a><ul>
 <li><a href="#http.tls.has_alpn"><code>has_alpn</code> <!-- --></a></li>
@@ -284,6 +293,44 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <section id="asynchronous-operation" class="level2">
 <h2>Asynchronous Operation</h2>
 <p>All lua-http operations include DNS lookup, connection, TLS negotiation, and read/write operations are asynchronous when run inside of a cqueue. <a href="http://25thandclement.com/~william/projects/cqueues.html">Cqueues</a> is a lua library that allows for composable event loops. Cqueues can be integrated with almost any main loop or event library you may encounter (see <a href="https://github.com/wahern/cqueues/wiki/Integrations-with-other-main-loops">here</a> for more information + samples), and hence lua-http can be asynchronous in any place you write lua!</p>
+</section>
+</section>
+<section id="interfaces" class="level1">
+<h1>Interfaces</h1>
+<section id="connection" class="level2">
+<h2>connection</h2>
+<p>All connection types expose the fields:</p>
+<section id="connection.type" class="level3">
+<h3><code>connection.type</code> <!-- --></h3>
+<p>Either <code>&quot;client&quot;</code> or <code>&quot;server&quot;</code></p>
+</section>
+<section id="connection.version" class="level3">
+<h3><code>connection.version</code> <!-- --></h3>
+<p>The HTTP version as a number</p>
+</section>
+</section>
+<section id="stream" class="level2">
+<h2>stream</h2>
+<p>All stream types expose the fields and functions:</p>
+<section id="stream.connection" class="level3">
+<h3><code>stream.connection</code> <!-- --></h3>
+<p>The underlying http connection object</p>
+</section>
+<section id="stream:get_headers" class="level3">
+<h3><code>stream:get_headers(timeout)</code> <!-- --></h3>
+</section>
+<section id="stream:write_headers" class="level3">
+<h3><code>stream:write_headers(headers, end_stream, timeout)</code> <!-- --></h3>
+</section>
+<section id="stream:get_next_chunk" class="level3">
+<h3><code>stream:get_next_chunk(timeout)</code> <!-- --></h3>
+</section>
+<section id="stream:write_chunk" class="level3">
+<h3><code>stream:write_chunk(chunk, end_stream, timeout)</code> <!-- --></h3>
+</section>
+<section id="stream:shutdown" class="level3">
+<h3><code>stream:shutdown()</code> <!-- --></h3>
+</section>
 </section>
 </section>
 <section id="modules" class="level1">
@@ -442,7 +489,7 @@ See <a href="#http.h2_connection"><code>http.h2_connection</code></a> for detail
 </section>
 <section id="http.h1_stream" class="level2">
 <h2>http.h1_stream</h2>
-<p>In addition to the functions from <a href="#http.stream_common">http.stream_common</a>, a <code>http.h1_stream</code> has the following methods:</p>
+<p>In addition to following the <a href="#stream"><em>stream</em></a> interface and the methods from <a href="#http.stream_common">http.stream_common</a>, a <code>http.h1_stream</code> has the following methods:</p>
 <section id="http.h1_stream:set_state" class="level3">
 <h3><code>h1_stream:set_state(new)</code> <!-- --></h3>
 </section>
@@ -558,7 +605,7 @@ See <a href="#http.h2_connection"><code>http.h2_connection</code></a> for detail
 </section>
 <section id="http.h2_stream" class="level2">
 <h2>http.h2_stream</h2>
-<p>In addition to the functions from <a href="#http.stream_common">http.stream_common</a>, a <code>http.h2_stream</code> has the following methods:</p>
+<p>In addition to following the <a href="#stream"><em>stream</em></a> interface and the methods from <a href="#http.stream_common">http.stream_common</a>, a <code>http.h2_stream</code> has the following methods:</p>
 <section id="http.h2_stream:set_state" class="level3">
 <h3><code>h2_stream:set_state(new)</code> <!-- --></h3>
 </section>
@@ -713,7 +760,7 @@ See <a href="#http.h2_connection"><code>http.h2_connection</code></a> for detail
 <section id="http.request:timeout" class="level3">
 <h3><code>request:go(timeout)</code> <!-- --></h3>
 <p>Performs the request.</p>
-<p>The request object is <strong>not</strong> invalidated; and can be reused for a new request. On success, returns the response <a href="#http.headers"><code>headers</code></a> and a <a href="#http.stream_common"><code>stream</code></a>.</p>
+<p>The request object is <strong>not</strong> invalidated; and can be reused for a new request. On success, returns the response <a href="#http.headers"><em>headers</em></a> and a <a href="#stream"><em>stream</em></a>.</p>
 </section>
 </section>
 <section id="http.server" class="level2">
@@ -721,31 +768,25 @@ See <a href="#http.h2_connection"><code>http.h2_connection</code></a> for detail
 </section>
 <section id="http.stream_common" class="level2">
 <h2>http.stream_common</h2>
-<p>Common functions for streams (no matter the underlying protocol version).</p>
-<p>All stream types expose the functions:</p>
+<p>The module <code>http.stream_common</code> provides common functions for streams (no matter the underlying protocol version). It exports a table <code>methods</code> of functions that build on top of the lower level <a href="#stream"><em>stream</em></a> interface.</p>
 <section id="http.stream_common:checktls" class="level3">
 <h3><code>stream:checktls()</code> <!-- --></h3>
+<p>Convenience wrapper equivalent to <code>stream.connection:checktls()</code></p>
 </section>
 <section id="http.stream_common:localname" class="level3">
 <h3><code>stream:localname()</code> <!-- --></h3>
+<p>Convenience wrapper equivalent to <code>stream.connection:localname()</code></p>
 </section>
 <section id="http.stream_common:peername" class="level3">
 <h3><code>stream:peername()</code> <!-- --></h3>
-</section>
-<section id="http.stream_common:get_headers" class="level3">
-<h3><code>stream:get_headers(timeout)</code> <!-- --></h3>
-</section>
-<section id="http.stream_common:write_headers" class="level3">
-<h3><code>stream:write_headers(headers, end_stream, timeout)</code> <!-- --></h3>
+<p>Convenience wrapper equivalent to <code>stream.connection:peername()</code></p>
 </section>
 <section id="http.stream_common:write_continue" class="level3">
 <h3><code>stream:write_continue(timeout)</code> <!-- --></h3>
 </section>
-<section id="http.stream_common:get_next_chunk" class="level3">
-<h3><code>stream:get_next_chunk(timeout)</code> <!-- --></h3>
-</section>
 <section id="http.stream_common:each_chunk" class="level3">
 <h3><code>stream:each_chunk()</code> <!-- --></h3>
+<p>Iterator over <code>stream:get_next_chunk()</code></p>
 </section>
 <section id="http.stream_common:get_body_as_string" class="level3">
 <h3><code>stream:get_body_as_string(timeout)</code> <!-- --></h3>
@@ -756,17 +797,11 @@ See <a href="#http.h2_connection"><code>http.h2_connection</code></a> for detail
 <section id="http.stream_common:get_body_as_file" class="level3">
 <h3><code>stream:get_body_as_file(timeout)</code> <!-- --></h3>
 </section>
-<section id="http.stream_common:write_chunk" class="level3">
-<h3><code>stream:write_chunk(chunk, end_stream, timeout)</code> <!-- --></h3>
-</section>
 <section id="http.stream_common:write_body_from_string" class="level3">
 <h3><code>stream:write_body_from_string(str, timeout)</code> <!-- --></h3>
 </section>
 <section id="http.stream_common:write_body_from_file" class="level3">
 <h3><code>stream:write_body_from_file(file, timeout)</code> <!-- --></h3>
-</section>
-<section id="http.stream_common:shutdown" class="level3">
-<h3><code>stream:shutdown()</code> <!-- --></h3>
 </section>
 </section>
 <section id="http.tls" class="level2">
