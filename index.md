@@ -55,6 +55,40 @@ All lua-http operations include DNS lookup, connection, TLS negotiation, and rea
 [Cqueues](http://25thandclement.com/~william/projects/cqueues.html) is a lua library that allows for composable event loops.
 Cqueues can be integrated with almost any main loop or event library you may encounter (see [here](https://github.com/wahern/cqueues/wiki/Integrations-with-other-main-loops) for more information + samples), and hence lua-http can be asynchronous in any place you write lua!
 
+# Interfaces
+
+## connection
+
+All connection types expose the fields:
+
+### `connection.type` <!-- --> {#connection.type}
+
+Either `"client"` or `"server"`
+
+### `connection.version` <!-- --> {#connection.version}
+
+The HTTP version as a number
+
+
+## stream
+
+All stream types expose the fields and functions:
+
+### `stream.connection` <!-- --> {#stream.connection}
+
+The underlying http connection object
+
+
+### `stream:get_headers(timeout)` <!-- --> {#stream:get_headers}
+
+### `stream:write_headers(headers, end_stream, timeout)` <!-- --> {#stream:write_headers}
+
+### `stream:get_next_chunk(timeout)` <!-- --> {#stream:get_next_chunk}
+
+### `stream:write_chunk(chunk, end_stream, timeout)` <!-- --> {#stream:write_chunk}
+
+### `stream:shutdown()` <!-- --> {#stream:shutdown}
+
 
 # Modules
 
@@ -210,7 +244,7 @@ print(reason_phrases["342"]) --> "Unassigned"
 
 ## http.h1_stream
 
-In addition to the functions from [http.stream_common](#http.stream_common),
+In addition to following the [*stream*](#stream) interface and the methods from [http.stream_common](#http.stream_common),
 a `http.h1_stream` has the following methods:
 
 ### `h1_stream:set_state(new)` <!-- --> {#http.h1_stream:set_state}
@@ -319,7 +353,7 @@ If `cond` is falsy (i.e. `false` or `nil`), throws an error with the first eleme
 
 ## http.h2_stream
 
-In addition to the functions from [http.stream_common](#http.stream_common),
+In addition to following the [*stream*](#stream) interface and the methods from [http.stream_common](#http.stream_common),
 a `http.h2_stream` has the following methods:
 
 ### `h2_stream:set_state(new)` <!-- --> {#http.h2_stream:set_state}
@@ -438,7 +472,7 @@ Creates a new `http.request` object from the given URI.
 Performs the request.
 
 The request object is **not** invalidated; and can be reused for a new request.
-On success, returns the response [`headers`](#http.headers) and a [`stream`](#http.stream_common).
+On success, returns the response [*headers*](#http.headers) and a [*stream*](#stream).
 
 
 ## http.server
@@ -446,25 +480,29 @@ On success, returns the response [`headers`](#http.headers) and a [`stream`](#ht
 
 ## http.stream_common
 
-Common functions for streams (no matter the underlying protocol version).
-
-All stream types expose the functions:
+The module `http.stream_common` provides common functions for streams (no matter the underlying protocol version). It exports a table `methods` of functions that build on top of the lower level [*stream*](#stream) interface.
 
 ### `stream:checktls()` <!-- --> {#http.stream_common:checktls}
 
+Convenience wrapper equivalent to `stream.connection:checktls()`
+
+
 ### `stream:localname()` <!-- --> {#http.stream_common:localname}
+
+Convenience wrapper equivalent to `stream.connection:localname()`
+
 
 ### `stream:peername()` <!-- --> {#http.stream_common:peername}
 
-### `stream:get_headers(timeout)` <!-- --> {#http.stream_common:get_headers}
+Convenience wrapper equivalent to `stream.connection:peername()`
 
-### `stream:write_headers(headers, end_stream, timeout)` <!-- --> {#http.stream_common:write_headers}
 
 ### `stream:write_continue(timeout)` <!-- --> {#http.stream_common:write_continue}
 
-### `stream:get_next_chunk(timeout)` <!-- --> {#http.stream_common:get_next_chunk}
-
 ### `stream:each_chunk()` <!-- --> {#http.stream_common:each_chunk}
+
+Iterator over `stream:get_next_chunk()`
+
 
 ### `stream:get_body_as_string(timeout)` <!-- --> {#http.stream_common:get_body_as_string}
 
@@ -472,13 +510,9 @@ All stream types expose the functions:
 
 ### `stream:get_body_as_file(timeout)` <!-- --> {#http.stream_common:get_body_as_file}
 
-### `stream:write_chunk(chunk, end_stream, timeout)` <!-- --> {#http.stream_common:write_chunk}
-
 ### `stream:write_body_from_string(str, timeout)` <!-- --> {#http.stream_common:write_body_from_string}
 
 ### `stream:write_body_from_file(file, timeout)` <!-- --> {#http.stream_common:write_body_from_file}
-
-### `stream:shutdown()` <!-- --> {#http.stream_common:shutdown}
 
 
 ## http.tls
