@@ -483,6 +483,27 @@ All stream types expose the functions:
 
 ## http.tls
 
+### `has_alpn` <!-- --> {#http.tls.has_alpn}
+
+Boolean indicating if ALPN is available in the current environment.
+
+It may be disabled if OpenSSL was compiled without ALPN support, or is an old version.
+
+
+### `modern_cipher_list` <!-- --> {#http.tls.modern_cipher_list}
+
+The [Mozilla "Modern" cipher list](https://wiki.mozilla.org/Security/Server_Side_TLS#Modern_compatibility) as a colon seperated list, ready to pass to OpenSSL
+
+
+### `banned_ciphers` <!-- --> {#http.tls.banned_ciphers}
+
+A set (table with string keys and values of `true`) containing the [ciphers banned in HTTP 2](https://http2.github.io/http2-spec/#BadCipherSuites)
+
+
+### `new_client_context()` <!-- --> {#http.tls.new_client_context}
+
+### `new_server_context()` <!-- --> {#http.tls.new_server_context}
+
 
 ## http.util
 
