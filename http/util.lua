@@ -47,6 +47,23 @@ local function decodeURIComponent(str)
 	return (str:gsub("%%(%x%x)", pchar_to_char))
 end
 
+-- An iterator over query segments (delimited by "&") as key/value pairs
+-- if a query segment has no '=', the value will be `nil`
+local function query_args(str)
+	local iter, state, first = str:gmatch("([^=&]+)(=?)([^&]*)&?")
+	return function(state, last) -- luacheck: ignore 431
+		local name, equals, value = iter(state, last)
+		if name == nil then return nil end
+		name = decodeURIComponent(name)
+		if equals == "" then
+			value = nil
+		else
+			value = decodeURIComponent(value)
+		end
+		return name, value
+	end, state, first
+end
+
 -- Resolves a relative path
 local function resolve_relative_path(orig_path, relative_path)
 	local t, i = {}, 0
@@ -171,6 +188,7 @@ return {
 	encodeURIComponent = encodeURIComponent;
 	decodeURI = decodeURI;
 	decodeURIComponent = decodeURIComponent;
+	query_args = query_args;
 	resolve_relative_path = resolve_relative_path;
 	scheme_to_port = scheme_to_port;
 	split_authority = split_authority;

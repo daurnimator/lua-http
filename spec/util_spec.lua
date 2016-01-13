@@ -16,6 +16,31 @@ describe("http.util module", function()
 		end
 		assert.same(allchars, util.decodeURIComponent(util.encodeURIComponent(allchars)))
 	end)
+	it("query_args works", function()
+		do
+			local iter, state, first = util.query_args("foo=bar")
+			assert.same({"foo", "bar"}, {iter(state, first)})
+			assert.same(nil, iter(state, first))
+		end
+		do
+			local iter, state, first = util.query_args("foo=bar&baz=qux&foo=somethingelse")
+			assert.same({"foo", "bar"}, {iter(state, first)})
+			assert.same({"baz", "qux"}, {iter(state, first)})
+			assert.same({"foo", "somethingelse"}, {iter(state, first)})
+			assert.same(nil, iter(state, first))
+		end
+		do
+			local iter, state, first = util.query_args("%3D=%26")
+			assert.same({"=", "&"}, {iter(state, first)})
+			assert.same(nil, iter(state, first))
+		end
+		do
+			local iter, state, first = util.query_args("foo=bar&noequals")
+			assert.same({"foo", "bar"}, {iter(state, first)})
+			assert.same({"noequals", nil}, {iter(state, first)})
+			assert.same(nil, iter(state, first))
+		end
+	end)
 	it("split_header works correctly", function()
 		-- nil
 		assert.same({n=0}, util.split_header(nil))
