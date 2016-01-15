@@ -128,16 +128,17 @@ body > * {
     font-size: 1rem;
     line-height: 1.5rem
 }
-@media(min-width: 700px) {
+@media(min-width: 55rem) {
     .meta {
         position: fixed;
-        width: 300px;
-        top: 0;
-        bottom: 0;
+        width: 20rem;
+        height: 100%;
         overflow: auto;
+        background: #FFF;
+        z-index: 1;
     }
     main {
-        margin-left: 300px;
-        padding-left: 1rem;
+        margin-left: 20rem;
+        overflow: auto;
     }
 }
