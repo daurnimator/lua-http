@@ -54,18 +54,18 @@ h1 {
     line-height: 3rem
 }
 h2 {
-    font-size: 2rem;
-    line-height: 2.5rem
-}
-h3 {
     font-size: 1.5rem;
     line-height: 2rem
+}
+h3 {
+    font-size: 1.25rem;
+    line-height: 1.5rem
 }
 h4,
 h5,
 h6 {
     font-size: 1rem;
-    line-height: 1.5rem
+    line-height: 1.25rem
 }
 hr {
     border: 0;
