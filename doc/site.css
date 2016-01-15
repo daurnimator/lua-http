@@ -108,6 +108,7 @@ html {
     -webkit-font-smoothing: antialiased;
     -webkit-text-size-adjust: 100%;
         -ms-text-size-adjust: 100%;
+    background: #FFF;
 }
 a {
     color: #999;
@@ -119,9 +120,9 @@ a > h2,
 a > h3 {
     color: #333;
 }
-body {
-    background: #FFF;
-    padding: 1rem;
+
+body > * {
+    padding: 0 1rem;
 }
 .subtitle {
     font-size: 1rem;
