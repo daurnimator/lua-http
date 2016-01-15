@@ -138,6 +138,7 @@ body > * {
         z-index: 1;
     }
     main {
+        display: block; /* required for e.g. konqueror */
         margin-left: 20rem;
         overflow: auto;
     }
