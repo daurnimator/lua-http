@@ -54,18 +54,18 @@ h1 {
     line-height: 3rem
 }
 h2 {
-    font-size: 2rem;
-    line-height: 2.5rem
-}
-h3 {
     font-size: 1.5rem;
     line-height: 2rem
+}
+h3 {
+    font-size: 1.25rem;
+    line-height: 1.5rem
 }
 h4,
 h5,
 h6 {
     font-size: 1rem;
-    line-height: 1.5rem
+    line-height: 1.25rem
 }
 hr {
     border: 0;
@@ -108,6 +108,7 @@ html {
     -webkit-font-smoothing: antialiased;
     -webkit-text-size-adjust: 100%;
         -ms-text-size-adjust: 100%;
+    background: #FFF;
 }
 a {
     color: #999;
@@ -119,24 +120,26 @@ a > h2,
 a > h3 {
     color: #333;
 }
-body {
-    background: #FFF;
-    padding: 1rem;
+
+body > * {
+    padding: 0 1rem;
 }
 .subtitle {
     font-size: 1rem;
     line-height: 1.5rem
 }
-@media(min-width: 700px) {
+@media(min-width: 55rem) {
     .meta {
         position: fixed;
-        width: 300px;
-        top: 0;
-        bottom: 0;
+        width: 20rem;
+        height: 100%;
         overflow: auto;
+        background: #FFF;
+        z-index: 1;
     }
     main {
-        margin-left: 300px;
-        padding-left: 1rem;
+        display: block; /* required for e.g. konqueror */
+        margin-left: 20rem;
+        overflow: auto;
     }
 }
