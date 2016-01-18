@@ -19,37 +19,54 @@ local request_mt = {
 
 local function new_from_uri_t(uri_t, headers)
 	local scheme = assert(uri_t.scheme, "URI missing scheme")
-	assert(scheme == "https" or scheme == "http" or scheme == "ws" or scheme == "wss", "scheme not http")
-	local host = tostring(assert(uri_t.host, "URI must include a host"))
-	local path = uri_t.path
-	if path == nil or path == "" then
-		path = "/"
-	else
-		path = http_util.encodeURI(path)
-	end
-	if uri_t.query then
-		path = path .. "?" .. http_util.encodeURI(uri_t.query)
-	end
+	assert(scheme == "https" or scheme == "http" or scheme == "ws" or scheme == "wss", "scheme not valid")
+	local host = tostring(assert(uri_t.host, "URI must include a host")) -- tostring required to e.g. convert lpeg_patterns IPv6 objects
+	local port = uri_t.port or http_util.scheme_to_port[scheme]
+	local is_connect -- CONNECT requests are a bit special, see http2 spec section 8.3
 	if headers == nil then
 		headers = new_headers()
 		headers:append(":method", "GET")
+		is_connect = false
+	else
+		is_connect = headers:get(":method") == "CONNECT"
 	end
-	local self = setmetatable({
-		host = host;
-		port = uri_t.port or http_util.scheme_to_port[scheme];
-		tls = (scheme == "https" or scheme == "wss");
-		headers = headers;
-		body = nil;
-	}, request_mt)
-	headers:upsert(":authority", http_util.to_authority(host, self.port, scheme))
-	headers:upsert(":path", path)
-	headers:upsert(":scheme", scheme)
+	if is_connect then
+		assert(uri_t.path == "", "CONNECT requests cannot have a path")
+		assert(uri_t.query == nil, "CONNECT requests cannot have a query")
+		assert(headers:has(":authority"), ":authority required for CONNECT requests")
+	else
+		headers:upsert(":authority", http_util.to_authority(host, port, scheme))
+		local path = uri_t.path
+		if path == nil or path == "" then
+			path = "/"
+		else
+			path = http_util.encodeURI(path)
+		end
+		if uri_t.query then
+			path = path .. "?" .. http_util.encodeURI(uri_t.query)
+		end
+		headers:upsert(":path", path)
+		headers:upsert(":scheme", scheme)
+	end
 	if uri_t.userinfo then
-		headers:upsert("authorization", "basic " .. basexx.to_base64(uri_t.userinfo), true)
+		local field
+		if is_connect then
+			field = "proxy-authorization"
+		else
+			field = "authorization"
+		end
+		headers:append(field, "basic " .. basexx.to_base64(uri_t.userinfo), true)
 	end
 	if not headers:has("user-agent") then
 		headers:append("user-agent", "lua-http")
 	end
+	local self = setmetatable({
+		host = host;
+		port = port;
+		tls = (scheme == "https" or scheme == "wss");
+		headers = headers;
+		body = nil;
+	}, request_mt)
 	return self
 end
 
@@ -58,26 +75,12 @@ local function new_from_uri(uri)
 	return new_from_uri_t(uri_t)
 end
 
--- CONNECT requests are a bit special, see http2 spec section 8.3
 local function new_connect(uri, connect_authority)
 	local uri_t = assert(uri_patts.uri:match(uri), "invalid URI")
-	assert(uri_t.path == "", "connect requests cannot have paths")
-	local scheme = uri_t.scheme
-	assert(scheme == "https" or scheme == "http", "scheme not http")
-	local host = tostring(assert(uri_t.host, "URI must include a host"))
-	local self = setmetatable({
-		host = host;
-		port = uri_t.port or (scheme == "https" and 443 or 80);
-		tls = (scheme == "https");
-		headers = new_headers();
-		body = nil;
-	}, request_mt)
-	self.headers:append(":authority", connect_authority)
-	self.headers:append(":method", "CONNECT")
-	if uri_t.userinfo then
-		self.headers:append("proxy-authorization", "basic " .. basexx.to_base64(uri_t.userinfo), true)
-	end
-	return self
+	local headers = new_headers()
+	headers:append(":authority", connect_authority)
+	headers:append(":method", "CONNECT")
+	return new_from_uri_t(uri_t, headers)
 end
 
 local function new_from_stream(stream)

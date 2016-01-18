@@ -474,6 +474,11 @@ Creates and returns a new headers object.
 Creates a new `http.request` object from the given URI.
 
 
+### `new_connect(uri, connect_authority)` <!-- --> {#http.request.new_connect}
+
+Creates a new `http.request` object from the given URI that will perform a *CONNECT* request.
+
+
 ### `request.host` <!-- --> {#http.request.host}
 
 The host this request should be sent to.
