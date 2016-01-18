@@ -388,16 +388,20 @@ defaults to <code>AF_INET</code></p></li>
 may be either a hostname or an ip address</p></li>
 <li><p><code>port</code> (string|integer): port to connect to in numeric form<br />
 e.g. <code>&quot;80&quot;</code> or <code>80</code></p></li>
-<li><p><code>sendname</code> (string|boolean, optional): the tls SNI host to send<br />
-defaults to <code>true</code><br />
-<code>true</code> indicates to copy the <code>host</code> field<br />
-<code>false</code> disables SNI</p></li>
+<li><code>sendname</code> (string|boolean, optional): the <a href="https://en.wikipedia.org/wiki/Server_Name_Indication">TLS SNI</a> host to send.<br />
+defaults to <code>true</code>
+<ul>
+<li><code>true</code> indicates to copy the <code>host</code> field</li>
+<li><code>false</code> disables SNI</li>
+</ul></li>
 <li><p><code>v6only</code> (boolean, optional): if the <code>IPV6_V6ONLY</code> flag should be set on the underlying socket.<br />
 defaults to <code>false</code></p></li>
-<li><p><code>tls</code> (boolean|userdata, optional): the <code>SSL_CTX*</code> to use, or a boolean to indicate the default<br />
-defaults to <code>true</code><br />
-<code>true</code> indicates to use the default TLS settings, see <a href="#http.tls"><code>http.tls</code></a> for information.<br />
-<code>false</code> means do not negotiate tls</p></li>
+<li><p><code>tls</code> (boolean|userdata, optional): the <code>SSL_CTX*</code> to use, or a boolean to indicate the default TLS context.<br />
+defaults to <code>true</code>.</p>
+<ul>
+<li><code>true</code> indicates to use the default TLS settings, see <a href="#http.tls"><code>http.tls</code></a> for information.</li>
+<li><code>false</code> means do not negotiate TLS</li>
+</ul></li>
 <li><code>version</code> (nil|1.0|1.1|2): HTTP version to use.
 <ul>
 <li><code>nil</code>: attempts HTTP 2 and falls back to HTTP 1.1</li>
@@ -405,7 +409,7 @@ defaults to <code>true</code><br />
 <li><code>1.1</code></li>
 <li><code>2</code></li>
 </ul></li>
-<li><p><code>h2_settings</code> (table, optional): HTTP 2 settings to use<br />
+<li><p><code>h2_settings</code> (table, optional): HTTP 2 settings to use.<br />
 See <a href="#http.h2_connection"><code>http.h2_connection</code></a> for details</p></li>
 </ul></li>
 <li><p><code>timeout</code> (optional) is the maximum amount of time (in seconds) to allow for connection to be established.</p>
@@ -511,7 +515,7 @@ See <a href="#http.h2_connection"><code>http.h2_connection</code></a> for detail
 </section>
 <section id="http.h1_stream" class="level2">
 <h2>http.h1_stream</h2>
-<p>In addition to following the <a href="#stream"><em>stream</em></a> interface and the methods from <a href="#http.stream_common">http.stream_common</a>, a <code>http.h1_stream</code> has the following methods:</p>
+<p>In addition to following the <a href="#stream"><em>stream</em></a> interface and the methods from <a href="#http.stream_common">http.stream_common</a>, an <code>http.h1_stream</code> has the following methods:</p>
 <section id="http.h1_stream:set_state" class="level3">
 <h3><code>h1_stream:set_state(new)</code> <!-- --></h3>
 </section>
@@ -521,7 +525,7 @@ See <a href="#http.h2_connection"><code>http.h2_connection</code></a> for detail
 </section>
 <section id="http.h2_connection" class="level2">
 <h2>http.h2_connection</h2>
-<p>An HTTP 2 connection can have multiple streams active and transmitting data at once, hence a <code>http.h2_connection</code> acts much like a scheduler.</p>
+<p>An HTTP 2 connection can have multiple streams active and transmitting data at once, hence an <code>http.h2_connection</code> acts much like a scheduler.</p>
 <section id="http.h2_connection.new" class="level3">
 <h3><code>new(socket, conn_type, settings, timeout)</code> <!-- --></h3>
 </section>
@@ -591,9 +595,9 @@ See <a href="#http.h2_connection"><code>http.h2_connection</code></a> for detail
 </section>
 <section id="http.h2_error" class="level2">
 <h2>http.h2_error</h2>
-<p>A type of error object that encapsulates HTTP 2 error information. A <code>http.h2_error</code> object has fields:</p>
+<p>A type of error object that encapsulates HTTP 2 error information. An <code>http.h2_error</code> object has fields:</p>
 <ul>
-<li><code>name</code>: The error <code>name</code>: a short identifier for this error</li>
+<li><code>name</code>: The error name: a short identifier for this error</li>
 <li><code>code</code>: The error code</li>
 <li><code>description</code>: The description of the error code</li>
 <li><code>message</code>: An error message</li>
@@ -606,13 +610,13 @@ See <a href="#http.h2_connection"><code>http.h2_connection</code></a> for detail
 </section>
 <section id="http.h2_error.is" class="level3">
 <h3><code>is(ob)</code> <!-- --></h3>
-<p>Returns a boolean indicating if the object <code>ob</code> is a <code>http.h2_error</code> object</p>
+<p>Returns a boolean indicating if the object <code>ob</code> is an <code>http.h2_error</code> object</p>
 </section>
 <section id="http.h2_error:new" class="level3">
 <h3><code>h2_error:new(ob)</code> <!-- --></h3>
 <p>Creates a new error object from the passed table. The table should have the form of an error object i.e. with fields <code>name</code>, <code>code</code>, <code>message</code>, <code>traceback</code>, etc.</p>
 <p>Fields <code>name</code>, <code>code</code> and <code>description</code> are inherited from the parent <code>h2_error</code> object if not specified.</p>
-<p><code>stream_error</code> defaults to `false.</p>
+<p><code>stream_error</code> defaults to <code>false</code>.</p>
 </section>
 <section id="http.h2_error:traceback" class="level3">
 <h3><code>h2_error:traceback(message, stream_error, lvl)</code> <!-- --></h3>
@@ -630,7 +634,7 @@ See <a href="#http.h2_connection"><code>http.h2_connection</code></a> for detail
 </section>
 <section id="http.h2_stream" class="level2">
 <h2>http.h2_stream</h2>
-<p>In addition to following the <a href="#stream"><em>stream</em></a> interface and the methods from <a href="#http.stream_common">http.stream_common</a>, a <code>http.h2_stream</code> has the following methods:</p>
+<p>In addition to following the <a href="#stream"><em>stream</em></a> interface and the methods from <a href="#http.stream_common">http.stream_common</a>, an <code>http.h2_stream</code> has the following methods:</p>
 <section id="http.h2_stream:set_state" class="level3">
 <h3><code>h2_stream:set_state(new)</code> <!-- --></h3>
 </section>
@@ -860,10 +864,11 @@ See <a href="#http.h2_connection"><code>http.h2_connection</code></a> for detail
 </section>
 <section id="http.stream_common:write_continue" class="level3">
 <h3><code>stream:write_continue(timeout)</code> <!-- --></h3>
+<p>Sends a 100-continue header block.</p>
 </section>
 <section id="http.stream_common:each_chunk" class="level3">
 <h3><code>stream:each_chunk()</code> <!-- --></h3>
-<p>Iterator over <code>stream:get_next_chunk()</code></p>
+<p>Iterator over <a href="#stream:get_next_chunk"><code>stream:get_next_chunk()</code></a></p>
 </section>
 <section id="http.stream_common:get_body_as_string" class="level3">
 <h3><code>stream:get_body_as_string(timeout)</code> <!-- --></h3>
@@ -964,7 +969,7 @@ See <a href="#http.h2_connection"><code>http.h2_connection</code></a> for detail
 </section>
 <section id="http.util.imf_date" class="level3">
 <h3><code>imf_date(time)</code> <!-- --></h3>
-<p>Returns the time in HTTP prefered date format (See <a href="https://tools.ietf.org/html/rfc7231#section-7.1.1.1">RFC 7231 section 7.1.1.1</a>)</p>
+<p>Returns the time in HTTP preferred date format (See <a href="https://tools.ietf.org/html/rfc7231#section-7.1.1.1">RFC 7231 section 7.1.1.1</a>)</p>
 <p><code>time</code> defaults to the current time</p>
 </section>
 </section>
@@ -989,11 +994,11 @@ See <a href="#http.h2_connection"><code>http.h2_connection</code></a> for detail
 <h3>Example</h3>
 <div class="sourceCode"><pre class="sourceCode lua"><code class="sourceCode lua"><span class="kw">local</span> zlib <span class="ot">=</span> <span class="fu">require</span> <span class="st">&quot;http.zlib&quot;</span>
 <span class="kw">local</span> original <span class="ot">=</span> <span class="st">&quot;the racecar raced around the racecar track&quot;</span>
-<span class="kw">local</span> deflate <span class="ot">=</span> zlib<span class="ot">.</span>deflate<span class="ot">()</span>
-<span class="kw">local</span> compressed <span class="ot">=</span> deflate<span class="ot">(</span>original<span class="ot">,</span> <span class="kw">true</span><span class="ot">)</span>
+<span class="kw">local</span> deflater <span class="ot">=</span> zlib<span class="ot">.</span>deflate<span class="ot">()</span>
+<span class="kw">local</span> compressed <span class="ot">=</span> deflater<span class="ot">(</span>original<span class="ot">,</span> <span class="kw">true</span><span class="ot">)</span>
 <span class="fu">print</span><span class="ot">(#</span>original<span class="ot">,</span> <span class="ot">#</span>compressed<span class="ot">)</span> <span class="co">-- compressed should be smaller</span>
-<span class="kw">local</span> inflate <span class="ot">=</span> zlib<span class="ot">.</span>inflate<span class="ot">()</span>
-<span class="kw">local</span> uncompressed <span class="ot">=</span> inflate<span class="ot">(</span>compressed<span class="ot">,</span> <span class="kw">true</span><span class="ot">)</span>
+<span class="kw">local</span> inflater <span class="ot">=</span> zlib<span class="ot">.</span>inflate<span class="ot">()</span>
+<span class="kw">local</span> uncompressed <span class="ot">=</span> inflater<span class="ot">(</span>compressed<span class="ot">,</span> <span class="kw">true</span><span class="ot">)</span>
 <span class="fu">assert</span><span class="ot">(</span>original <span class="ot">==</span> uncompressed<span class="ot">)</span></code></pre></div>
 </section>
 </section>

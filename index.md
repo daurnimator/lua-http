@@ -137,18 +137,19 @@ Can try to negotiate HTTP2 if possible, but
 	  - `port` (string|integer): port to connect to in numeric form  
 		e.g. `"80"` or `80`  
 
-	  - `sendname` (string|boolean, optional): the tls SNI host to send  
+	  - `sendname` (string|boolean, optional): the [TLS SNI](https://en.wikipedia.org/wiki/Server_Name_Indication) host to send.  
 		defaults to `true`  
-		`true` indicates to copy the `host` field  
-		`false` disables SNI  
+		  - `true` indicates to copy the `host` field
+		  - `false` disables SNI
 
 	  - `v6only` (boolean, optional): if the `IPV6_V6ONLY` flag should be set on the underlying socket.  
 		defaults to `false`  
 
-	  - `tls` (boolean|userdata, optional): the `SSL_CTX*` to use, or a boolean to indicate the default  
-		defaults to `true`  
-		`true` indicates to use the default TLS settings, see [`http.tls`](#http.tls) for information.  
-		`false` means do not negotiate tls  
+	  - `tls` (boolean|userdata, optional): the `SSL_CTX*` to use, or a boolean to indicate the default TLS context.  
+		defaults to `true`.
+
+		  - `true` indicates to use the default TLS settings, see [`http.tls`](#http.tls) for information.
+		  - `false` means do not negotiate TLS
 
 	  - `version` (nil|1.0|1.1|2): HTTP version to use.
 		  - `nil`: attempts HTTP 2 and falls back to HTTP 1.1
@@ -156,7 +157,7 @@ Can try to negotiate HTTP2 if possible, but
 		  - `1.1`
 		  - `2`
 
-	  - `h2_settings` (table, optional): HTTP 2 settings to use  
+	  - `h2_settings` (table, optional): HTTP 2 settings to use.  
 		See [`http.h2_connection`](#http.h2_connection) for details
 
 
@@ -249,7 +250,7 @@ print(reason_phrases["342"]) --> "Unassigned"
 ## http.h1_stream
 
 In addition to following the [*stream*](#stream) interface and the methods from [http.stream_common](#http.stream_common),
-a `http.h1_stream` has the following methods:
+an `http.h1_stream` has the following methods:
 
 ### `h1_stream:set_state(new)` <!-- --> {#http.h1_stream:set_state}
 
@@ -259,7 +260,7 @@ a `http.h1_stream` has the following methods:
 ## http.h2_connection
 
 An HTTP 2 connection can have multiple streams active and transmitting data at once,
-hence a `http.h2_connection` acts much like a scheduler.
+hence an `http.h2_connection` acts much like a scheduler.
 
 ### `new(socket, conn_type, settings, timeout)` <!-- --> {#http.h2_connection.new}
 
@@ -309,9 +310,9 @@ hence a `http.h2_connection` acts much like a scheduler.
 ## http.h2_error
 
 A type of error object that encapsulates HTTP 2 error information.
-A `http.h2_error` object has fields:
+An `http.h2_error` object has fields:
 
-  - `name`: The error `name`: a short identifier for this error
+  - `name`: The error name: a short identifier for this error
   - `code`: The error code
   - `description`: The description of the error code
   - `message`: An error message
@@ -327,7 +328,7 @@ It can be indexed by error name (e.g. `errors.PROTOCOL_ERROR`) or numeric code (
 
 ### `is(ob)` <!-- --> {#http.h2_error.is}
 
-Returns a boolean indicating if the object `ob` is a `http.h2_error` object
+Returns a boolean indicating if the object `ob` is an `http.h2_error` object
 
 
 ### `h2_error:new(ob)` <!-- --> {#http.h2_error:new}
@@ -337,7 +338,7 @@ The table should have the form of an error object i.e. with fields `name`, `code
 
 Fields `name`, `code` and `description` are inherited from the parent `h2_error` object if not specified.
 
-`stream_error` defaults to `false.
+`stream_error` defaults to `false`.
 
 
 ### `h2_error:traceback(message, stream_error, lvl)` <!-- --> {#http.h2_error:traceback}
@@ -360,7 +361,7 @@ If `cond` is falsy (i.e. `false` or `nil`), throws an error with the first eleme
 ## http.h2_stream
 
 In addition to following the [*stream*](#stream) interface and the methods from [http.stream_common](#http.stream_common),
-a `http.h2_stream` has the following methods:
+an `http.h2_stream` has the following methods:
 
 ### `h2_stream:set_state(new)` <!-- --> {#http.h2_stream:set_state}
 
@@ -571,9 +572,12 @@ Convenience wrapper equivalent to `stream.connection:peername()`
 
 ### `stream:write_continue(timeout)` <!-- --> {#http.stream_common:write_continue}
 
+Sends a 100-continue header block.
+
+
 ### `stream:each_chunk()` <!-- --> {#http.stream_common:each_chunk}
 
-Iterator over `stream:get_next_chunk()`
+Iterator over [`stream:get_next_chunk()`](#stream:get_next_chunk)
 
 
 ### `stream:get_body_as_string(timeout)` <!-- --> {#http.stream_common:get_body_as_string}
@@ -681,7 +685,7 @@ The returned table has an `n` field containing the number of elements.
 
 ### `imf_date(time)` <!-- --> {#http.util.imf_date}
 
-Returns the time in HTTP prefered date format (See [RFC 7231 section 7.1.1.1](https://tools.ietf.org/html/rfc7231#section-7.1.1.1))
+Returns the time in HTTP preferred date format (See [RFC 7231 section 7.1.1.1](https://tools.ietf.org/html/rfc7231#section-7.1.1.1))
 
 `time` defaults to the current time
 
@@ -718,11 +722,11 @@ it returns the compressed data as a string.
 ```lua
 local zlib = require "http.zlib"
 local original = "the racecar raced around the racecar track"
-local deflate = zlib.deflate()
-local compressed = deflate(original, true)
+local deflater = zlib.deflate()
+local compressed = deflater(original, true)
 print(#original, #compressed) -- compressed should be smaller
-local inflate = zlib.inflate()
-local uncompressed = inflate(compressed, true)
+local inflater = zlib.inflate()
+local uncompressed = inflater(compressed, true)
 assert(original == uncompressed)
 ```
 
