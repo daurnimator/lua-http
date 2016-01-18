@@ -72,6 +72,21 @@ Either `"client"` or `"server"`
 The HTTP version as a number
 
 
+### `connection:checktls()` <!-- --> {#connection:checktls}
+
+
+### `connection:localname()` <!-- --> {#connection:localname}
+
+
+### `connection:peername()` <!-- --> {#connection:peername}
+
+
+### `connection:close()` <!-- --> {#connection:close}
+
+
+### `connection:get_next_incoming_stream(timeout)` <!-- --> {#connection:get_next_incoming_stream}
+
+
 ## stream
 
 All stream types expose the following fields and functions.
@@ -195,11 +210,17 @@ local myconnection = http_client.connect {
 
 ### `h1_connection:checktls()` <!-- --> {#http.h1_connection:checktls}
 
+See [`connection:checktls()`](#connection:checktls)
+
 
 ### `h1_connection:localname()` <!-- --> {#http.h1_connection:localname}
 
+See [`connection:localname()`](#connection:localname)
+
 
 ### `h1_connection:peername()` <!-- --> {#http.h1_connection:peername}
+
+See [`connection:peername()`](#connection:peername)
 
 
 ### `h1_connection:clearerr(...)` <!-- --> {#http.h1_connection:clearerr}
@@ -213,11 +234,15 @@ local myconnection = http_client.connect {
 
 ### `h1_connection:close()` <!-- --> {#http.h1_connection:close}
 
+See [`connection:close()`](#connection:close)
+
 
 ### `h1_connection:new_stream()` <!-- --> {#http.h1_connection:new_stream}
 
 
 ### `h1_connection:get_next_incoming_stream(timeout)` <!-- --> {#http.h1_connection:get_next_incoming_stream}
+
+See [`connection:get_next_incoming_stream()`](#connection:get_next_incoming_stream)
 
 
 ### `h1_connection:read_request_line(timeout)` <!-- --> {#http.h1_connection:read_request_line}
@@ -316,11 +341,17 @@ hence an `http.h2_connection` acts much like a scheduler.
 
 ### `h2_connection:checktls()` <!-- --> {#http.h2_connection:checktls}
 
+See [`connection:checktls()`](#connection:checktls)
+
 
 ### `h2_connection:localname()` <!-- --> {#http.h2_connection:localname}
 
+See [`connection:localname()`](#connection:localname)
+
 
 ### `h2_connection:peername()` <!-- --> {#http.h2_connection:peername}
+
+See [`connection:peername()`](#connection:peername)
 
 
 ### `h2_connection:shutdown()` <!-- --> {#http.h2_connection:shutdown}
@@ -328,11 +359,15 @@ hence an `http.h2_connection` acts much like a scheduler.
 
 ### `h2_connection:close()` <!-- --> {#http.h2_connection:close}
 
+See [`connection:close()`](#connection:close)
+
 
 ### `h2_connection:new_stream(id)` <!-- --> {#http.h2_connection:new_stream}
 
 
 ### `h2_connection:get_next_incoming_stream(timeout)` <!-- --> {#http.h2_connection:get_next_incoming_stream}
+
+See [`connection:get_next_incoming_stream()`](#connection:get_next_incoming_stream)
 
 
 ### `h2_connection:read_http2_frame(timeout)` <!-- --> {#http.h2_connection:read_http2_frame}
