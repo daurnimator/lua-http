@@ -292,14 +292,14 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <section id="terminology" class="level2">
 <h2>Terminology</h2>
 <p>Much lua-http terminology is borrowed from HTTP 2.</p>
-<p>A &quot;connection&quot; is an abstraction over the underlying socket. lua-http has two connection types: one for HTTP 1, one for HTTP 2.</p>
-<p>A &quot;stream&quot; is a request/response on a connection. lua-http has two stream types: one for HTTP 1 based streams, and one for HTTP 2 based streams. They share a lowest common denominator interface, see (#stream).</p>
+<p>A <a href="#connection">&quot;connection&quot;</a> is an abstraction over the underlying socket. lua-http has two connection types: one for HTTP 1, one for HTTP 2.</p>
+<p>A <a href="#stream">&quot;stream&quot;</a> is a request/response on a connection. lua-http has two stream types: one for <a href="#http.h1_stream">HTTP 1 streams</a>, and one for <a href="#http.h2_stream">HTTP 2 streams</a>. They share a lowest common denominator interface, see <a href="#stream"><em>stream</em></a> and <a href="#http.stream_common"><em>http.stream_common</em></a>.</p>
 </section>
 <section id="common-use-cases" class="level2">
 <h2>Common use cases</h2>
 <section id="retrieving-a-document" class="level3">
 <h3>Retrieving a document</h3>
-<p>The highest level interface for clients is <a href="#http.request"><code>http.request</code></a>. By constructing a request object from a uri using <a href="#http.request.new_from_uri"><code>new_from_uri</code></a> and immediately evaluating it, you can easily fetch an HTTP resource.</p>
+<p>The highest level interface for clients is <a href="#http.request"><em>http.request</em></a>. By constructing a <a href="#http.request"><em>request</em></a> object from a uri using <a href="#http.request.new_from_uri"><code>new_from_uri</code></a> and immediately evaluating it, you can easily fetch an HTTP resource.</p>
 <div class="sourceCode"><pre class="sourceCode lua"><code class="sourceCode lua"><span class="kw">local</span> http_request <span class="ot">=</span> <span class="fu">require</span> <span class="st">&quot;http.request&quot;</span>
 <span class="kw">local</span> headers<span class="ot">,</span> stream <span class="ot">=</span> <span class="fu">assert</span><span class="ot">(</span>http_request<span class="ot">.</span>new_from_uri<span class="ot">(</span><span class="st">&quot;http://example.com&quot;</span><span class="ot">)</span>:go<span class="ot">())</span>
 <span class="kw">local</span> body <span class="ot">=</span> <span class="fu">assert</span><span class="ot">(</span>stream:get_body_as_string<span class="ot">())</span>
@@ -399,7 +399,7 @@ defaults to <code>false</code></p></li>
 <li><p><code>tls</code> (boolean|userdata, optional): the <code>SSL_CTX*</code> to use, or a boolean to indicate the default TLS context.<br />
 defaults to <code>true</code>.</p>
 <ul>
-<li><code>true</code> indicates to use the default TLS settings, see <a href="#http.tls"><code>http.tls</code></a> for information.</li>
+<li><code>true</code> indicates to use the default TLS settings, see <a href="#http.tls"><em>http.tls</em></a> for information.</li>
 <li><code>false</code> means do not negotiate TLS</li>
 </ul></li>
 <li><code>version</code> (nil|1.0|1.1|2): HTTP version to use.
@@ -410,7 +410,7 @@ defaults to <code>true</code>.</p>
 <li><code>2</code></li>
 </ul></li>
 <li><p><code>h2_settings</code> (table, optional): HTTP 2 settings to use.<br />
-See <a href="#http.h2_connection"><code>http.h2_connection</code></a> for details</p></li>
+See <a href="#http.h2_connection"><em>http.h2_connection</em></a> for details</p></li>
 </ul></li>
 <li><p><code>timeout</code> (optional) is the maximum amount of time (in seconds) to allow for connection to be established.</p>
 <p>This includes time for DNS lookup, connection, TLS negotiation (if tls enabled) and in the case of HTTP2: settings exchange.</p></li>
@@ -812,7 +812,7 @@ See <a href="#http.h2_connection"><code>http.h2_connection</code></a> for detail
 </section>
 <section id="http.request.headers" class="level3">
 <h3><code>request.headers</code> <!-- --></h3>
-<p>A <a href="#http.headers"><code>http.headers</code></a> object of headers that will be sent in the request.</p>
+<p>A <a href="#http.headers"><em>http.headers</em></a> object of headers that will be sent in the request.</p>
 </section>
 <section id="http.request.follow_redirects" class="level3">
 <h3><code>request.follow_redirects</code> <!-- --></h3>
@@ -832,7 +832,7 @@ See <a href="#http.h2_connection"><code>http.h2_connection</code></a> for detail
 <ul>
 <li>If <code>body</code> is a string it will be sent as given.</li>
 <li>If <code>body</code> is a function, it will be called repeatedly with the current time remaining and should return chunks of the request body as a string or <code>nil</code> if done.</li>
-<li>If <code>body</code> is a lua file object, it will be <a href="http://www.lua.org/manual/5.3/manual.html#pdf-file:seek"><code>:seek</code>'d</a> to the start, then sent as a body. Any errors encountered during file operations <em>will be thrown</em>.</li>
+<li>If <code>body</code> is a lua file object, it will be <a href="http://www.lua.org/manual/5.3/manual.html#pdf-file:seek"><code>:seek</code>'d</a> to the start, then sent as a body. Any errors encountered during file operations <strong>will be thrown</strong>.</li>
 </ul>
 </section>
 <section id="http.request:timeout" class="level3">
@@ -1011,7 +1011,7 @@ See <a href="#http.h2_connection"><code>http.h2_connection</code></a> for detail
 <ul>
 <li>must be called from within a running cqueue</li>
 <li>The callback may be called from a different thread in the cqueue</li>
-<li>The returned object will be a <a href="#http.request"><code>http.request</code></a> object
+<li>The returned object will be a <a href="#http.request"><em>http.request</em></a> object
 <ul>
 <li>This object is passed to the callback on errors and as the 4th argument on success</li>
 </ul></li>
