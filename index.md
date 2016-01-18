@@ -51,7 +51,7 @@ print(body)
 
 ## Asynchronous Operation
 
-All lua-http operations include DNS lookup, connection, TLS negotiation, and read/write operations are asynchronous when run inside of a cqueue.
+All lua-http operations including DNS lookup, socket connection, TLS negotiation and read/write operations are all asynchronous when run inside of a cqueue.
 [Cqueues](http://25thandclement.com/~william/projects/cqueues.html) is a lua library that allows for composable event loops.
 Cqueues can be integrated with almost any main loop or event library you may encounter (see [here](https://github.com/wahern/cqueues/wiki/Integrations-with-other-main-loops) for more information + samples), and hence lua-http can be asynchronous in any place you write lua!
 
