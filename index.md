@@ -137,18 +137,19 @@ Can try to negotiate HTTP2 if possible, but
 	  - `port` (string|integer): port to connect to in numeric form  
 		e.g. `"80"` or `80`  
 
-	  - `sendname` (string|boolean, optional): the tls SNI host to send  
+	  - `sendname` (string|boolean, optional): the [TLS SNI](https://en.wikipedia.org/wiki/Server_Name_Indication) host to send.  
 		defaults to `true`  
-		`true` indicates to copy the `host` field  
-		`false` disables SNI  
+		  - `true` indicates to copy the `host` field
+		  - `false` disables SNI
 
 	  - `v6only` (boolean, optional): if the `IPV6_V6ONLY` flag should be set on the underlying socket.  
 		defaults to `false`  
 
-	  - `tls` (boolean|userdata, optional): the `SSL_CTX*` to use, or a boolean to indicate the default  
-		defaults to `true`  
-		`true` indicates to use the default TLS settings, see [`http.tls`](#http.tls) for information.  
-		`false` means do not negotiate tls  
+	  - `tls` (boolean|userdata, optional): the `SSL_CTX*` to use, or a boolean to indicate the default TLS context.  
+		defaults to `true`.
+
+		  - `true` indicates to use the default TLS settings, see [`http.tls`](#http.tls) for information.
+		  - `false` means do not negotiate TLS
 
 	  - `version` (nil|1.0|1.1|2): HTTP version to use.
 		  - `nil`: attempts HTTP 2 and falls back to HTTP 1.1
@@ -156,7 +157,7 @@ Can try to negotiate HTTP2 if possible, but
 		  - `1.1`
 		  - `2`
 
-	  - `h2_settings` (table, optional): HTTP 2 settings to use  
+	  - `h2_settings` (table, optional): HTTP 2 settings to use.  
 		See [`http.h2_connection`](#http.h2_connection) for details
 
 
@@ -571,9 +572,12 @@ Convenience wrapper equivalent to `stream.connection:peername()`
 
 ### `stream:write_continue(timeout)` <!-- --> {#http.stream_common:write_continue}
 
+Sends a 100-continue header block.
+
+
 ### `stream:each_chunk()` <!-- --> {#http.stream_common:each_chunk}
 
-Iterator over `stream:get_next_chunk()`
+Iterator over [`stream:get_next_chunk()`](#stream:get_next_chunk)
 
 
 ### `stream:get_body_as_string(timeout)` <!-- --> {#http.stream_common:get_body_as_string}
