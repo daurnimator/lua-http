@@ -603,7 +603,8 @@ The [Mozilla "Intermediate" cipher list](https://wiki.mozilla.org/Security/Serve
 
 ### `banned_ciphers` <!-- --> {#http.tls.banned_ciphers}
 
-A set (table with string keys and values of `true`) containing the [ciphers banned in HTTP 2](https://http2.github.io/http2-spec/#BadCipherSuites)
+A set (table with string keys and values of `true`) of the [ciphers banned in HTTP 2](https://http2.github.io/http2-spec/#BadCipherSuites) where the keys are OpenSSL cipher names.
+Ciphers not known by OpenSSL are missing from the set.
 
 
 ### `new_client_context()` <!-- --> {#http.tls.new_client_context}
