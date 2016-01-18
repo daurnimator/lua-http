@@ -24,19 +24,19 @@ Some HTTP 2 operations return/throw special [http 2 error objects](#http.h2_erro
 
 Much lua-http terminology is borrowed from HTTP 2.
 
-A "connection" is an abstraction over the underlying socket.
+A ["connection"](#connection) is an abstraction over the underlying socket.
 lua-http has two connection types: one for HTTP 1, one for HTTP 2.
 
-A "stream" is a request/response on a connection.
-lua-http has two stream types: one for HTTP 1 based streams, and one for HTTP 2 based streams.
-They share a lowest common denominator interface, see (#stream).
+A ["stream"](#stream) is a request/response on a connection.
+lua-http has two stream types: one for [HTTP 1 streams](#http.h1_stream), and one for [HTTP 2 streams](#http.h2_stream).
+They share a lowest common denominator interface, see [*stream*](#stream) and [*http.stream_common*](#http.stream_common).
 
 
 ## Common use cases
 
 ### Retrieving a document
 
-The highest level interface for clients is [`http.request`](#http.request). By constructing a request object from a uri using [`new_from_uri`](#http.request.new_from_uri) and immediately evaluating it, you can easily fetch an HTTP resource.
+The highest level interface for clients is [*http.request*](#http.request). By constructing a [*request*](#http.request) object from a uri using [`new_from_uri`](#http.request.new_from_uri) and immediately evaluating it, you can easily fetch an HTTP resource.
 
 ```lua
 local http_request = require "http.request"
@@ -148,7 +148,7 @@ Can try to negotiate HTTP2 if possible, but
 	  - `tls` (boolean|userdata, optional): the `SSL_CTX*` to use, or a boolean to indicate the default TLS context.  
 		defaults to `true`.
 
-		  - `true` indicates to use the default TLS settings, see [`http.tls`](#http.tls) for information.
+		  - `true` indicates to use the default TLS settings, see [*http.tls*](#http.tls) for information.
 		  - `false` means do not negotiate TLS
 
 	  - `version` (nil|1.0|1.1|2): HTTP version to use.
@@ -158,7 +158,7 @@ Can try to negotiate HTTP2 if possible, but
 		  - `2`
 
 	  - `h2_settings` (table, optional): HTTP 2 settings to use.  
-		See [`http.h2_connection`](#http.h2_connection) for details
+		See [*http.h2_connection*](#http.h2_connection) for details
 
 
   - `timeout` (optional) is the maximum amount of time (in seconds) to allow for connection to be established.
@@ -507,7 +507,7 @@ The HTTP version to use; leave as `nil` to auto-select.
 
 ### `request.headers` <!-- --> {#http.request.headers}
 
-A [`http.headers`](#http.headers) object of headers that will be sent in the request.
+A [*http.headers*](#http.headers) object of headers that will be sent in the request.
 
 
 ### `request.follow_redirects` <!-- --> {#http.request.follow_redirects}
@@ -535,7 +535,7 @@ Allows setting a request body. `body` may be a string, function or lua file obje
 
   - If `body` is a string it will be sent as given.
   - If `body` is a function, it will be called repeatedly with the current time remaining and should return chunks of the request body as a string or `nil` if done.
-  - If `body` is a lua file object, it will be [`:seek`'d](http://www.lua.org/manual/5.3/manual.html#pdf-file:seek) to the start, then sent as a body. Any errors encountered during file operations *will be thrown*.
+  - If `body` is a lua file object, it will be [`:seek`'d](http://www.lua.org/manual/5.3/manual.html#pdf-file:seek) to the start, then sent as a body. Any errors encountered during file operations **will be thrown**.
 
 
 ### `request:go(timeout)` <!-- --> {#http.request:timeout}
@@ -742,7 +742,7 @@ A few key differences to the prosody `net.http.request`:
 
   - must be called from within a running cqueue
   - The callback may be called from a different thread in the cqueue
-  - The returned object will be a [`http.request`](#http.request) object
+  - The returned object will be a [*http.request*](#http.request) object
 	  - This object is passed to the callback on errors and as the 4th argument on success
   - The default user-agent will be from lua-http (rather than `"Prosody XMPP Server"`)
   - lua-http features (such as HTTP2) will be used where possible
