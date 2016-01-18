@@ -51,7 +51,7 @@ print(body)
 
 ## Asynchronous Operation
 
-All lua-http operations include DNS lookup, connection, TLS negotiation, and read/write operations are asynchronous when run inside of a cqueue.
+All lua-http operations including DNS lookup, socket connection, TLS negotiation and read/write operations are all asynchronous when run inside of a cqueue.
 [Cqueues](http://25thandclement.com/~william/projects/cqueues.html) is a lua library that allows for composable event loops.
 Cqueues can be integrated with almost any main loop or event library you may encounter (see [here](https://github.com/wahern/cqueues/wiki/Integrations-with-other-main-loops) for more information + samples), and hence lua-http can be asynchronous in any place you write lua!
 
@@ -474,6 +474,11 @@ Creates and returns a new headers object.
 Creates a new `http.request` object from the given URI.
 
 
+### `new_connect(uri, connect_authority)` <!-- --> {#http.request.new_connect}
+
+Creates a new `http.request` object from the given URI that will perform a *CONNECT* request.
+
+
 ### `request.host` <!-- --> {#http.request.host}
 
 The host this request should be sent to.
@@ -596,9 +601,15 @@ It may be disabled if OpenSSL was compiled without ALPN support, or is an old ve
 The [Mozilla "Modern" cipher list](https://wiki.mozilla.org/Security/Server_Side_TLS#Modern_compatibility) as a colon seperated list, ready to pass to OpenSSL
 
 
+### `intermediate_cipher_list` <!-- --> {#http.tls.intermediate_cipher_list}
+
+The [Mozilla "Intermediate" cipher list](https://wiki.mozilla.org/Security/Server_Side_TLS#Intermediate_compatibility_.28default.29) as a colon seperated list, ready to pass to OpenSSL
+
+
 ### `banned_ciphers` <!-- --> {#http.tls.banned_ciphers}
 
-A set (table with string keys and values of `true`) containing the [ciphers banned in HTTP 2](https://http2.github.io/http2-spec/#BadCipherSuites)
+A set (table with string keys and values of `true`) of the [ciphers banned in HTTP 2](https://http2.github.io/http2-spec/#BadCipherSuites) where the keys are OpenSSL cipher names.
+Ciphers not known by OpenSSL are missing from the set.
 
 
 ### `new_client_context()` <!-- --> {#http.tls.new_client_context}
