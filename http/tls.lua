@@ -9,9 +9,11 @@ local function cipher_list(arr)
 	return table.concat(arr, ":")
 end
 
--- "Modern" cipher list from Mozilla
+-- Cipher lists from Mozilla.
+-- https://wiki.mozilla.org/Security/Server_Side_TLS
 -- This list of ciphers should be kept up to date.
--- https://wiki.mozilla.org/Security/Server_Side_TLS#Modern_compatibility
+
+-- "Modern" cipher list
 local modern_cipher_list = cipher_list {
 	"ECDHE-RSA-AES128-GCM-SHA256";
 	"ECDHE-ECDSA-AES128-GCM-SHA256";
@@ -42,6 +44,53 @@ local modern_cipher_list = cipher_list {
 	"!3DES";
 	"!MD5";
 	"!PSK";
+}
+
+-- "Intermediate" cipher list
+local intermediate_cipher_list = cipher_list {
+	"ECDHE-RSA-AES128-GCM-SHA256";
+	"ECDHE-ECDSA-AES128-GCM-SHA256";
+	"ECDHE-RSA-AES256-GCM-SHA384";
+	"ECDHE-ECDSA-AES256-GCM-SHA384";
+	"DHE-RSA-AES128-GCM-SHA256";
+	"DHE-DSS-AES128-GCM-SHA256";
+	"kEDH+AESGCM";
+	"ECDHE-RSA-AES128-SHA256";
+	"ECDHE-ECDSA-AES128-SHA256";
+	"ECDHE-RSA-AES128-SHA";
+	"ECDHE-ECDSA-AES128-SHA";
+	"ECDHE-RSA-AES256-SHA384";
+	"ECDHE-ECDSA-AES256-SHA384";
+	"ECDHE-RSA-AES256-SHA";
+	"ECDHE-ECDSA-AES256-SHA";
+	"DHE-RSA-AES128-SHA256";
+	"DHE-RSA-AES128-SHA";
+	"DHE-DSS-AES128-SHA256";
+	"DHE-RSA-AES256-SHA256";
+	"DHE-DSS-AES256-SHA";
+	"DHE-RSA-AES256-SHA";
+	"ECDHE-RSA-DES-CBC3-SHA";
+	"ECDHE-ECDSA-DES-CBC3-SHA";
+	"EDH-RSA-DES-CBC3-SHA";
+	"AES128-GCM-SHA256";
+	"AES256-GCM-SHA384";
+	"AES128-SHA256";
+	"AES256-SHA256";
+	"AES128-SHA";
+	"AES256-SHA";
+	"AES";
+	"CAMELLIA";
+	"DES-CBC3-SHA";
+	"!aNULL";
+	"!eNULL";
+	"!EXPORT";
+	"!DES";
+	"!RC4";
+	"!MD5";
+	"!PSK";
+	"!aECDH";
+	"!EDH-DSS-DES-CBC3-SHA";
+	"!KRB5-DES-CBC3-SHA";
 }
 
 -- Banned ciphers from https://http2.github.io/http2-spec/#BadCipherSuites
@@ -350,6 +399,7 @@ end
 return {
 	has_alpn = has_alpn;
 	modern_cipher_list = modern_cipher_list;
+	intermediate_cipher_list = intermediate_cipher_list;
 	banned_ciphers = banned_ciphers;
 	new_client_context = new_client_context;
 	new_server_context = new_server_context;
