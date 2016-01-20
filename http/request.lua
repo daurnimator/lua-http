@@ -129,13 +129,16 @@ end
 
 function request_methods:new_stream(timeout)
 	-- TODO: pooling
-	local connection = client_connect({
+	local connection, err, errno = client_connect({
 		host = self.host;
 		port = self.port;
 		tls = self.tls;
 		sendname = self.sendname;
 		version = self.version;
 	}, timeout)
+	if connection == nil then
+		return nil, err, errno
+	end
 	return connection:new_stream()
 end
 
