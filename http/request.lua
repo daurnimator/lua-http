@@ -137,15 +137,15 @@ function request_methods:to_curl()
 	}
 	local n = 5
 
-	if self.max_redirects ~= 50 then -- curl default is 50
-		cmd[n+1] = "--max-redirs"
-		cmd[n+2] = string.format("%d", self.max_redirects or -1)
-		n = n + 2
-	end
-
 	if self.expect_100_timeout ~= 1 then
 		cmd[n+1] = "--expect100-timeout"
 		cmd[n+2] = string.format("%d", self.expect_100_timeout)
+		n = n + 2
+	end
+
+	if self.max_redirects ~= 50 then -- curl default is 50
+		cmd[n+1] = "--max-redirs"
+		cmd[n+2] = string.format("%d", self.max_redirects or -1)
 		n = n + 2
 	end
 
