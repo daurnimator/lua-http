@@ -7,9 +7,9 @@ local monotime = require "cqueues".monotime
 local ce = require "cqueues.errno"
 
 local request_methods = {
-	follow_redirects = true;
-	max_redirects = 5; -- false = no redirects
 	expect_100_timeout = 1;
+	follow_redirects = true;
+	max_redirects = 5;
 }
 
 local request_mt = {
@@ -139,7 +139,7 @@ end
 
 function request_methods:handle_redirect(orig_headers)
 	local max_redirects = self.max_redirects
-	if max_redirects == false or max_redirects <= 0 then
+	if max_redirects <= 0 then
 		return nil, "maximum redirects exceeded", ce.ELOOP
 	end
 	local location = orig_headers:get("location")
@@ -165,11 +165,9 @@ function request_methods:handle_redirect(orig_headers)
 	end
 	local headers = self.headers:clone()
 	local new_req = new_from_uri_t(uri_t, headers)
-	new_req.follow_redirects = rawget(self, "follow_redirects")
-	if type(max_redirects) == "number" then
-		new_req.max_redirects = max_redirects - 1
-	end
 	new_req.expect_100_timeout = rawget(self, "expect_100_timeout")
+	new_req.follow_redirects = rawget(self, "follow_redirects")
+	new_req.max_redirects = max_redirects - 1
 	if not new_req.tls and self.tls then
 		--[[ RFC 7231 5.5.2: A user agent MUST NOT send a Referer header field in an
 		unsecured HTTP request if the referring page was received with a secure protocol.]]

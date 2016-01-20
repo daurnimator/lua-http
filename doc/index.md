@@ -644,17 +644,17 @@ Boolean indicating if `:go()` should follow redirects.
 Defaults to `true`.
 
 
-### `request.max_redirects` <!-- --> {#http.request.max_redirects}
-
-Maximum number of redirects to follow before giving up.
-Defaults to `5`.
-Set to `false` to not give up.
-
-
 ### `request.expect_100_timeout` <!-- --> {#http.request.expect_100_timeout}
 
 Number of seconds to wait for a 100 Continue response before proceeding to send a request body.
 Defaults to `1`.
+
+
+### `request.max_redirects` <!-- --> {#http.request.max_redirects}
+
+Maximum number of redirects to follow before giving up.
+Defaults to `5`.
+Set to `math.huge` to not give up.
 
 
 ### `request:set_body(body)` <!-- --> {#http.request:set_body}
