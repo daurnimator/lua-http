@@ -3,6 +3,7 @@ describe("http1 stream", function()
 	local h1_connection = require "http.h1_connection"
 	local new_headers = require "http.headers".new
 	local cqueues = require "cqueues"
+	local ce = require "cqueues.errno"
 	local cs = require "cqueues.socket"
 	local cc = require "cqueues.condition"
 	local function assert_loop(cq, timeout)
@@ -20,6 +21,47 @@ describe("http1 stream", function()
 		c = h1_connection.new(c, "client", version)
 		return s, c
 	end
+	it("Can read content-length delimited stream", function()
+		local server, client = new_pair(1.1)
+		local cq = cqueues.new()
+		cq:wrap(function()
+			do
+				local stream = client:new_stream()
+				local headers = new_headers()
+				headers:append(":method", "GET")
+				headers:append(":path", "/a")
+				headers:append("content-length", "100")
+				assert(stream:write_headers(headers, false))
+				assert(stream:write_chunk(("b"):rep(100), true))
+			end
+			do
+				local stream = client:new_stream()
+				local headers = new_headers()
+				headers:append(":method", "GET")
+				headers:append(":path", "/b")
+				headers:append("content-length", "0")
+				assert(stream:write_headers(headers, true))
+			end
+		end)
+		cq:wrap(function()
+			do
+				local stream = server:get_next_incoming_stream()
+				local headers = assert(stream:read_headers())
+				local body = assert(stream:get_body_as_string())
+				assert.same(100, tonumber(headers:get("content-length")))
+				assert.same(100, #body)
+			end
+			do
+				local stream = server:get_next_incoming_stream()
+				local headers = assert(stream:read_headers())
+				local body = assert(stream:get_body_as_string())
+				assert.same(0, tonumber(headers:get("content-length")))
+				assert.same(0, #body)
+			end
+		end)
+		assert_loop(cq, TEST_TIMEOUT)
+		assert.truthy(cq:empty())
+	end)
 	it("allows pipelining", function()
 		local server, client = new_pair(1.1)
 		local cq = cqueues.new()
@@ -93,14 +135,14 @@ describe("http1 stream", function()
 			assert(a:write_chunk("body", true))
 			assert(assert(a:get_headers()):get(":status") == "200")
 			assert(a:get_next_chunk() == "done")
-			assert(a:get_next_chunk() == nil)
+			assert.same({nil, ce.EPIPE}, {a:get_next_chunk()})
 		end)
 		cq:wrap(function()
 			local b = assert(server:get_next_incoming_stream())
 			assert(b:get_headers())
 			assert(b:write_continue())
 			assert(b:get_next_chunk() == "body")
-			assert(b:get_next_chunk() == nil)
+			assert.same({nil, ce.EPIPE}, {b:get_next_chunk()})
 			local h = new_headers()
 			h:append(":status", "200")
 			assert(b:write_headers(h, false))

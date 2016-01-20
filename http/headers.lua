@@ -24,6 +24,8 @@ local entry_mt = {
 local never_index_defaults = {
 	authorization = true;
 	["proxy-authorization"] = true;
+	cookie = true;
+	["set-cookie"] = true;
 }
 
 local function new_entry(name, value, never_index)
@@ -47,6 +49,10 @@ end
 
 function entry_methods:unpack()
 	return self.name, self.value, self.never_index
+end
+
+function entry_methods:clone()
+	return new_entry(self.name, self.value, self.never_index)
 end
 
 
@@ -76,10 +82,12 @@ end
 local function add_to_index(_index, name, i)
 	local dex = _index[name]
 	if dex == nil then
-		dex = {i}
+		dex = {n=1, i}
 		_index[name] = dex
 	else
-		table.insert(dex, i)
+		local n = dex.n + 1
+		dex[n] = i
+		dex.n = n
 	end
 end
 
@@ -90,6 +98,20 @@ local function rebuild_index(self)
 		add_to_index(index, entry.name, i)
 	end
 	self._index = index
+end
+
+function headers_methods:clone()
+	local index, new_data = {}, {}
+	for i=1, self._n do
+		local entry = self._data[i]
+		new_data[i] = entry:clone()
+		add_to_index(index, entry.name, i)
+	end
+	return setmetatable({
+		_n = self._n;
+		_data = new_data;
+		_index = index;
+	}, headers_mt)
 end
 
 function headers_methods:append(name, ...)
@@ -112,17 +134,13 @@ headers_mt.__pairs = headers_methods.each
 
 function headers_methods:has(name)
 	local dex = self._index[name]
-	if dex then
-		return #dex
-	else
-		return false
-	end
+	return dex ~= nil
 end
 
 function headers_methods:delete(name)
 	local dex = self._index[name]
 	if dex then
-		local n = #dex
+		local n = dex.n
 		for i=n, 1, -1 do
 			table.remove(self._data, dex[i])
 		end
@@ -143,7 +161,7 @@ end
 function headers_methods:get_as_sequence(name)
 	local dex = self._index[name]
 	if dex == nil then return { n = 0; } end
-	local r = { n = #dex; }
+	local r = { n = dex.n; }
 	for i=1, r.n do
 		r[i] = self._data[dex[i]].value
 	end

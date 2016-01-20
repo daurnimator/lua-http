@@ -311,7 +311,7 @@ local function validate_headers(headers, is_request, nth_header, ended_stream)
 				return nil, h2_errors.PROTOCOL_ERROR:traceback("Trailers MUST be at end of stream", true)
 			end
 		elseif nth_header > 2 then
-			return nil, h2_errors.PROTOCOL_ERROR:traceback("A HTTP request consists of maximum 2 HEADER blocks", true)
+			return nil, h2_errors.PROTOCOL_ERROR:traceback("An HTTP request consists of maximum 2 HEADER blocks", true)
 		end
 	else
 		--[[ For HTTP/2 responses, a single :status pseudo-header field is
@@ -895,9 +895,9 @@ function stream_methods:get_headers(timeout)
 		end
 		local which = cqueues.poll(self.connection, self.recv_headers_cond, timeout)
 		if which == self.connection then
-			local ok, err = self.connection:step(0)
+			local ok, err, errno = self.connection:step(0)
 			if not ok then
-				return nil, err
+				return nil, err, errno
 			end
 		elseif which == timeout then
 			return nil, ce.ETIMEDOUT
@@ -919,9 +919,9 @@ function stream_methods:get_next_chunk(timeout)
 		end
 		local which = cqueues.poll(self.connection, self.chunk_cond, timeout)
 		if which == self.connection then
-			local ok, err = self.connection:step(0)
+			local ok, err, errno = self.connection:step(0)
 			if not ok then
-				return nil, err
+				return nil, err, errno
 			end
 		elseif which == timeout then
 			return nil, ce.ETIMEDOUT
@@ -980,7 +980,10 @@ function stream_methods:write_chunk(payload, end_stream, timeout)
 		while self.peer_flow_credits == 0 do
 			local which = cqueues.poll(self.connection, self.peer_flow_credits_increase, timeout)
 			if which == self.connection then
-				assert(self.connection:step(0))
+				local ok, err, errno = self.connection:step(0)
+				if not ok then
+					return nil, err, errno
+				end
 			elseif which == timeout then
 				return nil, ce.ETIMEDOUT
 			end
@@ -989,7 +992,10 @@ function stream_methods:write_chunk(payload, end_stream, timeout)
 		while self.connection.peer_flow_credits == 0 do
 			local which = cqueues.poll(self.connection, self.connection.peer_flow_credits_increase, timeout)
 			if which == self.connection then
-				assert(self.connection:step(0))
+				local ok, err, errno = self.connection:step(0)
+				if not ok then
+					return nil, err, errno
+				end
 			elseif which == timeout then
 				return nil, ce.ETIMEDOUT
 			end
@@ -1000,12 +1006,9 @@ function stream_methods:write_chunk(payload, end_stream, timeout)
 		if max_available < (#payload - sent) then
 			if max_available > 0 then
 				-- send partial payload
-				local ok, err = self:write_data_frame(payload:sub(sent+1, sent+max_available), false, timeout)
+				local ok, err, errno = self:write_data_frame(payload:sub(sent+1, sent+max_available), false, timeout)
 				if not ok then
-					if err == ce.EPIPE or err == ce.ETIMEDOUT then
-						return nil, err
-					end
-					error(err)
+					return nil, err, errno
 				end
 				sent = sent + max_available
 			end
@@ -1014,12 +1017,9 @@ function stream_methods:write_chunk(payload, end_stream, timeout)
 		end
 		timeout = deadline and (deadline-monotime())
 	end
-	local ok, err = self:write_data_frame(payload:sub(sent+1), end_stream, timeout)
+	local ok, err, errno = self:write_data_frame(payload:sub(sent+1), end_stream, timeout)
 	if not ok then
-		if err == ce.EPIPE or err == ce.ETIMEDOUT then
-			return nil, err
-		end
-		error(err)
+		return nil, err, errno
 	end
 	return true
 end

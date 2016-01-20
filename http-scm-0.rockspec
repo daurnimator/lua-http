@@ -17,7 +17,7 @@ dependencies = {
 	"bit32"; -- Only if lua == 5.1
 	"cqueues >= 20150907";
 	"luaossl >= 20150727";
-	"lbase64";
+	"basexx >= 0.2.0";
 	"lpeg_patterns >= 0.2";
 	"fifo";
 }
@@ -41,5 +41,6 @@ build = {
 		["http.tls"] = "http/tls.lua";
 		["http.util"] = "http/util.lua";
 		["http.zlib"] = "http/zlib.lua";
+		["http.compat.prosody"] = "http/compat/prosody.lua";
 	};
 }

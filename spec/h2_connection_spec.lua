@@ -4,6 +4,8 @@ describe("http2 connection", function()
 	local new_headers = require "http.headers".new
 	local cqueues = require "cqueues"
 	local cs = require "cqueues.socket"
+	local cc = require "cqueues.condition"
+	local ce = require "cqueues.errno"
 	local function assert_loop(cq, timeout)
 		local ok, err, _, thd = cq:loop(timeout)
 		if not ok then
@@ -41,9 +43,10 @@ describe("http2 connection", function()
 				for _=1, 10 do
 					assert(c:ping())
 				end
-				assert(c:close())
+				assert(c:shutdown())
 			end)
 			assert_loop(c)
+			assert(c:close())
 		end)
 		cq:wrap(function()
 			s = h2_connection.new(s, "server")
@@ -86,15 +89,21 @@ describe("http2 connection", function()
 			req_headers:append(":method", "GET")
 			req_headers:append(":scheme", "http")
 			req_headers:append(":path", "/")
-			client_stream:write_headers(req_headers, false)
+			assert(client_stream:write_headers(req_headers, false))
+			local ok, cond = 0, cc.new()
 			cq:wrap(function()
+				ok = ok + 1
+				if ok == 2 then cond:signal() end
 				assert(c.peer_flow_credits_increase:wait(TEST_TIMEOUT/2), "no connection credits")
 			end)
 			cq:wrap(function()
+				ok = ok + 1
+				if ok == 2 then cond:signal() end
 				assert(client_stream.peer_flow_credits_increase:wait(TEST_TIMEOUT/2), "no stream credits")
 			end)
-			cqueues.sleep(0.05) -- wait for above threads to get scheduled
-			client_stream:write_chunk(("really long string"):rep(1e6), true)
+			cond:wait() -- wait for above threads to get scheduled
+			assert(client_stream:write_chunk(("really long string"):rep(1e4), true))
+			assert_loop(c)
 			assert(c:close())
 		end)
 		local len = 0
@@ -102,8 +111,14 @@ describe("http2 connection", function()
 			s = h2_connection.new(s, "server")
 			local stream = assert(s:get_next_incoming_stream())
 			while true do
-				local chunk = stream:get_next_chunk()
-				if chunk == nil then break end
+				local chunk, err = stream:get_next_chunk()
+				if chunk == nil then
+					if err == ce.EPIPE then
+						break
+					else
+						error(err)
+					end
+				end
 				len = len + #chunk
 			end
 			assert(s:close())

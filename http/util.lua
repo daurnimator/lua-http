@@ -16,6 +16,64 @@ local function encodeURIComponent(str)
 	return (str:gsub("[^%w%-_%.%!%~%*%'%(%)]", char_to_pchar))
 end
 
+-- decodeURI unescapes url encoded characters
+-- excluding for characters that are special in urls
+local decodeURI do
+	-- Keep the blacklist in numeric form.
+	-- This means we can skip case normalisation of the hex characters
+	local decodeURI_blacklist = {}
+	for char in ("#$&+,/:;=?@"):gmatch(".") do
+		decodeURI_blacklist[string.byte(char)] = true
+	end
+	local function decodeURI_helper(str)
+		local x = tonumber(str, 16)
+		if not decodeURI_blacklist[x] then
+			return string.char(x)
+		end
+		-- return nothing; gsub will not perform the replacement
+	end
+	function decodeURI(str)
+		return (str:gsub("%%(%x%x)", decodeURI_helper))
+	end
+end
+
+-- Converts a hex string to a character
+local function pchar_to_char(str)
+	return string.char(tonumber(str, 16))
+end
+
+-- decodeURIComponent unescapes *all* url encoded characters
+local function decodeURIComponent(str)
+	return (str:gsub("%%(%x%x)", pchar_to_char))
+end
+
+-- An iterator over query segments (delimited by "&") as key/value pairs
+-- if a query segment has no '=', the value will be `nil`
+local function query_args(str)
+	local iter, state, first = str:gmatch("([^=&]+)(=?)([^&]*)&?")
+	return function(state, last) -- luacheck: ignore 431
+		local name, equals, value = iter(state, last)
+		if name == nil then return nil end
+		name = decodeURIComponent(name)
+		if equals == "" then
+			value = nil
+		else
+			value = decodeURIComponent(value)
+		end
+		return name, value
+	end, state, first
+end
+
+-- Converts a dictionary (string keys, string values) to an encoded query string
+local function dict_to_query(form)
+	local r, i = {}, 0
+	for name, value in pairs(form) do
+		i = i + 1
+		r[i] = encodeURIComponent(name).."="..encodeURIComponent(value)
+	end
+	return table.concat(r, "&", 1, i)
+end
+
 -- Resolves a relative path
 local function resolve_relative_path(orig_path, relative_path)
 	local t, i = {}, 0
@@ -64,6 +122,13 @@ local function resolve_relative_path(orig_path, relative_path)
 	return table.concat(t, "/", s, i)
 end
 
+local scheme_to_port = {
+	http = 80;
+	ws = 80;
+	https = 443;
+	wss = 443;
+}
+
 -- Splits a :authority header (same as Host) into host and port
 local function split_authority(authority, scheme)
 	local host, port
@@ -72,11 +137,8 @@ local function split_authority(authority, scheme)
 		authority = h
 		port = tonumber(p)
 	else -- when port missing from host header, it defaults to the default for that scheme
-		if scheme == "https" then
-			port = 443
-		elseif scheme == "http" then
-			port = 80
-		else
+		port = scheme_to_port[scheme]
+		if port == nil then
 			error("unknown scheme")
 		end
 	end
@@ -96,11 +158,10 @@ local function to_authority(host, port, scheme)
 	if host:match("^[%x:]+:[%x:]*$") then -- IPv6
 		authority = "[" .. authority .. "]"
 	end
-	if scheme == "https" then
-		if port == 443 then port = nil end
-	elseif scheme == "http" then
-		if port == 80 then port = nil end
-	end -- no else case, ignore lack of scheme
+	local default_port = scheme_to_port[scheme]
+	if default_port == port then
+		port = nil
+	end
 	if port then
 		authority = string.format("%s:%d", authority, port)
 	end
@@ -135,7 +196,12 @@ end
 return {
 	encodeURI = encodeURI;
 	encodeURIComponent = encodeURIComponent;
+	decodeURI = decodeURI;
+	decodeURIComponent = decodeURIComponent;
+	query_args = query_args;
+	dict_to_query = dict_to_query;
 	resolve_relative_path = resolve_relative_path;
+	scheme_to_port = scheme_to_port;
 	split_authority = split_authority;
 	to_authority = to_authority;
 	split_header = split_header;

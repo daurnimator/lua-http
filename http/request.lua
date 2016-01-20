@@ -1,5 +1,5 @@
 local uri_patts = require "lpeg_patterns.uri"
-local base64 = require "base64"
+local basexx = require "basexx"
 local client_connect = require "http.client".connect
 local new_headers = require "http.headers".new
 local http_util = require "http.util"
@@ -7,47 +7,68 @@ local monotime = require "cqueues".monotime
 local ce = require "cqueues.errno"
 
 local request_methods = {
-	follow_redirects = true;
-	max_redirects = 5; -- false = no redirects
 	expect_100_timeout = 1;
+	follow_redirects = true;
+	max_redirects = 5;
+	post301 = false;
+	post302 = false;
 }
+
 local request_mt = {
+	__name = "http.request";
 	__index = request_methods;
 }
 
 local function new_from_uri_t(uri_t, headers)
 	local scheme = assert(uri_t.scheme, "URI missing scheme")
-	assert(scheme == "https" or scheme == "http", "scheme not http")
-	local host = tostring(assert(uri_t.host, "URI must include a host"))
-	local path = uri_t.path
-	if path == nil or path == "" then
-		path = "/"
-	else
-		path = http_util.encodeURI(path)
-	end
-	if uri_t.query then
-		path = path .. "?" .. http_util.encodeURI(uri_t.query)
-	end
+	assert(scheme == "https" or scheme == "http" or scheme == "ws" or scheme == "wss", "scheme not valid")
+	local host = tostring(assert(uri_t.host, "URI must include a host")) -- tostring required to e.g. convert lpeg_patterns IPv6 objects
+	local port = uri_t.port or http_util.scheme_to_port[scheme]
+	local is_connect -- CONNECT requests are a bit special, see http2 spec section 8.3
 	if headers == nil then
 		headers = new_headers()
+		headers:append(":method", "GET")
+		is_connect = false
+	else
+		is_connect = headers:get(":method") == "CONNECT"
 	end
-	local self = setmetatable({
-		host = host;
-		port = uri_t.port or (scheme == "https" and 443 or 80);
-		tls = (scheme == "https");
-		headers = headers;
-		body = nil;
-	}, request_mt)
-	headers:upsert(":authority", http_util.to_authority(host, self.port, scheme))
-	headers:upsert(":method", "GET")
-	headers:upsert(":path", path)
-	headers:upsert(":scheme", scheme)
+	if is_connect then
+		assert(uri_t.path == "", "CONNECT requests cannot have a path")
+		assert(uri_t.query == nil, "CONNECT requests cannot have a query")
+		assert(headers:has(":authority"), ":authority required for CONNECT requests")
+	else
+		headers:upsert(":authority", http_util.to_authority(host, port, scheme))
+		local path = uri_t.path
+		if path == nil or path == "" then
+			path = "/"
+		else
+			path = http_util.encodeURI(path)
+		end
+		if uri_t.query then
+			path = path .. "?" .. http_util.encodeURI(uri_t.query)
+		end
+		headers:upsert(":path", path)
+		headers:upsert(":scheme", scheme)
+	end
 	if uri_t.userinfo then
-		headers:upsert("authorization", "basic " .. base64.encode(uri_t.userinfo), true)
+		local field
+		if is_connect then
+			field = "proxy-authorization"
+		else
+			field = "authorization"
+		end
+		headers:append(field, "basic " .. basexx.to_base64(uri_t.userinfo), true)
 	end
 	if not headers:has("user-agent") then
 		headers:append("user-agent", "lua-http")
 	end
+	local self = setmetatable({
+		host = host;
+		port = port;
+		tls = (scheme == "https" or scheme == "wss");
+		headers = headers;
+		body = nil;
+	}, request_mt)
 	return self
 end
 
@@ -56,26 +77,12 @@ local function new_from_uri(uri)
 	return new_from_uri_t(uri_t)
 end
 
--- CONNECT requests are a bit special, see http2 spec section 8.3
 local function new_connect(uri, connect_authority)
 	local uri_t = assert(uri_patts.uri:match(uri), "invalid URI")
-	assert(uri_t.path == "", "connect requests cannot have paths")
-	local scheme = uri_t.scheme or "http" -- default to http
-	assert(scheme == "https" or scheme == "http", "scheme not http")
-	local host = tostring(assert(uri_t.host, "URI must include a host"))
-	local self = setmetatable({
-		host = host;
-		port = uri_t.port or (scheme == "https" and 443 or 80);
-		tls = (scheme == "https");
-		headers = new_headers();
-		body = nil;
-	}, request_mt)
-	self.headers:append(":authority", connect_authority)
-	self.headers:append(":method", "CONNECT")
-	if uri_t.userinfo then
-		self.headers:append("proxy-authorization", "basic " .. base64.encode(uri_t.userinfo), true)
-	end
-	return self
+	local headers = new_headers()
+	headers:append(":authority", connect_authority)
+	headers:append(":method", "CONNECT")
+	return new_from_uri_t(uri_t, headers)
 end
 
 local function new_from_stream(stream)
@@ -103,14 +110,21 @@ local function new_from_stream(stream)
 end
 
 function request_methods:to_url()
-	local scheme = self.headers:get(":scheme")
-	local authority = self.headers:get(":authority")
-	if authority == nil then
-		authority = http_util.to_authority(self.host, self.port, scheme)
-	end
 	-- TODO: userinfo section (username/password)
-	local path = self.headers:get(":path")
-	return scheme .. "://" .. authority .. path
+	local method = self.headers:get(":method")
+	if method == "CONNECT" then
+		local scheme = self.tls and "https" or "http"
+		local authority = http_util.to_authority(self.host, self.port, scheme)
+		return scheme .. "://" .. authority
+	else
+		local scheme = self.headers:get(":scheme")
+		local authority = self.headers:get(":authority")
+		if authority == nil then
+			authority = http_util.to_authority(self.host, self.port, scheme)
+		end
+		local path = self.headers:get(":path")
+		return scheme .. "://" .. authority .. path
+	end
 end
 
 function request_methods:to_curl()
@@ -201,16 +215,21 @@ function request_methods:new_stream(timeout)
 		host = self.host;
 		port = self.port;
 		tls = self.tls;
+		sendname = self.sendname;
+		version = self.version;
 	}, timeout)
 	return connection:new_stream()
 end
 
 function request_methods:handle_redirect(orig_headers)
 	local max_redirects = self.max_redirects
-	if max_redirects == false or max_redirects <= 0 then
+	if max_redirects <= 0 then
 		return nil, "maximum redirects exceeded", ce.ELOOP
 	end
-	local location = assert(orig_headers:get("location"), "missing location header for redirect")
+	local location = orig_headers:get("location")
+	if not location then
+		return nil, "missing location header for redirect", ce.EINVAL
+	end
 	local uri_t = assert(uri_patts.uri_reference:match(location), "invalid URI")
 	local orig_scheme = self.headers:get(":scheme")
 	if uri_t.scheme == nil then
@@ -228,13 +247,44 @@ function request_methods:handle_redirect(orig_headers)
 			uri_t.path = http_util.resolve_relative_path(orig_path, uri_t.path)
 		end
 	end
-	local new_req = new_from_uri_t(uri_t)
-	new_req.follow_redirects = rawget(self, "follow_redirects")
-	if type(max_redirects) == "number" then
-		new_req.max_redirects = max_redirects - 1
-	end
+	local headers = self.headers:clone()
+	local new_req = new_from_uri_t(uri_t, headers)
 	new_req.expect_100_timeout = rawget(self, "expect_100_timeout")
+	new_req.follow_redirects = rawget(self, "follow_redirects")
+	new_req.max_redirects = max_redirects - 1
+	new_req.post301 = rawget(self, "post301")
+	new_req.post302 = rawget(self, "post302")
+	if not new_req.tls and self.tls then
+		--[[ RFC 7231 5.5.2: A user agent MUST NOT send a Referer header field in an
+		unsecured HTTP request if the referring page was received with a secure protocol.]]
+		headers:delete("referer")
+	else
+		headers:upsert("referer", self:to_url())
+	end
 	new_req.body = self.body
+	-- Change POST requests to a body-less GET on redirect?
+	local orig_status = orig_headers:get(":status")
+	if (orig_status == "303"
+		or (orig_status == "301" and not self.post301)
+		or (orig_status == "302" and not self.post302)
+		) and self.headers:get(":method") == "POST"
+	then
+		headers:upsert(":method", "GET")
+		-- Remove headers that don't make sense without a body
+		-- Headers that require a body
+		headers:delete("transfer-encoding")
+		headers:delete("content-length")
+		-- Representation Metadata from RFC 7231 Section 3.1
+		headers:delete("content-encoding")
+		headers:delete("content-language")
+		headers:delete("content-location")
+		headers:delete("content-type")
+		-- Other...
+		if headers:get("expect") == "100-continue" then
+			headers:delete("expect")
+		end
+		new_req.body = nil
+	end
 	return new_req
 end
 

@@ -24,7 +24,7 @@ describe("http.request module", function()
 			assert.same(nil, req.body)
 		end
 		do -- with userinfo section
-			local base64 = require "base64"
+			local basexx = require "basexx"
 			local req = request.new_from_uri("https://user:password@example.com/")
 			assert.same("example.com", req.host)
 			assert.same(443, req.port)
@@ -33,8 +33,49 @@ describe("http.request module", function()
 			assert.same("GET", req.headers:get ":method")
 			assert.same("/", req.headers:get ":path")
 			assert.same("https", req.headers:get ":scheme")
-			assert.same("user:password", base64.decode(req.headers:get "authorization":match "^basic%s+(.*)"))
+			assert.same("user:password", basexx.from_base64(req.headers:get "authorization":match "^basic%s+(.*)"))
 			assert.same(nil, req.body)
+		end
+	end)
+	it("can construct a CONNECT request", function()
+		do -- http url; no path
+			local req = request.new_connect("http://example.com", "connect.me")
+			assert.same("example.com", req.host)
+			assert.same(80, req.port)
+			assert.falsy(req.tls)
+			assert.same("connect.me", req.headers:get ":authority")
+			assert.same("CONNECT", req.headers:get ":method")
+			assert.falsy(req.headers:has ":path")
+			assert.falsy(req.headers:has ":scheme")
+			assert.same(nil, req.body)
+		end
+		do -- https
+			local req = request.new_connect("https://example.com", "connect.me:1234")
+			assert.same("example.com", req.host)
+			assert.same(443, req.port)
+			assert.truthy(req.tls)
+			assert.same("connect.me:1234", req.headers:get ":authority")
+			assert.same("CONNECT", req.headers:get ":method")
+			assert.falsy(req.headers:has ":path")
+			assert.falsy(req.headers:has ":scheme")
+			assert.same(nil, req.body)
+		end
+		do -- with userinfo section
+			local basexx = require "basexx"
+			local req = request.new_connect("https://user:password@example.com", "connect.me")
+			assert.same("example.com", req.host)
+			assert.same(443, req.port)
+			assert.truthy(req.tls)
+			assert.same("connect.me", req.headers:get ":authority")
+			assert.same("CONNECT", req.headers:get ":method")
+			assert.falsy(req.headers:has ":path")
+			assert.falsy(req.headers:has ":scheme")
+			assert.same("user:password", basexx.from_base64(req.headers:get "proxy-authorization":match "^basic%s+(.*)"))
+			assert.same(nil, req.body)
+		end
+		do -- anything with a path should fail
+			assert.has.errors(function() request.new_connect("http://example.com/") end)
+			assert.has.errors(function() request.new_connect("http://example.com/path") end)
 		end
 	end)
 	it("fails on invalid URIs", function()
@@ -51,6 +92,29 @@ describe("http.request module", function()
 		test("http://example.com/")
 		test("https://example.com/")
 		test("https://example.com:1234/")
+	end)
+	it("handles CONNECT requests in :to_url()", function()
+		local function test(uri)
+			local req = request.new_connect(uri, "connect.me")
+			assert.same(uri, req:to_url())
+		end
+		test("http://example.com")
+		test("https://example.com")
+		test("https://example.com:1234")
+		assert.has.errors(function() test("https://example.com/path") end)
+	end)
+	it(":set_body sets content-length for string arguments", function()
+		local req = request.new_from_uri("http://example.com")
+		assert.falsy(req.headers:has("content-length"))
+		local str = "a string"
+		req:set_body(str)
+		assert.same(string.format("%d", #str), req.headers:get("content-length"))
+	end)
+	it(":set_body sets expect 100-continue for file arguments", function()
+		local req = request.new_from_uri("http://example.com")
+		assert.falsy(req.headers:has("expect"))
+		req:set_body(io.tmpfile())
+		assert.same("100-continue", req.headers:get("expect"))
 	end)
 	it(":handle_redirect works", function()
 		local headers = require "http.headers"
@@ -98,6 +162,35 @@ describe("http.request module", function()
 			orig_headers:append(":status", "302")
 			orig_headers:append("location", "/")
 			assert.same({nil, "maximum redirects exceeded", ce.ELOOP}, {orig_req:handle_redirect(orig_headers)})
+		end
+		do -- missing location header
+			local ce = require "cqueues.errno"
+			local orig_req = request.new_from_uri("http://example.com")
+			local orig_headers = headers.new()
+			orig_headers:append(":status", "302")
+			assert.same({nil, "missing location header for redirect", ce.EINVAL}, {orig_req:handle_redirect(orig_headers)})
+		end
+		do -- POST => GET transformation
+			local orig_req = request.new_from_uri("http://example.com")
+			orig_req.headers:upsert(":method", "POST")
+			orig_req.headers:upsert("content-type", "text/plain")
+			orig_req:set_body("foo")
+			local orig_headers = headers.new()
+			orig_headers:append(":status", "303")
+			orig_headers:append("location", "/foo")
+			local new_req = orig_req:handle_redirect(orig_headers)
+			-- same
+			assert.same(orig_req.host, new_req.host)
+			assert.same(orig_req.port, new_req.port)
+			assert.same(orig_req.tls, new_req.tls)
+			assert.same(orig_req.headers:get ":authority", new_req.headers:get ":authority")
+			assert.same(orig_req.headers:get ":scheme", new_req.headers:get ":scheme")
+			-- different
+			assert.same("GET", new_req.headers:get ":method")
+			assert.same("/foo", new_req.headers:get ":path")
+			assert.falsy(new_req.headers:has "content-type")
+			assert.same(nil, new_req.body)
+			assert.same(orig_req.max_redirects-1, new_req.max_redirects)
 		end
 	end)
 end)

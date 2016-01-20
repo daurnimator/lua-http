@@ -1,5 +1,5 @@
 --[[
-This module implements an error object that can encapsulate the data required of a http2 error.
+This module implements an error object that can encapsulate the data required of an HTTP2 error.
 This data is:
   - the error 'name'
   - the error 'code'

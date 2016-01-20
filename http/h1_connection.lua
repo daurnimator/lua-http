@@ -1,4 +1,4 @@
--- This module implements the socket level functionality needed for a HTTP 1 connection
+-- This module implements the socket level functionality needed for an HTTP 1 connection
 
 local cqueues = require "cqueues"
 local monotime = cqueues.monotime
@@ -110,6 +110,9 @@ end
 
 function connection_methods:new_stream()
 	assert(self.type == "client")
+	if self.socket == nil or self.socket:eof() then
+		return nil, ce.EPIPE
+	end
 	local stream = h1_stream.new(self)
 	return stream
 end
@@ -157,8 +160,11 @@ function connection_methods:read_request_line(timeout)
 	end
 	local method, path, httpversion = line:match("^(%w+) (%S+) HTTP/(1%.[01])\r\n$")
 	if not method then
-		self.socket:seterror("r", ce.ENOMSG)
-		return nil, "invalid request line", ce.ENOMSG
+		local ok, errno2 = self.socket:unget(line)
+		if not ok then
+			return nil, onerror(self.socket, "unget", errno2)
+		end
+		return nil, ce.EPIPE
 	end
 	return method, path, tonumber(httpversion)
 end
@@ -170,8 +176,11 @@ function connection_methods:read_status_line(timeout)
 	end
 	local httpversion, status_code, reason_phrase = line:match("^HTTP/(1%.[01]) (%d%d%d) (.*)\r\n$")
 	if not httpversion then
-		self.socket:seterror("r", ce.ENOMSG)
-		return nil, "invalid status line", ce.ENOMSG
+		local ok, errno2 = self.socket:unget(line)
+		if not ok then
+			return nil, onerror(self.socket, "unget", errno2)
+		end
+		return nil, ce.EPIPE
 	end
 	return tonumber(httpversion), status_code, reason_phrase
 end
@@ -180,31 +189,7 @@ function connection_methods:read_header(timeout)
 	local line, err, errno = self.socket:xread("*h", timeout)
 	if line == nil then
 		-- Note: the *h read returns *just* nil when data is a non-mime compliant header
-		if err == nil then
-			-- Check if we're at EOF to distinguish between end of headers and EPIPE
-			if self.socket:eof("r") then
-				return nil, ce.EPIPE
-			end
-			-- Check for end of headers (peek ahead for \r\n)
-			local crlf
-			-- timeout of 0, the *h above should have read ahead enough
-			crlf, err, errno = self.socket:xread(2, 0)
-			if crlf == "\r\n" then -- luacheck: ignore 542
-				-- common case first, we're at end of headers!
-			elseif crlf == nil then
-				return nil, err or ce.EPIPE, errno
-			elseif crlf == "\r" then
-				err = ce.EPIPE
-			else
-				self.socket:seterror("r", ce.ENOMSG)
-				err, errno = "invalid header", ce.ENOMSG
-			end
-			local ok, errno2 = self.socket:unget(crlf)
-			if not ok then
-				err, errno = onerror(self.socket, "unget", errno2)
-			end
-		end
-		return nil, err, errno
+		return nil, err or ce.EPIPE, errno
 	end
 	local key, val = line:match("^([^%s:]+): *(.*)$")
 	-- don't need to validate, the *h read mode ensures a valid header
@@ -217,11 +202,12 @@ function connection_methods:read_headers_done(timeout)
 		return true
 	elseif crlf == nil then
 		return nil, err or ce.EPIPE, errno
-	elseif crlf == "\r" then
-		return nil, ce.EPIPE
 	else
-		self.socket:seterror("r", ce.ENOMSG)
-		return nil, "invalid header: expected CRLF", ce.ENOMSG
+		local ok, errno2 = self.socket:unget(crlf)
+		if not ok then
+			return nil, onerror(self.socket, "unget", errno2)
+		end
+		return nil, ce.EPIPE
 	end
 end
 
@@ -251,11 +237,14 @@ function connection_methods:read_body_chunk(timeout)
 	end
 	local chunk_size, chunk_ext = chunk_header:match("^(%x+) *(.-)\r\n")
 	if chunk_size == nil then
-		self.socket:seterror("r", ce.ENOMSG)
-		return nil, "invalid chunk", ce.ENOMSG
+		local unget_ok1, unget_errno1 = self.socket:unget(chunk_header)
+		if not unget_ok1 then
+			return nil, onerror(self.socket, "unget", unget_errno1)
+		end
+		return nil, ce.EPIPE
 	elseif #chunk_size > 8 then
-		self.socket:seterror("r", ce.ENOMSG)
-		return nil, "invalid chunk: too large", ce.ENOMSG
+		self.socket:seterror("r", ce.E2BIG)
+		return nil, "invalid chunk: too large", ce.E2BIG
 	end
 	chunk_size = tonumber(chunk_size, 16)
 	if chunk_ext == "" then
@@ -265,34 +254,33 @@ function connection_methods:read_body_chunk(timeout)
 		-- you MUST read trailers after this!
 		return false, chunk_ext
 	else
-		local chunk_data, err2, errno2 = self.socket:xread(chunk_size, deadline and (deadline-monotime()))
+		local chunk_data, err3, errno3 = self.socket:xread(chunk_size, deadline and (deadline-monotime()))
 		if chunk_data == nil then
-			do
-				local unget_ok1, err3 = self.socket:unget(chunk_header)
-				if not unget_ok1 then
-					return nil, err3
-				end
+			local unget_ok1, unget_errno1 = self.socket:unget(chunk_header)
+			if not unget_ok1 then
+				return nil, onerror(self.socket, "unget", unget_errno1)
 			end
-			return nil, err2 or ce.EPIPE, errno2
+			return nil, err3 or ce.EPIPE, errno3
 		end
 		local crlf, err4, errno4 = self.socket:xread(2, deadline and (deadline-monotime()))
-		if crlf == nil then
-			do
-				local unget_ok1, err5 = self.socket:unget(chunk_data)
-				if not unget_ok1 then
-					return nil, err5
-				end
-				local unget_ok2, err6 = self.socket:unget(chunk_header)
-				if not unget_ok2 then
-					return nil, err6
-				end
+		if crlf == "\r\n" then
+			-- Success!
+			return chunk_data, chunk_ext
+		elseif crlf ~= nil then
+			local unget_ok3, unget_errno3 = self.socket:unget(crlf)
+			if not unget_ok3 then
+				return nil, onerror(self.socket, "unget", unget_errno3)
 			end
-			return nil, err4 or ce.EPIPE, errno4
-		elseif crlf ~= "\r\n" then
-			self.socket:seterror("r", ce.ENOMSG)
-			return nil, "invalid chunk: expected CRLF", ce.ENOMSG
 		end
-		return chunk_data, chunk_ext
+		local unget_ok2, unget_errno2 = self.socket:unget(chunk_data)
+		if not unget_ok2 then
+			return nil, onerror(self.socket, "unget", unget_errno2)
+		end
+		local unget_ok1, unget_errno1 = self.socket:unget(chunk_header)
+		if not unget_ok1 then
+			return nil, onerror(self.socket, "unget", unget_errno1)
+		end
+		return nil, err4 or ce.EPIPE, errno4
 	end
 end
 
@@ -367,15 +355,6 @@ function connection_methods:write_body_plain(body, timeout)
 		return nil, err, errno
 	end
 	return true
-end
-
-function connection_methods:write_body_shutdown(timeout)
-	-- flushes write buffer
-	local ok, err, errno = self.socket:flush("n", timeout)
-	if ok == nil then
-		return nil, err, errno
-	end
-	return self.socket:shutdown("w")
 end
 
 return {

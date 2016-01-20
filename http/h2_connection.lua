@@ -119,7 +119,7 @@ local function new_connection(socket, conn_type, settings, timeout)
 			return nil, err
 		end
 		if not ok then
-			h2_error.errors.PROTOCOL_ERROR("invalid connection preface. not a http2 client?")
+			h2_error.errors.PROTOCOL_ERROR("invalid connection preface. not an http2 client?")
 		end
 	else
 		error('invalid connection type. must be "client" or "server"')
@@ -133,7 +133,7 @@ local function new_connection(socket, conn_type, settings, timeout)
 		version = 2; -- for compat with h1_connection
 
 		streams = setmetatable({}, {__mode="kv"});
-		stream0 = nil; -- store separetly with a strong reference
+		stream0 = nil; -- store separately with a strong reference
 		need_continuation = nil; -- stream
 		cq = cq;
 		highest_odd_stream = -1;
@@ -178,7 +178,7 @@ function connection_methods:events()
 end
 
 function connection_methods:timeout()
-	if not self.cq:empty() then
+	if not self:empty() then
 		return 0
 	end
 end
@@ -247,8 +247,12 @@ local function handle_step_return(self, step_ok, last_err, errno)
 	end
 end
 
+function connection_methods:empty()
+	return self.cq:empty()
+end
+
 function connection_methods:step(...)
-	if self.cq:empty() then
+	if self:empty() then
 		return handle_step_return(self, false, ce.EPIPE)
 	else
 		return handle_step_return(self, self.cq:step(...))
@@ -256,7 +260,7 @@ function connection_methods:step(...)
 end
 
 function connection_methods:loop(...)
-	if self.cq:empty() then
+	if self:empty() then
 		return handle_step_return(self, false, ce.EPIPE)
 	else
 		return handle_step_return(self, self.cq:loop(...))
@@ -312,6 +316,7 @@ function connection_methods:new_stream(id)
 		-- TODO: check MAX_CONCURRENT_STREAMS
 	end
 	assert(self.streams[id] == nil, "stream id already in use")
+	assert(id < 2^32, "stream id too large")
 	if id % 2 == 0 then
 		assert(id > self.highest_even_stream, "stream id too small")
 		self.highest_even_stream = id
@@ -342,9 +347,9 @@ function connection_methods:get_next_incoming_stream(timeout)
 		end
 		local which = cqueues.poll(self, self.new_streams_cond, self.recv_goaway, timeout)
 		if which == self then
-			local ok, err = self:step(0)
+			local ok, err, errno = self:step(0)
 			if not ok then
-				return nil, err
+				return nil, err, errno
 			end
 		elseif which == timeout then
 			return nil, ce.ETIMEDOUT
@@ -426,7 +431,10 @@ function connection_methods:ping(timeout)
 		timeout = deadline and (deadline-monotime())
 		local which = cqueues.poll(self, cond, timeout)
 		if which == self then
-			assert(self:step(0))
+			local ok, err, errno = self:step(0)
+			if not ok then
+				return nil, err, errno
+			end
 		elseif which == timeout then
 			return nil, ce.ETIMEDOUT
 		end
@@ -473,9 +481,9 @@ function connection_methods:settings(tbl, timeout)
 		timeout = deadline and (deadline-monotime())
 		local which = cqueues.poll(self, self.send_settings_ack_cond, timeout)
 		if which == self then
-			local ok2, err2 = self:step(0)
+			local ok2, err2, errno2 = self:step(0)
 			if not ok2 then
-				return nil, err2
+				return nil, err2, errno2
 			end
 		elseif which ~= self.send_settings_ack_cond then
 			self:write_goaway_frame(nil, h2_error.errors.SETTINGS_TIMEOUT.code, "timeout exceeded")
