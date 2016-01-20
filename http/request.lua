@@ -133,6 +133,19 @@ function request_methods:to_curl()
 	}
 	local n = 1
 
+	if self.version then
+		if self.version == 1 then
+			cmd[n+1] = "-0"
+		elseif self.version == 1.1 then
+			cmd[n+1] = "--http1.1"
+		elseif self.version == 2 then
+			cmd[n+1] = "--http2"
+		else
+			error("invalid version")
+		end
+		n = n + 1
+	end
+
 	if self.expect_100_timeout ~= 1 then
 		cmd[n+1] = "--expect100-timeout"
 		cmd[n+2] = string.format("%d", self.expect_100_timeout)
