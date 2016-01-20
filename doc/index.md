@@ -657,6 +657,18 @@ Defaults to `5`.
 Set to `math.huge` to not give up.
 
 
+### `request.post301` <!-- --> {#http.request.post301}
+
+Respect RFC 2616 Section 10.3.2 and **don't** convert POST requests into body-less GET requests when following a 301 redirect. The non-RFC behaviour is ubiquitous in web browsers and assumed by server. Modern HTTP endpoints send status code 308 to indicate that they don't want the method to be changed.
+Defaults to `false`.
+
+
+### `request.post302` <!-- --> {#http.request.post302}
+
+Respect RFC 2616 Section 10.3.3 and **don't** convert POST requests into body-less GET requests when following a 302 redirect. The non-RFC behaviour is ubiquitous in web browsers and assumed by server. Modern HTTP endpoints send status code 307 to indicate that they don't want the method to be changed.
+Defaults to `false`.
+
+
 ### `request:set_body(body)` <!-- --> {#http.request:set_body}
 
 Allows setting a request body. `body` may be a string, function or lua file object.

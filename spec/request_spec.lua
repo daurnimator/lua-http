@@ -170,5 +170,27 @@ describe("http.request module", function()
 			orig_headers:append(":status", "302")
 			assert.same({nil, "missing location header for redirect", ce.EINVAL}, {orig_req:handle_redirect(orig_headers)})
 		end
+		do -- POST => GET transformation
+			local orig_req = request.new_from_uri("http://example.com")
+			orig_req.headers:upsert(":method", "POST")
+			orig_req.headers:upsert("content-type", "text/plain")
+			orig_req:set_body("foo")
+			local orig_headers = headers.new()
+			orig_headers:append(":status", "303")
+			orig_headers:append("location", "/foo")
+			local new_req = orig_req:handle_redirect(orig_headers)
+			-- same
+			assert.same(orig_req.host, new_req.host)
+			assert.same(orig_req.port, new_req.port)
+			assert.same(orig_req.tls, new_req.tls)
+			assert.same(orig_req.headers:get ":authority", new_req.headers:get ":authority")
+			assert.same(orig_req.headers:get ":scheme", new_req.headers:get ":scheme")
+			-- different
+			assert.same("GET", new_req.headers:get ":method")
+			assert.same("/foo", new_req.headers:get ":path")
+			assert.falsy(new_req.headers:has "content-type")
+			assert.same(nil, new_req.body)
+			assert.same(orig_req.max_redirects-1, new_req.max_redirects)
+		end
 	end)
 end)

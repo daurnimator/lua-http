@@ -10,6 +10,8 @@ local request_methods = {
 	expect_100_timeout = 1;
 	follow_redirects = true;
 	max_redirects = 5;
+	post301 = false;
+	post302 = false;
 }
 
 local request_mt = {
@@ -168,6 +170,8 @@ function request_methods:handle_redirect(orig_headers)
 	new_req.expect_100_timeout = rawget(self, "expect_100_timeout")
 	new_req.follow_redirects = rawget(self, "follow_redirects")
 	new_req.max_redirects = max_redirects - 1
+	new_req.post301 = rawget(self, "post301")
+	new_req.post302 = rawget(self, "post302")
 	if not new_req.tls and self.tls then
 		--[[ RFC 7231 5.5.2: A user agent MUST NOT send a Referer header field in an
 		unsecured HTTP request if the referring page was received with a secure protocol.]]
@@ -176,6 +180,29 @@ function request_methods:handle_redirect(orig_headers)
 		headers:upsert("referer", self:to_url())
 	end
 	new_req.body = self.body
+	-- Change POST requests to a body-less GET on redirect?
+	local orig_status = orig_headers:get(":status")
+	if (orig_status == "303"
+		or (orig_status == "301" and not self.post301)
+		or (orig_status == "302" and not self.post302)
+		) and self.headers:get(":method") == "POST"
+	then
+		headers:upsert(":method", "GET")
+		-- Remove headers that don't make sense without a body
+		-- Headers that require a body
+		headers:delete("transfer-encoding")
+		headers:delete("content-length")
+		-- Representation Metadata from RFC 7231 Section 3.1
+		headers:delete("content-encoding")
+		headers:delete("content-language")
+		headers:delete("content-location")
+		headers:delete("content-type")
+		-- Other...
+		if headers:get("expect") == "100-continue" then
+			headers:delete("expect")
+		end
+		new_req.body = nil
+	end
 	return new_req
 end
 
