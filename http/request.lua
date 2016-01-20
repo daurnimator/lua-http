@@ -131,9 +131,8 @@ function request_methods:to_curl()
 	local cmd = {
 		"curl";
 		"--location-trusted";
-		"--post303";
 	}
-	local n = 3
+	local n = 2
 
 	if self.expect_100_timeout ~= 1 then
 		cmd[n+1] = "--expect100-timeout"
