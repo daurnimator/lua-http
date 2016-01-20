@@ -154,7 +154,9 @@ function request_methods:to_curl()
 
 	if self.follow_redirects then
 		cmd[n+1] = "--location-trusted"
-		n = n + 1
+		cmd[n+2] = "-e"
+		cmd[n+3] = ";auto"
+		n = n + 3
 	end
 
 	if self.max_redirects ~= 50 then -- curl default is 50
@@ -212,6 +214,15 @@ function request_methods:to_curl()
 		elseif name == "user-agent" then
 			cmd[n+1] = "-A"
 			cmd[n+2] = value
+			n = n + 2
+		elseif name == "referer" then
+			cmd[n+1] = "-e"
+			assert(not value:match("[^;]"), "cannot render referer")
+			if self.follow_redirects then
+				cmd[n+2] = value .. ";auto"
+			else
+				cmd[n+2] = value
+			end
 			n = n + 2
 		else
 			cmd[n+1] = "-H"
