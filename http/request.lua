@@ -157,22 +157,22 @@ function request_methods:to_curl()
 		cmd[n+2] = "-e"
 		cmd[n+3] = ";auto"
 		n = n + 3
-	end
 
-	if self.max_redirects ~= 50 then -- curl default is 50
-		cmd[n+1] = "--max-redirs"
-		cmd[n+2] = string.format("%d", self.max_redirects or -1)
-		n = n + 2
-	end
+		if self.max_redirects ~= 50 then -- curl default is 50
+			cmd[n+1] = "--max-redirs"
+			cmd[n+2] = string.format("%d", self.max_redirects or -1)
+			n = n + 2
+		end
 
-	if self.post301 then
-		cmd[n+1] = "--post301"
-		n = n + 1
-	end
+		if self.post301 then
+			cmd[n+1] = "--post301"
+			n = n + 1
+		end
 
-	if self.post302 then
-		cmd[n+1] = "--post302"
-		n = n + 1
+		if self.post302 then
+			cmd[n+1] = "--post302"
+			n = n + 1
+		end
 	end
 
 	if self.tls and self.tls ~= true then
