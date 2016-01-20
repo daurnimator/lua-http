@@ -82,10 +82,12 @@ end
 local function add_to_index(_index, name, i)
 	local dex = _index[name]
 	if dex == nil then
-		dex = {i}
+		dex = {n=1, i}
 		_index[name] = dex
 	else
-		table.insert(dex, i)
+		local n = dex.n + 1
+		dex[n] = i
+		dex.n = n
 	end
 end
 
@@ -138,7 +140,7 @@ end
 function headers_methods:delete(name)
 	local dex = self._index[name]
 	if dex then
-		local n = #dex
+		local n = dex.n
 		for i=n, 1, -1 do
 			table.remove(self._data, dex[i])
 		end
@@ -159,7 +161,7 @@ end
 function headers_methods:get_as_sequence(name)
 	local dex = self._index[name]
 	if dex == nil then return { n = 0; } end
-	local r = { n = #dex; }
+	local r = { n = dex.n; }
 	for i=1, r.n do
 		r[i] = self._data[dex[i]].value
 	end
