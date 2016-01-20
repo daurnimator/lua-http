@@ -200,7 +200,7 @@ function websocket_methods:send_frame(frame, timeout)
 	return true
 end
 
-function websocket_methods:send(data, opcode)
+function websocket_methods:send(data, opcode, timeout)
 	if self.readyState >= 2 then
 		return nil, "WebSocket closed, unable to send data", ce.EPIPE
 	end
@@ -218,7 +218,7 @@ function websocket_methods:send(data, opcode)
 		MASK = self.type == "client";
 		opcode = opcode;
 		data = data;
-	})
+	}, timeout)
 end
 
 local function close_helper(self, code, reason, deadline)
@@ -285,15 +285,16 @@ function websocket_methods:read(timeout)
 					return close_helper(self, 1002, "Continuation frame expected", deadline)
 				end
 				databuffer = { frame.data }
-				if frame.opcode == 0x1 then
-					databuffer_type = "text"
-				else
-					databuffer_type = "binary"
-				end
+				databuffer_type = frame.opcode
 			else
 				return close_helper(self, 1002, "Reserved opcode", deadline)
 			end
 			if frame.FIN then
+				if databuffer_type == 0x1 then
+					databuffer_type = "text"
+				elseif databuffer_type == 0x2 then
+					databuffer_type = "binary"
+				end
 				return table.concat(databuffer), databuffer_type
 			end
 		else -- Control frame
@@ -367,8 +368,8 @@ local function new_from_uri_t(uri_t, protocols)
 	local self = new("client")
 	self.request = http_request.new_from_uri_t(uri_t)
 	self.request.version = 1.1
-	self.request.headers:append("connection", "upgrade")
 	self.request.headers:append("upgrade", "websocket")
+	self.request.headers:append("connection", "upgrade")
 	self.key = new_key()
 	self.request.headers:append("sec-websocket-key", self.key, true)
 	self.request.headers:append("sec-websocket-version", "13")
@@ -392,6 +393,8 @@ local function new_from_uri(uri, ...)
 	return new_from_uri_t(uri_t, ...)
 end
 
+--[[ Takes a response to a websocket upgrade request,
+and attempts to complete a websocket connection]]
 local function handle_websocket_response(self, headers, stream)
 	assert(self.type == "client" and self.readyState == 0)
 
@@ -460,19 +463,13 @@ local function handle_websocket_response(self, headers, stream)
 	this header field indicates the use of a subprotocol that was not present
 	in the client's handshake (the server has indicated a subprotocol not
 	requested by the client), the client MUST Fail the WebSocket Connection]]
-	if headers:has("sec-websocket-protocol") then
+	local protocol = headers:get("sec-websocket-protocol")
+	if protocol then
 		local has_matching_protocol = false
 		if self.protocols then
-			local swps = headers:get_split_as_sequence("sec-websocket-protocol")
-			for i=1, swps.n do
-				local p1 = swps[i]:lower()
-				for _, p2 in ipairs(self.protocols) do
-					if p1 == p2 then
-						has_matching_protocol = true
-						break
-					end
-				end
-				if has_matching_protocol then
+			for _, p2 in ipairs(self.protocols) do
+				if protocol:lower() == p2 then
+					has_matching_protocol = true
 					break
 				end
 			end
@@ -483,6 +480,7 @@ local function handle_websocket_response(self, headers, stream)
 	end
 
 	-- Success!
+	assert(self.socket == nil, "websocket:connect called twice")
 	self.socket = assert(stream.connection:take_socket())
 	self.readyState = 1
 
