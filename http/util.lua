@@ -64,6 +64,16 @@ local function query_args(str)
 	end, state, first
 end
 
+-- Converts a dictionary (string keys, string values) to an encoded query string
+local function dict_to_query(form)
+	local r, i = {}, 0
+	for name, value in pairs(form) do
+		i = i + 1
+		r[i] = encodeURIComponent(name).."="..encodeURIComponent(value)
+	end
+	return table.concat(r, "&", 1, i)
+end
+
 -- Resolves a relative path
 local function resolve_relative_path(orig_path, relative_path)
 	local t, i = {}, 0
@@ -189,6 +199,7 @@ return {
 	decodeURI = decodeURI;
 	decodeURIComponent = decodeURIComponent;
 	query_args = query_args;
+	dict_to_query = dict_to_query;
 	resolve_relative_path = resolve_relative_path;
 	scheme_to_port = scheme_to_port;
 	split_authority = split_authority;

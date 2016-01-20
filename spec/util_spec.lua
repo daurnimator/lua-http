@@ -41,6 +41,18 @@ describe("http.util module", function()
 			assert.same(nil, iter(state, first))
 		end
 	end)
+	it("dict_to_query works", function()
+		assert.same("foo=bar", util.dict_to_query{foo = "bar"})
+		assert.same("foo=%CE%BB", util.dict_to_query{foo = "λ"})
+		do
+			local t = {foo = "bar"; baz = "qux"}
+			local r = {}
+			for k, v in util.query_args(util.dict_to_query(t)) do
+				r[k] = v
+			end
+			assert.same(t, r)
+		end
+	end)
 	it("split_header works correctly", function()
 		-- nil
 		assert.same({n=0}, util.split_header(nil))
