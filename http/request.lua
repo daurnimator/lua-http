@@ -131,11 +131,9 @@ function request_methods:to_curl()
 	local cmd = {
 		"curl";
 		"--location-trusted";
-		"--post301";
-		"--post302";
 		"--post303";
 	}
-	local n = 5
+	local n = 3
 
 	if self.expect_100_timeout ~= 1 then
 		cmd[n+1] = "--expect100-timeout"
@@ -147,6 +145,16 @@ function request_methods:to_curl()
 		cmd[n+1] = "--max-redirs"
 		cmd[n+2] = string.format("%d", self.max_redirects or -1)
 		n = n + 2
+	end
+
+	if self.post301 then
+		cmd[n+1] = "--post301"
+		n = n + 1
+	end
+
+	if self.post302 then
+		cmd[n+1] = "--post302"
+		n = n + 1
 	end
 
 	if self.tls and self.tls ~= true then
