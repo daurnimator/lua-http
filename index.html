@@ -70,6 +70,11 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#connection">connection</a><ul>
 <li><a href="#connection.type"><code>connection.type</code> <!-- --></a></li>
 <li><a href="#connection.version"><code>connection.version</code> <!-- --></a></li>
+<li><a href="#connection:checktls"><code>connection:checktls()</code> <!-- --></a></li>
+<li><a href="#connection:localname"><code>connection:localname()</code> <!-- --></a></li>
+<li><a href="#connection:peername"><code>connection:peername()</code> <!-- --></a></li>
+<li><a href="#connection:close"><code>connection:close()</code> <!-- --></a></li>
+<li><a href="#connection:get_next_incoming_stream"><code>connection:get_next_incoming_stream(timeout)</code> <!-- --></a></li>
 </ul></li>
 <li><a href="#stream">stream</a><ul>
 <li><a href="#stream.connection"><code>stream.connection</code> <!-- --></a></li>
@@ -251,6 +256,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.util.decodeURI"><code>decodeURI(str)</code> <!-- --></a></li>
 <li><a href="#http.util.decodeURIComponent"><code>decodeURIComponent(str)</code> <!-- --></a></li>
 <li><a href="#http.util.query_args"><code>query_args(str)</code> <!-- --></a></li>
+<li><a href="#http.util.dict_to_query"><code>dict_to_query(dict)</code> <!-- --></a></li>
 <li><a href="#http.util.resolve_relative_path"><code>resolve_relative_path(orig_path, relative_path)</code> <!-- --></a></li>
 <li><a href="#http.util.scheme_to_port"><code>scheme_to_port</code> <!-- --></a></li>
 <li><a href="#http.util.split_authority"><code>split_authority(authority, scheme)</code> <!-- --></a></li>
@@ -326,6 +332,21 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <section id="connection.version" class="level3">
 <h3><code>connection.version</code> <!-- --></h3>
 <p>The HTTP version as a number</p>
+</section>
+<section id="connection:checktls" class="level3">
+<h3><code>connection:checktls()</code> <!-- --></h3>
+</section>
+<section id="connection:localname" class="level3">
+<h3><code>connection:localname()</code> <!-- --></h3>
+</section>
+<section id="connection:peername" class="level3">
+<h3><code>connection:peername()</code> <!-- --></h3>
+</section>
+<section id="connection:close" class="level3">
+<h3><code>connection:close()</code> <!-- --></h3>
+</section>
+<section id="connection:get_next_incoming_stream" class="level3">
+<h3><code>connection:get_next_incoming_stream(timeout)</code> <!-- --></h3>
 </section>
 </section>
 <section id="stream" class="level2">
@@ -434,12 +455,15 @@ See <a href="#http.h2_connection"><em>http.h2_connection</em></a> for details</p
 </section>
 <section id="http.h1_connection:checktls" class="level3">
 <h3><code>h1_connection:checktls()</code> <!-- --></h3>
+<p>See <a href="#connection:checktls"><code>connection:checktls()</code></a></p>
 </section>
 <section id="http.h1_connection:localname" class="level3">
 <h3><code>h1_connection:localname()</code> <!-- --></h3>
+<p>See <a href="#connection:localname"><code>connection:localname()</code></a></p>
 </section>
 <section id="http.h1_connection:peername" class="level3">
 <h3><code>h1_connection:peername()</code> <!-- --></h3>
+<p>See <a href="#connection:peername"><code>connection:peername()</code></a></p>
 </section>
 <section id="http.h1_connection:clearerr" class="level3">
 <h3><code>h1_connection:clearerr(...)</code> <!-- --></h3>
@@ -452,12 +476,14 @@ See <a href="#http.h2_connection"><em>http.h2_connection</em></a> for details</p
 </section>
 <section id="http.h1_connection:close" class="level3">
 <h3><code>h1_connection:close()</code> <!-- --></h3>
+<p>See <a href="#connection:close"><code>connection:close()</code></a></p>
 </section>
 <section id="http.h1_connection:new_stream" class="level3">
 <h3><code>h1_connection:new_stream()</code> <!-- --></h3>
 </section>
 <section id="http.h1_connection:get_next_incoming_stream" class="level3">
 <h3><code>h1_connection:get_next_incoming_stream(timeout)</code> <!-- --></h3>
+<p>See <a href="#connection:get_next_incoming_stream"><code>connection:get_next_incoming_stream()</code></a></p>
 </section>
 <section id="http.h1_connection:read_request_line" class="level3">
 <h3><code>h1_connection:read_request_line(timeout)</code> <!-- --></h3>
@@ -549,24 +575,29 @@ See <a href="#http.h2_connection"><em>http.h2_connection</em></a> for details</p
 </section>
 <section id="http.h2_connection:checktls" class="level3">
 <h3><code>h2_connection:checktls()</code> <!-- --></h3>
+<p>See <a href="#connection:checktls"><code>connection:checktls()</code></a></p>
 </section>
 <section id="http.h2_connection:localname" class="level3">
 <h3><code>h2_connection:localname()</code> <!-- --></h3>
+<p>See <a href="#connection:localname"><code>connection:localname()</code></a></p>
 </section>
 <section id="http.h2_connection:peername" class="level3">
 <h3><code>h2_connection:peername()</code> <!-- --></h3>
+<p>See <a href="#connection:peername"><code>connection:peername()</code></a></p>
 </section>
 <section id="http.h2_connection:shutdown" class="level3">
 <h3><code>h2_connection:shutdown()</code> <!-- --></h3>
 </section>
 <section id="http.h2_connection:close" class="level3">
 <h3><code>h2_connection:close()</code> <!-- --></h3>
+<p>See <a href="#connection:close"><code>connection:close()</code></a></p>
 </section>
 <section id="http.h2_connection:new_stream" class="level3">
 <h3><code>h2_connection:new_stream(id)</code> <!-- --></h3>
 </section>
 <section id="http.h2_connection:get_next_incoming_stream" class="level3">
 <h3><code>h2_connection:get_next_incoming_stream(timeout)</code> <!-- --></h3>
+<p>See <a href="#connection:get_next_incoming_stream"><code>connection:get_next_incoming_stream()</code></a></p>
 </section>
 <section id="http.h2_connection:read_http2_frame" class="level3">
 <h3><code>h2_connection:read_http2_frame(timeout)</code> <!-- --></h3>
@@ -903,7 +934,8 @@ See <a href="#http.h2_connection"><em>http.h2_connection</em></a> for details</p
 </section>
 <section id="http.tls.banned_ciphers" class="level3">
 <h3><code>banned_ciphers</code> <!-- --></h3>
-<p>A set (table with string keys and values of <code>true</code>) of the <a href="https://http2.github.io/http2-spec/#BadCipherSuites">ciphers banned in HTTP 2</a> where the keys are OpenSSL cipher names. Ciphers not known by OpenSSL are missing from the set.</p>
+<p>A set (table with string keys and values of <code>true</code>) of the <a href="https://http2.github.io/http2-spec/#BadCipherSuites">ciphers banned in HTTP 2</a> where the keys are OpenSSL cipher names.</p>
+<p>Ciphers not known by OpenSSL are missing from the set.</p>
 </section>
 <section id="http.tls.new_client_context" class="level3">
 <h3><code>new_client_context()</code> <!-- --></h3>
@@ -941,6 +973,15 @@ See <a href="#http.h2_connection"><em>http.h2_connection</em></a> for details</p
 <span class="co">]]</span></code></pre></div>
 </section>
 </section>
+<section id="http.util.dict_to_query" class="level3">
+<h3><code>dict_to_query(dict)</code> <!-- --></h3>
+<p>Converts a dictionary (table with string keys) with string values to an encoded query string.</p>
+<section id="example-1" class="level4">
+<h4>Example</h4>
+<div class="sourceCode"><pre class="sourceCode lua"><code class="sourceCode lua"><span class="kw">local</span> http_util <span class="ot">=</span> <span class="fu">require</span> <span class="st">&quot;http.util&quot;</span>
+<span class="fu">print</span><span class="ot">(</span>http_util<span class="ot">.</span>dict_to_query<span class="ot">({</span>foo <span class="ot">=</span> <span class="st">&quot;bar&quot;</span><span class="ot">;</span> baz <span class="ot">=</span> <span class="st">&quot;qux&quot;</span><span class="ot">}))</span> <span class="co">--&gt; &quot;baz=qux&amp;foo=bar&quot;</span></code></pre></div>
+</section>
+</section>
 <section id="http.util.resolve_relative_path" class="level3">
 <h3><code>resolve_relative_path(orig_path, relative_path)</code> <!-- --></h3>
 </section>
@@ -951,7 +992,7 @@ See <a href="#http.h2_connection"><em>http.h2_connection</em></a> for details</p
 <section id="http.util.split_authority" class="level3">
 <h3><code>split_authority(authority, scheme)</code> <!-- --></h3>
 <p>Splits an <code>authority</code> into host and port components. If the authority has no port component, will attempt to use the default for the <code>scheme</code>.</p>
-<section id="example-1" class="level4">
+<section id="example-2" class="level4">
 <h4>Example</h4>
 <div class="sourceCode"><pre class="sourceCode lua"><code class="sourceCode lua"><span class="kw">local</span> http_util <span class="ot">=</span> <span class="fu">require</span> <span class="st">&quot;http.util&quot;</span>
 <span class="fu">print</span><span class="ot">(</span>http_util<span class="ot">.</span>split_authority<span class="ot">(</span><span class="st">&quot;localhost:8000&quot;</span><span class="ot">,</span> <span class="st">&quot;http&quot;</span><span class="ot">))</span> <span class="co">--&gt; &quot;localhost&quot;, 8000</span>

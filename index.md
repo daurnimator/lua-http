@@ -66,9 +66,25 @@ All connection types expose the fields:
 
 Either `"client"` or `"server"`
 
+
 ### `connection.version` <!-- --> {#connection.version}
 
 The HTTP version as a number
+
+
+### `connection:checktls()` <!-- --> {#connection:checktls}
+
+
+### `connection:localname()` <!-- --> {#connection:localname}
+
+
+### `connection:peername()` <!-- --> {#connection:peername}
+
+
+### `connection:close()` <!-- --> {#connection:close}
+
+
+### `connection:get_next_incoming_stream(timeout)` <!-- --> {#connection:get_next_incoming_stream}
 
 
 ## stream
@@ -83,11 +99,15 @@ The underlying [*connection*](#connection) object
 
 ### `stream:get_headers(timeout)` <!-- --> {#stream:get_headers}
 
+
 ### `stream:write_headers(headers, end_stream, timeout)` <!-- --> {#stream:write_headers}
+
 
 ### `stream:get_next_chunk(timeout)` <!-- --> {#stream:get_next_chunk}
 
+
 ### `stream:write_chunk(chunk, end_stream, timeout)` <!-- --> {#stream:write_chunk}
+
 
 ### `stream:shutdown()` <!-- --> {#stream:shutdown}
 
@@ -103,9 +123,12 @@ Results are only consistent between underlying implementations when parameters a
 
 ### `band(a, b)` <!-- --> {#http.bit.band}
 
+
 ### `bor(a, b)` <!-- --> {#http.bit.bor}
 
+
 ### `bxor(a, b)` <!-- --> {#http.bit.bxor}
+
 
 
 ### Example {#http.bit-example}
@@ -184,49 +207,82 @@ local myconnection = http_client.connect {
 
 ### `new(socket, conn_type, version)` <!-- --> {#http.h1_connection.new}
 
+
 ### `h1_connection:checktls()` <!-- --> {#http.h1_connection:checktls}
+
+See [`connection:checktls()`](#connection:checktls)
+
 
 ### `h1_connection:localname()` <!-- --> {#http.h1_connection:localname}
 
+See [`connection:localname()`](#connection:localname)
+
+
 ### `h1_connection:peername()` <!-- --> {#http.h1_connection:peername}
+
+See [`connection:peername()`](#connection:peername)
+
 
 ### `h1_connection:clearerr(...)` <!-- --> {#http.h1_connection:clearerr}
 
+
 ### `h1_connection:take_socket()` <!-- --> {#http.h1_connection:take_socket}
+
 
 ### `h1_connection:shutdown(dir)` <!-- --> {#http.h1_connection:shutdown}
 
+
 ### `h1_connection:close()` <!-- --> {#http.h1_connection:close}
+
+See [`connection:close()`](#connection:close)
+
 
 ### `h1_connection:new_stream()` <!-- --> {#http.h1_connection:new_stream}
 
+
 ### `h1_connection:get_next_incoming_stream(timeout)` <!-- --> {#http.h1_connection:get_next_incoming_stream}
+
+See [`connection:get_next_incoming_stream()`](#connection:get_next_incoming_stream)
+
 
 ### `h1_connection:read_request_line(timeout)` <!-- --> {#http.h1_connection:read_request_line}
 
+
 ### `h1_connection:read_status_line(timeout)` <!-- --> {#http.h1_connection:read_status_line}
+
 
 ### `h1_connection:read_header(timeout)` <!-- --> {#http.h1_connection:read_header}
 
+
 ### `h1_connection:read_headers_done(timeout)` <!-- --> {#http.h1_connection:read_headers_done}
+
 
 ### `h1_connection:read_body_by_length(len, timeout)` <!-- --> {#http.h1_connection:read_body_by_length}
 
+
 ### `h1_connection:read_body_till_close(timeout)` <!-- --> {#http.h1_connection:read_body_till_close}
+
 
 ### `h1_connection:read_body_chunk(timeout)` <!-- --> {#http.h1_connection:read_body_chunk}
 
+
 ### `h1_connection:write_request_line(method, path, httpversion, timeout)` <!-- --> {#http.h1_connection:write_request_line}
+
 
 ### `h1_connection:write_status_line(httpversion, status_code, reason_phrase, timeout)` <!-- --> {#http.h1_connection:write_status_line}
 
+
 ### `h1_connection:write_header(k, v, timeout)` <!-- --> {#http.h1_connection:write_header}
+
 
 ### `h1_connection:write_headers_done(timeout)` <!-- --> {#http.h1_connection:write_headers_done}
 
+
 ### `h1_connection:write_body_chunk(chunk, chunk_ext, timeout)` <!-- --> {#http.h1_connection:write_body_chunk}
 
+
 ### `h1_connection:write_body_last_chunk(chunk_ext, timeout)` <!-- --> {#http.h1_connection:write_body_last_chunk}
+
 
 ### `h1_connection:write_body_plain(body, timeout)` <!-- --> {#http.h1_connection:write_body_plain}
 
@@ -236,7 +292,6 @@ local myconnection = http_client.connect {
 A table mapping from status codes (as strings) to reason phrases for HTTP 1.
 
 Unknown status codes return `"Unassigned"`
-
 
 ### Example {#http.h1_reason_phrases-example}
 
@@ -254,6 +309,7 @@ an `http.h1_stream` has the following methods:
 
 ### `h1_stream:set_state(new)` <!-- --> {#http.h1_stream:set_state}
 
+
 ### `h1_stream:read_headers(timeout)` <!-- --> {#http.h1_stream:read_headers}
 
 
@@ -264,45 +320,76 @@ hence an `http.h2_connection` acts much like a scheduler.
 
 ### `new(socket, conn_type, settings, timeout)` <!-- --> {#http.h2_connection.new}
 
+
 ### `h2_connection:pollfd()` <!-- --> {#http.h2_connection:pollfd}
+
 
 ### `h2_connection:events()` <!-- --> {#http.h2_connection:events}
 
+
 ### `h2_connection:timeout()` <!-- --> {#http.h2_connection:timeout}
+
 
 ### `h2_connection:empty()` <!-- --> {#http.h2_connection:empty}
 
+
 ### `h2_connection:step(timeout)` <!-- --> {#http.h2_connection:step}
+
 
 ### `h2_connection:loop(timeout)` <!-- --> {#http.h2_connection:loop}
 
+
 ### `h2_connection:checktls()` <!-- --> {#http.h2_connection:checktls}
+
+See [`connection:checktls()`](#connection:checktls)
+
 
 ### `h2_connection:localname()` <!-- --> {#http.h2_connection:localname}
 
+See [`connection:localname()`](#connection:localname)
+
+
 ### `h2_connection:peername()` <!-- --> {#http.h2_connection:peername}
+
+See [`connection:peername()`](#connection:peername)
+
 
 ### `h2_connection:shutdown()` <!-- --> {#http.h2_connection:shutdown}
 
+
 ### `h2_connection:close()` <!-- --> {#http.h2_connection:close}
+
+See [`connection:close()`](#connection:close)
+
 
 ### `h2_connection:new_stream(id)` <!-- --> {#http.h2_connection:new_stream}
 
+
 ### `h2_connection:get_next_incoming_stream(timeout)` <!-- --> {#http.h2_connection:get_next_incoming_stream}
+
+See [`connection:get_next_incoming_stream()`](#connection:get_next_incoming_stream)
+
 
 ### `h2_connection:read_http2_frame(timeout)` <!-- --> {#http.h2_connection:read_http2_frame}
 
+
 ### `h2_connection:write_http2_frame(typ, flags, streamid, payload, timeout)` <!-- --> {#http.h2_connection:write_http2_frame}
+
 
 ### `h2_connection:ping(timeout)` <!-- --> {#http.h2_connection:ping}
 
+
 ### `h2_connection:write_window_update(inc, timeout)` <!-- --> {#http.h2_connection:write_window_update}
+
 
 ### `h2_connection:write_goaway_frame(last_stream_id, err_code, debug_msg)` <!-- --> {#http.h2_connection:write_goaway_frame}
 
+
 ### `h2_connection:set_peer_settings(peer_settings)` <!-- --> {#http.h2_connection:set_peer_settings}
 
+
 ### `h2_connection:ack_settings()` <!-- --> {#http.h2_connection:ack_settings}
+
 
 ### `h2_connection:settings(tbl, timeout)` <!-- --> {#http.h2_connection:settings}
 
@@ -365,25 +452,36 @@ an `http.h2_stream` has the following methods:
 
 ### `h2_stream:set_state(new)` <!-- --> {#http.h2_stream:set_state}
 
+
 ### `h2_stream:reprioritise(child, exclusive)` <!-- --> {#http.h2_stream:reprioritise}
+
 
 ### `h2_stream:write_http2_frame(typ, flags, payload, timeout)` <!-- --> {#http.h2_stream:write_http2_frame}
 
+
 ### `h2_stream:write_data_frame(payload, end_stream, padded, timeout)` <!-- --> {#http.h2_stream:write_data_frame}
+
 
 ### `h2_stream:write_headers_frame(payload, end_stream, end_headers, padded, exclusive, stream_dep, weight, timeout)` <!-- --> {#http.h2_stream:write_headers_frame}
 
+
 ### `h2_stream:write_rst_stream(err_code, timeout)` <!-- --> {#http.h2_stream:write_rst_stream}
+
 
 ### `h2_stream:write_settings_frame(ACK, settings, timeout)` <!-- --> {#http.h2_stream:write_settings_frame}
 
+
 ### `h2_stream:write_ping_frame(ACK, payload, timeout)` <!-- --> {#http.h2_stream:write_ping_frame}
+
 
 ### `h2_stream:write_goaway_frame(last_streamid, err_code, debug_msg, timeout)` <!-- --> {#http.h2_stream:write_goaway_frame}
 
+
 ### `h2_stream:write_window_update_frame(inc, timeout)` <!-- --> {#http.h2_stream:write_window_update_frame}
 
+
 ### `h2_stream:write_window_update(inc)` <!-- --> {#http.h2_stream:write_window_update}
+
 
 ### `h2_stream:write_continuation_frame(payload, end_headers, timeout)` <!-- --> {#http.h2_stream:write_continuation_frame}
 
@@ -402,29 +500,42 @@ Creates and returns a new headers object.
 
 ### `headers:len()` <!-- --> {#http.headers:len}
 
+
 ### `headers:clone()` <!-- --> {#http.headers:clone}
+
 
 ### `headers:append(name, value, never_index)` <!-- --> {#http.headers:append}
 
+
 ### `headers:each()` <!-- --> {#http.headers:each}
+
 
 ### `headers:has(name)` <!-- --> {#http.headers:has}
 
+
 ### `headers:delete(name)` <!-- --> {#http.headers:delete}
+
 
 ### `headers:geti(i)` <!-- --> {#http.headers:geti}
 
+
 ### `headers:get_as_sequence(name)` <!-- --> {#http.headers:get_as_sequence}
+
 
 ### `headers:get(name)` <!-- --> {#http.headers:get}
 
+
 ### `headers:get_comma_separated(name)` <!-- --> {#http.headers:get_comma_separated}
+
 
 ### `headers:get_split_as_sequence(name)` <!-- --> {#http.headers:get_split_as_sequence}
 
+
 ### `headers:modifyi(i, value, never_index)` <!-- --> {#http.headers:modifyi}
 
+
 ### `headers:upsert(name, value, never_index)` <!-- --> {#http.headers:upsert}
+
 
 ### `headers:sort()` <!-- --> {#http.headers:sort}
 
@@ -433,37 +544,54 @@ Creates and returns a new headers object.
 
 ### `new(SETTINGS_HEADER_TABLE_SIZE)` <!-- --> {#http.hpack.new}
 
+
 ### `hpack_context:append_data(val)` <!-- --> {#http.hpack:append_data}
+
 
 ### `hpack_context:render_data()` <!-- --> {#http.hpack:render_data}
 
+
 ### `hpack_context:clear_data()` <!-- --> {#http.hpack:clear_data}
+
 
 ### `hpack_context:evict_from_dynamic_table()` <!-- --> {#http.hpack:evict_from_dynamic_table}
 
+
 ### `hpack_context:dynamic_table_tostring()` <!-- --> {#http.hpack:dynamic_table_tostring}
+
 
 ### `hpack_context:set_max_dynamic_table_size(SETTINGS_HEADER_TABLE_SIZE)` <!-- --> {#http.hpack:set_max_dynamic_table_size}
 
+
 ### `hpack_context:encode_max_size(val)` <!-- --> {#http.hpack:encode_max_size}
+
 
 ### `hpack_context:resize_dynamic_table(new_size)` <!-- --> {#http.hpack:resize_dynamic_table}
 
+
 ### `hpack_context:add_to_dynamic_table(name, value, k) -- luacheck: ignore 212` <!-- --> {#http.hpack:add_to_dynamic_table}
+
 
 ### `hpack_context:dynamic_table_id_to_index(id)` <!-- --> {#http.hpack:dynamic_table_id_to_index}
 
+
 ### `hpack_context:lookup_pair_index(k)` <!-- --> {#http.hpack:lookup_pair_index}
+
 
 ### `hpack_context:lookup_name_index(name)` <!-- --> {#http.hpack:lookup_name_index}
 
+
 ### `hpack_context:lookup_index(index, allow_single)` <!-- --> {#http.hpack:lookup_index}
+
 
 ### `hpack_context:add_header_indexed(name, value, huffman)` <!-- --> {#http.hpack:add_header_indexed}
 
+
 ### `hpack_context:add_header_never_indexed(name, value, huffman)` <!-- --> {#http.hpack:add_header_never_indexed}
 
+
 ### `hpack_context:encode_headers(headers)` <!-- --> {#http.hpack:encode_headers}
+
 
 ### `hpack_context:decode_headers(payload, header_list, pos)` <!-- --> {#http.hpack:decode_headers}
 
@@ -582,11 +710,15 @@ Iterator over [`stream:get_next_chunk()`](#stream:get_next_chunk)
 
 ### `stream:get_body_as_string(timeout)` <!-- --> {#http.stream_common:get_body_as_string}
 
+
 ### `stream:save_body_to_file(file, timeout)` <!-- --> {#http.stream_common:save_body_to_file}
+
 
 ### `stream:get_body_as_file(timeout)` <!-- --> {#http.stream_common:get_body_as_file}
 
+
 ### `stream:write_body_from_string(str, timeout)` <!-- --> {#http.stream_common:write_body_from_string}
+
 
 ### `stream:write_body_from_file(file, timeout)` <!-- --> {#http.stream_common:write_body_from_file}
 
@@ -613,6 +745,7 @@ The [Mozilla "Intermediate" cipher list](https://wiki.mozilla.org/Security/Serve
 ### `banned_ciphers` <!-- --> {#http.tls.banned_ciphers}
 
 A set (table with string keys and values of `true`) of the [ciphers banned in HTTP 2](https://http2.github.io/http2-spec/#BadCipherSuites) where the keys are OpenSSL cipher names.
+
 Ciphers not known by OpenSSL are missing from the set.
 
 
@@ -625,11 +758,15 @@ Ciphers not known by OpenSSL are missing from the set.
 
 ### `encodeURI(str)` <!-- --> {#http.util.encodeURI}
 
+
 ### `encodeURIComponent(str)` <!-- --> {#http.util.encodeURIComponent}
+
 
 ### `decodeURI(str)` <!-- --> {#http.util.decodeURI}
 
+
 ### `decodeURIComponent(str)` <!-- --> {#http.util.decodeURIComponent}
+
 
 ### `query_args(str)` <!-- --> {#http.util.query_args}
 
@@ -649,7 +786,20 @@ end
 ```
 
 
+### `dict_to_query(dict)` <!-- --> {#http.util.dict_to_query}
+
+Converts a dictionary (table with string keys) with string values to an encoded query string.
+
+#### Example
+
+```lua
+local http_util = require "http.util"
+print(http_util.dict_to_query({foo = "bar"; baz = "qux"})) --> "baz=qux&foo=bar"
+```
+
+
 ### `resolve_relative_path(orig_path, relative_path)` <!-- --> {#http.util.resolve_relative_path}
+
 
 ### `scheme_to_port` <!-- --> {#http.util.scheme_to_port}
 
