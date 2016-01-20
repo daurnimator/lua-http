@@ -908,6 +908,72 @@ Returns the time in HTTP preferred date format (See [RFC 7231 section 7.1.1.1](h
 Current version of lua-http as a string.
 
 
+## http.websocket
+
+
+### `new_from_uri(uri)` <!-- --> {#http.websocket.new_from_uri}
+
+Creates a new `http.websocket` object of type `"client"` from the given URI.
+
+
+### `websocket.close_timeout` <!-- --> {#http.websocket.close_timeout}
+
+Amount of time (in seconds) to wait between sending a close frame and actually closing the connection.
+Defaults to `3` seconds.
+
+
+### `websocket:connect(timeout)` <!-- --> {#http.websocket:connect}
+
+Try to connect to a websocket server.
+
+
+### `websocket:read(timeout)` <!-- --> {#http.websocket:read}
+
+Reads and returns the next data frame plus its opcode.
+Any ping frames received while reading will be responded to.
+
+The opcode `0x1` will be returned as `"text"` and `0x2` will be returned as `"binary"`.
+
+
+### `websocket:each()` <!-- --> {#http.websocket:each}
+
+Iterator over [`websocket:read()`](#http.websocket:read).
+
+
+### `websocket:send_frame(frame, timeout)` <!-- --> {#http.websocket:send_frame}
+
+Low level function to send a raw frame.
+
+
+### `websocket:send(data, opcode, timeout)` <!-- --> {#http.websocket:send}
+
+Send the given `data` as a data frame.
+
+  - `data` should be a string
+  - `opcode` can be a numeric opcode, `"text"` or `"binary"`. If `nil`, defaults to a text frame
+
+
+### `websocket:close(code, reason, timeout)` <!-- --> {#http.websocket:close}
+
+Closes the websocket connection.
+
+  - `code` defaults to `1000`
+  - `reason` is an optional string
+
+
+### Example
+
+```lua
+local websocket = require "http.websocket"
+local ws = websocket.new_from_uri("wss://echo.websocket.org")
+assert(ws:connect())
+assert(ws:send("koo-eee!"))
+local data = assert(ws:read())
+assert(data == "koo-eee!")
+assert(ws:close())
+```
+
+
 ## http.zlib
 
 An abstraction layer over the various lua zlib libraries.
