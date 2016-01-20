@@ -786,6 +786,18 @@ end
 ```
 
 
+### `dict_to_query(dict)` <!-- --> {#http.util.dict_to_query}
+
+Converts a dictionary (table with string keys) with string values to an encoded query string.
+
+#### Example
+
+```lua
+local http_util = require "http.util"
+print(http_util.dict_to_query({foo = "bar"; baz = "qux"})) --> "baz=qux&foo=bar"
+```
+
+
 ### `resolve_relative_path(orig_path, relative_path)` <!-- --> {#http.util.resolve_relative_path}
 
 
