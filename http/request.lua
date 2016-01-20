@@ -168,7 +168,13 @@ function request_methods:to_curl()
 	-- Unlike the ':to_url' method, curl needs the authority in the URI to be the actual host/port
 	local authority = http_util.to_authority(self.host, self.port, scheme)
 	local path = self.headers:get(":path")
-	cmd[n+1] = scheme .. "://" .. authority .. path
+	local url = scheme .. "://" .. authority .. path
+	if url:match("[%[%]%{%}]") then
+		-- Turn off curl URL globbing
+		cmd[n+1] = "-g"
+		n = n + 1
+	end
+	cmd[n+1] = url
 	n = n + 1
 
 	for name, value in self.headers:each() do
