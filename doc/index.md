@@ -574,7 +574,7 @@ Creates and returns a new headers object.
 ### `hpack_context:resize_dynamic_table(new_size)` <!-- --> {#http.hpack:resize_dynamic_table}
 
 
-### `hpack_context:add_to_dynamic_table(name, value, k) -- luacheck: ignore 212` <!-- --> {#http.hpack:add_to_dynamic_table}
+### `hpack_context:add_to_dynamic_table(name, value, k)` <!-- --> {#http.hpack:add_to_dynamic_table}
 
 
 ### `hpack_context:dynamic_table_id_to_index(id)` <!-- --> {#http.hpack:dynamic_table_id_to_index}
