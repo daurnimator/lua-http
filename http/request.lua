@@ -260,7 +260,7 @@ function request_methods:go(timeout)
 		elseif type(self.body) == "function" then
 			-- call function to get body segments
 			while true do
-				local chunk = self.body(deadline and (deadline-monotime()))
+				local chunk = self.body()
 				if chunk then
 					local ok, err2, errno2 = stream:write_chunk(chunk, false, deadline and (deadline-monotime()))
 					if not ok then return nil, err2, errno2 end

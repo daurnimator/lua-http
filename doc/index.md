@@ -674,7 +674,7 @@ Defaults to `false`.
 Allows setting a request body. `body` may be a string, function or lua file object.
 
   - If `body` is a string it will be sent as given.
-  - If `body` is a function, it will be called repeatedly with the current time remaining and should return chunks of the request body as a string or `nil` if done.
+  - If `body` is a function, it will be called repeatedly like an iterator. It should return chunks of the request body as a string or `nil` if done.
   - If `body` is a lua file object, it will be [`:seek`'d](http://www.lua.org/manual/5.3/manual.html#pdf-file:seek) to the start, then sent as a body. Any errors encountered during file operations **will be thrown**.
 
 
