@@ -92,6 +92,7 @@ If using lua 5.1 you will need
     $ luarocks make http-scm-0.rockspec
     ```
 
+
 ## Generating documentation
 
 Documentation is written in markdown and intended to be consumed by [pandoc](http://pandoc.org/)
@@ -99,4 +100,9 @@ Documentation is written in markdown and intended to be consumed by [pandoc](htt
   - To generate self-contained HTML documentation:
     ```
     $ pandoc -t html5 --template=doc/template.html --section-divs --self-contained --toc -c doc/site.css doc/index.md doc/metadata.yaml
+    ```
+
+  - To generate a pdf manual:
+    ```
+    $ pandoc -s -t latex -V documentclass=article -V classoption=oneside -V links-as-notes -V geometry=a4paper,includeheadfoot,margin=2.54cm doc/index.md doc/metadata.yaml -o lua-http.pdf
     ```
