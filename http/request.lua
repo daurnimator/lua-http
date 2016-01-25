@@ -3,6 +3,7 @@ local basexx = require "basexx"
 local client_connect = require "http.client".connect
 local new_headers = require "http.headers".new
 local http_util = require "http.util"
+local version = require "http.version"
 local monotime = require "cqueues".monotime
 local ce = require "cqueues.errno"
 
@@ -18,6 +19,8 @@ local request_mt = {
 	__name = "http.request";
 	__index = request_methods;
 }
+
+local default_user_agent = string.format("%s/%s", version.name, version.version)
 
 local function new_from_uri_t(uri_t, headers)
 	local scheme = assert(uri_t.scheme, "URI missing scheme")
@@ -60,7 +63,7 @@ local function new_from_uri_t(uri_t, headers)
 		headers:append(field, "basic " .. basexx.to_base64(uri_t.userinfo), true)
 	end
 	if not headers:has("user-agent") then
-		headers:append("user-agent", "lua-http")
+		headers:append("user-agent", default_user_agent)
 	end
 	local self = setmetatable({
 		host = host;
