@@ -857,6 +857,18 @@ Returns the time in HTTP preferred date format (See [RFC 7231 section 7.1.1.1](h
 `time` defaults to the current time
 
 
+## http.version
+
+### `name` <!-- --> {#http.version.name}
+
+`"lua-http"`
+
+
+### `version` <!-- --> {#http.version.version}
+
+Current version of lua-http as a string.
+
+
 ## http.zlib
 
 An abstraction layer over the various lua zlib libraries.

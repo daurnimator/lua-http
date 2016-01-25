@@ -40,6 +40,7 @@ build = {
 		["http.stream_common"] = "http/stream_common.lua";
 		["http.tls"] = "http/tls.lua";
 		["http.util"] = "http/util.lua";
+		["http.version"] = "http/version.lua";
 		["http.zlib"] = "http/zlib.lua";
 		["http.compat.prosody"] = "http/compat/prosody.lua";
 	};
