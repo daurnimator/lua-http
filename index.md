@@ -644,17 +644,29 @@ Boolean indicating if `:go()` should follow redirects.
 Defaults to `true`.
 
 
-### `request.max_redirects` <!-- --> {#http.request.max_redirects}
-
-Maximum number of redirects to follow before giving up.
-Defaults to `5`.
-Set to `false` to not give up.
-
-
 ### `request.expect_100_timeout` <!-- --> {#http.request.expect_100_timeout}
 
 Number of seconds to wait for a 100 Continue response before proceeding to send a request body.
 Defaults to `1`.
+
+
+### `request.max_redirects` <!-- --> {#http.request.max_redirects}
+
+Maximum number of redirects to follow before giving up.
+Defaults to `5`.
+Set to `math.huge` to not give up.
+
+
+### `request.post301` <!-- --> {#http.request.post301}
+
+Respect RFC 2616 Section 10.3.2 and **don't** convert POST requests into body-less GET requests when following a 301 redirect. The non-RFC behaviour is ubiquitous in web browsers and assumed by server. Modern HTTP endpoints send status code 308 to indicate that they don't want the method to be changed.
+Defaults to `false`.
+
+
+### `request.post302` <!-- --> {#http.request.post302}
+
+Respect RFC 2616 Section 10.3.3 and **don't** convert POST requests into body-less GET requests when following a 302 redirect. The non-RFC behaviour is ubiquitous in web browsers and assumed by server. Modern HTTP endpoints send status code 307 to indicate that they don't want the method to be changed.
+Defaults to `false`.
 
 
 ### `request:set_body(body)` <!-- --> {#http.request:set_body}
@@ -662,7 +674,7 @@ Defaults to `1`.
 Allows setting a request body. `body` may be a string, function or lua file object.
 
   - If `body` is a string it will be sent as given.
-  - If `body` is a function, it will be called repeatedly with the current time remaining and should return chunks of the request body as a string or `nil` if done.
+  - If `body` is a function, it will be called repeatedly like an iterator. It should return chunks of the request body as a string or `nil` if done.
   - If `body` is a lua file object, it will be [`:seek`'d](http://www.lua.org/manual/5.3/manual.html#pdf-file:seek) to the start, then sent as a body. Any errors encountered during file operations **will be thrown**.
 
 
