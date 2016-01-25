@@ -182,12 +182,15 @@ end
 -- this function *should never throw* under normal operation
 function stream_methods:read_headers(timeout)
 	local deadline = timeout and (monotime()+timeout)
+	if self.state == "closed" or self.state == "half closed (remote)" then
+		return nil, ce.EPIPE
+	end
 	local headers = new_headers()
 	local status_code
-	if self.body_read_type == "chunked" then
-		error("NYI: trailers")
+	local is_trailers = self.body_read_type == "chunked"
+	if is_trailers then -- luacheck: ignore 542
 	elseif self.type == "server" then
-		if self.state ~= "idle" and self.state ~= "open" then
+		if self.state == "half closed (local)" then
 			return nil, ce.EPIPE
 		end
 		local method, path, httpversion =
@@ -206,7 +209,7 @@ function stream_methods:read_headers(timeout)
 		headers:append(":scheme", self:checktls() and "https" or "http")
 		self:set_state("open")
 	else -- client
-		if self.state ~= "open" and self.state ~= "half closed (local)" then
+		if self.state == "idle" then
 			return nil, ce.EPIPE
 		end
 		-- Make sure we're at front of connection pipeline
@@ -236,7 +239,7 @@ function stream_methods:read_headers(timeout)
 			break -- Success: End of headers.
 		end
 		k = k:lower() -- normalise to lower case
-		if k == "host" then
+		if k == "host" and not is_trailers then
 			k = ":authority"
 		end
 		headers:append(k, v)
@@ -257,7 +260,10 @@ function stream_methods:read_headers(timeout)
 	-- Now guess if there's a body...
 	-- RFC 7230 Section 3.3.3
 	local no_body
-	if self.type == "client" and (
+	if is_trailers then
+		-- there cannot be a body after trailers
+		no_body = true
+	elseif self.type == "client" and (
 		self.req_method == "HEAD"
 		or status_code == "204"
 		or status_code == "304"
@@ -625,24 +631,15 @@ function stream_methods:get_next_chunk(timeout)
 		chunk, err, errno = self.connection:read_body_chunk(timeout)
 		if chunk == false then
 			-- read trailers
-			local trailers = new_headers()
-			while true do
-				local k, v = self.connection:read_header(deadline and (deadline-monotime()))
-				if k == nil then
-					-- if it was an error, it will be repeated
-					local ok, err2, errno2 = self.connection:read_headers_done(deadline and (deadline-monotime()))
-					if ok == nil then
-						return nil, err2, errno2
-					end
-					break -- Success: End of headers.
-				end
-				trailers:append(k, v)
+			local trailers
+			trailers, err, errno = self:read_headers(deadline and (deadline-monotime()))
+			if not trailers then
+				return nil, err, errno
 			end
 			self.headers_fifo:push(trailers)
 			self.headers_cond:signal(1)
-
-			chunk, err, errno = nil, ce.EPIPE, nil
-			end_stream = true
+			-- :read_headers has already closed connection; return immediately
+			return nil, ce.EPIPE
 		else
 			end_stream = false
 		end
