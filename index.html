@@ -81,6 +81,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#stream:get_headers"><code>stream:get_headers(timeout)</code> <!-- --></a></li>
 <li><a href="#stream:write_headers"><code>stream:write_headers(headers, end_stream, timeout)</code> <!-- --></a></li>
 <li><a href="#stream:get_next_chunk"><code>stream:get_next_chunk(timeout)</code> <!-- --></a></li>
+<li><a href="#stream:unget"><code>stream:unget(str)</code> <!-- --></a></li>
 <li><a href="#stream:write_chunk"><code>stream:write_chunk(chunk, end_stream, timeout)</code> <!-- --></a></li>
 <li><a href="#stream:shutdown"><code>stream:shutdown()</code> <!-- --></a></li>
 </ul></li>
@@ -202,7 +203,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.hpack:set_max_dynamic_table_size"><code>hpack_context:set_max_dynamic_table_size(SETTINGS_HEADER_TABLE_SIZE)</code> <!-- --></a></li>
 <li><a href="#http.hpack:encode_max_size"><code>hpack_context:encode_max_size(val)</code> <!-- --></a></li>
 <li><a href="#http.hpack:resize_dynamic_table"><code>hpack_context:resize_dynamic_table(new_size)</code> <!-- --></a></li>
-<li><a href="#http.hpack:add_to_dynamic_table"><code>hpack_context:add_to_dynamic_table(name, value, k) -- luacheck: ignore 212</code> <!-- --></a></li>
+<li><a href="#http.hpack:add_to_dynamic_table"><code>hpack_context:add_to_dynamic_table(name, value, k)</code> <!-- --></a></li>
 <li><a href="#http.hpack:dynamic_table_id_to_index"><code>hpack_context:dynamic_table_id_to_index(id)</code> <!-- --></a></li>
 <li><a href="#http.hpack:lookup_pair_index"><code>hpack_context:lookup_pair_index(k)</code> <!-- --></a></li>
 <li><a href="#http.hpack:lookup_name_index"><code>hpack_context:lookup_name_index(name)</code> <!-- --></a></li>
@@ -265,6 +266,10 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.util.to_authority"><code>to_authority(host, port, scheme)</code> <!-- --></a></li>
 <li><a href="#http.util.split_header"><code>split_header(str)</code> <!-- --></a></li>
 <li><a href="#http.util.imf_date"><code>imf_date(time)</code> <!-- --></a></li>
+</ul></li>
+<li><a href="#http.version">http.version</a><ul>
+<li><a href="#http.version.name"><code>name</code> <!-- --></a></li>
+<li><a href="#http.version.version"><code>version</code> <!-- --></a></li>
 </ul></li>
 <li><a href="#http.zlib">http.zlib</a><ul>
 <li><a href="#http.zlib.engine"><code>engine</code> <!-- --></a></li>
@@ -366,6 +371,10 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 </section>
 <section id="stream:get_next_chunk" class="level3">
 <h3><code>stream:get_next_chunk(timeout)</code> <!-- --></h3>
+</section>
+<section id="stream:unget" class="level3">
+<h3><code>stream:unget(str)</code> <!-- --></h3>
+<p>Returns nothing</p>
 </section>
 <section id="stream:write_chunk" class="level3">
 <h3><code>stream:write_chunk(chunk, end_stream, timeout)</code> <!-- --></h3>
@@ -786,7 +795,7 @@ See <a href="#http.h2_connection"><em>http.h2_connection</em></a> for details</p
 <h3><code>hpack_context:resize_dynamic_table(new_size)</code> <!-- --></h3>
 </section>
 <section id="http.hpack:add_to_dynamic_table" class="level3">
-<h3><code>hpack_context:add_to_dynamic_table(name, value, k) -- luacheck: ignore 212</code> <!-- --></h3>
+<h3><code>hpack_context:add_to_dynamic_table(name, value, k)</code> <!-- --></h3>
 </section>
 <section id="http.hpack:dynamic_table_id_to_index" class="level3">
 <h3><code>hpack_context:dynamic_table_id_to_index(id)</code> <!-- --></h3>
@@ -1022,6 +1031,17 @@ See <a href="#http.h2_connection"><em>http.h2_connection</em></a> for details</p
 <h3><code>imf_date(time)</code> <!-- --></h3>
 <p>Returns the time in HTTP preferred date format (See <a href="https://tools.ietf.org/html/rfc7231#section-7.1.1.1">RFC 7231 section 7.1.1.1</a>)</p>
 <p><code>time</code> defaults to the current time</p>
+</section>
+</section>
+<section id="http.version" class="level2">
+<h2>http.version</h2>
+<section id="http.version.name" class="level3">
+<h3><code>name</code> <!-- --></h3>
+<p><code>&quot;lua-http&quot;</code></p>
+</section>
+<section id="http.version.version" class="level3">
+<h3><code>version</code> <!-- --></h3>
+<p>Current version of lua-http as a string.</p>
 </section>
 </section>
 <section id="http.zlib" class="level2">
