@@ -106,6 +106,11 @@ The underlying [*connection*](#connection) object
 ### `stream:get_next_chunk(timeout)` <!-- --> {#stream:get_next_chunk}
 
 
+### `stream:unget(str)` <!-- --> {#stream:unget}
+
+Returns nothing
+
+
 ### `stream:write_chunk(chunk, end_stream, timeout)` <!-- --> {#stream:write_chunk}
 
 

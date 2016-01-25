@@ -62,6 +62,7 @@ local function new_stream(connection)
 		peer_version = nil; -- 1.0 or 1.1
 		headers_fifo = new_fifo();
 		headers_cond = cc.new();
+		body_buffer = nil;
 		body_write_type = nil; -- "closed", "chunked", "length" or "missing"
 		body_write_left = nil; -- integer: only set when body_write_type == "length"
 		body_write_deflate = nil; -- nil or stateful deflate closure
@@ -609,10 +610,15 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 end
 
 function stream_methods:get_next_chunk(timeout)
+	local chunk = self.body_buffer
+	if chunk then
+		self.body_buffer = nil
+		return chunk
+	end
 	if self.state == "closed" or self.state == "half closed (remote)" then
 		return nil, ce.EPIPE
 	end
-	local chunk, end_stream
+	local end_stream
 	local err, errno
 	if self.body_read_type == "chunked" then
 		local deadline = timeout and (monotime()+timeout)
@@ -688,6 +694,15 @@ function stream_methods:get_next_chunk(timeout)
 		end
 	end
 	return chunk, err, errno
+end
+
+function stream_methods:unget(str)
+	local chunk = self.body_buffer
+	if chunk then
+		self.body_buffer = str .. chunk
+	else
+		self.body_buffer = str
+	end
 end
 
 function stream_methods:write_chunk(chunk, end_stream, timeout)

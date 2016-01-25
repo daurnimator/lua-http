@@ -938,6 +938,11 @@ function stream_methods:get_next_chunk(timeout)
 	end
 end
 
+function stream_methods:unget(str)
+	local chunk = new_chunk(self, 0, str) -- 0 means :ack does nothing
+	self.chunk_fifo:insert(1, chunk)
+end
+
 function stream_methods:write_headers(headers, end_stream, timeout)
 	local deadline = timeout and (monotime()+timeout)
 	assert(headers, "missing argument: headers")
