@@ -74,6 +74,100 @@ local function dict_to_query(form)
 	return table.concat(r, "&", 1, i)
 end
 
+local basexx = require "basexx"
+local rand = require "openssl.rand"
+local function generate_boundary()
+	-- #bytes should have > 128 bits of entropy so collisions are improbable
+	-- use characters in ASCII subset: base64 is something we already depend on.
+	-- use a number of bytes divisible by 3 so base64 encoding doesn't waste bytes
+	return basexx.to_url64(rand.bytes(18))
+end
+
+local auxlib = require "cqueues.auxlib"
+local CHUNK_SIZE = 2^20 -- write in 1MB chunks
+local function multipart_encode(boundary, parts)
+	assert(boundary and parts, "missing argument")
+	return auxlib.wrap(function()
+		local first = true
+		while true do
+			local headers, body = parts()
+			if headers == nil then
+				break
+			end
+
+			local str, i = { first and "--" or "\r\n--", boundary, "\r\n" }, 3
+			first = false
+			for k, v in headers:each() do
+				assert(type(k) == "string" and k:match("^[^:\r\n]+$"), "field name invalid")
+				assert(type(v) == "string" and v:sub(-1, -1) ~= "\n" and not v:match("\n[^ ]"), "field value invalid")
+				str[i+1] = k
+				str[i+2] = ": "
+				str[i+3] = v
+				str[i+4] = "\r\n"
+				i = i + 4
+			end
+			if i > 3 then
+				str[i+1] = "\r\n"
+				i = i + 1
+			end
+			coroutine.yield(table.concat(str, "", 1, i))
+
+			if type(body) == "string" then
+				coroutine.yield(body)
+			elseif io.type(body) == "file" then
+				assert(body:seek("set")) -- this implicity disallows non-seekable streams
+				-- Can't use :lines here as in Lua 5.1 it doesn't take a parameter
+				while true do
+					local chunk, err = body:read(CHUNK_SIZE)
+					if chunk == nil then
+						if err then
+							error(err)
+						end
+						break
+					end
+					coroutine.yield(chunk)
+				end
+			elseif type(body) == "function" then
+				-- call function to get body segments
+				while true do
+					local chunk = body()
+					if not chunk then
+						break
+					end
+					coroutine.yield(chunk)
+				end
+			end
+		end
+		coroutine.yield("\r\n--"..boundary.."\r\n")
+	end)
+end
+
+-- local function multipart_decode(boundary, stream, timeout)
+-- 	local deadline = timeout and (monotime()+timeout)
+-- 	local buffer = ""
+-- 	while true do
+-- 		local chunk, err, errno = stream:get_next_chunk(deadline and (deadline-monotime()))
+-- 		if not chunk then
+-- 			return nil, err, errno
+-- 		end
+-- 		buffer = buffer .. chunk
+-- 		assert(buffer:sub(1, #boundary) == boundary)
+-- 		-- read headers
+-- 		-- search for boundary
+
+-- 		local s, e = buffer:find(boundary, 1, true)
+-- 		if s then
+-- 			buffer
+
+-- 			if buffer:sub(s-2, s-1) == "\r\n" then
+-- 				s = s - 2
+-- 			end
+-- 			local data = buffer:sub(1, s-1)
+-- 			buffer = buffer:sub(
+-- 		end
+-- 	end
+-- end
+
 -- Resolves a relative path
 local function resolve_relative_path(orig_path, relative_path)
 	local t, i = {}, 0
@@ -200,6 +294,8 @@ return {
 	decodeURIComponent = decodeURIComponent;
 	query_args = query_args;
 	dict_to_query = dict_to_query;
+	generate_boundary = generate_boundary;
+	multipart_encode = multipart_encode;
 	resolve_relative_path = resolve_relative_path;
 	scheme_to_port = scheme_to_port;
 	split_authority = split_authority;
