@@ -226,6 +226,13 @@ function request_methods:set_body(body)
 	end
 end
 
+function request_methods:set_multipart_form_data(parts)
+	local boundary = http_util.generate_boundary()
+	local body = http_util.multipart_encode(boundary, parts)
+	self.headers:upsert("content-type", "multipart/form-data; boundary=" .. boundary)
+	return self:set_body(body)
+end
+
 function request_methods:go(timeout)
 	local deadline = timeout and (monotime()+timeout)
 
