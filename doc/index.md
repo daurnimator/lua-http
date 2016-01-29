@@ -728,6 +728,12 @@ Iterator over [`stream:get_next_chunk()`](#stream:get_next_chunk)
 ### `stream:get_body_as_string(timeout)` <!-- --> {#http.stream_common:get_body_as_string}
 
 
+### `stream:get_body_chars(n, timeout)` <!-- --> {#http.stream_common:get_body_chars}
+
+
+### `stream:get_body_until(pattern, plain, include_pattern, timeout)` <!-- --> {#http.stream_common:get_body_until}
+
+
 ### `stream:save_body_to_file(file, timeout)` <!-- --> {#http.stream_common:save_body_to_file}
 
 
