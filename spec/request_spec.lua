@@ -83,6 +83,9 @@ describe("http.request module", function()
 
 		-- no scheme
 		assert.has.errors(function() request.new_from_uri("example.com") end)
+
+		-- trailing junk
+		assert.has.errors(function() request.new_from_uri("example.com/foo junk.") end)
 	end)
 	it("can (sometimes) roundtrip via :to_url()", function()
 		local function test(uri)

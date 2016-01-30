@@ -1,3 +1,4 @@
+local lpeg = require "lpeg"
 local uri_patts = require "lpeg_patterns.uri"
 local basexx = require "basexx"
 local client_connect = require "http.client".connect
@@ -21,6 +22,10 @@ local request_mt = {
 }
 
 local default_user_agent = string.format("%s/%s", version.name, version.version)
+
+local EOF = lpeg.P(-1)
+local uri_patt = uri_patts.uri * EOF
+local uri_ref = uri_patts.uri_reference * EOF
 
 local function new_from_uri_t(uri_t, headers)
 	local scheme = assert(uri_t.scheme, "URI missing scheme")
@@ -76,12 +81,12 @@ local function new_from_uri_t(uri_t, headers)
 end
 
 local function new_from_uri(uri)
-	local uri_t = assert(uri_patts.uri:match(uri), "invalid URI")
+	local uri_t = assert(uri_patt:match(uri), "invalid URI")
 	return new_from_uri_t(uri_t)
 end
 
 local function new_connect(uri, connect_authority)
-	local uri_t = assert(uri_patts.uri:match(uri), "invalid URI")
+	local uri_t = assert(uri_patt:match(uri), "invalid URI")
 	local headers = new_headers()
 	headers:append(":authority", connect_authority)
 	headers:append(":method", "CONNECT")
@@ -154,7 +159,7 @@ function request_methods:handle_redirect(orig_headers)
 	if not location then
 		return nil, "missing location header for redirect", ce.EINVAL
 	end
-	local uri_t = assert(uri_patts.uri_reference:match(location), "invalid URI")
+	local uri_t = assert(uri_ref:match(location), "invalid URI")
 	local orig_scheme = self.headers:get(":scheme")
 	if uri_t.scheme == nil then
 		uri_t.scheme = orig_scheme
@@ -166,7 +171,7 @@ function request_methods:handle_redirect(orig_headers)
 		uri_t.path = http_util.encodeURI(uri_t.path)
 		if uri_t.path:sub(1, 1) ~= "/" then -- relative path
 			local orig_target = self.headers:get(":path")
-			local orig_path = assert(uri_patts.uri_reference:match(orig_target)).path
+			local orig_path = assert(uri_ref:match(orig_target)).path
 			orig_path = http_util.encodeURI(orig_path)
 			uri_t.path = http_util.resolve_relative_path(orig_path, uri_t.path)
 		end
