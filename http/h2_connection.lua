@@ -304,7 +304,7 @@ function connection_methods:new_stream(id)
 	if id then
 		assert(id % 1 == 0)
 	else
-		if self.lowest_goaway then
+		if self.recv_goaway_lowest then
 			h2_error.errors.PROTOCOL_ERROR("Receivers of a GOAWAY frame MUST NOT open additional streams on the connection")
 		end
 		if self.type == "client" then
