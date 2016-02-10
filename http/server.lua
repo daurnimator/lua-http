@@ -177,7 +177,9 @@ Takes a table of options:
 ]]
 local function listen(tbl)
 	local tls = tbl.tls
-	local host = assert(tbl.host or tbl.path, "need host or path")
+	local host = tbl.host
+	local path = tbl.path
+	assert(host or path, "need host or path")
 	local port = tbl.port
 	if port == nil and tbl.host then
 		if tls == true then
@@ -190,23 +192,16 @@ local function listen(tbl)
 	end
 	local ctx = tbl.ctx
 	if ctx == nil and tls ~= false then
-		ctx = new_ctx(host)
+		ctx = new_ctx(host or path)
 	end
-	local s
-	if tbl.host then
-		s = assert(cs.listen{
-			host = host;
-			port = port;
-			v6only = tbl.v6only;
-			reuseaddr = tbl.reuseaddr;
-			reuseport = tbl.reuseport;
-		})
-	else
-		s = assert(cs.listen{
-			path = host;
-			reuseaddr = tbl.reuseaddr;
-		})
-	end
+	local s = assert(cs.listen{
+		host = host;
+		port = port;
+		path = path;
+		v6only = tbl.v6only;
+		reuseaddr = tbl.reuseaddr;
+		reuseport = tbl.reuseport;
+	})
 	-- Return errors rather than throwing
 	s:onerror(function(s, op, why, lvl) -- luacheck: ignore 431 212
 		return why
