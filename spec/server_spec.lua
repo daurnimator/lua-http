@@ -35,10 +35,12 @@ describe("http.server module using hostnames", function()
 			stream:get_headers()
 			stream:shutdown()
 			s:shutdown()
+			print 'shutting down server // spy'
 		end)
 		cq:wrap(function()
 			s:run(on_stream)
 			s:close()
+			print 'closed // server'
 		end)
 		cq:wrap(function()
 			local options = {}
@@ -59,6 +61,7 @@ describe("http.server module using hostnames", function()
 			assert(stream:write_headers(headers, true))
 			stream:get_headers()
 			conn:close()
+			print 'closed connection // client'
 		end)
 		assert_loop(cq, TEST_TIMEOUT)
 		assert.truthy(cq:empty())
