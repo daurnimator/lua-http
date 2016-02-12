@@ -693,7 +693,26 @@ On success, returns the response [*headers*](#http.headers) and a [*stream*](#st
 
 ## http.server
 
-### `listen(options)` <!-- --> {#http.client.connect}
+This interface is **unstable**.
+
+### `listen(options)` <!-- --> {#http.server.connect}
+
+
+### `server:listen(timeout)` <!-- --> {#http.server:listen}
+
+
+### `server:localname()` <!-- --> {#http.server:localname}
+
+
+### `server:pause()` <!-- --> {#http.server:pause}
+
+Cause [`server:run`](#http.server:run) to stop processing new clients and return.
+
+
+### `server:close()` <!-- --> {#http.server:close}
+
+
+### `server:run(on_stream, cq)` <!-- --> {#http.server:run}
 
 
 ## http.stream_common
