@@ -231,7 +231,12 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.request:timeout"><code>request:go(timeout)</code> <!-- --></a></li>
 </ul></li>
 <li><a href="#http.server">http.server</a><ul>
-<li><a href="#http.client.connect"><code>listen(options)</code> <!-- --></a></li>
+<li><a href="#http.server.connect"><code>listen(options)</code> <!-- --></a></li>
+<li><a href="#http.server:listen"><code>server:listen(timeout)</code> <!-- --></a></li>
+<li><a href="#http.server:localname"><code>server:localname()</code> <!-- --></a></li>
+<li><a href="#http.server:pause"><code>server:pause()</code> <!-- --></a></li>
+<li><a href="#http.server:close"><code>server:close()</code> <!-- --></a></li>
+<li><a href="#http.server:run"><code>server:run(on_stream, cq)</code> <!-- --></a></li>
 </ul></li>
 <li><a href="#http.stream_common">http.stream_common</a><ul>
 <li><a href="#http.stream_common:checktls"><code>stream:checktls()</code> <!-- --></a></li>
@@ -895,8 +900,25 @@ See <a href="#http.h2_connection"><em>http.h2_connection</em></a> for details</p
 </section>
 <section id="http.server" class="level2">
 <h2>http.server</h2>
-<section id="http.client.connect" class="level3">
+<p>This interface is <strong>unstable</strong>.</p>
+<section id="http.server.connect" class="level3">
 <h3><code>listen(options)</code> <!-- --></h3>
+</section>
+<section id="http.server:listen" class="level3">
+<h3><code>server:listen(timeout)</code> <!-- --></h3>
+</section>
+<section id="http.server:localname" class="level3">
+<h3><code>server:localname()</code> <!-- --></h3>
+</section>
+<section id="http.server:pause" class="level3">
+<h3><code>server:pause()</code> <!-- --></h3>
+<p>Cause <a href="#http.server:run"><code>server:run</code></a> to stop processing new clients and return.</p>
+</section>
+<section id="http.server:close" class="level3">
+<h3><code>server:close()</code> <!-- --></h3>
+</section>
+<section id="http.server:run" class="level3">
+<h3><code>server:run(on_stream, cq)</code> <!-- --></h3>
 </section>
 </section>
 <section id="http.stream_common" class="level2">
