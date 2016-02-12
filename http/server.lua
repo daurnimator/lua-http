@@ -241,7 +241,7 @@ end
 function server_methods:run(on_stream, cq)
 	cq = cq or cqueues.running()
 	self.paused = false
-	while not self.paused do
+	repeat
 		if self.n_connections >= self.max_concurrent then
 			self.connection_done:wait()
 		end
@@ -285,7 +285,7 @@ function server_methods:run(on_stream, cq)
 				end
 			end)
 		end
-	end
+	until self.paused
 	return true
 end
 
