@@ -34,6 +34,11 @@ This project is a work in progress and not ready for production use.
 
 # Installation
 
+It's recommended to install lua-http by using [luarocks](https://luarocks.org/).
+This will automatically install run-time lua dependencies for you.
+
+    $ luarocks install --server=http://luarocks.org/dev http
+
 ## Dependencies
 
   - [cqueues](http://25thandclement.com/~william/projects/cqueues.html) >= 20150907
