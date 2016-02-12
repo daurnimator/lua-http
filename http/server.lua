@@ -209,7 +209,8 @@ local function listen(tbl)
 		ctx = ctx;
 		max_concurrent = tbl.max_concurrent;
 		n_connections = 0;
-		shutdown_cond = cc.new();
+		pause_cond = cc.new();
+		paused = true;
 		connection_done = cc.new(); -- signalled when connection has been closed
 		client_timeout = tbl.client_timeout;
 	}, server_mt)
@@ -225,17 +226,13 @@ function server_methods:localname()
 	return self.socket:localname()
 end
 
--- Shutdown the server socket
--- does *not* shutdown connections that originated on this socket
-function server_methods:shutdown()
-	if self.shutdown_cond then
-		self.shutdown_cond:signal()
-	end
-	self.shutdown_cond = nil
+function server_methods:pause()
+	self.paused = true
+	self.pause_cond:signal()
 end
 
 function server_methods:close()
-	self:shutdown()
+	self:pause()
 	cqueues.poll()
 	cqueues.poll()
 	self.socket:close()
@@ -243,18 +240,16 @@ end
 
 function server_methods:run(on_stream, cq)
 	cq = cq or cqueues.running()
-	while self.shutdown_cond do
+	self.paused = false
+	while not self.paused do
 		if self.n_connections >= self.max_concurrent then
 			self.connection_done:wait()
 		end
-		-- Yield this thread until a client arrives
 		local socket, accept_err = self.socket:accept({nodelay = true;}, 0)
 		if socket == nil then
 			if accept_err == ce.ETIMEDOUT then
-				-- Wait for a client
-				if cqueues.poll(self.socket, self.shutdown_cond) == self.shutdown_cond then
-					break
-				end
+				-- Yield this thread until a client arrives or server paused
+				cqueues.poll(self.socket, self.pause_cond)
 			elseif accept_err == ce.EMFILE then
 				-- Wait for another request to finish
 				if not self.connection_done:wait(0.1) then
