@@ -664,13 +664,13 @@ Set to `math.huge` to not give up.
 
 ### `request.post301` <!-- --> {#http.request.post301}
 
-Respect RFC 2616 Section 10.3.2 and **don't** convert POST requests into body-less GET requests when following a 301 redirect. The non-RFC behaviour is ubiquitous in web browsers and assumed by server. Modern HTTP endpoints send status code 308 to indicate that they don't want the method to be changed.
+Respect RFC 2616 Section 10.3.2 and **don't** convert POST requests into body-less GET requests when following a 301 redirect. The non-RFC behaviour is ubiquitous in web browsers and assumed by servers. Modern HTTP endpoints send status code 308 to indicate that they don't want the method to be changed.
 Defaults to `false`.
 
 
 ### `request.post302` <!-- --> {#http.request.post302}
 
-Respect RFC 2616 Section 10.3.3 and **don't** convert POST requests into body-less GET requests when following a 302 redirect. The non-RFC behaviour is ubiquitous in web browsers and assumed by server. Modern HTTP endpoints send status code 307 to indicate that they don't want the method to be changed.
+Respect RFC 2616 Section 10.3.3 and **don't** convert POST requests into body-less GET requests when following a 302 redirect. The non-RFC behaviour is ubiquitous in web browsers and assumed by servers. Modern HTTP endpoints send status code 307 to indicate that they don't want the method to be changed.
 Defaults to `false`.
 
 
@@ -726,6 +726,12 @@ Iterator over [`stream:get_next_chunk()`](#stream:get_next_chunk)
 
 
 ### `stream:get_body_as_string(timeout)` <!-- --> {#http.stream_common:get_body_as_string}
+
+
+### `stream:get_body_chars(n, timeout)` <!-- --> {#http.stream_common:get_body_chars}
+
+
+### `stream:get_body_until(pattern, plain, include_pattern, timeout)` <!-- --> {#http.stream_common:get_body_until}
 
 
 ### `stream:save_body_to_file(file, timeout)` <!-- --> {#http.stream_common:save_body_to_file}

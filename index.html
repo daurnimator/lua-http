@@ -240,6 +240,8 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.stream_common:write_continue"><code>stream:write_continue(timeout)</code> <!-- --></a></li>
 <li><a href="#http.stream_common:each_chunk"><code>stream:each_chunk()</code> <!-- --></a></li>
 <li><a href="#http.stream_common:get_body_as_string"><code>stream:get_body_as_string(timeout)</code> <!-- --></a></li>
+<li><a href="#http.stream_common:get_body_chars"><code>stream:get_body_chars(n, timeout)</code> <!-- --></a></li>
+<li><a href="#http.stream_common:get_body_until"><code>stream:get_body_until(pattern, plain, include_pattern, timeout)</code> <!-- --></a></li>
 <li><a href="#http.stream_common:save_body_to_file"><code>stream:save_body_to_file(file, timeout)</code> <!-- --></a></li>
 <li><a href="#http.stream_common:get_body_as_file"><code>stream:get_body_as_file(timeout)</code> <!-- --></a></li>
 <li><a href="#http.stream_common:write_body_from_string"><code>stream:write_body_from_string(str, timeout)</code> <!-- --></a></li>
@@ -870,11 +872,11 @@ See <a href="#http.h2_connection"><em>http.h2_connection</em></a> for details</p
 </section>
 <section id="http.request.post301" class="level3">
 <h3><code>request.post301</code> <!-- --></h3>
-<p>Respect RFC 2616 Section 10.3.2 and <strong>don't</strong> convert POST requests into body-less GET requests when following a 301 redirect. The non-RFC behaviour is ubiquitous in web browsers and assumed by server. Modern HTTP endpoints send status code 308 to indicate that they don't want the method to be changed. Defaults to <code>false</code>.</p>
+<p>Respect RFC 2616 Section 10.3.2 and <strong>don't</strong> convert POST requests into body-less GET requests when following a 301 redirect. The non-RFC behaviour is ubiquitous in web browsers and assumed by servers. Modern HTTP endpoints send status code 308 to indicate that they don't want the method to be changed. Defaults to <code>false</code>.</p>
 </section>
 <section id="http.request.post302" class="level3">
 <h3><code>request.post302</code> <!-- --></h3>
-<p>Respect RFC 2616 Section 10.3.3 and <strong>don't</strong> convert POST requests into body-less GET requests when following a 302 redirect. The non-RFC behaviour is ubiquitous in web browsers and assumed by server. Modern HTTP endpoints send status code 307 to indicate that they don't want the method to be changed. Defaults to <code>false</code>.</p>
+<p>Respect RFC 2616 Section 10.3.3 and <strong>don't</strong> convert POST requests into body-less GET requests when following a 302 redirect. The non-RFC behaviour is ubiquitous in web browsers and assumed by servers. Modern HTTP endpoints send status code 307 to indicate that they don't want the method to be changed. Defaults to <code>false</code>.</p>
 </section>
 <section id="http.request:set_body" class="level3">
 <h3><code>request:set_body(body)</code> <!-- --></h3>
@@ -922,6 +924,12 @@ See <a href="#http.h2_connection"><em>http.h2_connection</em></a> for details</p
 </section>
 <section id="http.stream_common:get_body_as_string" class="level3">
 <h3><code>stream:get_body_as_string(timeout)</code> <!-- --></h3>
+</section>
+<section id="http.stream_common:get_body_chars" class="level3">
+<h3><code>stream:get_body_chars(n, timeout)</code> <!-- --></h3>
+</section>
+<section id="http.stream_common:get_body_until" class="level3">
+<h3><code>stream:get_body_until(pattern, plain, include_pattern, timeout)</code> <!-- --></h3>
 </section>
 <section id="http.stream_common:save_body_to_file" class="level3">
 <h3><code>stream:save_body_to_file(file, timeout)</code> <!-- --></h3>
