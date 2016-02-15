@@ -99,11 +99,11 @@ function stream_methods:set_state(new)
 		-- If we have just finished writing the response
 		if (old == "idle" or old == "open" or old == "half closed (remote)")
 			and (new == "half closed (local)" or new == "closed") then
+			-- remove ourselves from the write pipeline
+			assert(self.connection.pipeline:pop() == self)
 			if self.close_when_done then
 				self.connection:shutdown()
 			end
-			-- remove ourselves from the write pipeline
-			assert(self.connection.pipeline:pop() == self)
 			local next_stream = self.connection.pipeline:peek()
 			if next_stream then
 				next_stream.pipeline_cond:signal()
@@ -124,11 +124,11 @@ function stream_methods:set_state(new)
 		-- If we have just finished reading the response;
 		if (old == "idle" or old == "open" or old == "half closed (local)")
 			and (new == "half closed (remote)" or new == "closed") then
+			-- remove ourselves from the read pipeline
+			assert(self.connection.pipeline:pop() == self)
 			if self.close_when_done then
 				self.connection:shutdown()
 			end
-			-- remove ourselves from the read pipeline
-			assert(self.connection.pipeline:pop() == self)
 			local next_stream = self.connection.pipeline:peek()
 			if next_stream then
 				next_stream.pipeline_cond:signal()
