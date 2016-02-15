@@ -53,6 +53,16 @@ describe("http.util module", function()
 			assert.same(t, r)
 		end
 	end)
+	it("split_authority works", function()
+		assert.same({"example.com", 80}, {util.split_authority("example.com", "http")})
+		assert.same({"example.com", 8000}, {util.split_authority("example.com:8000", "http")})
+		assert.has.errors(function()
+			util.split_authority("example.com", "madeupscheme")
+		end)
+		-- IPv6
+		assert.same({"::1", 443}, {util.split_authority("[::1]", "https")})
+		assert.same({"::1", 8000}, {util.split_authority("[::1]:8000", "https")})
+	end)
 	it("split_header works correctly", function()
 		-- nil
 		assert.same({n=0}, util.split_header(nil))
