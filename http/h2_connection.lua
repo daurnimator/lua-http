@@ -9,9 +9,13 @@ local h2_error = require "http.h2_error"
 local h2_stream = require "http.h2_stream"
 local hpack = require "http.hpack"
 local h2_banned_ciphers = require "http.tls".banned_ciphers
-local assert = require "compat53.module".assert
 local spack = string.pack or require "compat53.string".pack
 local sunpack = string.unpack or require "compat53.string".unpack
+
+local assert = assert
+if _VERSION:match("%d+%.?%d*") < "5.3" then
+	assert = require "compat53.module".assert
+end
 
 local function xor(a, b)
 	return (a and b) or not (a or b)

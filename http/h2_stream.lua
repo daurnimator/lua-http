@@ -7,10 +7,14 @@ local band = require "http.bit".band
 local bor = require "http.bit".bor
 local h2_errors = require "http.h2_error".errors
 local stream_common = require "http.stream_common"
-local assert = require "compat53.module".assert
 local spack = string.pack or require "compat53.string".pack
 local sunpack = string.unpack or require "compat53.string".unpack
 local unpack = table.unpack or unpack -- luacheck: ignore 113
+
+local assert = assert
+if _VERSION:match("%d+%.?%d*") < "5.3" then
+	assert = require "compat53.module".assert
+end
 
 local function xor(a, b)
 	return (a and b) or not (a or b)
