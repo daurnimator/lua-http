@@ -3,6 +3,9 @@
 ## Features
 
   - Optionally asynchronous (including DNS lookups and SSL)
+  - Supports HTTP version 1.0, 1.1 and 2
+  - Functionality for both client and server
+  - Websockets
   - Compatible with Lua 5.1, 5.2, 5.3 and [LuaJIT](http://luajit.org/)
 
 
@@ -11,25 +14,13 @@
 Can be found at [https://daurnimator.github.io/lua-http/](https://daurnimator.github.io/lua-http/)
 
 
-# Status
-
-This project is a work in progress and not ready for production use.
+## Status
 
 [![Build Status](https://travis-ci.org/daurnimator/lua-http.svg)](https://travis-ci.org/daurnimator/lua-http)
 [![Coverage Status](https://coveralls.io/repos/daurnimator/lua-http/badge.svg?branch=master&service=github)](https://coveralls.io/github/daurnimator/lua-http?branch=master)
 
-## Todo
-
-  - [x] HTTP 1.1
-  - [x] [HTTP 2](https://http2.github.io/http2-spec/)
-	  - [x] [HPACK](https://http2.github.io/http2-spec/compression.html)
-  - [ ] Connection pooling
-  - [ ] [`socket.http`](http://w3.impa.br/~diego/software/luasocket/http.html) compatibility layer
-  - [x] Prosody [`net.http`](https://prosody.im/doc/developers/net/http) compatibility layer
-  - [x] Handle redirects
-  - [ ] Be able to use an HTTP proxy
-  - [x] Compression (e.g. gzip)
-  - [ ] Websockets
+  - HTTP client API is reaching stability
+  - The HTTP server API is still changing
 
 
 # Installation
@@ -47,7 +38,7 @@ This will automatically install run-time lua dependencies for you.
   - [lpeg_patterns](https://github.com/daurnimator/lpeg_patterns) >= 0.2
   - [fifo](https://github.com/daurnimator/fifo.lua)
 
-If you want to use gzip compression you will need **one** of:
+To use gzip compression you need **one** of:
 
   - [lzlib](https://github.com/LuaDist/lzlib) or [lua-zlib](https://github.com/brimworks/lua-zlib)
 
