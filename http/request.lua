@@ -117,6 +117,25 @@ local function new_from_stream(stream)
 	return self
 end
 
+function request_methods:clone()
+	return setmetatable({
+		host = self.host;
+		port = self.port;
+		tls = self.tls;
+		sendname = self.sendname;
+		version = self.version;
+
+		headers = self.headers:clone();
+		body = self.body;
+
+		expect_100_timeout = rawget(self, "expect_100_timeout");
+		follow_redirects = rawget(self, "follow_redirects");
+		max_redirects = rawget(self, "max_redirects");
+		post301 = rawget(self, "post301");
+		post302 = rawget(self, "post302");
+	}, request_mt)
+end
+
 function request_methods:to_url()
 	-- TODO: userinfo section (username/password)
 	local method = self.headers:get(":method")

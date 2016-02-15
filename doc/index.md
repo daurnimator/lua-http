@@ -683,6 +683,15 @@ Allows setting a request body. `body` may be a string, function or lua file obje
   - If `body` is a lua file object, it will be [`:seek`'d](http://www.lua.org/manual/5.3/manual.html#pdf-file:seek) to the start, then sent as a body. Any errors encountered during file operations **will be thrown**.
 
 
+### `request:clone()` <!-- --> {#http.request:clone}
+
+Creates and returns a clone of the request.
+
+The clone has its own deep copy of the [`.headers`](#http.request.headers) field.
+
+The [`.tls`](#http.request.tls) and body fields are shallow copied from the original request.
+
+
 ### `request:go(timeout)` <!-- --> {#http.request:timeout}
 
 Performs the request.
