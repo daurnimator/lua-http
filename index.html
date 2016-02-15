@@ -228,6 +228,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.request.post301"><code>request.post301</code> <!-- --></a></li>
 <li><a href="#http.request.post302"><code>request.post302</code> <!-- --></a></li>
 <li><a href="#http.request:set_body"><code>request:set_body(body)</code> <!-- --></a></li>
+<li><a href="#http.request:clone"><code>request:clone()</code> <!-- --></a></li>
 <li><a href="#http.request:timeout"><code>request:go(timeout)</code> <!-- --></a></li>
 </ul></li>
 <li><a href="#http.server">http.server</a><ul>
@@ -891,6 +892,12 @@ See <a href="#http.h2_connection"><em>http.h2_connection</em></a> for details</p
 <li>If <code>body</code> is a function, it will be called repeatedly like an iterator. It should return chunks of the request body as a string or <code>nil</code> if done.</li>
 <li>If <code>body</code> is a lua file object, it will be <a href="http://www.lua.org/manual/5.3/manual.html#pdf-file:seek"><code>:seek</code>'d</a> to the start, then sent as a body. Any errors encountered during file operations <strong>will be thrown</strong>.</li>
 </ul>
+</section>
+<section id="http.request:clone" class="level3">
+<h3><code>request:clone()</code> <!-- --></h3>
+<p>Creates and returns a clone of the request.</p>
+<p>The clone has its own deep copy of the <a href="#http.request.headers"><code>.headers</code></a> field.</p>
+<p>The <a href="#http.request.tls"><code>.tls</code></a> and body fields are shallow copied from the original request.</p>
 </section>
 <section id="http.request:timeout" class="level3">
 <h3><code>request:go(timeout)</code> <!-- --></h3>
