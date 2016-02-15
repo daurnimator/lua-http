@@ -1,6 +1,9 @@
 describe("http.util module", function()
 	local unpack = table.unpack or unpack -- luacheck: ignore 113
 	local util = require "http.util"
+	it("decodeURI works", function()
+		assert.same("Encoded string", util.decodeURI("Encoded%20string"))
+	end)
 	it("decodeURI doesn't decode blacklisted characters", function()
 		assert.same("%24", util.decodeURI("%24"))
 		local s = util.encodeURIComponent("#$&+,/:;=?@")
