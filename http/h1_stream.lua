@@ -370,6 +370,9 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 	end
 	local status_code, method
 	if self.type == "server" then
+		if self.state == "idle" then
+			error("cannot write headers when stream is idle")
+		end
 		-- Make sure we're at the front of the pipeline
 		if self.connection.pipeline:peek() ~= self then
 			if not self.pipeline_cond:wait(deadline and (deadline-monotime)) then
