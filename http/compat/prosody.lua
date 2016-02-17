@@ -19,8 +19,8 @@ local function new_prosody(url, ex, callback)
 	local cq = assert(cqueues.running(), "must be running inside a cqueue")
 	local ok, req = pcall(new_from_uri, url)
 	if not ok then
-		callback(nil, 0, req);
-		return nil, "invalid-url";
+		callback(nil, 0, req)
+		return nil, "invalid-url"
 	end
 	req.follow_redirects = false -- prosody doesn't follow redirects
 	if ex then
@@ -80,7 +80,7 @@ local function new_prosody(url, ex, callback)
 			httpversion = stream.peer_version;
 			headers = headers_as_kv;
 			body = response_body;
-		};
+		}
 		callback(response_body, code, response, self)
 	end, req)
 	return req
