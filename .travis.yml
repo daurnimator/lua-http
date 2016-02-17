@@ -12,6 +12,7 @@ env:
     - LUA="lua 5.2"    ZLIB=lua-zlib
     - LUA="lua 5.3"
     - LUA="lua 5.3"    ZLIB=lzlib
+    - LUA="lua 5.3"    COMPAT53=no
     # lua-zlib is currently unavailable for lua5.3 https://github.com/brimworks/lua-zlib/issues/28
     - LUA="luajit @"
     - LUA="luajit @"   ZLIB=lzlib
@@ -42,6 +43,7 @@ install:
   - luarocks install --only-deps http-scm-0.rockspec
   - if [ "$ZLIB" = "lzlib" ]; then luarocks install lzlib; fi
   - if [ "$ZLIB" = "lua-zlib" ]; then luarocks install lua-zlib; fi
+  - if [ "$COMPAT53" = "no" ]; then luarocks remove compat53; fi
 
 script:
   - luacheck .
