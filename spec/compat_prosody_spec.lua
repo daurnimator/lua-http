@@ -93,6 +93,9 @@ describe("http.compat.prosody module", function()
 				local headers = new_headers()
 				headers:append(":status", "201")
 				headers:append("connection", "close")
+				-- send duplicate headers
+				headers:append("someheader", "foo")
+				headers:append("someheader", "bar")
 				assert(stream:write_headers(headers, false))
 				assert(stream:write_chunk("success!", true))
 				stream:shutdown()
@@ -106,9 +109,10 @@ describe("http.compat.prosody module", function()
 						["content-type"] = "text/plain";
 					};
 					body = "this is a body";
-				}, function(b, c)
+				}, function(b, c, r)
 				assert.same(201, c)
 				assert.same("success!", b)
+				assert.same("foo,bar", r.headers.someheader)
 				s:pause()
 			end)
 		end)
