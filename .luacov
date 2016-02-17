@@ -4,6 +4,7 @@ return {
 	deletestats = true;
 	include = {
 		"/http/[^/]+$";
+		"/http/compat/[^/]+$";
 	};
 	exclude = {
 	};
