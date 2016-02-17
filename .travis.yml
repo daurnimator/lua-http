@@ -34,6 +34,7 @@ before_install:
                               # into 'here' subdirectory
   - export PATH=$PATH:$PWD/here/bin # Add directory with all installed binaries to PATH
   - eval `luarocks path --bin`
+  - luarocks install luacheck
   - luarocks install luacov-coveralls
   - luarocks install busted
 
@@ -43,6 +44,7 @@ install:
   - if [ "$ZLIB" = "lua-zlib" ]; then luarocks install lua-zlib; fi
 
 script:
+  - luacheck .
   - busted -c
 
 after_success:
