@@ -29,10 +29,10 @@ branches:
 
 before_install:
   - pip install hererocks
-  - hererocks here -r^ --$LUA # Install latest LuaRocks version
+  - hererocks ~/hererocks -r^ --$LUA # Install latest LuaRocks version
                               # plus the Lua version for this build job
                               # into 'here' subdirectory
-  - export PATH=$PATH:$PWD/here/bin # Add directory with all installed binaries to PATH
+  - export PATH=$PATH:~/hererocks/bin # Add directory with all installed binaries to PATH
   - eval `luarocks path --bin`
   - luarocks install luacheck
   - luarocks install luacov-coveralls
