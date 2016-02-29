@@ -149,12 +149,33 @@ print(bit.band(1, 3)) --> 1
 Deals with obtaining a connection to an HTTP server.
 
 
+### `negotiate(socket, options, timeout)` <!-- --> {#http.client.negotiate}
+
+  - `socket` is a cqueues socket object
+
+  - `options` is a table containing:
+
+	  - `tls` (boolean|userdata, optional): the `SSL_CTX*` to use, or a boolean to indicate the default TLS context.  
+		defaults to `true`.
+
+		  - `true` indicates to use the default TLS settings, see [*http.tls*](#http.tls) for information.
+		  - `false` means do not negotiate TLS
+
+	  - `version` (nil|1.0|1.1|2): HTTP version to use.
+		  - `nil`: attempts HTTP 2 and falls back to HTTP 1.1
+		  - `1.0`
+		  - `1.1`
+		  - `2`
+
+	  - `h2_settings` (table, optional): HTTP 2 settings to use.  
+		See [*http.h2_connection*](#http.h2_connection) for details
+
+
 ### `connect(options, timeout)` <!-- --> {#http.client.connect}
 
 Creates a new connection to an HTTP server.
-Can try to negotiate HTTP2 if possible, but 
 
-  - `options` is a table containing:
+  - `options` is a table containing the options to [*http.client.negotiate*](#http.client.negotiate),plus the following:
 
 	  - `family` (integer, optional): socket family to use.  
 		defaults to `AF_INET`  
@@ -173,30 +194,14 @@ Can try to negotiate HTTP2 if possible, but
 	  - `v6only` (boolean, optional): if the `IPV6_V6ONLY` flag should be set on the underlying socket.  
 		defaults to `false`  
 
-	  - `tls` (boolean|userdata, optional): the `SSL_CTX*` to use, or a boolean to indicate the default TLS context.  
-		defaults to `true`.
-
-		  - `true` indicates to use the default TLS settings, see [*http.tls*](#http.tls) for information.
-		  - `false` means do not negotiate TLS
-
-	  - `version` (nil|1.0|1.1|2): HTTP version to use.
-		  - `nil`: attempts HTTP 2 and falls back to HTTP 1.1
-		  - `1.0`
-		  - `1.1`
-		  - `2`
-
-	  - `h2_settings` (table, optional): HTTP 2 settings to use.  
-		See [*http.h2_connection*](#http.h2_connection) for details
-
-
   - `timeout` (optional) is the maximum amount of time (in seconds) to allow for connection to be established.
 
 	This includes time for DNS lookup, connection, TLS negotiation (if tls enabled) and in the case of HTTP2: settings exchange.
 
 
-### Example {#http.client-example}
+#### Example {#http.client.connect-example}
 
-Connect to a local http server running on port 8000
+Connect to a local HTTP server running on port 8000
 
 ```lua
 local http_client = require "http.client"
