@@ -27,7 +27,7 @@ local function username_password_auth(s, username, password, deadline)
 		end
 	end
 	do
-		local version, err, errno = s:read(1, deadline and deadline-monotime())
+		local version, err, errno = s:xread(1, deadline and deadline-monotime())
 		if not version then
 			return nil, err or ce.EPIPE, errno
 		end
@@ -36,7 +36,7 @@ local function username_password_auth(s, username, password, deadline)
 		end
 	end
 	do
-		local ok, err, errno = s:read(1, deadline and deadline-monotime())
+		local ok, err, errno = s:xread(1, deadline and deadline-monotime())
 		if not ok then
 			return nil, err or ce.EPIPE, errno
 		end
