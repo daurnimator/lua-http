@@ -1,5 +1,12 @@
 --[[
-This module implements a subset of SOCKS5.
+This module implements a subset of SOCKS as defined in RFC 1928.
+
+SOCKS5 has different authentication mechanisms,
+currently this code only supports username+password auth (defined in RFC 1929).
+
+URI format is taken from curl:
+  - socks5:// is SOCKS5, resolving the authority locally
+  - socks5h:// is SOCK5, but let the proxy resolve the hostname
 ]]
 
 local monotime = require "cqueues".monotime
