@@ -37,6 +37,7 @@ build = {
 		["http.hpack"] = "http/hpack.lua";
 		["http.request"] = "http/request.lua";
 		["http.server"] = "http/server.lua";
+		["http.socks"] = "http/socks.lua";
 		["http.stream_common"] = "http/stream_common.lua";
 		["http.tls"] = "http/tls.lua";
 		["http.util"] = "http/util.lua";
