@@ -54,7 +54,7 @@ local function username_password_auth(s, username, password, deadline)
 	return true
 end
 
-local function socks5_negotiate(s, options, deadline)
+local function socks5_negotiate_deadline(s, options, deadline)
 	local available_auth_methods = {
 		"\0", ["\0"] = true;
 	}
@@ -215,6 +215,11 @@ local function socks5_negotiate(s, options, deadline)
 	return dst_fam, dst_host, dst_port
 end
 
+-- Wrapper that takes timeout instead of deadline
+local function socks5_negotiate(s, options, timeout)
+	return socks5_negotiate_deadline(s, options, timeout and (monotime()+timeout))
+end
+
 local function connect(socks_uri, options, timeout)
 	local deadline = timeout and (monotime()+timeout)
 	local uri_t = assert(uri_patts.uri:match(socks_uri), "invalid URI")
@@ -259,7 +264,7 @@ local function connect(socks_uri, options, timeout)
 				host = options.host
 			end
 		end
-		dst_fam, dst_host, dst_port = socks5_negotiate(s, {
+		dst_fam, dst_host, dst_port = socks5_negotiate_deadline(s, {
 			host = host;
 			port = options.port;
 			username = username;
@@ -280,5 +285,6 @@ local function connect(socks_uri, options, timeout)
 end
 
 return {
+	socks5_negotiate = socks5_negotiate;
 	connect = connect;
 }
