@@ -47,11 +47,11 @@ local function username_password_auth(s, username, password, deadline)
 	return true
 end
 
-local function socks5_negotiate(s, host, port, username, password, deadline)
+local function socks5_negotiate(s, options, deadline)
 	local available_auth_methods = {
 		"\0", ["\0"] = true;
 	}
-	if username then
+	if options.username then
 		table.insert(available_auth_methods, "\2")
 		available_auth_methods["\2"] = true
 	end
@@ -83,7 +83,7 @@ local function socks5_negotiate(s, host, port, username, password, deadline)
 	if auth_method == "\0" then -- luacheck: ignore 542
 		-- do nothing
 	elseif auth_method == "\2" then
-		local ok, err, errno = username_password_auth(s, username, password, deadline)
+		local ok, err, errno = username_password_auth(s, options.username, options.password, deadline)
 		if not ok then
 			return nil, err, errno
 		end
@@ -91,6 +91,8 @@ local function socks5_negotiate(s, host, port, username, password, deadline)
 		error("unreachable")
 	end
 	do
+		local host = options.host
+		local port = tonumber(options.port)
 		local data
 		if getmetatable(host) == IPv4.IPv4_mt then
 			data = spack(">BBx Bc4I2", 5, 1, 1, host:binary(), port)
@@ -250,8 +252,12 @@ local function connect(socks_uri, options, timeout)
 				host = options.host
 			end
 		end
-		local port = tonumber(options.port)
-		dst_fam, dst_host, dst_port = socks5_negotiate(s, host, port, username, password, deadline)
+		dst_fam, dst_host, dst_port = socks5_negotiate(s, {
+			host = host;
+			port = options.port;
+			username = username;
+			password = password;
+		}, deadline)
 		if not dst_fam then
 			s:close()
 			return nil, dst_host, dst_port
