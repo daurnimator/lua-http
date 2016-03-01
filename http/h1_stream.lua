@@ -714,6 +714,7 @@ function stream_methods:write_chunk(chunk, end_stream, timeout)
 	else
 		assert(self.connection.pipeline:peek() == self)
 	end
+	local orig_size = #chunk
 	if self.body_write_deflate then
 		chunk = self.body_write_deflate(chunk, end_stream)
 	end
@@ -759,7 +760,7 @@ function stream_methods:write_chunk(chunk, end_stream, timeout)
 	elseif self.body_write_type ~= "missing" then
 		error("unknown body writing method")
 	end
-	self.stats_sent = self.stats_sent + #chunk
+	self.stats_sent = self.stats_sent + orig_size
 	if end_stream then
 		if self.state == "half closed (remote)" then
 			self:set_state("closed")
