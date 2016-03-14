@@ -177,8 +177,7 @@ local function socks5_negotiate_deadline(s, options, deadline)
 				return nil, err or ce.EPIPE, errno
 			end
 			dst_fam = cs.AF_INET
-			local o1, o2, o3, o4 = ipv4:byte(1, 4)
-			dst_host = string.format("%d.%d.%d.%d", o1, o2, o3, o4)
+			dst_host = string.format("%d.%d.%d.%d", ipv4:byte(1, 4))
 		elseif atype == "\4" then
 			local ipv6
 			ipv6, err, errno = s:xread(16, deadline and deadline-monotime())
@@ -186,10 +185,8 @@ local function socks5_negotiate_deadline(s, options, deadline)
 				return nil, err or ce.EPIPE, errno
 			end
 			dst_fam = cs.AF_INET6
-			local o1, o2, o3, o4, o5, o6, o7, o8, o9, o10, o11, o12, o13, o14, o15, o16 =
-				ipv6:byte(1, 16)
 			dst_host = string.format("%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x",
-				o1, o2, o3, o4, o5, o6, o7, o8, o9, o10, o11, o12, o13, o14, o15, o16)
+				ipv6:byte(1, 16))
 		elseif atype == "\3" then
 			local len
 			len, err, errno = s:xread(1, deadline and deadline-monotime())
