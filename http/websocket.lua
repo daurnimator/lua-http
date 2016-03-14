@@ -238,7 +238,7 @@ local function close_helper(self, code, reason, deadline)
 		read_deadline = math.min(read_deadline, deadline)
 	end
 	while not self.got_close_code do
-		if not self:read(read_deadline-monotime()) then
+		if not self:receive(read_deadline-monotime()) then
 			break
 		end
 	end
@@ -260,7 +260,7 @@ function websocket_methods:close(code, reason, timeout)
 	return true
 end
 
-function websocket_methods:read(timeout)
+function websocket_methods:receive(timeout)
 	local deadline = timeout and (monotime()+timeout)
 	local databuffer, databuffer_type
 	while true do
@@ -343,7 +343,7 @@ end
 
 function websocket_methods:each()
 	return function(self) -- luacheck: ignore 432
-		return self:read()
+		return self:receive()
 	end, self
 end
 

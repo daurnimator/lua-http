@@ -927,7 +927,7 @@ Defaults to `3` seconds.
 Try to connect to a websocket server.
 
 
-### `websocket:read(timeout)` <!-- --> {#http.websocket:read}
+### `websocket:receive(timeout)` <!-- --> {#http.websocket:receive}
 
 Reads and returns the next data frame plus its opcode.
 Any ping frames received while reading will be responded to.
@@ -937,7 +937,7 @@ The opcode `0x1` will be returned as `"text"` and `0x2` will be returned as `"bi
 
 ### `websocket:each()` <!-- --> {#http.websocket:each}
 
-Iterator over [`websocket:read()`](#http.websocket:read).
+Iterator over [`websocket:receive()`](#http.websocket:receive).
 
 
 ### `websocket:send_frame(frame, timeout)` <!-- --> {#http.websocket:send_frame}
@@ -968,7 +968,7 @@ local websocket = require "http.websocket"
 local ws = websocket.new_from_uri("wss://echo.websocket.org")
 assert(ws:connect())
 assert(ws:send("koo-eee!"))
-local data = assert(ws:read())
+local data = assert(ws:receive())
 assert(data == "koo-eee!")
 assert(ws:close())
 ```

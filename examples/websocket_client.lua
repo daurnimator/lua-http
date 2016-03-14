@@ -14,7 +14,7 @@ local ws = websocket.new_from_uri("ws://ws-feed.exchange.coinbase.com")
 assert(ws:connect())
 assert(ws:send(json.encode({type = "subscribe", product_id = "BTC-USD"})))
 for _=1, 5 do
-	local data = assert(ws:read())
+	local data = assert(ws:receive())
 	print(data)
 end
 assert(ws:close())
