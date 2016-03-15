@@ -22,6 +22,7 @@ local uri_patts = require "lpeg_patterns.uri"
 local rand = require "openssl.rand"
 local digest = require "openssl.digest"
 local bit = require "http.bit"
+local new_headers = require "http.headers".new
 local http_request = require "http.request"
 
 local websocket_methods = {
@@ -354,7 +355,7 @@ function websocket_methods:each()
 end
 
 local function new(type)
-	assert(type == "client")
+	assert(type == "client" or type == "server")
 	local self = setmetatable({
 		socket = nil;
 		type = type;
@@ -364,7 +365,10 @@ local function new(type)
 		key = nil;
 		protocol = nil;
 		protocols = nil;
+		-- only used by client:
 		request = nil;
+		-- only used by server:
+		stream = nil;
 	}, websocket_mt)
 	return self
 end
@@ -508,10 +512,116 @@ function websocket_methods:connect(timeout)
 	return handle_websocket_response(self, headers, stream)
 end
 
+-- Given an incoming HTTP1 request, attempts to upgrade it to a websocket connection
+local function new_from_stream(headers, stream)
+	assert(stream.connection.type == "server")
+
+	if stream.connection.version < 1 or stream.connection.version >= 2 then
+		return nil, "websockets only supported with HTTP 1.x", ce.EINVAL
+	end
+
+	local upgrade = headers:get("upgrade")
+	if not upgrade or upgrade:lower() ~= "websocket" then
+		return nil, "upgrade header not websocket", ce.EINVAL
+	end
+
+	local has_connection_upgrade = false
+	local connection_header = headers:get_split_as_sequence("connection")
+	for i=1, connection_header.n do
+		if connection_header[i]:lower() == "upgrade" then
+			has_connection_upgrade = true
+			break
+		end
+	end
+	if not has_connection_upgrade then
+		return nil, "connection header doesn't contain upgrade", ce.EINVAL
+	end
+
+	local key = trim(headers:get("sec-websocket-key"))
+	if not key then
+		return nil, "missing sec-websocket-key", ce.EINVAL
+	end
+
+	if headers:get("sec-websocket-version") ~= "13" then
+		return nil, "unsupported sec-websocket-version"
+	end
+
+	local protocols_available
+	if headers:has("sec-websocket-protocol") then
+		local client_protocols = headers:get_split_as_sequence("sec-websocket-protocol")
+		--[[ The request MAY include a header field with the name
+		Sec-WebSocket-Protocol. If present, this value indicates one
+		or more comma-separated subprotocol the client wishes to speak,
+		ordered by preference. The elements that comprise this value
+		MUST be non-empty strings with characters in the range U+0021 to
+		U+007E not including separator characters as defined in
+		[RFC2616] and MUST all be unique strings.]]
+		protocols_available = {}
+		for i, protocol in ipairs(client_protocols) do
+			protocol = trim(protocol)
+			if protocols_available[protocol] then
+				return nil, "duplicate protocol", ce.EINVAL
+			end
+			if not validate_protocol(protocol) then
+				return nil, "invalid protocol", ce.EINVAL
+			end
+			protocols_available[protocol] = true
+			protocols_available[i] = protocol
+		end
+	end
+
+	local self = new("server")
+	self.key = key
+	self.protocols = protocols_available
+	self.stream = stream
+	return self
+end
+
+function websocket_methods:accept(protocols, response_headers)
+	assert(self.type == "server" and self.readyState == 0)
+
+	if response_headers == nil then
+		response_headers = new_headers()
+	end
+	response_headers:upsert(":status", "101")
+	response_headers:upsert("upgrade", "websocket")
+	response_headers:upsert("connection", "upgrade")
+	response_headers:upsert("sec-websocket-accept", base64_sha1(self.key .. magic))
+
+	local chosen_protocol
+	if self.protocols then
+		if protocols then
+			for _, protocol in ipairs(protocols) do
+				if self.protocols[protocol] then
+					chosen_protocol = protocol
+					break
+				end
+			end
+		end
+		if not chosen_protocol then
+			return nil, "no matching protocol", ce.EPROTONOSUPPORT
+		end
+		response_headers:upsert("sec-websocket-protocol", chosen_protocol)
+	end
+
+	do
+		local ok, err, errno = self.stream:write_headers(response_headers, false)
+		if not ok then
+			return ok, err, errno
+		end
+	end
+
+	self.socket = assert(self.stream.connection:take_socket())
+	self.stream = nil
+	self.readyState = 1
+	self.protocol = chosen_protocol
+	return true
+end
+
 return {
 	new_from_uri_t = new_from_uri_t;
 	new_from_uri = new_from_uri;
-
+	new_from_stream = new_from_stream;
 	build_frame = build_frame;
 	read_frame = read_frame;
 	build_close = build_close;
