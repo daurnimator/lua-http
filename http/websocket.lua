@@ -51,6 +51,12 @@ local function trim(s)
 	return from > #s and "" or s:match(".*%S", from)
 end
 
+--[[ this value MUST be non-empty strings with characters in the range U+0021
+to U+007E not including separator characters as defined in [RFC2616] ]]
+local function validate_protocol(p)
+	return p:match("^[\33\35-\39\42\43\45\46\48-\57\65-\90\94-\122\124\126\127]+$")
+end
+
 -- XORs the string `str` with a 32bit key
 local function apply_mask(str, key)
 	assert(#key == 4)
@@ -389,7 +395,7 @@ local function new_from_uri_t(uri_t, protocols)
 			if protocols_copy[v] then
 				error("duplicate protocol")
 			end
-			assert(v:match("^[\33\35-\39\42\43\45\46\48-\57\65-\90\94-\122\124\126\127]+$"), "invalid protocol")
+			assert(validate_protocol(v), "invalid protocol")
 			protocols_copy[v] = true
 			protocols_copy[i] = v
 		end
