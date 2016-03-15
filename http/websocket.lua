@@ -362,6 +362,7 @@ local function new(type)
 		got_close_code = nil;
 		got_close_reason = nil;
 		key = nil;
+		protocol = nil;
 		protocols = nil;
 		request = nil;
 	}, websocket_mt)
@@ -491,7 +492,9 @@ local function handle_websocket_response(self, headers, stream)
 	-- Success!
 	assert(self.socket == nil, "websocket:connect called twice")
 	self.socket = assert(stream.connection:take_socket())
+	self.request = nil
 	self.readyState = 1
+	self.protocol = protocol
 
 	return true
 end
