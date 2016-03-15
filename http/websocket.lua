@@ -375,15 +375,26 @@ local function new_from_uri_t(uri_t, protocols)
 	self.request.headers:append("sec-websocket-version", "13")
 	if protocols then
 		--[[ The request MAY include a header field with the name
-        Sec-WebSocket-Protocol. If present, this value indicates one
-        or more comma-separated subprotocol the client wishes to speak,
-        ordered by preference. The elements that comprise this value
-        MUST be non-empty strings with characters in the range U+0021 to
-        U+007E not including separator characters as defined in
-        [RFC2616] and MUST all be unique strings.]]
-        -- TODO: protocol validation
-		self.protocols = protocols
-		self.request.headers:append("sec-websocket-protocol", table.concat(protocols, ","))
+		Sec-WebSocket-Protocol. If present, this value indicates one
+		or more comma-separated subprotocol the client wishes to speak,
+		ordered by preference. The elements that comprise this value
+		MUST be non-empty strings with characters in the range U+0021 to
+		U+007E not including separator characters as defined in
+		[RFC2616] and MUST all be unique strings.]]
+		local n_protocols = #protocols
+		-- Copy the passed 'protocols' array so that caller is allowed to modify
+		local protocols_copy = {}
+		for i=1, n_protocols do
+			local v = protocols[i]
+			if protocols_copy[v] then
+				error("duplicate protocol")
+			end
+			assert(v:match("^[\33\35-\39\42\43\45\46\48-\57\65-\90\94-\122\124\126\127]+$"), "invalid protocol")
+			protocols_copy[v] = true
+			protocols_copy[i] = v
+		end
+		self.protocols = protocols_copy
+		self.request.headers:append("sec-websocket-protocol", table.concat(protocols_copy, ",", 1, n_protocols))
 	end
 	return self
 end
@@ -465,15 +476,7 @@ local function handle_websocket_response(self, headers, stream)
 	requested by the client), the client MUST Fail the WebSocket Connection]]
 	local protocol = headers:get("sec-websocket-protocol")
 	if protocol then
-		local has_matching_protocol = false
-		if self.protocols then
-			for _, p2 in ipairs(self.protocols) do
-				if protocol:lower() == p2 then
-					has_matching_protocol = true
-					break
-				end
-			end
-		end
+		local has_matching_protocol = self.protocols and self.protocols[protocol]
 		if not has_matching_protocol then
 			return nil, "unexpected protocol", ce.EINVAL
 		end
