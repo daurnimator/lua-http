@@ -234,7 +234,7 @@ local function close_helper(self, code, reason, deadline)
 	end
 
 	if self.readyState < 2 then
-		local close_frame = build_close(code, reason, true)
+		local close_frame = build_close(code, reason, self.type == "client")
 		-- ignore failure
 		self:send_frame(close_frame, deadline and deadline-monotime())
 	end
