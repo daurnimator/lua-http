@@ -13,14 +13,22 @@ describe("http.server module", function()
 			error(err, 2)
 		end
 	end
-	local function simple_test(tls, version)
+	local function simple_test(tls, version, path)
 		local cq = cqueues.new()
-		local s = server.listen {
-			host = "localhost";
-			port = 0;
-		}
+		local options = {}
+		if path then
+			options.path = path
+		else
+			options.host = "localhost"
+			options.port = 0
+		end
+		local s = server.listen(options)
 		assert(s:listen())
-		local _, host, port = s:localname()
+		local host, port
+		if not path then
+			local _
+			_, host, port = s:localname()
+		end
 		local on_stream = spy.new(function(stream)
 			stream:get_headers()
 			stream:shutdown()
@@ -31,12 +39,16 @@ describe("http.server module", function()
 			s:close()
 		end)
 		cq:wrap(function()
-			local conn = client.connect {
-				host = host;
-				port = port;
-				tls = tls;
-				version = version;
-			}
+			local options = {}
+			if path then
+				options.path = path
+			else
+				options.host = host
+				options.port = port
+			end
+			options.tls = tls
+			options.version = version
+			local conn = client.connect(options)
 			local stream = conn:new_stream()
 			local headers = new_headers()
 			headers:append(":method", "GET")
@@ -47,19 +59,34 @@ describe("http.server module", function()
 			conn:close()
 		end)
 		assert_loop(cq, TEST_TIMEOUT)
+		if path then
+			os.remove(path)
+		end
 		assert.truthy(cq:empty())
 		assert.spy(on_stream).was.called()
 	end
-	it("works with plain http 1.1", function()
+	it("works with plain http 1.1 using IP", function()
 		simple_test(false, 1.1)
 	end)
-	it("works with https 1.1", function()
+	it("works with https 1.1 using IP", function()
 		simple_test(true, 1.1)
 	end)
-	it("works with plain http 2.0", function()
+	it("works with plain http 2.0 using IP", function()
 		simple_test(false, 2.0)
 	end);
-	(require "http.tls".has_alpn and it or pending)("works with https 2.0", function()
+	(require "http.tls".has_alpn and it or pending)("works with https 2.0 using IP", function()
 		simple_test(true, 2.0)
+	end)
+	it("works with plain http 1.1 using UNIX socket domain", function()
+		simple_test(false, 1.1, os.tmpname() .. ".socket")
+	end)
+	it("works with https 1.1 using UNIX socket domain", function()
+		simple_test(true, 1.1, os.tmpname() .. ".socket")
+	end)
+	it("works with plain http 2.0 using UNIX socket domain", function()
+		simple_test(false, 2.0, os.tmpname() .. ".socket")
+	end);
+	(require "http.tls".has_alpn and it or pending)("works with https 2.0 using UNIX socket domain", function()
+		simple_test(true, 2.0, os.tmpname() .. ".socket")
 	end)
 end)
