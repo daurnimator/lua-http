@@ -59,7 +59,6 @@ describe("http.server module using hostnames", function()
 			assert(stream:write_headers(headers, true))
 			stream:get_headers()
 			conn:close()
-			print 'closed connection // client'
 		end)
 		assert_loop(cq, TEST_TIMEOUT)
 		assert.truthy(cq:empty())

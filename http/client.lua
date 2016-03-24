@@ -26,8 +26,8 @@ end
 
 local function negotiate(s, options, timeout)
 	local deadline = timeout and (monotime()+timeout)
-<<<<<<< HEAD
-	local s do
+	local s
+	do
 		local errno
 		s, errno = cs.connect {
 			family = options.family;
@@ -42,8 +42,6 @@ local function negotiate(s, options, timeout)
 			return nil, ce.strerror(errno), errno
 		end
 	end
-=======
->>>>>>> d59a8316054e5accfcd9723e0102ddca2e6f06c0
 	s:onerror(onerror)
 	local tls = options.tls
 	local version = options.version
@@ -98,6 +96,7 @@ local function connect(options, timeout)
 		family = options.family;
 		host = options.host;
 		port = options.port;
+		path = options.path;
 		sendname = options.sendname;
 		v6only = options.v6only;
 		nodelay = true;
