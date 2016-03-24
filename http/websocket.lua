@@ -78,11 +78,19 @@ local function build_frame(desc)
 		assert(#data <= 125, "WebSocket control frames MUST have a payload length of 125 bytes or less.")
 	end
 
-	local b1 = bit.bor(desc.opcode,
-		desc.FIN and 0x80 or 0,
-		desc.RSV1 and 0x40 or 0,
-		desc.RSV2 and 0x20 or 0,
-		desc.RSV3 and 0x10 or 0)
+	local b1 = desc.opcode
+	if desc.FIN then
+		b1 = bit.bor(b1, 0x80)
+	end
+	if desc.RSV1 then
+		b1 = bit.bor(b1, 0x40)
+	end
+	if desc.RSV2 then
+		b1 = bit.bor(b1, 0x20)
+	end
+	if desc.RSV3 then
+		b1 = bit.bor(b1, 0x10)
+	end
 
 	local b2 = #data
 	local length_extra
