@@ -100,4 +100,25 @@ describe("http.websocket module two sided tests", function()
 		assert_loop(cq, TEST_TIMEOUT)
 		assert.truthy(cq:empty())
 	end)
+	for _, flag in ipairs{"RSV1", "RSV2", "RSV3"} do
+		it("fails correctly on "..flag.." flag set", function()
+			local cq = cqueues.new()
+			local c, s = new_pair()
+			cq:wrap(function()
+				assert(c:send_frame({
+					opcode = 1;
+					[flag] = true;
+				}))
+				assert(c:close())
+			end)
+			cq:wrap(function()
+				local ok, _, errno = s:receive()
+				assert.same(nil, ok)
+				assert.same(1002, errno)
+				assert(s:close())
+			end)
+			assert_loop(cq, TEST_TIMEOUT)
+			assert.truthy(cq:empty())
+		end)
+	end
 end)
