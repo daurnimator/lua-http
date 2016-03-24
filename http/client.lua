@@ -26,21 +26,6 @@ end
 
 local function connect(options, timeout)
 	local deadline = timeout and (monotime()+timeout)
-	local s do
-		local errno
-		s, errno = cs.connect {
-			family = options.family;
-			host = options.host;
-			port = options.port;
-			path = options.path;
-			sendname = options.sendname;
-			v6only = options.v6only;
-			nodelay = true;
-		}
-		if s == nil then
-			return nil, ce.strerror(errno), errno
-		end
-	end
 	s:onerror(onerror)
 	local tls = options.tls
 	local version = options.version
@@ -87,6 +72,23 @@ local function connect(options, timeout)
 	else
 		error("Unknown HTTP version: " .. tostring(version))
 	end
+end
+
+local function connect(options, timeout)
+	-- TODO: https://github.com/wahern/cqueues/issues/124
+	local s, errno = cs.connect {
+		family = options.family;
+		host = options.host;
+		port = options.port;
+		path = options.path;
+		sendname = options.sendname;
+		v6only = options.v6only;
+		nodelay = true;
+	}
+	if s == nil then
+		return nil, ce.strerror(errno), errno
+	end
+	return negotiate(s, options, timeout)
 end
 
 return {

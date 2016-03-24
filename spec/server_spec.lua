@@ -1,5 +1,5 @@
 local TEST_TIMEOUT = 2
-describe("http.server module using hostnames", function()
+describe("http.server module", function()
 	local server = require "http.server"
 	local client = require "http.client"
 	local new_headers = require "http.headers".new
@@ -13,12 +13,10 @@ describe("http.server module using hostnames", function()
 			error(err, 2)
 		end
 	end
-	local socket_paths = {}
 	local function simple_test(tls, version, path)
 		local cq = cqueues.new()
 		local options = {}
 		if path then
-			socket_paths[#socket_paths + 1] = path
 			options.path = path
 		else
 			options.host = "localhost"
@@ -61,9 +59,11 @@ describe("http.server module using hostnames", function()
 			assert(stream:write_headers(headers, true))
 			stream:get_headers()
 			conn:close()
-			print 'closed connection // client'
 		end)
 		assert_loop(cq, TEST_TIMEOUT)
+		if path then
+			os.remove(path)
+		end
 		assert.truthy(cq:empty())
 		assert.spy(on_stream).was.called()
 	end
@@ -79,7 +79,6 @@ describe("http.server module using hostnames", function()
 	(require "http.tls".has_alpn and it or pending)("works with https 2.0 using IP", function()
 		simple_test(true, 2.0)
 	end)
-	local socket_path = os.tmpname() .. ".sock"
 	it("works with plain http 1.1 using UNIX socket domain", function()
 		simple_test(false, 1.1, os.tmpname() .. ".socket")
 	end)
@@ -92,7 +91,4 @@ describe("http.server module using hostnames", function()
 	(require "http.tls".has_alpn and it or pending)("works with https 2.0 using UNIX socket domain", function()
 		simple_test(true, 2.0, os.tmpname() .. ".socket")
 	end)
-	for k, v in pairs(socket_paths) do
-		os.remove(v)
-	end
 end)
