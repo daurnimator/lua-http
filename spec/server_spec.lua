@@ -33,12 +33,10 @@ describe("http.server module", function()
 			stream:get_headers()
 			stream:shutdown()
 			s:shutdown()
-			print 'shutting down server // spy'
 		end)
 		cq:wrap(function()
 			s:run(on_stream)
 			s:close()
-			print 'closed // server'
 		end)
 		cq:wrap(function()
 			local options = {}
@@ -61,9 +59,6 @@ describe("http.server module", function()
 			conn:close()
 		end)
 		assert_loop(cq, TEST_TIMEOUT)
-		if path then
-			os.remove(path)
-		end
 		assert.truthy(cq:empty())
 		assert.spy(on_stream).was.called()
 	end
@@ -80,15 +75,31 @@ describe("http.server module", function()
 		simple_test(true, 2.0)
 	end)
 	it("works with plain http 1.1 using UNIX socket domain", function()
+		local path = os.tmpname() .. ".socket"
 		simple_test(false, 1.1, os.tmpname() .. ".socket")
+		finally(function()
+			os.remove(path)
+		end)
 	end)
 	it("works with https 1.1 using UNIX socket domain", function()
+		local path = os.tmpname() .. ".socket"
 		simple_test(true, 1.1, os.tmpname() .. ".socket")
+		finally(function()
+			os.remove(path)
+		end)
 	end)
 	it("works with plain http 2.0 using UNIX socket domain", function()
+		local path = os.tmpname() .. ".socket"
 		simple_test(false, 2.0, os.tmpname() .. ".socket")
+		finally(function()
+			os.remove(path)
+		end)
 	end);
 	(require "http.tls".has_alpn and it or pending)("works with https 2.0 using UNIX socket domain", function()
+		local path = os.tmpname() .. ".socket"
 		simple_test(true, 2.0, os.tmpname() .. ".socket")
+		finally(function()
+			os.remove(path)
+		end)
 	end)
 end)

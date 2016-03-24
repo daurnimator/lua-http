@@ -24,7 +24,7 @@ local function onerror(socket, op, why, lvl) -- luacheck: ignore 212
 	return string.format("%s: %s", op, ce.strerror(why)), why
 end
 
-local function connect(options, timeout)
+local function negotiate(s, options, timeout)
 	local deadline = timeout and (monotime()+timeout)
 	s:onerror(onerror)
 	local tls = options.tls
