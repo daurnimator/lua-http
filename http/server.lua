@@ -192,7 +192,11 @@ local function listen(tbl)
 	end
 	local ctx = tbl.ctx
 	if ctx == nil and tls ~= false then
-		ctx = new_ctx(host or path)
+		if host then
+			ctx = new_ctx(host)
+		else
+			error("OpenSSL ctx field expected when using UNIX domain paths")
+		end
 	end
 	local s = assert(cs.listen{
 		host = host;
