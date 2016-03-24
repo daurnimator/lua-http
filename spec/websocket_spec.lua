@@ -1,3 +1,4 @@
+local TEST_TIMEOUT = 2
 describe("http.websocket module's internal functions work", function()
 	local websocket = require "http.websocket"
 	it("build_frame works for simple cases", function()
@@ -58,5 +59,45 @@ describe("http.websocket module's internal functions work", function()
 		assert.same({nil, nil}, {websocket.parse_close ""})
 		assert.same({1000, nil}, {websocket.parse_close "\3\232"})
 		assert.same({1000, "error"}, {websocket.parse_close "\3\232error"})
+	end)
+end)
+describe("http.websocket module two sided tests", function()
+	local websocket = require "http.websocket"
+	local cs = require "cqueues.socket"
+	local cqueues = require "cqueues"
+	local function assert_loop(cq, timeout)
+		local ok, err, _, thd = cq:loop(timeout)
+		if not ok then
+			if thd then
+				err = debug.traceback(thd, err)
+			end
+			error(err, 2)
+		end
+	end
+	local function new_pair()
+		local c, s = cs.pair()
+		local client = websocket.new("client")
+		client.socket = c
+		client.readyState = 1
+		local server = websocket.new("server")
+		server.socket = s
+		server.readyState = 1
+		return client, server
+	end
+	it("works with a socketpair", function()
+		local cq = cqueues.new()
+		local c, s = new_pair()
+		cq:wrap(function()
+			assert(c:send("hello"))
+			assert.same("world", c:receive())
+			assert(c:close())
+		end)
+		cq:wrap(function()
+			assert.same("hello", s:receive())
+			assert(s:send("world"))
+			assert(s:close())
+		end)
+		assert_loop(cq, TEST_TIMEOUT)
+		assert.truthy(cq:empty())
 	end)
 end)
