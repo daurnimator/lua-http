@@ -279,7 +279,6 @@ end
 
 function websocket_methods:receive(timeout)
 	local deadline = timeout and (monotime()+timeout)
-	local databuffer, databuffer_type
 	while true do
 		local frame, err, errno = read_frame(self.socket, deadline and (deadline-monotime()))
 		if frame == nil then
@@ -293,26 +292,30 @@ function websocket_methods:receive(timeout)
 
 		if frame.opcode < 0x8 then
 			if frame.opcode == 0x0 then -- Continuation frames
-				if not databuffer then
+				if not self.databuffer then
 					return close_helper(self, 1002, "Unexpected continuation frame", deadline)
 				end
-				databuffer[#databuffer+1] = frame.data
+				self.databuffer[#self.databuffer+1] = frame.data
 			elseif frame.opcode == 0x1 or frame.opcode == 0x2 then -- Text or Binary frame
-				if databuffer then
+				if self.databuffer then
 					return close_helper(self, 1002, "Continuation frame expected", deadline)
 				end
-				databuffer = { frame.data }
-				databuffer_type = frame.opcode
+				self.databuffer = { frame.data }
+				self.databuffer_type = frame.opcode
 			else
 				return close_helper(self, 1002, "Reserved opcode", deadline)
 			end
 			if frame.FIN then
+				local databuffer_type = self.databuffer_type
+				self.databuffer_type = nil
 				if databuffer_type == 0x1 then
 					databuffer_type = "text"
 				elseif databuffer_type == 0x2 then
 					databuffer_type = "binary"
 				end
-				return table.concat(databuffer), databuffer_type
+				local databuffer = table.concat(self.databuffer)
+				self.databuffer = nil
+				return databuffer, databuffer_type
 			end
 		else -- Control frame
 			if frame.length > 125 then -- Control frame with too much payload
@@ -373,6 +376,8 @@ local function new(type)
 		socket = nil;
 		type = type;
 		readyState = 0;
+		databuffer = nil;
+		databuffer_type = nil;
 		got_close_code = nil;
 		got_close_reason = nil;
 		key = nil;
