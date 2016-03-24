@@ -4,14 +4,33 @@ describe("http.server module", function()
 	local new_headers = require "http.headers".new
 	local cqueues = require "cqueues"
 	local cs = require "cqueues.socket"
-	local function simple_test(tls, version)
+	local function assert_loop(cq, timeout)
+		local ok, err, _, thd = cq:loop(timeout)
+		if not ok then
+			if thd then
+				err = debug.traceback(thd, err)
+			end
+			error(err, 2)
+		end
+	end
+	local function simple_test(tls, version, path)
 		local cq = cqueues.new()
-		local s = server.listen {
-			host = "localhost";
-			port = 0;
-		}
+		local options = {}
+		if path then
+			options.path = path
+		else
+			options.host = "localhost"
+			options.port = 0
+		end
+		options.version = version
+		options.tls = tls
+		local s = server.listen(options)
 		assert(s:listen())
-		local _, host, port = s:localname()
+		local host, port
+		if not path then
+			local _
+			_, host, port = s:localname()
+		end
 		local on_stream = spy.new(function(stream)
 			stream:get_headers()
 			stream:shutdown()
@@ -22,12 +41,16 @@ describe("http.server module", function()
 			s:close()
 		end)
 		cq:wrap(function()
-			local conn = client.connect {
-				host = host;
-				port = port;
-				tls = tls;
-				version = version;
-			}
+			local client_options = {}
+			if path then
+				client_options.path = path
+			else
+				client_options.host = host
+				client_options.port = port
+			end
+			client_options.tls = tls
+			client_options.version = version
+			local conn = client.connect(client_options)
 			local stream = conn:new_stream()
 			local headers = new_headers()
 			headers:append(":method", "GET")
@@ -41,16 +64,16 @@ describe("http.server module", function()
 		assert.truthy(cq:empty())
 		assert.spy(on_stream).was.called()
 	end
-	it("works with plain http 1.1", function()
+	it("works with plain http 1.1 using IP", function()
 		simple_test(false, 1.1)
 	end)
-	it("works with https 1.1", function()
+	it("works with https 1.1 using IP", function()
 		simple_test(true, 1.1)
 	end)
-	it("works with plain http 2.0", function()
+	it("works with plain http 2.0 using IP", function()
 		simple_test(false, 2.0)
 	end);
-	(require "http.tls".has_alpn and it or pending)("works with https 2.0", function()
+	(require "http.tls".has_alpn and it or pending)("works with https 2.0 using IP", function()
 		simple_test(true, 2.0)
 	end)
 	it("taking socket from underlying connection is handled well by server", function()
@@ -83,5 +106,39 @@ describe("http.server module", function()
 		assert_loop(cq, TEST_TIMEOUT)
 		assert.truthy(cq:empty())
 		assert.spy(on_stream).was.called()
+	end)
+	--[[
+	--
+	-- Until there is a way to generate OpenSSL contexts in this file for
+	-- UNIX domain sockets, there is no way to use TLS with this. Because
+	-- of this, the status for using TLS with UNIX domain sockets is
+	-- pending.
+	--
+	--]]
+	local socket_path = os.tmpname()
+	os.remove(socket_path) -- in case it was generated automatically
+	it("works with plain http 1.1 using UNIX socket domain", function()
+		simple_test(false, 1.1, socket_path)
+		finally(function()
+			os.remove(socket_path)
+		end)
+	end)
+	pending("works with https 1.1 using UNIX socket domain", function()
+		simple_test(true, 1.1, socket_path)
+		finally(function()
+			os.remove(socket_path)
+		end)
+	end)
+	it("works with plain http 2.0 using UNIX socket domain", function()
+		simple_test(false, 2.0, socket_path)
+		finally(function()
+			os.remove(socket_path)
+		end)
+	end);
+	pending("works with https 2.0 using UNIX socket domain", function()
+		simple_test(true, 2.0, socket_path)
+		finally(function()
+			os.remove(socket_path)
+		end)
 	end)
 end)
