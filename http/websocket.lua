@@ -259,7 +259,7 @@ local function close_helper(self, code, reason, deadline)
 		self.socket:close()
 	end
 
-	return nil, reason, ce.ENOMSG
+	return nil, reason, code
 end
 
 function websocket_methods:close(code, reason, timeout)
@@ -331,6 +331,9 @@ function websocket_methods:receive(timeout)
 				end
 				self.got_close_code = status_code
 				self.got_close_message = message
+				--[[ RFC 6455 5.5.1
+				When sending a Close frame in response, the endpoint typically
+				echos the status code it received.]]
 				return close_helper(self, status_code, message, deadline)
 			elseif frame.opcode == 0x9 then -- Ping frame
 				frame.opcode = 0xA
