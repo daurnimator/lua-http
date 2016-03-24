@@ -1,5 +1,5 @@
 local TEST_TIMEOUT = 2
-describe("http.server module using hostnames", function()
+describe("http.server module", function()
 	local server = require "http.server"
 	local client = require "http.client"
 	local new_headers = require "http.headers".new
