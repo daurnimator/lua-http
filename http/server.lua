@@ -181,7 +181,7 @@ local function listen(tbl)
 	local path = tbl.path
 	assert(host or path, "need host or path")
 	local port = tbl.port
-	if port == nil and tbl.host then
+	if port == nil and host then
 		if tls == true then
 			port = "443"
 		elseif tls == false then
