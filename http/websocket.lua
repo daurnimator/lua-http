@@ -237,6 +237,7 @@ local function close_helper(self, code, reason, deadline)
 		local close_frame = build_close(code, reason, self.type == "client")
 		-- ignore failure
 		self:send_frame(close_frame, deadline and deadline-monotime())
+		self.readyState = 2
 	end
 
 	-- Do not close socket straight away, wait for acknowledgement from server
@@ -250,12 +251,13 @@ local function close_helper(self, code, reason, deadline)
 		end
 	end
 
-	self.socket:shutdown()
-	cqueues.poll()
-	cqueues.poll()
-	self.socket:close()
-
-	self.readyState = 3
+	if self.readyState < 3 then
+		self.readyState = 3
+		self.socket:shutdown()
+		cqueues.poll()
+		cqueues.poll()
+		self.socket:close()
+	end
 
 	return nil, reason, ce.ENOMSG
 end
