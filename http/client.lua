@@ -24,8 +24,9 @@ local function onerror(socket, op, why, lvl) -- luacheck: ignore 212
 	return string.format("%s: %s", op, ce.strerror(why)), why
 end
 
-local function connect(options, timeout)
+local function negotiate(s, options, timeout)
 	local deadline = timeout and (monotime()+timeout)
+<<<<<<< HEAD
 	local s do
 		local errno
 		s, errno = cs.connect {
@@ -41,6 +42,8 @@ local function connect(options, timeout)
 			return nil, ce.strerror(errno), errno
 		end
 	end
+=======
+>>>>>>> d59a8316054e5accfcd9723e0102ddca2e6f06c0
 	s:onerror(onerror)
 	local tls = options.tls
 	local version = options.version
@@ -56,7 +59,7 @@ local function connect(options, timeout)
 				tls = default_h2_ctx or default_h1_ctx
 			end
 		end
-		local ok, err, errno = s:starttls(tls, timeout)
+		local ok, err, errno = s:starttls(tls, deadline and (deadline-monotime()))
 		if not ok then
 			return nil, err, errno
 		end
@@ -89,6 +92,23 @@ local function connect(options, timeout)
 	end
 end
 
+local function connect(options, timeout)
+	-- TODO: https://github.com/wahern/cqueues/issues/124
+	local s, errno = cs.connect {
+		family = options.family;
+		host = options.host;
+		port = options.port;
+		sendname = options.sendname;
+		v6only = options.v6only;
+		nodelay = true;
+	}
+	if s == nil then
+		return nil, ce.strerror(errno), errno
+	end
+	return negotiate(s, options, timeout)
+end
+
 return {
+	negotiate = negotiate;
 	connect = connect;
 }

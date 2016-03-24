@@ -34,13 +34,11 @@ describe("http.server module using hostnames", function()
 		local on_stream = spy.new(function(stream)
 			stream:get_headers()
 			stream:shutdown()
-			s:shutdown()
-			print 'shutting down server // spy'
+			s:pause()
 		end)
 		cq:wrap(function()
 			s:run(on_stream)
 			s:close()
-			print 'closed // server'
 		end)
 		cq:wrap(function()
 			local options = {}

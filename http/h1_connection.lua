@@ -120,22 +120,25 @@ end
 -- this function *should never throw*
 function connection_methods:get_next_incoming_stream(timeout)
 	assert(self.type == "server")
+	local deadline = timeout and (monotime()+timeout)
 	-- Make sure we don't try and read before the previous request has been fully read
-	if self.req_locked then
+	repeat
 		-- Wait until previous requests have been fully read
-		if not self.req_cond:wait(timeout) then
-			return nil, ce.ETIMEDOUT
+		if self.req_locked then
+			if not self.req_cond:wait(deadline and deadline - monotime()) then
+				return nil, ce.ETIMEDOUT
+			end
+			assert(self.req_locked == nil)
 		end
-		assert(self.req_locked == nil)
-	end
-	if self.socket == nil or self.socket:eof("r") then
-		return nil, ce.EPIPE
-	end
-	-- check if socket has already got an error set
-	local errno = self.socket:error("r")
-	if errno then
-		return nil, onerror(self.socket, "read", errno, 3)
-	end
+		if self.socket == nil then
+			return nil, ce.EPIPE
+		end
+		-- Wait for at least one byte
+		local ok, err, errno = self.socket:fill(1, deadline and deadline-monotime())
+		if not ok then
+			return nil, err or ce.EPIPE, errno
+		end
+	until not self.req_locked
 	local stream = h1_stream.new(self)
 	self.pipeline:push(stream)
 	self.req_locked = stream

@@ -99,11 +99,11 @@ function stream_methods:set_state(new)
 		-- If we have just finished writing the response
 		if (old == "idle" or old == "open" or old == "half closed (remote)")
 			and (new == "half closed (local)" or new == "closed") then
+			-- remove ourselves from the write pipeline
+			assert(self.connection.pipeline:pop() == self)
 			if self.close_when_done then
 				self.connection:shutdown()
 			end
-			-- remove ourselves from the write pipeline
-			assert(self.connection.pipeline:pop() == self)
 			local next_stream = self.connection.pipeline:peek()
 			if next_stream then
 				next_stream.pipeline_cond:signal()
@@ -124,11 +124,11 @@ function stream_methods:set_state(new)
 		-- If we have just finished reading the response;
 		if (old == "idle" or old == "open" or old == "half closed (local)")
 			and (new == "half closed (remote)" or new == "closed") then
+			-- remove ourselves from the read pipeline
+			assert(self.connection.pipeline:pop() == self)
 			if self.close_when_done then
 				self.connection:shutdown()
 			end
-			-- remove ourselves from the read pipeline
-			assert(self.connection.pipeline:pop() == self)
 			local next_stream = self.connection.pipeline:peek()
 			if next_stream then
 				next_stream.pipeline_cond:signal()
@@ -370,6 +370,9 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 	end
 	local status_code, method
 	if self.type == "server" then
+		if self.state == "idle" then
+			error("cannot write headers when stream is idle")
+		end
 		-- Make sure we're at the front of the pipeline
 		if self.connection.pipeline:peek() ~= self then
 			if not self.pipeline_cond:wait(deadline and (deadline-monotime)) then
@@ -711,6 +714,7 @@ function stream_methods:write_chunk(chunk, end_stream, timeout)
 	else
 		assert(self.connection.pipeline:peek() == self)
 	end
+	local orig_size = #chunk
 	if self.body_write_deflate then
 		chunk = self.body_write_deflate(chunk, end_stream)
 	end
@@ -756,7 +760,7 @@ function stream_methods:write_chunk(chunk, end_stream, timeout)
 	elseif self.body_write_type ~= "missing" then
 		error("unknown body writing method")
 	end
-	self.stats_sent = self.stats_sent + #chunk
+	self.stats_sent = self.stats_sent + orig_size
 	if end_stream then
 		if self.state == "half closed (remote)" then
 			self:set_state("closed")

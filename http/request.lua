@@ -117,6 +117,25 @@ local function new_from_stream(stream)
 	return self
 end
 
+function request_methods:clone()
+	return setmetatable({
+		host = self.host;
+		port = self.port;
+		tls = self.tls;
+		sendname = self.sendname;
+		version = self.version;
+
+		headers = self.headers:clone();
+		body = self.body;
+
+		expect_100_timeout = rawget(self, "expect_100_timeout");
+		follow_redirects = rawget(self, "follow_redirects");
+		max_redirects = rawget(self, "max_redirects");
+		post301 = rawget(self, "post301");
+		post302 = rawget(self, "post302");
+	}, request_mt)
+end
+
 function request_methods:to_url()
 	-- TODO: userinfo section (username/password)
 	local method = self.headers:get(":method")
@@ -160,37 +179,65 @@ function request_methods:handle_redirect(orig_headers)
 		return nil, "missing location header for redirect", ce.EINVAL
 	end
 	local uri_t = assert(uri_ref:match(location), "invalid URI")
-	local orig_scheme = self.headers:get(":scheme")
-	if uri_t.scheme == nil then
-		uri_t.scheme = orig_scheme
-	end
-	if uri_t.host == nil then
-		uri_t.host, uri_t.port = http_util.split_authority(self.headers:get(":authority"), orig_scheme)
-	end
-	if uri_t.path ~= nil then
-		uri_t.path = http_util.encodeURI(uri_t.path)
-		if uri_t.path:sub(1, 1) ~= "/" then -- relative path
-			local orig_target = self.headers:get(":path")
-			local orig_path = assert(uri_ref:match(orig_target)).path
-			orig_path = http_util.encodeURI(orig_path)
-			uri_t.path = http_util.resolve_relative_path(orig_path, uri_t.path)
+	local new_req = self:clone()
+	new_req.max_redirects = max_redirects - 1
+	local is_connect = new_req.headers:get(":method") == "CONNECT"
+	if uri_t.scheme ~= nil then
+		if not is_connect then
+			new_req.headers:upsert(":scheme", uri_t.scheme)
+		end
+		if uri_t.scheme == "https" or uri_t.scheme == "wss" then
+			new_req.tls = self.tls or true
+		else
+			new_req.tls = false
 		end
 	end
-	local headers = self.headers:clone()
-	local new_req = new_from_uri_t(uri_t, headers)
-	new_req.expect_100_timeout = rawget(self, "expect_100_timeout")
-	new_req.follow_redirects = rawget(self, "follow_redirects")
-	new_req.max_redirects = max_redirects - 1
-	new_req.post301 = rawget(self, "post301")
-	new_req.post302 = rawget(self, "post302")
+	if uri_t.host ~= nil then
+		local new_scheme = new_req.headers:get(":scheme")
+		new_req.host = uri_t.host
+		new_req.port = uri_t.port or http_util.scheme_to_port[new_scheme]
+		if not is_connect then
+			new_req.headers:upsert(":authority", http_util.to_authority(uri_t.host, uri_t.port, new_scheme))
+		end
+		new_req.sendname = nil
+	end
+	if is_connect then
+		assert(uri_t.path == "", "CONNECT requests cannot have a path")
+		assert(uri_t.query == nil, "CONNECT requests cannot have a query")
+	else
+		local new_path
+		if uri_t.path == "" then
+			new_path = "/"
+		else
+			new_path = http_util.encodeURI(uri_t.path)
+			if new_path:sub(1, 1) ~= "/" then -- relative path
+				local orig_target = self.headers:get(":path")
+				local orig_path = assert(uri_ref:match(orig_target)).path
+				orig_path = http_util.encodeURI(orig_path)
+				new_path = http_util.resolve_relative_path(orig_path, new_path)
+			end
+		end
+		if uri_t.query then
+			new_path = new_path .. "?" .. http_util.encodeURI(uri_t.query)
+		end
+		new_req.headers:upsert(":path", new_path)
+	end
+	if uri_t.userinfo then
+		local field
+		if is_connect then
+			field = "proxy-authorization"
+		else
+			field = "authorization"
+		end
+		new_req.headers:upsert(field, "basic " .. basexx.to_base64(uri_t.userinfo), true)
+	end
 	if not new_req.tls and self.tls then
 		--[[ RFC 7231 5.5.2: A user agent MUST NOT send a Referer header field in an
 		unsecured HTTP request if the referring page was received with a secure protocol.]]
-		headers:delete("referer")
+		new_req.headers:delete("referer")
 	else
-		headers:upsert("referer", self:to_url())
+		new_req.headers:upsert("referer", self:to_url())
 	end
-	new_req.body = self.body
 	-- Change POST requests to a body-less GET on redirect?
 	local orig_status = orig_headers:get(":status")
 	if (orig_status == "303"
@@ -198,19 +245,19 @@ function request_methods:handle_redirect(orig_headers)
 		or (orig_status == "302" and not self.post302)
 		) and self.headers:get(":method") == "POST"
 	then
-		headers:upsert(":method", "GET")
+		new_req.headers:upsert(":method", "GET")
 		-- Remove headers that don't make sense without a body
 		-- Headers that require a body
-		headers:delete("transfer-encoding")
-		headers:delete("content-length")
+		new_req.headers:delete("transfer-encoding")
+		new_req.headers:delete("content-length")
 		-- Representation Metadata from RFC 7231 Section 3.1
-		headers:delete("content-encoding")
-		headers:delete("content-language")
-		headers:delete("content-location")
-		headers:delete("content-type")
+		new_req.headers:delete("content-encoding")
+		new_req.headers:delete("content-language")
+		new_req.headers:delete("content-location")
+		new_req.headers:delete("content-type")
 		-- Other...
-		if headers:get("expect") == "100-continue" then
-			headers:delete("expect")
+		if new_req.headers:get("expect") == "100-continue" then
+			new_req.headers:delete("expect")
 		end
 		new_req.body = nil
 	end

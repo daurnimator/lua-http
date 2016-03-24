@@ -402,7 +402,6 @@ describe("low level http 1 connection operations", function()
 end)
 describe("high level http1 connection operations", function()
 	local h1_connection = require "http.h1_connection"
-	local cqueues = require "cqueues"
 	local cs = require "cqueues.socket"
 	local ce = require "cqueues.errno"
 
@@ -415,16 +414,7 @@ describe("high level http1 connection operations", function()
 
 	it(":get_next_incoming_stream times out", function()
 		local s, c = new_pair(1.1) -- luacheck: ignore 211
-		local cq = cqueues.new()
-		cq:wrap(function()
-			local stream = s:get_next_incoming_stream()
-			cq:wrap(function()
-				assert.same({nil, ce.ETIMEDOUT}, {s:get_next_incoming_stream(0.05)})
-			end)
-			cqueues.sleep(0.1)
-			stream:shutdown()
-		end)
-		assert(cq:loop())
+		assert.same({nil, ce.ETIMEDOUT}, {s:get_next_incoming_stream(0.05)})
 	end)
 	it(":get_next_incoming_stream returns nil, EPIPE when no data", function()
 		local s, c = new_pair(1.1)

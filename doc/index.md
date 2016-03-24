@@ -149,12 +149,33 @@ print(bit.band(1, 3)) --> 1
 Deals with obtaining a connection to an HTTP server.
 
 
+### `negotiate(socket, options, timeout)` <!-- --> {#http.client.negotiate}
+
+  - `socket` is a cqueues socket object
+
+  - `options` is a table containing:
+
+	  - `tls` (boolean|userdata, optional): the `SSL_CTX*` to use, or a boolean to indicate the default TLS context.  
+		defaults to `true`.
+
+		  - `true` indicates to use the default TLS settings, see [*http.tls*](#http.tls) for information.
+		  - `false` means do not negotiate TLS
+
+	  - `version` (nil|1.0|1.1|2): HTTP version to use.
+		  - `nil`: attempts HTTP 2 and falls back to HTTP 1.1
+		  - `1.0`
+		  - `1.1`
+		  - `2`
+
+	  - `h2_settings` (table, optional): HTTP 2 settings to use.  
+		See [*http.h2_connection*](#http.h2_connection) for details
+
+
 ### `connect(options, timeout)` <!-- --> {#http.client.connect}
 
 Creates a new connection to an HTTP server.
-Can try to negotiate HTTP2 if possible, but 
 
-  - `options` is a table containing:
+  - `options` is a table containing the options to [*http.client.negotiate*](#http.client.negotiate),plus the following:
 
 	  - `family` (integer, optional): socket family to use.  
 		defaults to `AF_INET`  
@@ -173,30 +194,14 @@ Can try to negotiate HTTP2 if possible, but
 	  - `v6only` (boolean, optional): if the `IPV6_V6ONLY` flag should be set on the underlying socket.  
 		defaults to `false`  
 
-	  - `tls` (boolean|userdata, optional): the `SSL_CTX*` to use, or a boolean to indicate the default TLS context.  
-		defaults to `true`.
-
-		  - `true` indicates to use the default TLS settings, see [*http.tls*](#http.tls) for information.
-		  - `false` means do not negotiate TLS
-
-	  - `version` (nil|1.0|1.1|2): HTTP version to use.
-		  - `nil`: attempts HTTP 2 and falls back to HTTP 1.1
-		  - `1.0`
-		  - `1.1`
-		  - `2`
-
-	  - `h2_settings` (table, optional): HTTP 2 settings to use.  
-		See [*http.h2_connection*](#http.h2_connection) for details
-
-
   - `timeout` (optional) is the maximum amount of time (in seconds) to allow for connection to be established.
 
 	This includes time for DNS lookup, connection, TLS negotiation (if tls enabled) and in the case of HTTP2: settings exchange.
 
 
-### Example {#http.client-example}
+#### Example {#http.client.connect-example}
 
-Connect to a local http server running on port 8000
+Connect to a local HTTP server running on port 8000
 
 ```lua
 local http_client = require "http.client"
@@ -664,13 +669,13 @@ Set to `math.huge` to not give up.
 
 ### `request.post301` <!-- --> {#http.request.post301}
 
-Respect RFC 2616 Section 10.3.2 and **don't** convert POST requests into body-less GET requests when following a 301 redirect. The non-RFC behaviour is ubiquitous in web browsers and assumed by server. Modern HTTP endpoints send status code 308 to indicate that they don't want the method to be changed.
+Respect RFC 2616 Section 10.3.2 and **don't** convert POST requests into body-less GET requests when following a 301 redirect. The non-RFC behaviour is ubiquitous in web browsers and assumed by servers. Modern HTTP endpoints send status code 308 to indicate that they don't want the method to be changed.
 Defaults to `false`.
 
 
 ### `request.post302` <!-- --> {#http.request.post302}
 
-Respect RFC 2616 Section 10.3.3 and **don't** convert POST requests into body-less GET requests when following a 302 redirect. The non-RFC behaviour is ubiquitous in web browsers and assumed by server. Modern HTTP endpoints send status code 307 to indicate that they don't want the method to be changed.
+Respect RFC 2616 Section 10.3.3 and **don't** convert POST requests into body-less GET requests when following a 302 redirect. The non-RFC behaviour is ubiquitous in web browsers and assumed by servers. Modern HTTP endpoints send status code 307 to indicate that they don't want the method to be changed.
 Defaults to `false`.
 
 
@@ -683,6 +688,15 @@ Allows setting a request body. `body` may be a string, function or lua file obje
   - If `body` is a lua file object, it will be [`:seek`'d](http://www.lua.org/manual/5.3/manual.html#pdf-file:seek) to the start, then sent as a body. Any errors encountered during file operations **will be thrown**.
 
 
+### `request:clone()` <!-- --> {#http.request:clone}
+
+Creates and returns a clone of the request.
+
+The clone has its own deep copy of the [`.headers`](#http.request.headers) field.
+
+The [`.tls`](#http.request.tls) and body fields are shallow copied from the original request.
+
+
 ### `request:go(timeout)` <!-- --> {#http.request:timeout}
 
 Performs the request.
@@ -693,7 +707,26 @@ On success, returns the response [*headers*](#http.headers) and a [*stream*](#st
 
 ## http.server
 
-### `listen(options)` <!-- --> {#http.client.connect}
+This interface is **unstable**.
+
+### `listen(options)` <!-- --> {#http.server.connect}
+
+
+### `server:listen(timeout)` <!-- --> {#http.server:listen}
+
+
+### `server:localname()` <!-- --> {#http.server:localname}
+
+
+### `server:pause()` <!-- --> {#http.server:pause}
+
+Cause [`server:run`](#http.server:run) to stop processing new clients and return.
+
+
+### `server:close()` <!-- --> {#http.server:close}
+
+
+### `server:run(on_stream, cq)` <!-- --> {#http.server:run}
 
 
 ## http.stream_common
