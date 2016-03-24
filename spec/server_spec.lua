@@ -76,7 +76,6 @@ describe("http.server module using hostnames", function()
 	(require "http.tls".has_alpn and it or pending)("works with https 2.0 using IP", function()
 		simple_test(true, 2.0)
 	end)
-	local socket_path = os.tmpname() .. ".sock"
 	it("works with plain http 1.1 using UNIX socket domain", function()
 		simple_test(false, 1.1, os.tmpname() .. ".socket")
 	end)
