@@ -88,6 +88,7 @@ function connection_methods:take_socket()
 		return nil
 	end
 	self.socket = nil
+	self:shutdown()
 	-- Reset socket to some defaults
 	s:onerror(nil)
 	return s
