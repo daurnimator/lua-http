@@ -346,6 +346,7 @@ function request_methods:go(timeout)
 end
 
 return {
+	new_from_uri_t = new_from_uri_t;
 	new_from_uri = new_from_uri;
 	new_connect = new_connect;
 	new_from_stream = new_from_stream;
