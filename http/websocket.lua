@@ -398,7 +398,7 @@ local function new(type)
 end
 
 local function new_from_uri_t(uri_t, protocols)
-	local scheme = assert(uri_t.scheme, "URI missing scheme")
+	local scheme = assert(type(uri_t) == "table" and uri_t.scheme, "URI missing scheme")
 	assert(scheme == "ws" or scheme == "wss", "scheme not websocket")
 	local self = new("client")
 	self.request = http_request.new_from_uri_t(uri_t)
