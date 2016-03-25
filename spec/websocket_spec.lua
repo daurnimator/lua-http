@@ -62,6 +62,7 @@ describe("http.websocket module's internal functions work", function()
 	end)
 end)
 describe("http.websocket module two sided tests", function()
+	local server = require "http.server"
 	local websocket = require "http.websocket"
 	local cs = require "cqueues.socket"
 	local cqueues = require "cqueues"
@@ -121,4 +122,34 @@ describe("http.websocket module two sided tests", function()
 			assert.truthy(cq:empty())
 		end)
 	end
+	it("works when using url constructor", function()
+		local cq = cqueues.new()
+		local s = server.listen {
+			host = "localhost";
+			port = 0;
+		}
+		assert(s:listen())
+		local _, host, port = s:localname()
+		cq:wrap(function()
+			s:run(function (stream)
+				local headers = assert(stream:get_headers())
+				s:pause()
+				local ws = websocket.new_from_stream(headers, stream)
+				assert(ws:accept())
+				assert(ws:close())
+			end)
+			s:close()
+		end)
+		cq:wrap(function()
+			local ws = websocket.new_from_uri_t {
+				scheme = "ws";
+				host = host;
+				port = port;
+			}
+			assert(ws:connect())
+			assert(ws:close())
+		end)
+		assert_loop(cq, TEST_TIMEOUT)
+		assert.truthy(cq:empty())
+	end)
 end)
