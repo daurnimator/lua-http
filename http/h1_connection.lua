@@ -94,14 +94,16 @@ function connection_methods:take_socket()
 end
 
 function connection_methods:shutdown(dir)
-	self.socket:shutdown(dir)
-end
-
-function connection_methods:close()
 	while self.pipeline:length() > 0 do
 		local stream = self.pipeline:peek()
 		stream:shutdown()
 	end
+	if self.socket then
+		self.socket:shutdown(dir)
+	end
+end
+
+function connection_methods:close()
 	self:shutdown()
 	if self.socket then
 		cqueues.poll()
