@@ -916,6 +916,16 @@ Current version of lua-http as a string.
 Creates a new `http.websocket` object of type `"client"` from the given URI.
 
 
+### `new_from_stream(headers, stream)` <!-- --> {#http.websocket.new_from_stream}
+
+Attempts to create a new `http.websocket` object of type `"server"` from the given request headers and stream.
+
+  - [`headers`](#http.headers) should be headers of a suspected websocket upgrade request from a HTTP 1 client.
+  - [`stream`](#http.h1_stream) should be a live HTTP 1 stream of the `"server"` type.
+
+This function does **not** have side effects, and is hence okay to use tentatively.
+
+
 ### `websocket.close_timeout` <!-- --> {#http.websocket.close_timeout}
 
 Amount of time (in seconds) to wait between sending a close frame and actually closing the connection.
