@@ -911,9 +911,11 @@ Current version of lua-http as a string.
 ## http.websocket
 
 
-### `new_from_uri(uri)` <!-- --> {#http.websocket.new_from_uri}
+### `new_from_uri(uri, protocols)` <!-- --> {#http.websocket.new_from_uri}
 
 Creates a new `http.websocket` object of type `"client"` from the given URI.
+
+  - `protocols` (optional) should be a lua table containing a sequence of protocols to send to the server
 
 
 ### `new_from_stream(headers, stream)` <!-- --> {#http.websocket.new_from_stream}
