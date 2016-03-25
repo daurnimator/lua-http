@@ -601,12 +601,10 @@ local function new_from_stream(headers, stream)
 	return self
 end
 
-function websocket_methods:accept(protocols, response_headers, timeout)
+function websocket_methods:accept(protocols, timeout)
 	assert(self.type == "server" and self.readyState == 0)
 
-	if response_headers == nil then
-		response_headers = new_headers()
-	end
+	local response_headers = new_headers()
 	response_headers:upsert(":status", "101")
 	response_headers:upsert("upgrade", "websocket")
 	response_headers:upsert("connection", "upgrade")
