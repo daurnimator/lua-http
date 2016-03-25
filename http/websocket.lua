@@ -601,7 +601,7 @@ local function new_from_stream(headers, stream)
 	return self
 end
 
-function websocket_methods:accept(protocols, response_headers)
+function websocket_methods:accept(protocols, response_headers, timeout)
 	assert(self.type == "server" and self.readyState == 0)
 
 	if response_headers == nil then
@@ -629,7 +629,7 @@ function websocket_methods:accept(protocols, response_headers)
 	end
 
 	do
-		local ok, err, errno = self.stream:write_headers(response_headers, false)
+		local ok, err, errno = self.stream:write_headers(response_headers, false, timeout)
 		if not ok then
 			return ok, err, errno
 		end
