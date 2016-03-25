@@ -103,9 +103,11 @@ function connection_methods:close()
 		stream:shutdown()
 	end
 	self:shutdown()
-	cqueues.poll()
-	cqueues.poll()
-	self.socket:close()
+	if self.socket then
+		cqueues.poll()
+		cqueues.poll()
+		self.socket:close()
+	end
 end
 
 function connection_methods:new_stream()
