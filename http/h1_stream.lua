@@ -140,41 +140,44 @@ end
 local server_error_headers = new_headers()
 server_error_headers:append(":status", "503")
 function stream_methods:shutdown()
-	if self.type == "client" and self.state == "half closed (local)" then
-		-- If we're a client and have fully sent our request body,
+	if self.type == "server" and (self.state == "open" or self.state == "half closed (remote)") then
+		-- Make sure we're at the front of the pipeline
+		if self.connection.pipeline:peek() ~= self then
+			if not self.pipeline_cond:wait() then
+				return nil, ce.ETIMEDOUT
+			end
+			assert(self.connection.pipeline:peek() == self)
+		end
+		if not self.body_write_type then
+			-- Can send server error response
+			self:write_headers(server_error_headers, true)
+		end
+	elseif self.state == "half closed (local)" then
 		-- we'd like to finishing reading any remaining response so that we get out of the way
 		local start = self.stats_recv
-		while true do
+		repeat
 			-- don't bother continuing if we're reading until connection is closed
 			if self.body_read_type == "close" then
-				self.connection:shutdown("rw")
 				break
 			end
 			if self:get_next_chunk() == nil then
 				break -- ignore errors
 			end
-			if (self.stats_recv - start) >= clean_shutdown_limit then
-				self.connection:shutdown("rw")
-				break
-			end
-		end
+		until (self.stats_recv - start) >= clean_shutdown_limit
+		-- state may still be "half closed (local)" (but hopefully moved on to "closed")
 	end
-	if self.state == "open" or self.state == "half closed (remote)" then
-		if not self.body_write_type and self.type == "server" then
-			-- Can send server error response
-			local ok = self:write_headers(server_error_headers, true)
-			if not ok then
-				self.connection:shutdown("w")
-			end
-		else
-			-- This is a bad situation: we are trying to shutdown a connection that has the body partially sent
-			-- Especially in the case of Connection: close, where closing indicates EOF,
-			-- this will result in a client only getting a partial response.
-			-- Could also end up here if a client sending headers fails.
-			self.connection:shutdown("w")
+	if self.state == "idle" then
+		self:set_state("closed")
+	elseif self.state ~= "closed" then
+		-- This is a bad situation: we are trying to shutdown a connection that has the body partially sent
+		-- Especially in the case of Connection: close, where closing indicates EOF,
+		-- this will result in a client only getting a partial response.
+		-- Could also end up here if a client sending headers fails.
+		if self.connection.socket then
+			self.connection.socket:shutdown()
 		end
+		self:set_state("closed")
 	end
-	self:set_state("closed")
 end
 
 -- read_headers may be called more than once for a stream
