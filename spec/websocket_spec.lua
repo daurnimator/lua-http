@@ -76,13 +76,13 @@ describe("http.websocket module two sided tests", function()
 	end
 	local function new_pair()
 		local c, s = cs.pair()
-		local client = websocket.new("client")
-		client.socket = c
-		client.readyState = 1
-		local server = websocket.new("server")
-		server.socket = s
-		server.readyState = 1
-		return client, server
+		local ws_client = websocket.new("client")
+		ws_client.socket = c
+		ws_client.readyState = 1
+		local ws_server = websocket.new("server")
+		ws_server.socket = s
+		ws_server.readyState = 1
+		return ws_client, ws_server
 	end
 	it("works with a socketpair", function()
 		local cq = cqueues.new()
