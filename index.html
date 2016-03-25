@@ -94,8 +94,8 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.bit-example">Example</a></li>
 </ul></li>
 <li><a href="#http.client">http.client</a><ul>
+<li><a href="#http.client.negotiate"><code>negotiate(socket, options, timeout)</code> <!-- --></a></li>
 <li><a href="#http.client.connect"><code>connect(options, timeout)</code> <!-- --></a></li>
-<li><a href="#http.client-example">Example</a></li>
 </ul></li>
 <li><a href="#http.h1_connection">http.h1_connection</a><ul>
 <li><a href="#http.h1_connection.new"><code>new(socket, conn_type, version)</code> <!-- --></a></li>
@@ -279,6 +279,19 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.version.name"><code>name</code> <!-- --></a></li>
 <li><a href="#http.version.version"><code>version</code> <!-- --></a></li>
 </ul></li>
+<li><a href="#http.websocket">http.websocket</a><ul>
+<li><a href="#http.websocket.new_from_uri"><code>new_from_uri(uri, protocols)</code> <!-- --></a></li>
+<li><a href="#http.websocket.new_from_stream"><code>new_from_stream(headers, stream)</code> <!-- --></a></li>
+<li><a href="#http.websocket.close_timeout"><code>websocket.close_timeout</code> <!-- --></a></li>
+<li><a href="#http.websocket:accept"><code>websocket:accept(protocols, timeout)</code> <!-- --></a></li>
+<li><a href="#http.websocket:connect"><code>websocket:connect(timeout)</code> <!-- --></a></li>
+<li><a href="#http.websocket:receive"><code>websocket:receive(timeout)</code> <!-- --></a></li>
+<li><a href="#http.websocket:each"><code>websocket:each()</code> <!-- --></a></li>
+<li><a href="#http.websocket:send_frame"><code>websocket:send_frame(frame, timeout)</code> <!-- --></a></li>
+<li><a href="#http.websocket:send"><code>websocket:send(data, opcode, timeout)</code> <!-- --></a></li>
+<li><a href="#http.websocket:close"><code>websocket:close(code, reason, timeout)</code> <!-- --></a></li>
+<li><a href="#example-3">Example</a></li>
+</ul></li>
 <li><a href="#http.zlib">http.zlib</a><ul>
 <li><a href="#http.zlib.engine"><code>engine</code> <!-- --></a></li>
 <li><a href="#http.zlib.inflate"><code>inflate()</code> <!-- --></a></li>
@@ -416,26 +429,12 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <section id="http.client" class="level2">
 <h2>http.client</h2>
 <p>Deals with obtaining a connection to an HTTP server.</p>
-<section id="http.client.connect" class="level3">
-<h3><code>connect(options, timeout)</code> <!-- --></h3>
-<p>Creates a new connection to an HTTP server. Can try to negotiate HTTP2 if possible, but</p>
+<section id="http.client.negotiate" class="level3">
+<h3><code>negotiate(socket, options, timeout)</code> <!-- --></h3>
 <ul>
+<li><p><code>socket</code> is a cqueues socket object</p></li>
 <li><p><code>options</code> is a table containing:</p>
 <ul>
-<li><p><code>family</code> (integer, optional): socket family to use.<br />
-defaults to <code>AF_INET</code></p></li>
-<li><p><code>host</code> (string): host to connect to.<br />
-may be either a hostname or an ip address</p></li>
-<li><p><code>port</code> (string|integer): port to connect to in numeric form<br />
-e.g. <code>&quot;80&quot;</code> or <code>80</code></p></li>
-<li><code>sendname</code> (string|boolean, optional): the <a href="https://en.wikipedia.org/wiki/Server_Name_Indication">TLS SNI</a> host to send.<br />
-defaults to <code>true</code>
-<ul>
-<li><code>true</code> indicates to copy the <code>host</code> field</li>
-<li><code>false</code> disables SNI</li>
-</ul></li>
-<li><p><code>v6only</code> (boolean, optional): if the <code>IPV6_V6ONLY</code> flag should be set on the underlying socket.<br />
-defaults to <code>false</code></p></li>
 <li><p><code>tls</code> (boolean|userdata, optional): the <code>SSL_CTX*</code> to use, or a boolean to indicate the default TLS context.<br />
 defaults to <code>true</code>.</p>
 <ul>
@@ -452,19 +451,42 @@ defaults to <code>true</code>.</p>
 <li><p><code>h2_settings</code> (table, optional): HTTP 2 settings to use.<br />
 See <a href="#http.h2_connection"><em>http.h2_connection</em></a> for details</p></li>
 </ul></li>
+</ul>
+</section>
+<section id="http.client.connect" class="level3">
+<h3><code>connect(options, timeout)</code> <!-- --></h3>
+<p>Creates a new connection to an HTTP server.</p>
+<ul>
+<li><p><code>options</code> is a table containing the options to <a href="#http.client.negotiate"><em>http.client.negotiate</em></a>,plus the following:</p>
+<ul>
+<li><p><code>family</code> (integer, optional): socket family to use.<br />
+defaults to <code>AF_INET</code></p></li>
+<li><p><code>host</code> (string): host to connect to.<br />
+may be either a hostname or an ip address</p></li>
+<li><p><code>port</code> (string|integer): port to connect to in numeric form<br />
+e.g. <code>&quot;80&quot;</code> or <code>80</code></p></li>
+<li><code>sendname</code> (string|boolean, optional): the <a href="https://en.wikipedia.org/wiki/Server_Name_Indication">TLS SNI</a> host to send.<br />
+defaults to <code>true</code>
+<ul>
+<li><code>true</code> indicates to copy the <code>host</code> field</li>
+<li><code>false</code> disables SNI</li>
+</ul></li>
+<li><p><code>v6only</code> (boolean, optional): if the <code>IPV6_V6ONLY</code> flag should be set on the underlying socket.<br />
+defaults to <code>false</code></p></li>
+</ul></li>
 <li><p><code>timeout</code> (optional) is the maximum amount of time (in seconds) to allow for connection to be established.</p>
 <p>This includes time for DNS lookup, connection, TLS negotiation (if tls enabled) and in the case of HTTP2: settings exchange.</p></li>
 </ul>
-</section>
-<section id="http.client-example" class="level3">
-<h3>Example</h3>
-<p>Connect to a local http server running on port 8000</p>
+<section id="http.client.connect-example" class="level4">
+<h4>Example</h4>
+<p>Connect to a local HTTP server running on port 8000</p>
 <div class="sourceCode"><pre class="sourceCode lua"><code class="sourceCode lua"><span class="kw">local</span> http_client <span class="ot">=</span> <span class="fu">require</span> <span class="st">&quot;http.client&quot;</span>
 <span class="kw">local</span> myconnection <span class="ot">=</span> http_client<span class="ot">.</span>connect <span class="ot">{</span>
     host <span class="ot">=</span> <span class="st">&quot;localhost&quot;</span><span class="ot">;</span>
     port <span class="ot">=</span> <span class="dv">8000</span><span class="ot">;</span>
     tls <span class="ot">=</span> <span class="kw">false</span><span class="ot">;</span>
 <span class="ot">}</span></code></pre></div>
+</section>
 </section>
 </section>
 <section id="http.h1_connection" class="level2">
@@ -1079,6 +1101,81 @@ See <a href="#http.h2_connection"><em>http.h2_connection</em></a> for details</p
 <section id="http.version.version" class="level3">
 <h3><code>version</code> <!-- --></h3>
 <p>Current version of lua-http as a string.</p>
+</section>
+</section>
+<section id="http.websocket" class="level2">
+<h2>http.websocket</h2>
+<section id="http.websocket.new_from_uri" class="level3">
+<h3><code>new_from_uri(uri, protocols)</code> <!-- --></h3>
+<p>Creates a new <code>http.websocket</code> object of type <code>&quot;client&quot;</code> from the given URI.</p>
+<ul>
+<li><code>protocols</code> (optional) should be a lua table containing a sequence of protocols to send to the server</li>
+</ul>
+</section>
+<section id="http.websocket.new_from_stream" class="level3">
+<h3><code>new_from_stream(headers, stream)</code> <!-- --></h3>
+<p>Attempts to create a new <code>http.websocket</code> object of type <code>&quot;server&quot;</code> from the given request headers and stream.</p>
+<ul>
+<li><a href="#http.headers"><code>headers</code></a> should be headers of a suspected websocket upgrade request from a HTTP 1 client.</li>
+<li><a href="#http.h1_stream"><code>stream</code></a> should be a live HTTP 1 stream of the <code>&quot;server&quot;</code> type.</li>
+</ul>
+<p>This function does <strong>not</strong> have side effects, and is hence okay to use tentatively.</p>
+</section>
+<section id="http.websocket.close_timeout" class="level3">
+<h3><code>websocket.close_timeout</code> <!-- --></h3>
+<p>Amount of time (in seconds) to wait between sending a close frame and actually closing the connection. Defaults to <code>3</code> seconds.</p>
+</section>
+<section id="http.websocket:accept" class="level3">
+<h3><code>websocket:accept(protocols, timeout)</code> <!-- --></h3>
+<p>Completes negotiation with a websocket client.</p>
+<ul>
+<li><code>protocols</code> (optional) should be a lua table containing a sequence of protocols to to allow from the client</li>
+</ul>
+<p>Usually called after a successful <a href="#http.websocket.new_from_stream"><code>new_from_stream</code></a></p>
+</section>
+<section id="http.websocket:connect" class="level3">
+<h3><code>websocket:connect(timeout)</code> <!-- --></h3>
+<p>Connect to a websocket server.</p>
+<p>Usually called after a successful <a href="#http.websocket.new_from_uri"><code>new_from_uri</code></a></p>
+</section>
+<section id="http.websocket:receive" class="level3">
+<h3><code>websocket:receive(timeout)</code> <!-- --></h3>
+<p>Reads and returns the next data frame plus its opcode. Any ping frames received while reading will be responded to.</p>
+<p>The opcode <code>0x1</code> will be returned as <code>&quot;text&quot;</code> and <code>0x2</code> will be returned as <code>&quot;binary&quot;</code>.</p>
+</section>
+<section id="http.websocket:each" class="level3">
+<h3><code>websocket:each()</code> <!-- --></h3>
+<p>Iterator over <a href="#http.websocket:receive"><code>websocket:receive()</code></a>.</p>
+</section>
+<section id="http.websocket:send_frame" class="level3">
+<h3><code>websocket:send_frame(frame, timeout)</code> <!-- --></h3>
+<p>Low level function to send a raw frame.</p>
+</section>
+<section id="http.websocket:send" class="level3">
+<h3><code>websocket:send(data, opcode, timeout)</code> <!-- --></h3>
+<p>Send the given <code>data</code> as a data frame.</p>
+<ul>
+<li><code>data</code> should be a string</li>
+<li><code>opcode</code> can be a numeric opcode, <code>&quot;text&quot;</code> or <code>&quot;binary&quot;</code>. If <code>nil</code>, defaults to a text frame</li>
+</ul>
+</section>
+<section id="http.websocket:close" class="level3">
+<h3><code>websocket:close(code, reason, timeout)</code> <!-- --></h3>
+<p>Closes the websocket connection.</p>
+<ul>
+<li><code>code</code> defaults to <code>1000</code></li>
+<li><code>reason</code> is an optional string</li>
+</ul>
+</section>
+<section id="example-3" class="level3">
+<h3>Example</h3>
+<div class="sourceCode"><pre class="sourceCode lua"><code class="sourceCode lua"><span class="kw">local</span> websocket <span class="ot">=</span> <span class="fu">require</span> <span class="st">&quot;http.websocket&quot;</span>
+<span class="kw">local</span> ws <span class="ot">=</span> websocket<span class="ot">.</span>new_from_uri<span class="ot">(</span><span class="st">&quot;wss://echo.websocket.org&quot;</span><span class="ot">)</span>
+<span class="fu">assert</span><span class="ot">(</span>ws:<span class="fu">connect</span><span class="ot">())</span>
+<span class="fu">assert</span><span class="ot">(</span>ws:send<span class="ot">(</span><span class="st">&quot;koo-eee!&quot;</span><span class="ot">))</span>
+<span class="kw">local</span> data <span class="ot">=</span> <span class="fu">assert</span><span class="ot">(</span>ws:receive<span class="ot">())</span>
+<span class="fu">assert</span><span class="ot">(</span>data <span class="ot">==</span> <span class="st">&quot;koo-eee!&quot;</span><span class="ot">)</span>
+<span class="fu">assert</span><span class="ot">(</span>ws:<span class="fu">close</span><span class="ot">())</span></code></pre></div>
 </section>
 </section>
 <section id="http.zlib" class="level2">

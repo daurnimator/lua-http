@@ -149,12 +149,33 @@ print(bit.band(1, 3)) --> 1
 Deals with obtaining a connection to an HTTP server.
 
 
+### `negotiate(socket, options, timeout)` <!-- --> {#http.client.negotiate}
+
+  - `socket` is a cqueues socket object
+
+  - `options` is a table containing:
+
+	  - `tls` (boolean|userdata, optional): the `SSL_CTX*` to use, or a boolean to indicate the default TLS context.  
+		defaults to `true`.
+
+		  - `true` indicates to use the default TLS settings, see [*http.tls*](#http.tls) for information.
+		  - `false` means do not negotiate TLS
+
+	  - `version` (nil|1.0|1.1|2): HTTP version to use.
+		  - `nil`: attempts HTTP 2 and falls back to HTTP 1.1
+		  - `1.0`
+		  - `1.1`
+		  - `2`
+
+	  - `h2_settings` (table, optional): HTTP 2 settings to use.  
+		See [*http.h2_connection*](#http.h2_connection) for details
+
+
 ### `connect(options, timeout)` <!-- --> {#http.client.connect}
 
 Creates a new connection to an HTTP server.
-Can try to negotiate HTTP2 if possible, but 
 
-  - `options` is a table containing:
+  - `options` is a table containing the options to [*http.client.negotiate*](#http.client.negotiate),plus the following:
 
 	  - `family` (integer, optional): socket family to use.  
 		defaults to `AF_INET`  
@@ -173,30 +194,14 @@ Can try to negotiate HTTP2 if possible, but
 	  - `v6only` (boolean, optional): if the `IPV6_V6ONLY` flag should be set on the underlying socket.  
 		defaults to `false`  
 
-	  - `tls` (boolean|userdata, optional): the `SSL_CTX*` to use, or a boolean to indicate the default TLS context.  
-		defaults to `true`.
-
-		  - `true` indicates to use the default TLS settings, see [*http.tls*](#http.tls) for information.
-		  - `false` means do not negotiate TLS
-
-	  - `version` (nil|1.0|1.1|2): HTTP version to use.
-		  - `nil`: attempts HTTP 2 and falls back to HTTP 1.1
-		  - `1.0`
-		  - `1.1`
-		  - `2`
-
-	  - `h2_settings` (table, optional): HTTP 2 settings to use.  
-		See [*http.h2_connection*](#http.h2_connection) for details
-
-
   - `timeout` (optional) is the maximum amount of time (in seconds) to allow for connection to be established.
 
 	This includes time for DNS lookup, connection, TLS negotiation (if tls enabled) and in the case of HTTP2: settings exchange.
 
 
-### Example {#http.client-example}
+#### Example {#http.client.connect-example}
 
-Connect to a local http server running on port 8000
+Connect to a local HTTP server running on port 8000
 
 ```lua
 local http_client = require "http.client"
@@ -901,6 +906,95 @@ Returns the time in HTTP preferred date format (See [RFC 7231 section 7.1.1.1](h
 ### `version` <!-- --> {#http.version.version}
 
 Current version of lua-http as a string.
+
+
+## http.websocket
+
+
+### `new_from_uri(uri, protocols)` <!-- --> {#http.websocket.new_from_uri}
+
+Creates a new `http.websocket` object of type `"client"` from the given URI.
+
+  - `protocols` (optional) should be a lua table containing a sequence of protocols to send to the server
+
+
+### `new_from_stream(headers, stream)` <!-- --> {#http.websocket.new_from_stream}
+
+Attempts to create a new `http.websocket` object of type `"server"` from the given request headers and stream.
+
+  - [`headers`](#http.headers) should be headers of a suspected websocket upgrade request from a HTTP 1 client.
+  - [`stream`](#http.h1_stream) should be a live HTTP 1 stream of the `"server"` type.
+
+This function does **not** have side effects, and is hence okay to use tentatively.
+
+
+### `websocket.close_timeout` <!-- --> {#http.websocket.close_timeout}
+
+Amount of time (in seconds) to wait between sending a close frame and actually closing the connection.
+Defaults to `3` seconds.
+
+
+### `websocket:accept(protocols, timeout)` <!-- --> {#http.websocket:accept}
+
+Completes negotiation with a websocket client.
+
+  - `protocols` (optional) should be a lua table containing a sequence of protocols to to allow from the client
+
+Usually called after a successful [`new_from_stream`](#http.websocket.new_from_stream)
+
+
+### `websocket:connect(timeout)` <!-- --> {#http.websocket:connect}
+
+Connect to a websocket server.
+
+Usually called after a successful [`new_from_uri`](#http.websocket.new_from_uri)
+
+
+### `websocket:receive(timeout)` <!-- --> {#http.websocket:receive}
+
+Reads and returns the next data frame plus its opcode.
+Any ping frames received while reading will be responded to.
+
+The opcode `0x1` will be returned as `"text"` and `0x2` will be returned as `"binary"`.
+
+
+### `websocket:each()` <!-- --> {#http.websocket:each}
+
+Iterator over [`websocket:receive()`](#http.websocket:receive).
+
+
+### `websocket:send_frame(frame, timeout)` <!-- --> {#http.websocket:send_frame}
+
+Low level function to send a raw frame.
+
+
+### `websocket:send(data, opcode, timeout)` <!-- --> {#http.websocket:send}
+
+Send the given `data` as a data frame.
+
+  - `data` should be a string
+  - `opcode` can be a numeric opcode, `"text"` or `"binary"`. If `nil`, defaults to a text frame
+
+
+### `websocket:close(code, reason, timeout)` <!-- --> {#http.websocket:close}
+
+Closes the websocket connection.
+
+  - `code` defaults to `1000`
+  - `reason` is an optional string
+
+
+### Example
+
+```lua
+local websocket = require "http.websocket"
+local ws = websocket.new_from_uri("wss://echo.websocket.org")
+assert(ws:connect())
+assert(ws:send("koo-eee!"))
+local data = assert(ws:receive())
+assert(data == "koo-eee!")
+assert(ws:close())
+```
 
 
 ## http.zlib
