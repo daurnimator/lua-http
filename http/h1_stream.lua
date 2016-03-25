@@ -442,6 +442,9 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		if cl then
 			error("Content-Length not allowed in response with 1xx status code")
 		end
+		if status_code == "101" then
+			self.body_write_type = "switched protocol"
+		end
 	elseif not self.body_write_type then -- only figure out how to send the body if we haven't figured it out yet... TODO: use better check
 		if self.close_when_done == nil then
 			if self.connection.version == 1.0 or (self.type == "server" and self.peer_version == 1.0) then
