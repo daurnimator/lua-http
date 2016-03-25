@@ -63,6 +63,7 @@ describe("http.websocket module's internal functions work", function()
 end)
 describe("http.websocket module two sided tests", function()
 	local server = require "http.server"
+	local util = require "http.util"
 	local websocket = require "http.websocket"
 	local cs = require "cqueues.socket"
 	local cqueues = require "cqueues"
@@ -122,7 +123,7 @@ describe("http.websocket module two sided tests", function()
 			assert.truthy(cq:empty())
 		end)
 	end
-	it("works when using url constructor", function()
+	it("works when using uri string constructor", function()
 		local cq = cqueues.new()
 		local s = server.listen {
 			host = "localhost";
@@ -141,12 +142,41 @@ describe("http.websocket module two sided tests", function()
 			s:close()
 		end)
 		cq:wrap(function()
-			local ws = websocket.new_from_uri_t {
+			local ws = websocket.new_from_uri("ws://"..util.to_authority(host, port, "ws"));
+			assert(ws:connect())
+			assert(ws:close())
+		end)
+		assert_loop(cq, TEST_TIMEOUT)
+		assert.truthy(cq:empty())
+	end)
+	it("works when using uri table constructor and protocols", function()
+		local cq = cqueues.new()
+		local s = server.listen {
+			host = "localhost";
+			port = 0;
+		}
+		assert(s:listen())
+		local _, host, port = s:localname()
+		cq:wrap(function()
+			s:run(function (stream)
+				local headers = assert(stream:get_headers())
+				s:pause()
+				local ws = websocket.new_from_stream(headers, stream)
+				assert(ws:accept({"my awesome-protocol", "foo"}))
+				-- Should prefer client protocol preference
+				assert.same("foo", ws.protocol)
+				assert(ws:close())
+			end)
+			s:close()
+		end)
+		cq:wrap(function()
+			local ws = websocket.new_from_uri_t({
 				scheme = "ws";
 				host = host;
 				port = port;
-			}
+			}, {"foo", "my-awesome-protocol", "bar"})
 			assert(ws:connect())
+			assert.same("foo", ws.protocol)
 			assert(ws:close())
 		end)
 		assert_loop(cq, TEST_TIMEOUT)
