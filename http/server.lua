@@ -97,7 +97,8 @@ local function handle_client(conn, on_stream)
 	while true do
 		local stream, err, errno = conn:get_next_incoming_stream()
 		if stream == nil then
-			if (err == ce.EPIPE or errno == ce.ECONNRESET or errno == ce.ENOTCONN) and conn.socket:pending() == 0 then
+			if (err == ce.EPIPE or errno == ce.ECONNRESET or errno == ce.ENOTCONN)
+			  and (conn.socket == nil or conn.socket:pending() == 0) then
 				break
 			else
 				return nil, err, errno
