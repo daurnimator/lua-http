@@ -93,30 +93,6 @@ local function new_connect(uri, connect_authority)
 	return new_from_uri_t(uri_t, headers)
 end
 
-local function new_from_stream(stream)
-	local host, port
-	local ssl = stream:checktls()
-	local request_headers = stream:get_headers()
-	local scheme = request_headers:get(":scheme") or (ssl and "https" or "http")
-	if request_headers:has(":authority") then
-		host, port = http_util.split_authority(request_headers:get(":authority"), scheme)
-	else
-		local fam -- luacheck: ignore 231
-		fam, host, port = stream:localname()
-		host = ssl:getHostName() or host
-	end
-
-	local self = setmetatable({
-		host = host;
-		port = port;
-		tls = ssl ~= nil; -- TODO: create ssl context?
-		headers = request_headers;
-		body = stream:read_body_to_tmpfile(request_headers); -- TODO: doesn't make sense for CONNECT
-	}, request_mt)
-
-	return self
-end
-
 function request_methods:clone()
 	return setmetatable({
 		host = self.host;
@@ -349,7 +325,6 @@ return {
 	new_from_uri_t = new_from_uri_t;
 	new_from_uri = new_from_uri;
 	new_connect = new_connect;
-	new_from_stream = new_from_stream;
 	methods = request_methods;
 	mt = request_mt;
 }
