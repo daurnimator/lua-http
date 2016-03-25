@@ -4,6 +4,7 @@ describe("http.server module", function()
 	local client = require "http.client"
 	local new_headers = require "http.headers".new
 	local cqueues = require "cqueues"
+	local cs = require "cqueues.socket"
 	local function assert_loop(cq, timeout)
 		local ok, err, _, thd = cq:loop(timeout)
 		if not ok then
@@ -61,5 +62,36 @@ describe("http.server module", function()
 	end);
 	(require "http.tls".has_alpn and it or pending)("works with https 2.0", function()
 		simple_test(true, 2.0)
+	end)
+	it("taking socket from underlying connection is handled well by server", function()
+		local cq = cqueues.new()
+		local s = server.listen {
+			host = "localhost";
+			port = 0;
+		}
+		assert(s:listen())
+		local _, host, port = s:localname()
+		local on_stream = spy.new(function(stream)
+			local sock = stream.connection:take_socket()
+			s:pause()
+			assert.same("test", sock:read("*a"))
+			sock:close()
+		end)
+		cq:wrap(function()
+			s:run(on_stream)
+			s:close()
+		end)
+		cq:wrap(function()
+			local sock = cs.connect {
+				host = host;
+				port = port;
+			}
+			assert(sock:write("test"))
+			assert(sock:flush())
+			sock:close()
+		end)
+		assert_loop(cq, TEST_TIMEOUT)
+		assert.truthy(cq:empty())
+		assert.spy(on_stream).was.called()
 	end)
 end)
