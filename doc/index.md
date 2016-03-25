@@ -936,7 +936,9 @@ Defaults to `3` seconds.
 
 ### `websocket:connect(timeout)` <!-- --> {#http.websocket:connect}
 
-Try to connect to a websocket server.
+Connect to a websocket server.
+
+Usually called after a successful [`new_from_uri`](#http.websocket.new_from_uri)
 
 
 ### `websocket:receive(timeout)` <!-- --> {#http.websocket:receive}
