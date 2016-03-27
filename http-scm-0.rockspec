@@ -44,5 +44,6 @@ build = {
 		["http.websocket"] = "http/websocket.lua";
 		["http.zlib"] = "http/zlib.lua";
 		["http.compat.prosody"] = "http/compat/prosody.lua";
+		["http.compat.socket"] = "http/compat/socket.lua";
 	};
 }
