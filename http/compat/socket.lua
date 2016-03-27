@@ -89,7 +89,8 @@ function _M.request(reqt, b)
 				end
 			end)
 			req:set_body(function()
-				local ok, chunk, err = coroutine.resume(co)
+				-- Pass true through to coroutine to indicate success of last write
+				local ok, chunk, err = coroutine.resume(co, true)
 				if not ok then
 					error(chunk)
 				elseif err then
@@ -104,15 +105,15 @@ function _M.request(reqt, b)
 		if sink ~= nil then
 			get_body = function(stream, deadline) -- luacheck: ignore 431
 				local function res_body_source()
-					local ok, err = stream:get_next_chunk(deadline and deadline-monotime())
-					if not ok then
+					local chunk, err = stream:get_next_chunk(deadline and deadline-monotime())
+					if not chunk then
 						if err == ce.EPIPE then
 							return nil
 						else
 							return nil, err
 						end
 					end
-					return true
+					return chunk
 				end
 				-- This loop is the same as ltn12.pump.all
 				while true do
