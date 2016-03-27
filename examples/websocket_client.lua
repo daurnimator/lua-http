@@ -2,6 +2,7 @@
 Example of websocket client usage
 
   - Connects to the coinbase feed.
+	Documentation of feed: https://docs.exchange.coinbase.com/#websocket-feed
   - Sends a subscribe message
   - Prints off 5 messages
   - Close the socket and clean up.
