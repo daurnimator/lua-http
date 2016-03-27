@@ -35,6 +35,11 @@ local websocket_mt = {
 	__index = websocket_methods;
 }
 
+function websocket_mt:__tostring()
+	return string.format("http.websocket{type=%s;readyState=%d;protocol=%s}",
+		self.type, self.readyState, self.protocol)
+end
+
 local magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
 -- a nonce consisting of a randomly selected 16-byte value that has been base64-encoded
