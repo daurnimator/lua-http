@@ -381,6 +381,21 @@ function websocket_methods:each()
 	end, self
 end
 
+--[[ RFC 6455 Section 5.5.3:
+A Pong frame MAY be sent unsolicited. This serves as a unidirectional heartbeat.
+A response to an unsolicited Pong frame is not expected.]]
+function websocket_methods:send_pong(data, timeout)
+	return self:send_frame({
+		FIN = true;
+		--[[ RFC 6455
+		5.1: A server MUST NOT mask any frames that it sends to the client
+		6.1.5: If the data is being sent by the client, the frame(s) MUST be masked]]
+		MASK = self.type == "client";
+		opcode = 0xA;
+		data = data;
+	}, timeout)
+end
+
 local function new(type)
 	assert(type == "client" or type == "server")
 	local self = setmetatable({
