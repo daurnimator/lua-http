@@ -358,12 +358,8 @@ function websocket_methods:receive(timeout)
 				echos the status code it received.]]
 				return close_helper(self, status_code, message, deadline)
 			elseif frame.opcode == 0x9 then -- Ping frame
-				frame.opcode = 0xA
-				--[[ RFC 6455
-				5.1: A server MUST NOT mask any frames that it sends to the client
-				6.1.5: If the data is being sent by the client, the frame(s) MUST be masked]]
-				frame.MASK = self.type == "client";
-				if not self:send_frame(frame, deadline and (deadline-monotime())) then
+				local ok, err2 = self:send_pong(frame.data, deadline and (deadline-monotime()))
+				if not ok and err2 ~= ce.EPIPE then
 					return close_helper(self, 1002, "Pong failed", deadline)
 				end
 			elseif frame.opcode == 0xA then -- luacheck: ignore 542
