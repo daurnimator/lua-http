@@ -1,14 +1,25 @@
 --[[
 WebSocket module
-
 Specified in RFC-6455
+
+This code is partially based on MIT/X11 code Copyright (C) 2012 Florian Zeitz
 
 Design criteria:
   - Client API must work without an event loop
   - Borrow from the Browser Javascript WebSocket API when sensible
   - server-side API should mirror client-side API
+  - avoid reading data from the socket when the application doesn't want it
+	(and loosing our TCP provided backpressure)
 
-This code is partially based on MIT/X11 code Copyright (C) 2012 Florian Zeitz
+
+## Notes on websocket pings:
+
+  - You MAY not receive a pong for every ping you send.
+  - You MAY receive extra pongs
+
+These two facts together mean that you can't track pings.
+Hence pings are only useful to know if the peer is still connected.
+If the peer is sending *anything*, then you know they are still connected.
 ]]
 
 local basexx = require "basexx"
