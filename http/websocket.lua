@@ -26,6 +26,7 @@ local basexx = require "basexx"
 local spack = string.pack or require "compat53.string".pack
 local sunpack = string.unpack or require "compat53.string".unpack
 local unpack = table.unpack or unpack -- luacheck: ignore 113
+local utf8_len = (utf8 or require "compat53.utf8").len -- luacheck: ignore 113
 local cqueues = require "cqueues"
 local monotime = cqueues.monotime
 local ce = require "cqueues.errno"
@@ -329,14 +330,21 @@ function websocket_methods:receive(timeout)
 			end
 			if frame.FIN then
 				local databuffer_type = self.databuffer_type
-				self.databuffer_type = nil
+				local databuffer = table.concat(self.databuffer)
 				if databuffer_type == 0x1 then
 					databuffer_type = "text"
+					--[[ RFC 6455 8.1
+					When an endpoint is to interpret a byte stream as UTF-8 but finds
+					that the byte stream is not, in fact, a valid UTF-8 stream, that
+					endpoint MUST _Fail the WebSocket Connection_.]]
+					local valid_utf8, err_pos = utf8_len(databuffer)
+					if not valid_utf8 then
+						return close_helper(self, 1002, string.format("invalid utf-8 at position %d", err_pos))
+					end
 				elseif databuffer_type == 0x2 then
 					databuffer_type = "binary"
 				end
-				local databuffer = table.concat(self.databuffer)
-				self.databuffer = nil
+				self.databuffer_type, self.databuffer = nil, nil
 				return databuffer, databuffer_type
 			end
 		else -- Control frame
