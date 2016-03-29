@@ -1,4 +1,3 @@
-local TEST_TIMEOUT = 2
 describe("http.compat.prosody module", function()
 	local cqueues = require "cqueues"
 	local request = require "http.compat.prosody".request

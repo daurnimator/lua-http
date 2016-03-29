@@ -1,4 +1,3 @@
-local TEST_TIMEOUT = 2
 describe("http.server module", function()
 	local server = require "http.server"
 	local client = require "http.client"

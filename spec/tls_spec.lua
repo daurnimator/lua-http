@@ -1,4 +1,3 @@
-local TEST_TIMEOUT = 2
 describe("http.tls module", function()
 	local tls = require "http.tls"
 	local cqueues = require "cqueues"

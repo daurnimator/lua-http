@@ -1,4 +1,3 @@
-local TEST_TIMEOUT = 2
 describe("http.compat.socket module", function()
 	local http = require "http.compat.socket"
 	local new_headers = require "http.headers".new

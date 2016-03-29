@@ -1,4 +1,3 @@
-local TEST_TIMEOUT = 2
 describe("http.stream_common", function()
 	local h1_connection = require "http.h1_connection"
 	local new_headers = require "http.headers".new

@@ -1,4 +1,3 @@
-local TEST_TIMEOUT = 2
 describe("http.websocket module's internal functions work", function()
 	local websocket = require "http.websocket"
 	it("build_frame works for simple cases", function()

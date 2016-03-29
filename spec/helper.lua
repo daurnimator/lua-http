@@ -1,3 +1,5 @@
+TEST_TIMEOUT = 2
+
 -- Solves https://github.com/keplerproject/luacov/issues/38
 local cqueues = require "cqueues"
 local luacov_runner = require "luacov.runner"

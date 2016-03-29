@@ -1,4 +1,3 @@
-local TEST_TIMEOUT = 2
 describe("http2 connection", function()
 	local h2_connection = require "http.h2_connection"
 	local new_headers = require "http.headers".new
