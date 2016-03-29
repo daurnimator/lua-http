@@ -976,6 +976,20 @@ Send the given `data` as a data frame.
   - `opcode` can be a numeric opcode, `"text"` or `"binary"`. If `nil`, defaults to a text frame
 
 
+### `websocket:send_ping(data, timeout)` <!-- --> {#http.websocket:send_ping}
+
+Sends a ping frame.
+
+  - `data` is optional
+
+
+### `websocket:send_pong(data, timeout)` <!-- --> {#http.websocket:send_pong}
+
+Sends a pong frame. Works as a unidirectional keepalive.
+
+  - `data` is optional
+
+
 ### `websocket:close(code, reason, timeout)` <!-- --> {#http.websocket:close}
 
 Closes the websocket connection.
@@ -1068,6 +1082,27 @@ cq:wrap(function()
 	end)
 end)
 assert(cq:loop())
+```
+
+
+## http.compat.socket
+
+Provides compatibility with [luasocket's http.request module](w3.impa.br/~diego/software/luasocket/http.html).
+
+Differences:
+
+  - Will automatically be non-blocking when run inside a cqueues managed coroutine
+  - lua-http features (such as HTTP2) will be used where possible
+
+
+### Example {#http.compat.socket-example}
+
+Using the 'simple' interface as part of a normal script:
+
+```lua
+local socket_http = require "http.compat.socket"
+local body, code = assert(socket_http.request("http://lua.org"))
+print(code, #body) --> 200, 2514
 ```
 
 

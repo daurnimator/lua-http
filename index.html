@@ -289,6 +289,8 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.websocket:each"><code>websocket:each()</code> <!-- --></a></li>
 <li><a href="#http.websocket:send_frame"><code>websocket:send_frame(frame, timeout)</code> <!-- --></a></li>
 <li><a href="#http.websocket:send"><code>websocket:send(data, opcode, timeout)</code> <!-- --></a></li>
+<li><a href="#http.websocket:send_ping"><code>websocket:send_ping(data, timeout)</code> <!-- --></a></li>
+<li><a href="#http.websocket:send_pong"><code>websocket:send_pong(data, timeout)</code> <!-- --></a></li>
 <li><a href="#http.websocket:close"><code>websocket:close(code, reason, timeout)</code> <!-- --></a></li>
 <li><a href="#example-3">Example</a></li>
 </ul></li>
@@ -301,6 +303,9 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.compat.prosody">http.compat.prosody</a><ul>
 <li><a href="#http.compat.prosody.request"><code>request(url, ex, callback)</code> <!-- --></a></li>
 <li><a href="#http.compat.prosody-example">Example</a></li>
+</ul></li>
+<li><a href="#http.compat.socket">http.compat.socket</a><ul>
+<li><a href="#http.compat.socket-example">Example</a></li>
 </ul></li>
 </ul></li>
 <li><a href="#links">Links</a></li>
@@ -1159,6 +1164,20 @@ defaults to <code>false</code></p></li>
 <li><code>opcode</code> can be a numeric opcode, <code>&quot;text&quot;</code> or <code>&quot;binary&quot;</code>. If <code>nil</code>, defaults to a text frame</li>
 </ul>
 </section>
+<section id="http.websocket:send_ping" class="level3">
+<h3><code>websocket:send_ping(data, timeout)</code> <!-- --></h3>
+<p>Sends a ping frame.</p>
+<ul>
+<li><code>data</code> is optional</li>
+</ul>
+</section>
+<section id="http.websocket:send_pong" class="level3">
+<h3><code>websocket:send_pong(data, timeout)</code> <!-- --></h3>
+<p>Sends a pong frame. Works as a unidirectional keepalive.</p>
+<ul>
+<li><code>data</code> is optional</li>
+</ul>
+</section>
 <section id="http.websocket:close" class="level3">
 <h3><code>websocket:close(code, reason, timeout)</code> <!-- --></h3>
 <p>Closes the websocket connection.</p>
@@ -1236,6 +1255,22 @@ cq:wrap<span class="ot">(</span><span class="kw">function</span><span class="ot"
     <span class="kw">end</span><span class="ot">)</span>
 <span class="kw">end</span><span class="ot">)</span>
 <span class="fu">assert</span><span class="ot">(</span>cq:loop<span class="ot">())</span></code></pre></div>
+</section>
+</section>
+<section id="http.compat.socket" class="level2">
+<h2>http.compat.socket</h2>
+<p>Provides compatibility with <a href="w3.impa.br/~diego/software/luasocket/http.html">luasocket's http.request module</a>.</p>
+<p>Differences:</p>
+<ul>
+<li>Will automatically be non-blocking when run inside a cqueues managed coroutine</li>
+<li>lua-http features (such as HTTP2) will be used where possible</li>
+</ul>
+<section id="http.compat.socket-example" class="level3">
+<h3>Example</h3>
+<p>Using the 'simple' interface as part of a normal script:</p>
+<div class="sourceCode"><pre class="sourceCode lua"><code class="sourceCode lua"><span class="kw">local</span> socket_http <span class="ot">=</span> <span class="fu">require</span> <span class="st">&quot;http.compat.socket&quot;</span>
+<span class="kw">local</span> body<span class="ot">,</span> code <span class="ot">=</span> <span class="fu">assert</span><span class="ot">(</span>socket_http<span class="ot">.</span>request<span class="ot">(</span><span class="st">&quot;http://lua.org&quot;</span><span class="ot">))</span>
+<span class="fu">print</span><span class="ot">(</span>code<span class="ot">,</span> <span class="ot">#</span>body<span class="ot">)</span> <span class="co">--&gt; 200, 2514</span></code></pre></div>
 </section>
 </section>
 </section>
