@@ -4,15 +4,6 @@ describe("http.compat.socket module", function()
 	local server = require "http.server"
 	local util = require "http.util"
 	local cqueues = require "cqueues"
-	local function assert_loop(cq, timeout)
-		local ok, err, _, thd = cq:loop(timeout)
-		if not ok then
-			if thd then
-				err = debug.traceback(thd, err)
-			end
-			error(err, 2)
-		end
-	end
 	it("fails safely on an invalid host", function()
 		-- in the luasocket example they use 'wrong.host', but 'host' is now a valid TLD.
 		-- use 'wrong.invalid' instead for this test.

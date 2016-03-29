@@ -5,15 +5,6 @@ describe("http1 stream", function()
 	local ce = require "cqueues.errno"
 	local cs = require "cqueues.socket"
 	local cc = require "cqueues.condition"
-	local function assert_loop(cq, timeout)
-		local ok, err, _, thd = cq:loop(timeout)
-		if not ok then
-			if thd then
-				err = debug.traceback(thd, err)
-			end
-			error(err, 2)
-		end
-	end
 	local function new_pair(version)
 		local s, c = cs.pair()
 		s = h1_connection.new(s, "server", version)

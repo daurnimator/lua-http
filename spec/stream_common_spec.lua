@@ -3,15 +3,6 @@ describe("http.stream_common", function()
 	local new_headers = require "http.headers".new
 	local cqueues = require "cqueues"
 	local cs = require "cqueues.socket"
-	local function assert_loop(cq, timeout)
-		local ok, err, _, thd = cq:loop(timeout)
-		if not ok then
-			if thd then
-				err = debug.traceback(thd, err)
-			end
-			error(err, 2)
-		end
-	end
 	local function new_pair(version)
 		local s, c = cs.pair()
 		s = h1_connection.new(s, "server", version)

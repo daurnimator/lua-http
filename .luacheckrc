@@ -1,5 +1,8 @@
 std = "min"
 files["spec"] = {
 	std = "+busted";
-	new_globals = {"TEST_TIMEOUT"};
+	new_globals = {
+		"TEST_TIMEOUT";
+		"assert_loop";
+	};
 }

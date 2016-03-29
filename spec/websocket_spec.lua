@@ -66,15 +66,6 @@ describe("http.websocket module two sided tests", function()
 	local websocket = require "http.websocket"
 	local cs = require "cqueues.socket"
 	local cqueues = require "cqueues"
-	local function assert_loop(cq, timeout)
-		local ok, err, _, thd = cq:loop(timeout)
-		if not ok then
-			if thd then
-				err = debug.traceback(thd, err)
-			end
-			error(err, 2)
-		end
-	end
 	local function new_pair()
 		local c, s = cs.pair()
 		local ws_client = websocket.new("client")

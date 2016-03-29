@@ -5,15 +5,6 @@ describe("http2 connection", function()
 	local cs = require "cqueues.socket"
 	local cc = require "cqueues.condition"
 	local ce = require "cqueues.errno"
-	local function assert_loop(cq, timeout)
-		local ok, err, _, thd = cq:loop(timeout)
-		if not ok then
-			if thd then
-				err = debug.traceback(thd, err)
-			end
-			error(err, 2)
-		end
-	end
 	it("Rejects invalid #preface", function()
 		local function test_preface(text)
 			local c, s = cs.pair()
