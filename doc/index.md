@@ -976,6 +976,13 @@ Send the given `data` as a data frame.
   - `opcode` can be a numeric opcode, `"text"` or `"binary"`. If `nil`, defaults to a text frame
 
 
+### `websocket:send_ping(data, timeout)` <!-- --> {#http.websocket:send_ping}
+
+Sends a ping frame.
+
+  - `data` is optional
+
+
 ### `websocket:send_pong(data, timeout)` <!-- --> {#http.websocket:send_pong}
 
 Sends a pong frame. Works as a unidirectional keepalive.
