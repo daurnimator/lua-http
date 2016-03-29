@@ -224,10 +224,10 @@ function websocket_methods:send_frame(frame, timeout)
 end
 
 function websocket_methods:send(data, opcode, timeout)
+	assert(type(data) == "string")
 	if self.readyState >= 2 then
 		return nil, "WebSocket closed, unable to send data", ce.EPIPE
 	end
-	assert(type(data) == "string")
 	if opcode == "text" or opcode == nil then
 		opcode = 0x1
 	elseif opcode == "binary" then
