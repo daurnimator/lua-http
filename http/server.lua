@@ -162,10 +162,13 @@ local server_mt = {
 --[[ Starts listening on the given socket
 
 Takes a table of options:
+  - `.family`: protocol family
   - `.host`: address to bind to (required if not `.path`)
   - `.port`: port to bind to (optional if tls isn't `nil`, in which case defaults to 80 for `.tls == false` or 443 if `.tls == true`)
   - `.path`: path to UNIX socket (required if not `.host`)
   - `.v6only`: allow ipv6 only (no ipv4-mapped-ipv6)
+  - `.mode`: fchmod or chmod socket after creating UNIX domain socket
+  - `.mask`: set and restore umask when binding UNIX domain socket
   - `.reuseaddr`: turn on SO_REUSEADDR flag?
   - `.reuseport`: turn on SO_REUSEPORT flag?
   - `.tls`: `nil`: allow both tls and non-tls connections
@@ -200,12 +203,15 @@ local function listen(tbl)
 		end
 	end
 	local s = assert(cs.listen{
+		family = tbl.family;
 		host = host;
 		port = port;
 		path = path;
-		v6only = tbl.v6only;
+		mode = tbl.mode;
+		mask = tbl.mask;
 		reuseaddr = tbl.reuseaddr;
 		reuseport = tbl.reuseport;
+		v6only = tbl.v6only;
 	})
 	-- Return errors rather than throwing
 	s:onerror(function(s, op, why, lvl) -- luacheck: ignore 431 212
