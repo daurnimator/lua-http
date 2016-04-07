@@ -153,7 +153,7 @@ end
 
 local function read_frame(sock, deadline)
 	local frame do
-		local first_2, err, errno = sock:xread(2, deadline and (deadline-monotime()))
+		local first_2, err, errno = sock:xread(2, "b", deadline and (deadline-monotime()))
 		if not first_2 then
 			return nil, err, errno
 		end
@@ -173,13 +173,13 @@ local function read_frame(sock, deadline)
 	end
 
 	if frame.length == 126 then
-		local length, err, errno = sock:xread(2, deadline and (deadline-monotime()))
+		local length, err, errno = sock:xread(2, "b", deadline and (deadline-monotime()))
 		if not length then
 			return nil, err, errno
 		end
 		frame.length = sunpack(">I2", length)
 	elseif frame.length == 127 then
-		local length, err, errno = sock:xread(8, deadline and (deadline-monotime()))
+		local length, err, errno = sock:xread(8, "b", deadline and (deadline-monotime()))
 		if not length then
 			return nil, err, errno
 		end
@@ -187,7 +187,7 @@ local function read_frame(sock, deadline)
 	end
 
 	if frame.MASK then
-		local key, err, errno = sock:xread(4, deadline and (deadline-monotime()))
+		local key, err, errno = sock:xread(4, "b", deadline and (deadline-monotime()))
 		if not key then
 			return nil, err, errno
 		end
@@ -195,7 +195,7 @@ local function read_frame(sock, deadline)
 	end
 
 	do
-		local data, err, errno = sock:xread(frame.length, deadline and (deadline-monotime()))
+		local data, err, errno = sock:xread(frame.length, "b", deadline and (deadline-monotime()))
 		if data == nil then
 			return nil, err, errno
 		end
@@ -225,7 +225,7 @@ function websocket_methods:send_frame(frame, timeout)
 	if self.readyState < 1 or self.readyState > 2 then
 		return nil, ce.strerror(ce.EPIPE), ce.EPIPE
 	end
-	local ok, err, errno = self.socket:xwrite(build_frame(frame), "n", timeout)
+	local ok, err, errno = self.socket:xwrite(build_frame(frame), "bn", timeout)
 	if not ok then
 		return nil, err, errno
 	end
