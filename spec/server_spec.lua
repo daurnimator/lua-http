@@ -12,14 +12,11 @@ describe("http.server module", function()
 		}
 		if family == cs.AF_UNIX then
 			local socket_path = os.tmpname()
-			-- On many POSIX systems, tmpname() creates the file to prevent
-			-- races; however, bind() on UNIX sockets ignores SO_REUSEADDR,
-			-- so we have to unlink first.
-			os.remove(socket_path)
 			finally(function()
 				os.remove(socket_path)
 			end)
 			options.path = socket_path
+			options.unlink = true
 		else
 			options.host = "localhost"
 			options.port = 0

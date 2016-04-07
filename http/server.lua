@@ -169,6 +169,7 @@ Takes a table of options:
   - `.v6only`: allow ipv6 only (no ipv4-mapped-ipv6)
   - `.mode`: fchmod or chmod socket after creating UNIX domain socket
   - `.mask`: set and restore umask when binding UNIX domain socket
+  - `.unlink`: unlink socket path before binding?
   - `.reuseaddr`: turn on SO_REUSEADDR flag?
   - `.reuseport`: turn on SO_REUSEPORT flag?
   - `.tls`: `nil`: allow both tls and non-tls connections
@@ -209,6 +210,7 @@ local function listen(tbl)
 		path = path;
 		mode = tbl.mode;
 		mask = tbl.mask;
+		unlink = tbl.unlink;
 		reuseaddr = tbl.reuseaddr;
 		reuseport = tbl.reuseport;
 		v6only = tbl.v6only;
