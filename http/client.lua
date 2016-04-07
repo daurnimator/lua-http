@@ -80,6 +80,7 @@ local function connect(options, timeout)
 		family = options.family;
 		host = options.host;
 		port = options.port;
+		path = options.path;
 		sendname = options.sendname;
 		v6only = options.v6only;
 		nodelay = true;

@@ -186,6 +186,8 @@ Creates a new connection to an HTTP server.
 	  - `port` (string|integer): port to connect to in numeric form  
 		e.g. `"80"` or `80`  
 
+	  - `path` (string): path to connect to (UNIX sockets)
+
 	  - `sendname` (string|boolean, optional): the [TLS SNI](https://en.wikipedia.org/wiki/Server_Name_Indication) host to send.  
 		defaults to `true`  
 		  - `true` indicates to copy the `host` field

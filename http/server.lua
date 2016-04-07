@@ -162,8 +162,9 @@ local server_mt = {
 --[[ Starts listening on the given socket
 
 Takes a table of options:
-  - `.host`: address to bind to (required)
+  - `.host`: address to bind to (required if not `.path`)
   - `.port`: port to bind to (optional if tls isn't `nil`, in which case defaults to 80 for `.tls == false` or 443 if `.tls == true`)
+  - `.path`: path to UNIX socket (required if not `.host`)
   - `.v6only`: allow ipv6 only (no ipv4-mapped-ipv6)
   - `.reuseaddr`: turn on SO_REUSEADDR flag?
   - `.reuseport`: turn on SO_REUSEPORT flag?
@@ -177,9 +178,11 @@ Takes a table of options:
 ]]
 local function listen(tbl)
 	local tls = tbl.tls
-	local host = assert(tbl.host, "need host")
+	local host = tbl.host
+	local path = tbl.path
+	assert(host or path, "need host or path")
 	local port = tbl.port
-	if port == nil then
+	if host and port == nil then
 		if tls == true then
 			port = "443"
 		elseif tls == false then
@@ -190,11 +193,16 @@ local function listen(tbl)
 	end
 	local ctx = tbl.ctx
 	if ctx == nil and tls ~= false then
-		ctx = new_ctx(host)
+		if host then
+			ctx = new_ctx(host)
+		else
+			error("Custom OpenSSL context required when using a UNIX domain socket")
+		end
 	end
 	local s = assert(cs.listen{
 		host = host;
 		port = port;
+		path = path;
 		v6only = tbl.v6only;
 		reuseaddr = tbl.reuseaddr;
 		reuseport = tbl.reuseport;
