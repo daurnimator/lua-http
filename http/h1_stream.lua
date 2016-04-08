@@ -372,7 +372,15 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		return nil, ce.EPIPE
 	end
 	local status_code, method
-	if self.type == "server" then
+	local is_trailers
+	if self.body_write_type == "chunked" then
+		-- we are writing trailers; close off body
+		is_trailers = true
+		local ok, err, errno = self.connection:write_body_last_chunk(nil, deadline and deadline-monotime())
+		if not ok then
+			return nil, err, errno
+		end
+	elseif self.type == "server" then
 		if self.state == "idle" then
 			error("cannot write headers when stream is idle")
 		end
@@ -615,9 +623,17 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 	end
 
 	if end_stream then
-		local ok, err, errno = self:write_chunk("", true)
-		if not ok then
-			return nil, err, errno
+		if is_trailers then
+			if self.state == "half closed (remote)" then
+				self:set_state("closed")
+			else
+				self:set_state("half closed (local)")
+			end
+		else
+			local ok, err, errno = self:write_chunk("", true)
+			if not ok then
+				return nil, err, errno
+			end
 		end
 	end
 
@@ -711,6 +727,7 @@ function stream_methods:unget(str)
 	end
 end
 
+local empty_headers = new_headers()
 function stream_methods:write_chunk(chunk, end_stream, timeout)
 	if self.state ~= "open" and self.state ~= "half closed (remote)" then
 		error("cannot write chunk when stream is " .. self.state)
@@ -725,25 +742,13 @@ function stream_methods:write_chunk(chunk, end_stream, timeout)
 		chunk = self.body_write_deflate(chunk, end_stream)
 	end
 	if self.body_write_type == "chunked" then
-		local deadline = timeout and (monotime()+timeout)
 		if #chunk > 0 then
+			local deadline = timeout and monotime()+timeout
 			local ok, err, errno = self.connection:write_body_chunk(chunk, nil, timeout)
 			if not ok then
 				return nil, err, errno
 			end
 			timeout = deadline and (deadline-monotime())
-		end
-		if end_stream then
-			local ok, err, errno = self.connection:write_body_last_chunk(nil, timeout)
-			if not ok then
-				return nil, err, errno
-			end
-			-- TODO: trailers?
-			timeout = deadline and (deadline-monotime())
-			ok, err, errno = self.connection:write_headers_done(timeout)
-			if not ok then
-				return nil, err, errno
-			end
 		end
 	elseif self.body_write_type == "length" then
 		if #chunk > 0 then
@@ -752,9 +757,6 @@ function stream_methods:write_chunk(chunk, end_stream, timeout)
 				return nil, err, errno
 			end
 			self.body_write_left = self.body_write_left - #chunk
-		end
-		if end_stream then
-			assert(self.body_write_left == 0, "invalid content-length")
 		end
 	elseif self.body_write_type == "close" then
 		if #chunk > 0 then
@@ -768,6 +770,11 @@ function stream_methods:write_chunk(chunk, end_stream, timeout)
 	end
 	self.stats_sent = self.stats_sent + orig_size
 	if end_stream then
+		if self.body_write_type == "chunked" then
+			return self:write_headers(empty_headers, true, timeout)
+		elseif self.body_write_type == "length" then
+			assert(self.body_write_left == 0, "invalid content-length")
+		end
 		if self.state == "half closed (remote)" then
 			self:set_state("closed")
 		else
