@@ -159,9 +159,41 @@ local server_mt = {
 	__index = server_methods;
 }
 
---[[ Starts listening on the given socket
+--[[ Creates a new server object
 
 Takes a table of options:
+  - `.socket`: A cqueues socket object
+  - `.tls`: `nil`: allow both tls and non-tls connections
+  -         `true`: allows tls connections only
+  -         `false`: allows non-tls connections only
+  - `.ctx`: an `openssl.ssl.context` object to use for tls connections
+  - `       `nil`: a self-signed context will be generated
+  - `.max_concurrent`: Maximum number of connections to allow live at a time (default: infinity)
+  - `.client_timeout`: Timeout (in seconds) to wait for client to send first bytes and/or complete TLS handshake (default: 10)
+]]
+local function new_server(tbl)
+	local socket = assert(tbl.socket)
+
+	-- Return errors rather than throwing
+	socket:onerror(function(s, op, why, lvl) -- luacheck: ignore 431 212
+		return why
+	end)
+
+	return setmetatable({
+		socket = socket;
+		tls = tbl.tls;
+		ctx = tbl.ctx;
+		max_concurrent = tbl.max_concurrent;
+		n_connections = 0;
+		pause_cond = cc.new();
+		paused = true;
+		connection_done = cc.new(); -- signalled when connection has been closed
+		client_timeout = tbl.client_timeout;
+	}, server_mt)
+end
+
+--[[
+Extra options:
   - `.family`: protocol family
   - `.host`: address to bind to (required if not `.path`)
   - `.port`: port to bind to (optional if tls isn't `nil`, in which case defaults to 80 for `.tls == false` or 443 if `.tls == true`)
@@ -172,13 +204,6 @@ Takes a table of options:
   - `.unlink`: unlink socket path before binding?
   - `.reuseaddr`: turn on SO_REUSEADDR flag?
   - `.reuseport`: turn on SO_REUSEPORT flag?
-  - `.tls`: `nil`: allow both tls and non-tls connections
-  -         `true`: allows tls connections only
-  -         `false`: allows non-tls connections only
-  - `.ctx`: an `openssl.ssl.context` object to use for tls connections
-  - `       `nil`: a self-signed context will be generated
-  - `.max_concurrent`: Maximum number of connections to allow live at a time (default: infinity)
-  - `.client_timeout`: Timeout (in seconds) to wait for client to send first bytes and/or complete TLS handshake (default: 10)
 ]]
 local function listen(tbl)
 	local tls = tbl.tls
@@ -215,22 +240,13 @@ local function listen(tbl)
 		reuseport = tbl.reuseport;
 		v6only = tbl.v6only;
 	})
-	-- Return errors rather than throwing
-	s:onerror(function(s, op, why, lvl) -- luacheck: ignore 431 212
-		return why
-	end)
-
-	return setmetatable({
+	return new_server {
 		socket = s;
 		tls = tls;
 		ctx = ctx;
 		max_concurrent = tbl.max_concurrent;
-		n_connections = 0;
-		pause_cond = cc.new();
-		paused = true;
-		connection_done = cc.new(); -- signalled when connection has been closed
 		client_timeout = tbl.client_timeout;
-	}, server_mt)
+	}
 end
 
 -- Actually wait for and *do* the binding
@@ -307,5 +323,6 @@ function server_methods:run(on_stream, cq)
 end
 
 return {
+	new = new_server;
 	listen = listen;
 }
