@@ -330,4 +330,5 @@ end
 return {
 	new = new_server;
 	listen = listen;
+	mt = server_mt;
 }
