@@ -272,7 +272,7 @@ function server_methods:close()
 end
 
 function server_methods:run(on_stream, cq)
-	cq = cq or cqueues.running()
+	cq = assert(cq or cqueues.running())
 	self.paused = false
 	repeat
 		if self.n_connections >= self.max_concurrent then
