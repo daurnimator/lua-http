@@ -338,11 +338,26 @@ function stream_methods:read_headers(timeout)
 end
 
 function stream_methods:get_headers(timeout)
-	if self.headers_fifo:length() == 0 then
-		-- TODO: locking?
-		return self:read_headers(timeout)
+	if self.headers_fifo:length() > 0 then
+		return self.headers_fifo:pop()
 	end
-	return self.headers_fifo:pop()
+	if self.body_read_type == "chunked" then
+		-- wait for signal from trailers
+		-- XXX: what if nothing is reading body?
+		local deadline = timeout and monotime() + timeout
+		repeat
+			if self.state == "closed" or self.state == "half closed (remote)" then
+				return nil, ce.EPIPE
+			end
+			if not self.headers_cond:wait(timeout) then
+				return nil, ce.ETIMEDOUT
+			end
+			timeout = deadline and deadline-monotime()
+		until self.headers_fifo:length() > 0
+		return self.headers_fifo:pop()
+	end
+	-- TODO: locking?
+	return self:read_headers(timeout)
 end
 
 local ignore_fields = {
