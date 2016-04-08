@@ -11,6 +11,8 @@ local x509 = require "openssl.x509"
 local name = require "openssl.x509.name"
 local altname = require "openssl.x509.altname"
 
+local hang_timeout = 0.03
+
 local function onerror(socket, op, why, lvl) -- luacheck: ignore 212
 	if why == ce.EPIPE or why == ce.ETIMEDOUT then
 		return why
@@ -276,22 +278,25 @@ function server_methods:run(on_stream, cq)
 	self.paused = false
 	repeat
 		if self.n_connections >= self.max_concurrent then
-			self.connection_done:wait()
+			cqueues.poll(self.connection_done, self.pause_cond)
+			if self.paused then
+				break
+			end
 		end
-		local socket, accept_err = self.socket:accept({nodelay = true;}, 0)
+		local socket, accept_errno = self.socket:accept({nodelay = true;}, 0)
 		if socket == nil then
-			if accept_err == ce.ETIMEDOUT then
+			if accept_errno == ce.ETIMEDOUT then
 				-- Yield this thread until a client arrives or server paused
 				cqueues.poll(self.socket, self.pause_cond)
-			elseif accept_err == ce.EMFILE then
+			elseif accept_errno == ce.EMFILE then
 				-- Wait for another request to finish
-				if not self.connection_done:wait(0.1) then
-					-- If we're stuck waiting for more than 100ms, run a garbage collection sweep
+				if cqueues.poll(self.connection_done, self.pause_cond, hang_timeout) == hang_timeout then
+					-- If we're stuck waiting, run a garbage collection sweep
 					-- This can prevent a hang
 					collectgarbage()
 				end
 			else
-				error(ce.strerror(accept_err))
+				return nil, ce.strerror(accept_errno), accept_errno
 			end
 		else
 			self.n_connections = self.n_connections + 1
