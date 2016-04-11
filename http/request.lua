@@ -9,6 +9,9 @@ local monotime = require "cqueues".monotime
 local ce = require "cqueues.errno"
 
 local request_methods = {
+	h2_settings = {
+		[0x2] = false; -- disable PUSH
+	};
 	expect_100_timeout = 1;
 	follow_redirects = true;
 	max_redirects = 5;
@@ -94,12 +97,24 @@ local function new_connect(uri, connect_authority)
 end
 
 function request_methods:clone()
+	local h2_settings = rawget(self, "h2_settings")
+	if h2_settings then
+		h2_settings = {
+			[0x1] = h2_settings[0x1];
+			[0x2] = h2_settings[0x2];
+			[0x3] = h2_settings[0x3];
+			[0x4] = h2_settings[0x4];
+			[0x5] = h2_settings[0x5];
+			[0x6] = h2_settings[0x6];
+		}
+	end
 	return setmetatable({
 		host = self.host;
 		port = self.port;
 		tls = self.tls;
 		sendname = self.sendname;
 		version = self.version;
+		h2_settings = h2_settings;
 
 		headers = self.headers:clone();
 		body = self.body;
@@ -138,6 +153,7 @@ function request_methods:new_stream(timeout)
 		tls = self.tls;
 		sendname = self.sendname;
 		version = self.version;
+		h2_settings = self.h2_settings;
 	}, timeout)
 	if connection == nil then
 		return nil, err, errno
