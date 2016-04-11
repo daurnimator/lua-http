@@ -236,6 +236,9 @@ local function connect(socks_uri, options, timeout)
 	local username, password
 	if uri_t.userinfo then
 		username, password = uri_t.userinfo:match("^([^:]*):(.*)$")
+		if username == nil then
+			error("invalid username/password format")
+		end
 		username = http_util.decodeURIComponent(username)
 		password = http_util.decodeURIComponent(password)
 	end
