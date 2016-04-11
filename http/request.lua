@@ -80,9 +80,9 @@ local function new_from_uri_t(uri_t, headers)
 	return self
 end
 
-local function new_from_uri(uri)
+local function new_from_uri(uri, ...)
 	local uri_t = assert(uri_patt:match(uri), "invalid URI")
-	return new_from_uri_t(uri_t)
+	return new_from_uri_t(uri_t, ...)
 end
 
 local function new_connect(uri, connect_authority)
