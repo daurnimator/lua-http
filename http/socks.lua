@@ -21,8 +21,9 @@ local http_util = require "http.util"
 local client = require "http.client"
 
 local EOF = require "lpeg".P(-1)
-local IPv4address = require "lpeg_patterns.IPv4".IPv4address * EOF
-local IPv6address = require "lpeg_patterns.IPv6".IPv6address * EOF
+local IPv4address = require "lpeg_patterns.IPv4".IPv4address
+local IPv6address = require "lpeg_patterns.IPv6".IPv6address
+local IPaddress = (IPv4address + IPv6address) * EOF
 
 -- RFC 1929
 local function username_password_auth(s, username, password, deadline)
@@ -220,11 +221,14 @@ end
 local function connect(socks_uri, options, timeout)
 	local deadline = timeout and (monotime()+timeout)
 	local uri_t = assert(uri_patts.uri:match(socks_uri), "invalid URI")
-	local resolve_locally
+	local host = IPaddress:match(options.host)
 	if uri_t.scheme == "socks5" then
-		resolve_locally = true
+		host = options.host
 	elseif uri_t.scheme == "socks5h" then
-		resolve_locally = false
+		if host == nil then
+			-- need to resolve locally
+			error("NYI")
+		end
 	else
 		error("only SOCKS5 proxys supported")
 	end
@@ -252,15 +256,6 @@ local function connect(socks_uri, options, timeout)
 		end
 	end
 	local dst_fam, dst_host, dst_port do
-		local host = IPv4address:match(options.host)
-			or IPv6address:match(options.host)
-		if host == nil then
-			if resolve_locally then
-				error("NYI")
-			else
-				host = options.host
-			end
-		end
 		dst_fam, dst_host, dst_port = socks5_negotiate_deadline(s, {
 			host = host;
 			port = options.port;
