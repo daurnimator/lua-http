@@ -161,6 +161,11 @@ local server_mt = {
 	__index = server_methods;
 }
 
+function server_mt:__tostring()
+	return string.format("http.server{socket=%s;n_connections=%d}",
+		tostring(self.socket), self.n_connections)
+end
+
 --[[ Creates a new server object
 
 Takes a table of options:
