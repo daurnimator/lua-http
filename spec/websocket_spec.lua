@@ -60,6 +60,13 @@ describe("http.websocket module's internal functions work", function()
 		assert.same({1000, "error"}, {websocket.parse_close "\3\232error"})
 	end)
 end)
+describe("http.websocket", function()
+	local websocket = require "http.websocket"
+	it("__tostring works", function()
+		local ws = websocket.new_from_uri("wss://example.com")
+		assert.same("http.websocket{", tostring(ws):match("^.-%{"))
+	end)
+end)
 describe("http.websocket module two sided tests", function()
 	local server = require "http.server"
 	local util = require "http.util"
