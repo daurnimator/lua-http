@@ -332,8 +332,10 @@ function server_methods:close()
 	self.cq:reset()
 	cqueues.poll()
 	cqueues.poll()
-	self.socket:close()
-	self.socket = nil
+	if self.socket then
+		self.socket:close()
+		self.socket = nil
+	end
 end
 
 function server_methods:pollfd()
