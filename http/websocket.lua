@@ -691,6 +691,8 @@ return {
 	new_from_uri_t = new_from_uri_t;
 	new_from_uri = new_from_uri;
 	new_from_stream = new_from_stream;
+	methods = websocket_methods;
+	mt = websocket_mt;
 
 	new = new;
 	build_frame = build_frame;
