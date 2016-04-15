@@ -136,7 +136,7 @@ function request_methods:to_url()
 	end
 	local authorization = self.headers:get(authorization_field)
 	if authorization then
-		local auth_type, userinfo = authorization:match("(%S+)%s*(%S+)")
+		local auth_type, userinfo = authorization:match("^%s*(%S+)%s+(%S+)%s*$")
 		if auth_type and auth_type:lower() == "basic" then
 			userinfo = basexx.from_base64(userinfo)
 			userinfo = http_util.encodeURI(userinfo)
