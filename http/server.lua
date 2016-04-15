@@ -94,22 +94,73 @@ local function wrap_socket(self, socket, deadline)
 	return conn, is_h2
 end
 
--- this function *should never throw*
-local function handle_client(conn, on_stream)
+local function on_connection(self, conn)
+	local cq = cqueues.running()
+	local err, errno
 	while true do
-		local stream, err, errno = conn:get_next_incoming_stream()
+		local stream
+		stream, err, errno = conn:get_next_incoming_stream()
 		if stream == nil then
-			if (err == ce.EPIPE or errno == ce.ECONNRESET or errno == ce.ENOTCONN)
-			  and (conn.socket == nil or conn.socket:pending() == 0) then
-				break
-			else
-				return nil, err, errno
-			end
+			break
 		end
-		on_stream(stream)
+		cq:wrap(self.on_stream, self, stream)
 	end
 	-- wait for streams to complete?
-	return true
+	conn:close()
+	self.n_connections = self.n_connections - 1
+	self.connection_done:signal(1)
+	if (err ~= ce.EPIPE and errno ~= ce.ECONNRESET and errno ~= ce.ENOTCONN)
+	  or (cs.type(conn.socket) == "socket" and conn.socket:pending() ~= 0) then
+		error(err)
+	end
+end
+
+local function server_loop(self)
+	local cq = cqueues.running()
+	while true do
+		if self.n_connections >= self.max_concurrent then
+			cqueues.poll(self.connection_done)
+		end
+		if self.paused then
+			cqueues.poll(self.pause_cond)
+		end
+		if not self.socket then
+			-- closed
+			break
+		end
+		local socket, accept_errno = self.socket:accept({nodelay = true;}, 0)
+		if socket == nil then
+			if accept_errno == ce.ETIMEDOUT then
+				-- Yield this thread until a client arrives
+				cqueues.poll(self.socket)
+			elseif accept_errno == ce.EMFILE then
+				-- Wait for another request to finish
+				if cqueues.poll(self.connection_done, hang_timeout) == hang_timeout then
+					-- If we're stuck waiting, run a garbage collection sweep
+					-- This can prevent a hang
+					collectgarbage()
+				end
+			else
+				error(ce.strerror(accept_errno))
+			end
+		else
+			self.n_connections = self.n_connections + 1
+			cq:wrap(function()
+				local conn, is_h2, errno = wrap_socket(self, socket)
+				if not conn then
+					local err = is_h2
+					socket:close()
+					if err ~= ce.EPIPE -- client closed connection
+						and err ~= ce.ETIMEDOUT -- an operation timed out
+						and errno ~= ce.ECONNRESET then
+						error(err)
+					end
+				else
+					cqueues.running():wrap(on_connection, self, conn)
+				end
+			end)
+		end
+	end
 end
 
 -- Prefer whichever comes first
@@ -175,23 +226,32 @@ Takes a table of options:
 ]]
 local function new_server(tbl)
 	local socket = assert(tbl.socket)
+	local on_stream = assert(tbl.on_stream)
+
+	local cq = cqueues.new()
 
 	-- Return errors rather than throwing
 	socket:onerror(function(s, op, why, lvl) -- luacheck: ignore 431 212
 		return why
 	end)
 
-	return setmetatable({
+	local self = setmetatable({
+		cq = cq;
 		socket = socket;
+		on_stream = on_stream;
 		tls = tbl.tls;
 		ctx = tbl.ctx;
 		max_concurrent = tbl.max_concurrent;
 		n_connections = 0;
 		pause_cond = cc.new();
-		paused = true;
+		paused = false;
 		connection_done = cc.new(); -- signalled when connection has been closed
 		client_timeout = tbl.client_timeout;
 	}, server_mt)
+
+	cq:wrap(server_loop, self)
+
+	return self
 end
 
 --[[
@@ -244,6 +304,7 @@ local function listen(tbl)
 	})
 	return new_server {
 		socket = s;
+		on_stream = tbl.on_stream;
 		tls = tls;
 		ctx = ctx;
 		max_concurrent = tbl.max_concurrent;
@@ -267,64 +328,36 @@ function server_methods:pause()
 end
 
 function server_methods:close()
-	self:pause()
+	cqueues.cancel(self.cq:pollfd())
+	self.cq:reset()
 	cqueues.poll()
 	cqueues.poll()
 	self.socket:close()
+	self.socket = nil
 end
 
-function server_methods:run(on_stream, cq)
-	cq = assert(cq or cqueues.running())
-	self.paused = false
-	repeat
-		if self.n_connections >= self.max_concurrent then
-			cqueues.poll(self.connection_done, self.pause_cond)
-			if self.paused then
-				break
-			end
-		end
-		local socket, accept_errno = self.socket:accept({nodelay = true;}, 0)
-		if socket == nil then
-			if accept_errno == ce.ETIMEDOUT then
-				-- Yield this thread until a client arrives or server paused
-				cqueues.poll(self.socket, self.pause_cond)
-			elseif accept_errno == ce.EMFILE then
-				-- Wait for another request to finish
-				if cqueues.poll(self.connection_done, self.pause_cond, hang_timeout) == hang_timeout then
-					-- If we're stuck waiting, run a garbage collection sweep
-					-- This can prevent a hang
-					collectgarbage()
-				end
-			else
-				return nil, ce.strerror(accept_errno), accept_errno
-			end
-		else
-			self.n_connections = self.n_connections + 1
-			cq:wrap(function()
-				local ok, err
-				local conn, is_h2, errno = wrap_socket(self, socket)
-				if not conn then
-					err = is_h2
-					socket:close()
-					if errno == ce.ECONNRESET then
-						ok = true
-					end
-				else
-					ok, err = handle_client(conn, on_stream)
-					conn:close()
-				end
-				self.n_connections = self.n_connections - 1
-				self.connection_done:signal(1)
-				if not ok
-					and err ~= ce.EPIPE -- client closed connection
-					and err ~= ce.ETIMEDOUT -- an operation timed out
-				then
-					error(err)
-				end
-			end)
-		end
-	until self.paused
-	return true
+function server_methods:pollfd()
+	return self.cq:pollfd()
+end
+
+function server_methods:events()
+	return self.cq:events()
+end
+
+function server_methods:timeout()
+	return self.cq:timeout()
+end
+
+function server_methods:empty()
+	return self.cq:empty()
+end
+
+function server_methods:step(...)
+	return self.cq:step(...)
+end
+
+function server_methods:loop(...)
+	return self.cq:loop(...)
 end
 
 return {

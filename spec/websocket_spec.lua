@@ -206,18 +206,18 @@ describe("http.websocket module two sided tests", function()
 		local s = server.listen {
 			host = "localhost";
 			port = 0;
+			on_stream = function(s, stream)
+				local headers = assert(stream:get_headers())
+				local ws = websocket.new_from_stream(headers, stream)
+				assert(ws:accept())
+				assert(ws:close())
+				s:close()
+			end;
 		}
 		assert(s:listen())
 		local _, host, port = s:localname()
 		cq:wrap(function()
-			s:run(function (stream)
-				local headers = assert(stream:get_headers())
-				s:pause()
-				local ws = websocket.new_from_stream(headers, stream)
-				assert(ws:accept())
-				assert(ws:close())
-			end)
-			s:close()
+			assert_loop(s)
 		end)
 		cq:wrap(function()
 			local ws = websocket.new_from_uri("ws://"..util.to_authority(host, port, "ws"));
@@ -232,20 +232,20 @@ describe("http.websocket module two sided tests", function()
 		local s = server.listen {
 			host = "localhost";
 			port = 0;
-		}
-		assert(s:listen())
-		local _, host, port = s:localname()
-		cq:wrap(function()
-			s:run(function (stream)
+			on_stream = function(s, stream)
 				local headers = assert(stream:get_headers())
-				s:pause()
 				local ws = websocket.new_from_stream(headers, stream)
 				assert(ws:accept({"my awesome-protocol", "foo"}))
 				-- Should prefer client protocol preference
 				assert.same("foo", ws.protocol)
 				assert(ws:close())
-			end)
-			s:close()
+				s:close()
+			end;
+		}
+		assert(s:listen())
+		local _, host, port = s:localname()
+		cq:wrap(function()
+			assert_loop(s)
 		end)
 		cq:wrap(function()
 			local ws = websocket.new_from_uri_t({

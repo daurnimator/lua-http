@@ -21,16 +21,16 @@ describe("http.server module", function()
 			options.host = "localhost"
 			options.port = 0
 		end
-		local s = server.listen(options)
-		assert(s:listen())
-		local on_stream = spy.new(function(stream)
+		local on_stream = spy.new(function(s, stream)
 			stream:get_headers()
 			stream:shutdown()
-			s:pause()
-		end)
-		cq:wrap(function()
-			s:run(on_stream)
 			s:close()
+		end)
+		options.on_stream = on_stream
+		local s = server.listen(options)
+		assert(s:listen())
+		cq:wrap(function()
+			assert_loop(s)
 		end)
 		cq:wrap(function()
 			local client_path
@@ -89,21 +89,21 @@ describe("http.server module", function()
 	end)
 	it("taking socket from underlying connection is handled well by server", function()
 		local cq = cqueues.new()
+		local on_stream = spy.new(function(s, stream)
+			local sock = stream.connection:take_socket()
+			s:close()
+			assert.same("test", sock:read("*a"))
+			sock:close()
+		end);
 		local s = server.listen {
 			host = "localhost";
 			port = 0;
+			on_stream = on_stream;
 		}
 		assert(s:listen())
 		local _, host, port = s:localname()
-		local on_stream = spy.new(function(stream)
-			local sock = stream.connection:take_socket()
-			s:pause()
-			assert.same("test", sock:read("*a"))
-			sock:close()
-		end)
 		cq:wrap(function()
-			s:run(on_stream)
-			s:close()
+			assert_loop(s)
 		end)
 		cq:wrap(function()
 			local sock = cs.connect {
