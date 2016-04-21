@@ -188,6 +188,13 @@ describe("low level http 1 connection operations", function()
 		}
 	end)
 	it(":read_header works in exotic conditions", function()
+		do -- trailing whitespace
+			local s, c = new_pair(1.1)
+			c = c:take_socket()
+			assert(c:xwrite("foo: bar \r\n\r\n", "bn"))
+			c:close()
+			assert.same({"foo", "bar"}, {s:read_header()})
+		end
 		do -- continuation
 			local s, c = new_pair(1.1)
 			c = c:take_socket()

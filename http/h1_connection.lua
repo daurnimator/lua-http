@@ -199,7 +199,8 @@ function connection_methods:read_header(timeout)
 		-- Note: the *h read returns *just* nil when data is a non-mime compliant header
 		return nil, err or ce.EPIPE, errno
 	end
-	local key, val = line:match("^([^%s:]+): *(.*)$")
+	-- header fields can have optional surrounding whitespace
+	local key, val = line:match("^([^%s:]+):[ \t]*(.-)[ \t]*$")
 	-- don't need to validate, the *h read mode ensures a valid header
 	return key, val
 end
