@@ -74,15 +74,18 @@ local function new_stream(connection)
 end
 
 local valid_states = {
-	["idle"] = true; -- initial
-	["open"] = true; -- have sent or received headers; haven't sent body yet
-	["half closed (local)"] = true; -- have sent whole body
-	["half closed (remote)"] = true; -- have received whole body
-	["closed"] = true; -- complete
+	["idle"] = 1; -- initial
+	["open"] = 2; -- have sent or received headers; haven't sent body yet
+	["half closed (local)"] = 3; -- have sent whole body
+	["half closed (remote)"] = 3; -- have received whole body
+	["closed"] = 4; -- complete
 }
 function stream_methods:set_state(new)
-	assert(valid_states[new])
+	local new_order = assert(valid_states[new])
 	local old = self.state
+	if new_order <= valid_states[old] then
+		error("invalid state progression ('"..old.."' to '"..new.."')")
+	end
 	self.state = new
 	if self.type == "server" then
 		-- If we have just finished reading the request
