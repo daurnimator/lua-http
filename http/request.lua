@@ -250,7 +250,8 @@ function request_methods:handle_redirect(orig_headers)
 		new_req.headers:delete("content-location")
 		new_req.headers:delete("content-type")
 		-- Other...
-		if new_req.headers:get("expect") == "100-continue" then
+		local expect = new_req.headers:get("expect")
+		if expect and expect:lower() == "100-continue" then
 			new_req.headers:delete("expect")
 		end
 		new_req.body = nil
@@ -288,7 +289,8 @@ function request_methods:go(timeout)
 
 	local headers
 	if self.body then
-		if self.headers:get("expect") == "100-continue" then
+		local expect = self.headers:get("expect")
+		if expect and expect:lower() == "100-continue" then
 			-- Try to wait for 100-continue before proceeding
 			if deadline then
 				local err, errno
