@@ -174,7 +174,8 @@ function connection_methods:read_request_line(timeout)
 		end
 		return nil, ce.EPIPE
 	end
-	return method, path, tonumber(httpversion)
+	httpversion = httpversion == "1.0" and 1.0 or 1.1 -- Avoid tonumber() due to locale issues
+	return method, path, httpversion
 end
 
 function connection_methods:read_status_line(timeout)
@@ -190,7 +191,8 @@ function connection_methods:read_status_line(timeout)
 		end
 		return nil, ce.EPIPE
 	end
-	return tonumber(httpversion), status_code, reason_phrase
+	httpversion = httpversion == "1.0" and 1.0 or 1.1 -- Avoid tonumber() due to locale issues
+	return httpversion, status_code, reason_phrase
 end
 
 function connection_methods:read_header(timeout)
