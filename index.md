@@ -540,9 +540,6 @@ Creates and returns a new headers object.
 ### `headers:get_comma_separated(name)` <!-- --> {#http.headers:get_comma_separated}
 
 
-### `headers:get_split_as_sequence(name)` <!-- --> {#http.headers:get_split_as_sequence}
-
-
 ### `headers:modifyi(i, value, never_index)` <!-- --> {#http.headers:modifyi}
 
 
