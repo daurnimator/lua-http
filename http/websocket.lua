@@ -30,12 +30,19 @@ local utf8_len = (utf8 or require "compat53.utf8").len -- luacheck: ignore 113
 local cqueues = require "cqueues"
 local monotime = cqueues.monotime
 local ce = require "cqueues.errno"
+local lpeg = require "lpeg"
+local http_patts = require "lpeg_patterns.http"
 local uri_patts = require "lpeg_patterns.uri"
 local rand = require "openssl.rand"
 local digest = require "openssl.digest"
 local bit = require "http.bit"
 local new_headers = require "http.headers".new
 local http_request = require "http.request"
+
+local EOF = lpeg.P(-1)
+local Connection = lpeg.Ct(http_patts.Connection) * EOF
+local Sec_WebSocket_Protocol_Client = lpeg.Ct(http_patts.Sec_WebSocket_Protocol_Client) * EOF
+local Sec_WebSocket_Extensions = lpeg.Ct(http_patts.Sec_WebSocket_Extensions) * EOF
 
 local websocket_methods = {
 	-- Max seconds to wait after sending close frame until closing connection
@@ -518,17 +525,24 @@ local function handle_websocket_response(self, headers, stream)
 	Connection header field doesn't contain a token that is an
 	ASCII case-insensitive match for the value "Upgrade", the client
 	MUST Fail the WebSocket Connection]]
-	local has_connection_upgrade = false
-	local connection_header = headers:get_split_as_sequence("connection")
-	for i=1, connection_header.n do
-		if connection_header[i]:lower() == "upgrade" then
-			has_connection_upgrade = true
-			break
+	do
+		local has_connection_upgrade = false
+		local h = headers:get_comma_separated("connection")
+		if not h then
+			return nil, "invalid connection header", ce.EINVAL
+		end
+		local connection_header = Connection:match(h)
+		for i=1, #connection_header do
+			if connection_header[i] == "upgrade" then
+				has_connection_upgrade = true
+				break
+			end
+		end
+		if not has_connection_upgrade then
+			return nil, "connection header doesn't contain upgrade", ce.EINVAL
 		end
 	end
-	if not has_connection_upgrade then
-		return nil, "connection header doesn't contain upgrade", ce.EINVAL
-	end
+
 
 	--[[ If the response lacks a Sec-WebSocket-Accept header field or
 	the Sec-WebSocket-Accept contains a value other than the
@@ -547,9 +561,15 @@ local function handle_websocket_response(self, headers, stream)
 	this header field indicates the use of an extension that was not present
 	in the client's handshake (the server has indicated an extension not
 	requested by the client), the client MUST Fail the WebSocket Connection]]
-	-- For now, we don't support any extensions
-	if headers:has("sec-websocket-extensions") then
-		return nil, "extensions not supported", ce.EINVAL
+	do -- For now, we don't support any extensions
+		local h = headers:get_comma_separated("sec-websocket-extensions")
+		if h then
+			local extensions = Sec_WebSocket_Extensions:match(h)
+			if not extensions then
+				return nil, "invalid sec-websocket-extensions header", ce.EINVAL
+			end
+			return nil, "extensions not supported", ce.EINVAL
+		end
 	end
 
 	--[[ If the response includes a Sec-WebSocket-Protocol header field and
@@ -596,16 +616,22 @@ local function new_from_stream(headers, stream)
 		return nil, "upgrade header not websocket", ce.EINVAL
 	end
 
-	local has_connection_upgrade = false
-	local connection_header = headers:get_split_as_sequence("connection")
-	for i=1, connection_header.n do
-		if connection_header[i]:lower() == "upgrade" then
-			has_connection_upgrade = true
-			break
+	do
+		local has_connection_upgrade = false
+		local h = headers:get_comma_separated("connection")
+		if not h then
+			return nil, "invalid connection header", ce.EINVAL
 		end
-	end
-	if not has_connection_upgrade then
-		return nil, "connection header doesn't contain upgrade", ce.EINVAL
+		local connection_header = Connection:match(h)
+		for i=1, #connection_header do
+			if connection_header[i] == "upgrade" then
+				has_connection_upgrade = true
+				break
+			end
+		end
+		if not has_connection_upgrade then
+			return nil, "connection header doesn't contain upgrade", ce.EINVAL
+		end
 	end
 
 	local key = trim(headers:get("sec-websocket-key"))
@@ -619,7 +645,11 @@ local function new_from_stream(headers, stream)
 
 	local protocols_available
 	if headers:has("sec-websocket-protocol") then
-		local client_protocols = headers:get_split_as_sequence("sec-websocket-protocol")
+		local h = headers:get_comma_separated("sec-websocket-protocol")
+		local client_protocols = Sec_WebSocket_Protocol_Client:match(h)
+		if not client_protocols then
+			return nil, "invalid sec-websocket-protocol header", ce.EINVAL
+		end
 		--[[ The request MAY include a header field with the name
 		Sec-WebSocket-Protocol. If present, this value indicates one
 		or more comma-separated subprotocol the client wishes to speak,
