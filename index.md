@@ -881,13 +881,6 @@ Joins the `host` and `port` to create a valid authority component.
 Omits the port if it is the default for the `scheme`.
 
 
-### `split_header(str)` <!-- --> {#http.util.split_header}
-
-Many HTTP headers are specified to be comma seperated elements with optional whitespace. This function returns a table with a sequence of these elements.
-
-The returned table has an `n` field containing the number of elements.
-
-
 ### `imf_date(time)` <!-- --> {#http.util.imf_date}
 
 Returns the time in HTTP preferred date format (See [RFC 7231 section 7.1.1.1](https://tools.ietf.org/html/rfc7231#section-7.1.1.1))
