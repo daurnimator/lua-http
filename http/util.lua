@@ -171,25 +171,6 @@ local function to_authority(host, port, scheme)
 	return authority
 end
 
--- Many HTTP headers contain comma seperated values
--- This function returns an iterator over header components
-local function each_header_component(str)
-	return str:gmatch(" *([^ ,][^,]-) *%f[,%z]")
-end
-
-local function split_header(str)
-	if str == nil then
-		return { n = 0 }
-	end
-	local r, n = { n = nil }, 0
-	for elem in each_header_component(str) do
-		n = n + 1
-		r[n] = elem
-	end
-	r.n = n
-	return r
-end
-
 -- HTTP prefered date format
 -- See RFC 7231 section 7.1.1.1
 local function imf_date(time)
@@ -218,7 +199,6 @@ return {
 	scheme_to_port = scheme_to_port;
 	split_authority = split_authority;
 	to_authority = to_authority;
-	split_header = split_header;
 	imf_date = imf_date;
 	maybe_quote = maybe_quote;
 }
