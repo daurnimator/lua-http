@@ -318,7 +318,7 @@ function stream_methods:read_headers(timeout)
 		else
 			self.body_read_type = "close"
 		end
-		if last_transfer_encoding == "gzip" or last_transfer_encoding == "deflate" then
+		if last_transfer_encoding == "gzip" or last_transfer_encoding == "deflate" or last_transfer_encoding == "x-gzip" then
 			self.body_read_inflate = zlib.inflate()
 			n = n - 1
 		end
@@ -355,7 +355,7 @@ function stream_methods:read_headers(timeout)
 			local te = TE:match(headers:get_comma_separated("te"))
 			for _, v in ipairs(te) do
 				local tcoding = v[1]
-				if (tcoding == "gzip" or tcoding "deflate")
+				if (tcoding == "gzip" or tcoding == "x-gzip" or tcoding "deflate")
 					and (v.q == nil or v.q ~= 0) then
 					v.q = nil
 					self.body_write_deflate_encoding = v
@@ -611,7 +611,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 				if self.body_write_deflate -- only use if client sent the TE header allowing it
 					and not cl -- not allowed to use both content-length *and* transfer-encoding
 					and not end_stream -- no point encoding body if there isn't one
-					and not has_any(Content_Encoding:match(headers:get_comma_separated("content-encoding") or ""), "gzip", "deflate")
+					and not has_any(Content_Encoding:match(headers:get_comma_separated("content-encoding") or ""), "gzip", "x-gzip", "deflate")
 					-- don't bother if content-encoding is already gzip/deflate
 					-- TODO: need to take care of quality suffixes ("deflate; q=0.5")
 				then
