@@ -1,3 +1,6 @@
+local lpeg = require "lpeg"
+local http_patts = require "lpeg_patterns.http"
+
 -- Encodes a character as a percent encoded string
 local function char_to_pchar(c)
 	return string.format("%%%02X", c:byte(1,1))
@@ -193,6 +196,17 @@ local function imf_date(time)
 	return os.date("!%a, %d %b %Y %H:%M:%S GMT", time)
 end
 
+-- This pattern checks if it's argument is a valid token, if so, it returns it as is.
+-- Otherwise, it returns it as a quoted string (with any special characters escaped)
+local maybe_quote do
+	local EOF = lpeg.P(-1)
+	local patt = http_patts.token * EOF
+		+ lpeg.Cs(lpeg.Cc'"' * ((lpeg.S"\\\"") / "\\%0" + http_patts.qdtext)^0 * lpeg.Cc'"') * EOF
+	maybe_quote = function (s)
+		return patt:match(s)
+	end
+end
+
 return {
 	encodeURI = encodeURI;
 	encodeURIComponent = encodeURIComponent;
@@ -206,4 +220,5 @@ return {
 	to_authority = to_authority;
 	split_header = split_header;
 	imf_date = imf_date;
+	maybe_quote = maybe_quote;
 }

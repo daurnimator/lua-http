@@ -898,6 +898,13 @@ Returns the time in HTTP preferred date format (See [RFC 7231 section 7.1.1.1](h
 `time` defaults to the current time
 
 
+### `maybe_quote(str)` <!-- --> {#http.util.maybe_quote}
+
+  - If `str` is a valid `token`, return it as-is.
+  - If `str` would be valid as a `quoted-string`, return the quoted version
+  - Otherwise, returns `nil`
+
+
 ## http.version
 
 ### `name` <!-- --> {#http.version.name}

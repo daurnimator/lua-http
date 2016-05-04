@@ -104,4 +104,37 @@ describe("http.util module", function()
 	it("generates correct looking Date header format", function()
 		assert.same("Fri, 13 Feb 2009 23:31:30 GMT", util.imf_date(1234567890))
 	end)
+	describe("maybe_quote", function()
+		it("makes acceptable tokens or quoted-string", function()
+			assert.same([[foo]], util.maybe_quote([[foo]]))
+			assert.same([["with \" quote"]], util.maybe_quote([[with " quote]]))
+		end)
+		it("escapes all bytes correctly", function()
+			local http_patts = require "lpeg_patterns.http"
+			local s do -- Make a string containing every byte allowed in a quoted string
+				local t = {"\t"} -- tab
+				for i=32, 126 do
+					t[#t+1] = string.char(i)
+				end
+				for i=128, 255 do
+					t[#t+1] = string.char(i)
+				end
+				s = table.concat(t)
+			end
+			assert.same(s, http_patts.quoted_string:match(util.maybe_quote(s)))
+		end)
+		it("returns nil on invalid input", function()
+			local function check(s)
+				assert.same(nil, util.maybe_quote(s))
+			end
+			for i=0, 8 do
+				check(string.char(i))
+			end
+			-- skip tab
+			for i=10, 31 do
+				check(string.char(i))
+			end
+			check("\127")
+		end)
+	end)
 end)
