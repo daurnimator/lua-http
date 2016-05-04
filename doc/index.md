@@ -690,6 +690,13 @@ Allows setting a request body. `body` may be a string, function or lua file obje
   - If `body` is a lua file object, it will be [`:seek`'d](http://www.lua.org/manual/5.3/manual.html#pdf-file:seek) to the start, then sent as a body. Any errors encountered during file operations **will be thrown**.
 
 
+### `request:set_form_data(dict)` <!-- --> {#http.request:set_form_data}
+
+Turns the request into a POST request with a `"application/x-www-form-urlencoded"` encoded body.
+
+`dict` should be a table with string keys and string values.
+
+
 ### `request:clone()` <!-- --> {#http.request:clone}
 
 Creates and returns a clone of the request.

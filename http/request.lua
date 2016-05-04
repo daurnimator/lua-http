@@ -273,6 +273,13 @@ function request_methods:set_body(body)
 	end
 end
 
+function request_methods:set_form_data(form)
+	local body = http_util.dict_to_query(form)
+	self.headers:upsert(":method", "POST")
+	self.headers:upsert("content-type", "application/x-www-form-urlencoded")
+	return self:set_body(body)
+end
+
 function request_methods:go(timeout)
 	local deadline = timeout and (monotime()+timeout)
 
