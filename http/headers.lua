@@ -13,7 +13,6 @@ An index of field name => array indices is kept.
 ]]
 
 local unpack = table.unpack or unpack -- luacheck: ignore 113
-local http_util = require "http.util"
 
 local entry_methods = {}
 local entry_mt = {
@@ -180,10 +179,6 @@ function headers_methods:get_comma_separated(name)
 	else
 		return table.concat(r, ",", 1, r.n)
 	end
-end
-
-function headers_methods:get_split_as_sequence(name)
-	return http_util.split_header(self:get_comma_separated(name))
 end
 
 function headers_methods:modifyi(i, ...)
