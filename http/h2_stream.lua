@@ -712,6 +712,28 @@ frame_handlers[0x5] = function(stream, flags, payload)
 		stream.id, end_headers, tostring(exclusive), promised_stream, header_fragment))
 end
 
+function stream_methods:write_push_promise_frame(promised_stream_id, payload, end_headers, padded, timeout)
+	assert(self.state == "open" or self.state == "half closed (remote)")
+	assert(self.id ~= 0)
+	local pad_len, padding = "", ""
+	local flags = 0
+	if end_headers then
+		flags = bor(flags, 0x4)
+	end
+	if padded then
+		flags = bor(flags, 0x8)
+		pad_len = spack("> B", padded)
+		padding = ("\0"):rep(padded)
+	end
+	assert(promised_stream_id < 0x80000000)
+	assert(promised_stream_id % 2 == 0)
+	assert(promised_stream_id > self.highest_even_stream)
+	-- TODO: promised_stream_id must be valid for sender
+	promised_stream_id = spack(">I4", promised_stream_id)
+	payload = pad_len .. promised_stream_id .. payload .. padding
+	return self:write_http2_frame(0x5, flags, payload, timeout)
+end
+
 -- PING
 frame_handlers[0x6] = function(stream, flags, payload)
 	if stream.id ~= 0 then
