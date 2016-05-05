@@ -250,7 +250,7 @@ local valid_pseudo_headers = {
 local function validate_headers(headers, is_request, nth_header, ended_stream)
 	do -- Validate that all colon fields are before other ones (section 8.1.2.1)
 		local seen_non_colon = false
-		for name in headers:each() do
+		for name, value in headers:each() do
 			if name:sub(1,1) == ":" then
 				--[[ Pseudo-header fields are only valid in the context in
 				which they are defined. Pseudo-header fields defined for
@@ -268,6 +268,9 @@ local function validate_headers(headers, is_request, nth_header, ended_stream)
 				end
 			else
 				seen_non_colon = true
+			end
+			if type(value) ~= "string" then
+				return nil, "invalid header field"
 			end
 		end
 	end
