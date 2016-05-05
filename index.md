@@ -445,7 +445,7 @@ Fields `name`, `code` and `description` are inherited from the parent `h2_error`
 `stream_error` defaults to `false`.
 
 
-### `h2_error:traceback(message, stream_error, lvl)` <!-- --> {#http.h2_error:traceback}
+### `h2_error:new_traceback(message, stream_error, lvl)` <!-- --> {#http.h2_error:new_traceback}
 
 Creates a new error object, recording a traceback from the current thread.
 
