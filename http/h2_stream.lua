@@ -976,8 +976,6 @@ local function write_headers(self, func, headers, timeout)
 			assert(self:write_continuation_frame(partial, true, deadline and deadline-monotime()))
 		end
 	end
-
-	return true
 end
 
 function stream_methods:write_headers(headers, end_stream, timeout)
@@ -986,9 +984,11 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 	assert(type(end_stream) == "boolean", "'end_stream' MUST be a boolean")
 
 	local padded, exclusive, stream_dep, weight = nil, nil, nil, nil
-	return write_headers(self, function(payload, end_headers, deadline)
+	write_headers(self, function(payload, end_headers, deadline)
 		return self:write_headers_frame(payload, end_stream, end_headers, padded, exclusive, stream_dep, weight, deadline and deadline-monotime())
 	end, headers, timeout)
+
+	return true
 end
 
 function stream_methods:write_chunk(payload, end_stream, timeout)
