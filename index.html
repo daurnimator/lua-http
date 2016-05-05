@@ -158,7 +158,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.h2_error.errors"><code>errors</code> <!-- --></a></li>
 <li><a href="#http.h2_error.is"><code>is(ob)</code> <!-- --></a></li>
 <li><a href="#http.h2_error:new"><code>h2_error:new(ob)</code> <!-- --></a></li>
-<li><a href="#http.h2_error:traceback"><code>h2_error:traceback(message, stream_error, lvl)</code> <!-- --></a></li>
+<li><a href="#http.h2_error:new_traceback"><code>h2_error:new_traceback(message, stream_error, lvl)</code> <!-- --></a></li>
 <li><a href="#http.h2_error:error"><code>h2_error:error(message, stream_error, lvl)</code> <!-- --></a></li>
 <li><a href="#http.h2_error:assert"><code>h2_error:assert(cond, ...)</code> <!-- --></a></li>
 </ul></li>
@@ -168,8 +168,11 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.h2_stream:write_http2_frame"><code>h2_stream:write_http2_frame(typ, flags, payload, timeout)</code> <!-- --></a></li>
 <li><a href="#http.h2_stream:write_data_frame"><code>h2_stream:write_data_frame(payload, end_stream, padded, timeout)</code> <!-- --></a></li>
 <li><a href="#http.h2_stream:write_headers_frame"><code>h2_stream:write_headers_frame(payload, end_stream, end_headers, padded, exclusive, stream_dep, weight, timeout)</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:write_priority_frame"><code>h2_stream:write_priority_frame(exclusive, stream_dep, weight, timeout)</code> <!-- --></a></li>
 <li><a href="#http.h2_stream:write_rst_stream"><code>h2_stream:write_rst_stream(err_code, timeout)</code> <!-- --></a></li>
 <li><a href="#http.h2_stream:write_settings_frame"><code>h2_stream:write_settings_frame(ACK, settings, timeout)</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:write_push_promise_frame"><code>h2_stream:write_push_promise_frame(promised_stream_id, payload, end_headers, padded, timeout)</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:push_promise"><code>h2_stream:push_promise(headers, timeout)</code> <!-- --></a></li>
 <li><a href="#http.h2_stream:write_ping_frame"><code>h2_stream:write_ping_frame(ACK, payload, timeout)</code> <!-- --></a></li>
 <li><a href="#http.h2_stream:write_goaway_frame"><code>h2_stream:write_goaway_frame(last_streamid, err_code, debug_msg, timeout)</code> <!-- --></a></li>
 <li><a href="#http.h2_stream:write_window_update_frame"><code>h2_stream:write_window_update_frame(inc, timeout)</code> <!-- --></a></li>
@@ -470,6 +473,7 @@ defaults to <code>AF_INET</code></p></li>
 may be either a hostname or an ip address</p></li>
 <li><p><code>port</code> (string|integer): port to connect to in numeric form<br />
 e.g. <code>&quot;80&quot;</code> or <code>80</code></p></li>
+<li><p><code>path</code> (string): path to connect to (UNIX sockets)</p></li>
 <li><code>sendname</code> (string|boolean, optional): the <a href="https://en.wikipedia.org/wiki/Server_Name_Indication">TLS SNI</a> host to send.<br />
 defaults to <code>true</code>
 <ul>
@@ -640,6 +644,9 @@ defaults to <code>false</code></p></li>
 </section>
 <section id="http.h2_connection:new_stream" class="level3">
 <h3><code>h2_connection:new_stream(id)</code> <!-- --></h3>
+<p><code>id</code> (optional) is the stream id to assign the new stream. For client initiated streams, this will be the next free odd numbered stream.<br />
+For server initiated streams, this will be the next free even numbered stream.</p>
+<p>See <a href="#connection:new_stream"><code>connection:new_stream()</code></a> for more information.</p>
 </section>
 <section id="http.h2_connection:get_next_incoming_stream" class="level3">
 <h3><code>h2_connection:get_next_incoming_stream(timeout)</code> <!-- --></h3>
@@ -695,8 +702,8 @@ defaults to <code>false</code></p></li>
 <p>Fields <code>name</code>, <code>code</code> and <code>description</code> are inherited from the parent <code>h2_error</code> object if not specified.</p>
 <p><code>stream_error</code> defaults to <code>false</code>.</p>
 </section>
-<section id="http.h2_error:traceback" class="level3">
-<h3><code>h2_error:traceback(message, stream_error, lvl)</code> <!-- --></h3>
+<section id="http.h2_error:new_traceback" class="level3">
+<h3><code>h2_error:new_traceback(message, stream_error, lvl)</code> <!-- --></h3>
 <p>Creates a new error object, recording a traceback from the current thread.</p>
 </section>
 <section id="http.h2_error:error" class="level3">
@@ -727,11 +734,22 @@ defaults to <code>false</code></p></li>
 <section id="http.h2_stream:write_headers_frame" class="level3">
 <h3><code>h2_stream:write_headers_frame(payload, end_stream, end_headers, padded, exclusive, stream_dep, weight, timeout)</code> <!-- --></h3>
 </section>
+<section id="http.h2_stream:write_priority_frame" class="level3">
+<h3><code>h2_stream:write_priority_frame(exclusive, stream_dep, weight, timeout)</code> <!-- --></h3>
+</section>
 <section id="http.h2_stream:write_rst_stream" class="level3">
 <h3><code>h2_stream:write_rst_stream(err_code, timeout)</code> <!-- --></h3>
 </section>
 <section id="http.h2_stream:write_settings_frame" class="level3">
 <h3><code>h2_stream:write_settings_frame(ACK, settings, timeout)</code> <!-- --></h3>
+</section>
+<section id="http.h2_stream:write_push_promise_frame" class="level3">
+<h3><code>h2_stream:write_push_promise_frame(promised_stream_id, payload, end_headers, padded, timeout)</code> <!-- --></h3>
+</section>
+<section id="http.h2_stream:push_promise" class="level3">
+<h3><code>h2_stream:push_promise(headers, timeout)</code> <!-- --></h3>
+<p>Pushes a new promise to the client.</p>
+<p>Returns the new stream as a <a href="#http.h2_stream">h2_stream</a>.</p>
 </section>
 <section id="http.h2_stream:write_ping_frame" class="level3">
 <h3><code>h2_stream:write_ping_frame(ACK, payload, timeout)</code> <!-- --></h3>
