@@ -483,6 +483,9 @@ an `http.h2_stream` has the following methods:
 ### `h2_stream:write_settings_frame(ACK, settings, timeout)` <!-- --> {#http.h2_stream:write_settings_frame}
 
 
+### `h2_stream:write_push_promise_frame(promised_stream_id, payload, end_headers, padded, timeout)` <!-- --> {#http.h2_stream:write_push_promise_frame}
+
+
 ### `h2_stream:write_ping_frame(ACK, payload, timeout)` <!-- --> {#http.h2_stream:write_ping_frame}
 
 
