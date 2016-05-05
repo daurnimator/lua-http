@@ -491,6 +491,13 @@ an `http.h2_stream` has the following methods:
 ### `h2_stream:write_push_promise_frame(promised_stream_id, payload, end_headers, padded, timeout)` <!-- --> {#http.h2_stream:write_push_promise_frame}
 
 
+### `h2_stream:push_promise(headers, timeout)` <!-- --> {#http.h2_stream:push_promise}
+
+Pushes a new promise to the client.
+
+Returns the new stream as a [h2_stream](#http.h2_stream).
+
+
 ### `h2_stream:write_ping_frame(ACK, payload, timeout)` <!-- --> {#http.h2_stream:write_ping_frame}
 
 
