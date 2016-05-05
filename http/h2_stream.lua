@@ -969,39 +969,46 @@ function stream_methods:unget(str)
 	self.chunk_fifo:insert(1, chunk)
 end
 
-function stream_methods:write_headers(headers, end_stream, timeout)
+local function write_headers(self, func, headers, timeout)
 	local deadline = timeout and (monotime()+timeout)
-	assert(headers, "missing argument: headers")
-	assert(type(end_stream) == "boolean", "'end_stream' MUST be a boolean")
-	assert(validate_headers(headers, xor(self.id % 2 == 1, self.type == "client"), self.stats_sent_headers+1, end_stream))
 	local encoding_context = self.connection.encoding_context
 	encoding_context:encode_headers(headers)
 	local payload = encoding_context:render_data()
 	encoding_context:clear_data()
 
 	local SETTINGS_MAX_FRAME_SIZE = self.connection.peer_settings[0x5]
-	local padded, exclusive, stream_dep, weight = nil, nil, nil, nil
 	if #payload <= SETTINGS_MAX_FRAME_SIZE then
-		assert(self:write_headers_frame(payload, end_stream, true, padded, exclusive, stream_dep, weight, timeout))
+		assert(func(payload, true, deadline))
 	else
 		do
 			local partial = payload:sub(1, SETTINGS_MAX_FRAME_SIZE)
-			assert(self:write_headers_frame(partial, end_stream, false, padded, exclusive, stream_dep, weight, timeout))
+			assert(func(partial, false, deadline))
 		end
 		local sent = SETTINGS_MAX_FRAME_SIZE
 		local max = #payload-SETTINGS_MAX_FRAME_SIZE
 		while sent < max do
 			local partial = payload:sub(sent+1, sent+SETTINGS_MAX_FRAME_SIZE)
-			assert(self:write_continuation_frame(partial, false, deadline and (deadline-monotime())))
+			assert(self:write_continuation_frame(partial, false, deadline and deadline-monotime()))
 			sent = sent + SETTINGS_MAX_FRAME_SIZE
 		end
 		do
 			local partial = payload:sub(sent+1)
-			assert(self:write_continuation_frame(partial, true, deadline and (deadline-monotime())))
+			assert(self:write_continuation_frame(partial, true, deadline and deadline-monotime()))
 		end
 	end
 
 	return true
+end
+
+function stream_methods:write_headers(headers, end_stream, timeout)
+	assert(headers, "missing argument: headers")
+	assert(validate_headers(headers, xor(self.id % 2 == 1, self.type == "client"), self.stats_sent_headers+1, end_stream))
+	assert(type(end_stream) == "boolean", "'end_stream' MUST be a boolean")
+
+	local padded, exclusive, stream_dep, weight = nil, nil, nil, nil
+	return write_headers(self, function(payload, end_headers, deadline)
+		return self:write_headers_frame(payload, end_stream, end_headers, padded, exclusive, stream_dep, weight, deadline and deadline-monotime())
+	end, headers, timeout)
 end
 
 function stream_methods:write_chunk(payload, end_stream, timeout)
