@@ -678,23 +678,70 @@ frame_handlers[0x5] = function(stream, flags, payload)
 	local end_headers = band(flags, 0x04) ~= 0
 	local padded = band(flags, 0x8) ~= 0
 
+	-- index where payload body starts
+	local pos = 1
+	local pad_len
+
 	if padded then
-		local pad_len = sunpack("> B", payload)
-		if pad_len >= #payload then -- >= will take care of the pad_len itself
-			return nil, h2_errors.PROTOCOL_ERROR:traceback("length of the padding is the length of the frame payload or greater")
-		elseif payload:match("[^%z]", -pad_len) then
-			return nil, h2_errors.PROTOCOL_ERROR:traceback("padding not null bytes")
-		end
-		payload = payload:sub(2, -pad_len-1)
+		pad_len = sunpack("> B", payload, pos)
+		pos = 2
+	else
+		pad_len = 0
 	end
 
-	local tmp = sunpack(">I4", payload)
-	local exclusive = band(tmp, 0x80000000) ~= 0
-	local promised_stream = band(tmp, 0x7fffffff)
-	local header_fragment = payload:sub(5)
+	local tmp = sunpack(">I4", payload, pos)
+	local promised_stream_id = band(tmp, 0x7fffffff)
+	pos = pos + 4
 
-	error(string.format("NYI: PUSH_PROMISE (id=%d, exclusive?=%s, promised=%d, #fragment=%d)",
-		stream.id, end_headers, tostring(exclusive), promised_stream, header_fragment))
+	if #payload - pos + 1 > MAX_HEADER_BUFFER_SIZE then
+		return nil, h2_errors.PROTOCOL_ERROR:traceback("headers too large")
+	end
+
+	payload = payload:sub(pos)
+
+	if not end_headers then
+		local recv_headers_buffer = { payload }
+		local recv_headers_buffer_items = 1
+		local recv_headers_buffer_length = #payload
+		repeat
+			local end_continuations, header_fragment = stream:read_continuation()
+			if not end_continuations then
+				return nil, header_fragment
+			end
+			recv_headers_buffer_items = recv_headers_buffer_items + 1
+			recv_headers_buffer[recv_headers_buffer_items] = header_fragment
+			recv_headers_buffer_length = recv_headers_buffer_length + #header_fragment
+			if recv_headers_buffer_length > MAX_HEADER_BUFFER_SIZE then
+				return nil, h2_errors.PROTOCOL_ERROR:traceback("headers too large")
+			end
+		until end_continuations
+
+		payload = table.concat(recv_headers_buffer, "", 1, recv_headers_buffer_items)
+	end
+
+	if pad_len > #payload then
+		return nil, h2_errors.PROTOCOL_ERROR:traceback("length of the padding is the length of the frame payload or greater")
+	elseif pad_len > 0 and payload:match("[^%z]", -pad_len) then
+		return nil, h2_errors.PROTOCOL_ERROR:traceback("padding not null bytes")
+	end
+	payload = payload:sub(1, -pad_len-1)
+
+	local headers, newpos = stream.connection.decoding_context:decode_headers(payload)
+	if newpos ~= #payload + 1 then
+		return nil, h2_errors.COMPRESSION_ERROR:traceback("incomplete header fragment")
+	end
+
+	local ok, err = validate_headers(headers, true, 1, false)
+	if not ok then return nil, err end
+
+	local promised_stream = stream.connection:new_stream(promised_stream_id)
+	stream:reprioritise(promised_stream)
+	promised_stream:set_state("reserved (remote)")
+	promised_stream.recv_headers_fifo:push(headers)
+	stream.connection.new_streams:push(promised_stream)
+	stream.connection.new_streams_cond:signal(1)
+
+	return true
 end
 
 function stream_methods:write_push_promise_frame(promised_stream_id, payload, end_headers, padded, timeout)
@@ -985,6 +1032,26 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 	end, headers, timeout)
 
 	return true
+end
+
+function stream_methods:push_promise(headers, timeout)
+	assert(self.type == "server")
+	assert(headers, "missing argument: headers")
+	assert(validate_headers(headers, true, 1, false))
+	assert(headers:has(":authority"))
+
+	local promised_stream = self.connection:new_stream()
+	self:reprioritise(promised_stream)
+	local promised_stream_id = promised_stream.id
+
+	local padded = nil
+	write_headers(self, function(payload, end_headers, deadline)
+		return self:write_push_promise_frame(promised_stream_id, payload, end_headers, padded, deadline)
+	end, headers, timeout)
+
+	promised_stream:set_state("reserved (local)")
+
+	return promised_stream
 end
 
 function stream_methods:write_chunk(payload, end_stream, timeout)
