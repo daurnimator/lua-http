@@ -381,7 +381,7 @@ function connection_methods:read_http2_frame(timeout)
 	end
 	local size, typ, flags, streamid = sunpack(">I3 B B I4", frame_header)
 	if size > self.acked_settings[0x5] then
-		return nil, h2_error.errors.FRAME_SIZE_ERROR:traceback("frame too large")
+		return nil, h2_error.errors.FRAME_SIZE_ERROR:new_traceback("frame too large")
 	end
 	-- reserved bit MUST be ignored by receivers
 	streamid = band(streamid, 0x7fffffff)
@@ -409,7 +409,7 @@ end
 function connection_methods:write_http2_frame(typ, flags, streamid, payload, timeout)
 	local deadline = timeout and (monotime()+timeout)
 	if #payload > self.peer_settings[0x5] then
-		return nil, h2_error.errors.FRAME_SIZE_ERROR:traceback("frame too large")
+		return nil, h2_error.errors.FRAME_SIZE_ERROR:new_traceback("frame too large")
 	end
 	local header = spack(">I3 B B I4", #payload, typ, flags, streamid)
 	local ok, err, errno = self.socket:xwrite(header, "f", timeout)

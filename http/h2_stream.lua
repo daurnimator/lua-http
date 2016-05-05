@@ -95,7 +95,7 @@ function stream_methods:reprioritise(child, exclusive)
 	assert(child.id ~= 0) -- cannot reprioritise stream 0
 	if self == child then
 		-- http2 spec, section 5.3.1
-		return nil, h2_errors.PROTOCOL_ERROR:traceback("A stream cannot depend on itself", true)
+		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("A stream cannot depend on itself", true)
 	end
 	do -- Check if the child is an ancestor
 		local ancestor = self.parent
@@ -159,10 +159,10 @@ end
 -- DATA
 frame_handlers[0x0] = function(stream, flags, payload)
 	if stream.id == 0 then
-		return nil, h2_errors.PROTOCOL_ERROR:traceback("'DATA' frames MUST be associated with a stream")
+		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("'DATA' frames MUST be associated with a stream")
 	end
 	if stream.state ~= "open" and stream.state ~= "half closed (local)" then
-		return nil, h2_errors.STREAM_CLOSED:traceback("'DATA' frame not allowed in '" .. stream.state .. "' state", true)
+		return nil, h2_errors.STREAM_CLOSED:new_traceback("'DATA' frame not allowed in '" .. stream.state .. "' state", true)
 	end
 
 	local end_stream = band(flags, 0x1) ~= 0
@@ -173,9 +173,9 @@ frame_handlers[0x0] = function(stream, flags, payload)
 	if padded then
 		local pad_len = sunpack("> B", payload)
 		if pad_len >= #payload then -- >= will take care of the pad_len itself
-			return nil, h2_errors.PROTOCOL_ERROR:traceback("length of the padding is the length of the frame payload or greater")
+			return nil, h2_errors.PROTOCOL_ERROR:new_traceback("length of the padding is the length of the frame payload or greater")
 		elseif payload:match("[^%z]", -pad_len) then
-			return nil, h2_errors.PROTOCOL_ERROR:traceback("padding not null bytes")
+			return nil, h2_errors.PROTOCOL_ERROR:new_traceback("padding not null bytes")
 		end
 		payload = payload:sub(2, -pad_len-1)
 	end
@@ -261,10 +261,10 @@ local function validate_headers(headers, is_request, nth_header, ended_stream)
 				undefined or invalid pseudo-header fields as malformed
 				(Section 8.1.2.6)]]
 				if (is_request and nth_header ~= 1) or valid_pseudo_headers[name] ~= is_request then
-					return nil, h2_errors.PROTOCOL_ERROR:traceback("Pseudo-header fields are only valid in the context in which they are defined", true)
+					return nil, h2_errors.PROTOCOL_ERROR:new_traceback("Pseudo-header fields are only valid in the context in which they are defined", true)
 				end
 				if seen_non_colon then
-					return nil, h2_errors.PROTOCOL_ERROR:traceback("All pseudo-header fields MUST appear in the header block before regular header fields", true)
+					return nil, h2_errors.PROTOCOL_ERROR:new_traceback("All pseudo-header fields MUST appear in the header block before regular header fields", true)
 				end
 			else
 				seen_non_colon = true
@@ -272,11 +272,11 @@ local function validate_headers(headers, is_request, nth_header, ended_stream)
 		end
 	end
 	if headers:has("connection") then
-		return nil, h2_errors.PROTOCOL_ERROR:traceback("An endpoint MUST NOT generate an HTTP/2 message containing connection-specific header fields", true)
+		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("An endpoint MUST NOT generate an HTTP/2 message containing connection-specific header fields", true)
 	end
 	local te = headers:get_as_sequence("te")
 	if te.n > 0 and (te[1] ~= "trailers" or te.n ~= 1) then
-		return nil, h2_errors.PROTOCOL_ERROR:traceback([[The TE header field, which MAY be present in an HTTP/2 request; when it is, it MUST NOT contain any value other than "trailers"]], true)
+		return nil, h2_errors.PROTOCOL_ERROR:new_traceback([[The TE header field, which MAY be present in an HTTP/2 request; when it is, it MUST NOT contain any value other than "trailers"]], true)
 	end
 	if is_request then
 		if nth_header == 1 then
@@ -285,28 +285,28 @@ local function validate_headers(headers, is_request, nth_header, ended_stream)
 			An HTTP request that omits mandatory pseudo-header fields is malformed (Section 8.1.2.6).]]
 			local methods = headers:get_as_sequence(":method")
 			if methods.n ~= 1 then
-				return nil, h2_errors.PROTOCOL_ERROR:traceback("requests MUST include exactly one valid value for the :method, :scheme, and :path pseudo-header fields, unless it is a CONNECT request", true)
+				return nil, h2_errors.PROTOCOL_ERROR:new_traceback("requests MUST include exactly one valid value for the :method, :scheme, and :path pseudo-header fields, unless it is a CONNECT request", true)
 			elseif methods[1] ~= "CONNECT" then
 				local scheme = headers:get_as_sequence(":scheme")
 				local path = headers:get_as_sequence(":path")
 				if scheme.n ~= 1 or path.n ~= 1 then
-					return nil, h2_errors.PROTOCOL_ERROR:traceback("requests MUST include exactly one valid value for the :method, :scheme, and :path pseudo-header fields, unless it is a CONNECT request", true)
+					return nil, h2_errors.PROTOCOL_ERROR:new_traceback("requests MUST include exactly one valid value for the :method, :scheme, and :path pseudo-header fields, unless it is a CONNECT request", true)
 				end
 				if path[1] == "" and (scheme[1] == "http" or scheme[1] == "https") then
-					return nil, h2_errors.PROTOCOL_ERROR:traceback("The :path pseudo-header field MUST NOT be empty for http or https URIs", true)
+					return nil, h2_errors.PROTOCOL_ERROR:new_traceback("The :path pseudo-header field MUST NOT be empty for http or https URIs", true)
 				end
 			else -- is CONNECT method
 				-- Section 8.3
 				if headers:has(":scheme") or headers:has(":path") then
-					return nil, h2_errors.PROTOCOL_ERROR:traceback("For a CONNECT request, the :scheme and :path pseudo-header fields MUST be omitted", true)
+					return nil, h2_errors.PROTOCOL_ERROR:new_traceback("For a CONNECT request, the :scheme and :path pseudo-header fields MUST be omitted", true)
 				end
 			end
 		elseif nth_header == 2 then
 			if not ended_stream then
-				return nil, h2_errors.PROTOCOL_ERROR:traceback("Trailers MUST be at end of stream", true)
+				return nil, h2_errors.PROTOCOL_ERROR:new_traceback("Trailers MUST be at end of stream", true)
 			end
 		elseif nth_header > 2 then
-			return nil, h2_errors.PROTOCOL_ERROR:traceback("An HTTP request consists of maximum 2 HEADER blocks", true)
+			return nil, h2_errors.PROTOCOL_ERROR:new_traceback("An HTTP request consists of maximum 2 HEADER blocks", true)
 		end
 	else
 		--[[ For HTTP/2 responses, a single :status pseudo-header field is
@@ -314,7 +314,7 @@ local function validate_headers(headers, is_request, nth_header, ended_stream)
 		This pseudo-header field MUST be included in all responses; otherwise,
 		the response is malformed (Section 8.1.2.6)]]
 		if not headers:has(":status") then
-			return nil, h2_errors.PROTOCOL_ERROR:traceback(":status pseudo-header field MUST be included in all responses", true)
+			return nil, h2_errors.PROTOCOL_ERROR:new_traceback(":status pseudo-header field MUST be included in all responses", true)
 		end
 	end
 	return true
@@ -323,10 +323,10 @@ end
 -- HEADERS
 frame_handlers[0x1] = function(stream, flags, payload)
 	if stream.id == 0 then
-		return nil, h2_errors.PROTOCOL_ERROR:traceback("'HEADERS' frames MUST be associated with a stream")
+		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("'HEADERS' frames MUST be associated with a stream")
 	end
 	if stream.state ~= "idle" and stream.state ~= "open" and stream.state ~= "half closed (local)" and stream.state ~= "reserved (remote)" then
-		return nil, h2_errors.STREAM_CLOSED:traceback("'HEADERS' frame not allowed in '" .. stream.state .. "' state", true)
+		return nil, h2_errors.STREAM_CLOSED:new_traceback("'HEADERS' frame not allowed in '" .. stream.state .. "' state", true)
 	end
 
 	local end_stream = band(flags, 0x1) ~= 0
@@ -364,7 +364,7 @@ frame_handlers[0x1] = function(stream, flags, payload)
 	end
 
 	if #payload - pos + 1 > MAX_HEADER_BUFFER_SIZE then
-		return nil, h2_errors.PROTOCOL_ERROR:traceback("headers too large")
+		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("headers too large")
 	end
 
 	if pos > 1 then
@@ -384,7 +384,7 @@ frame_handlers[0x1] = function(stream, flags, payload)
 			recv_headers_buffer[recv_headers_buffer_items] = header_fragment
 			recv_headers_buffer_length = recv_headers_buffer_length + #header_fragment
 			if recv_headers_buffer_length > MAX_HEADER_BUFFER_SIZE then
-				return nil, h2_errors.PROTOCOL_ERROR:traceback("headers too large")
+				return nil, h2_errors.PROTOCOL_ERROR:new_traceback("headers too large")
 			end
 		until end_continuations
 
@@ -392,15 +392,15 @@ frame_handlers[0x1] = function(stream, flags, payload)
 	end
 
 	if pad_len > #payload then
-		return nil, h2_errors.PROTOCOL_ERROR:traceback("length of the padding is the length of the frame payload or greater")
+		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("length of the padding is the length of the frame payload or greater")
 	elseif pad_len > 0 and payload:match("[^%z]", -pad_len) then
-		return nil, h2_errors.PROTOCOL_ERROR:traceback("padding not null bytes")
+		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("padding not null bytes")
 	end
 	payload = payload:sub(1, -pad_len-1)
 
 	local headers, newpos = stream.connection.decoding_context:decode_headers(payload)
 	if newpos ~= #payload + 1 then
-		return nil, h2_errors.COMPRESSION_ERROR:traceback("incomplete header fragment")
+		return nil, h2_errors.COMPRESSION_ERROR:new_traceback("incomplete header fragment")
 	end
 
 	stream.stats_recv_headers = stream.stats_recv_headers + 1
@@ -476,10 +476,10 @@ end
 -- PRIORITY
 frame_handlers[0x2] = function(stream, flags, payload) -- luacheck: ignore 212
 	if stream.id == 0 then
-		return nil, h2_errors.PROTOCOL_ERROR:traceback("'PRIORITY' frames MUST be associated with a stream")
+		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("'PRIORITY' frames MUST be associated with a stream")
 	end
 	if #payload ~= 5 then
-		return nil, h2_errors.FRAME_SIZE_ERROR:traceback("'PRIORITY' frames must be 5 bytes", true)
+		return nil, h2_errors.FRAME_SIZE_ERROR:new_traceback("'PRIORITY' frames must be 5 bytes", true)
 	end
 
 	local exclusive, stream_dep, weight
@@ -511,13 +511,13 @@ end
 -- RST_STREAM
 frame_handlers[0x3] = function(stream, flags, payload) -- luacheck: ignore 212
 	if stream.id == 0 then
-		return nil, h2_errors.PROTOCOL_ERROR:traceback("'RST_STREAM' frames MUST be associated with a stream")
+		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("'RST_STREAM' frames MUST be associated with a stream")
 	end
 	if #payload ~= 4 then
-		return nil, h2_errors.FRAME_SIZE_ERROR:traceback("'RST_STREAM' frames must be 4 bytes")
+		return nil, h2_errors.FRAME_SIZE_ERROR:new_traceback("'RST_STREAM' frames must be 4 bytes")
 	end
 	if stream.state == "idle" then
-		return nil, h2_errors.PROTOCOL_ERROR:traceback([['RST_STREAM' frames MUST NOT be sent for a stream in the "idle" state]])
+		return nil, h2_errors.PROTOCOL_ERROR:new_traceback([['RST_STREAM' frames MUST NOT be sent for a stream in the "idle" state]])
 	end
 
 	local err_code = sunpack(">I4", payload)
@@ -552,19 +552,19 @@ end
 -- SETTING
 frame_handlers[0x4] = function(stream, flags, payload)
 	if stream.id ~= 0 then
-		return nil, h2_errors.PROTOCOL_ERROR:traceback("stream identifier for a 'SETTINGS' frame MUST be zero")
+		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("stream identifier for a 'SETTINGS' frame MUST be zero")
 	end
 
 	local ack = band(flags, 0x1) ~= 0
 	if ack then -- server is ACK-ing our settings
 		if #payload ~= 0 then
-			return nil, h2_errors.FRAME_SIZE_ERROR:traceback("Receipt of a 'SETTINGS' frame with the ACK flag set and a length field value other than 0")
+			return nil, h2_errors.FRAME_SIZE_ERROR:new_traceback("Receipt of a 'SETTINGS' frame with the ACK flag set and a length field value other than 0")
 		end
 		stream.connection:ack_settings()
 		return true
 	else -- settings from server
 		if #payload % 6 ~= 0 then
-			return nil, h2_errors.FRAME_SIZE_ERROR:traceback("'SETTINGS' frame with a length other than a multiple of 6 octets")
+			return nil, h2_errors.FRAME_SIZE_ERROR:new_traceback("'SETTINGS' frame with a length other than a multiple of 6 octets")
 		end
 		local peer_settings = {}
 		for i=1, #payload, 6 do
@@ -580,23 +580,23 @@ frame_handlers[0x4] = function(stream, flags, payload)
 				elseif val == 1 then
 					val = true
 				else
-					return nil, h2_errors.PROTOCOL_ERROR:traceback()
+					return nil, h2_errors.PROTOCOL_ERROR:new_traceback()
 				end
 				if val and stream.type == "client" then
 					-- Clients MUST reject any attempt to change the SETTINGS_ENABLE_PUSH
 					-- setting to a value other than 0 by treating the message as a connection
 					-- error of type PROTOCOL_ERROR.
-					return nil, h2_errors.PROTOCOL_ERROR:traceback("SETTINGS_ENABLE_PUSH not allowed for clients")
+					return nil, h2_errors.PROTOCOL_ERROR:new_traceback("SETTINGS_ENABLE_PUSH not allowed for clients")
 				end
 			elseif id == 0x4 then
 				if val >= 2^31 then
-					return nil, h2_errors.FLOW_CONTROL_ERROR:traceback("SETTINGS_INITIAL_WINDOW_SIZE must be less than 2^31")
+					return nil, h2_errors.FLOW_CONTROL_ERROR:new_traceback("SETTINGS_INITIAL_WINDOW_SIZE must be less than 2^31")
 				end
 			elseif id == 0x5 then
 				if val < 16384 then
-					return nil, h2_errors.PROTOCOL_ERROR:traceback("SETTINGS_MAX_FRAME_SIZE must be greater than or equal to 16384")
+					return nil, h2_errors.PROTOCOL_ERROR:new_traceback("SETTINGS_MAX_FRAME_SIZE must be greater than or equal to 16384")
 				elseif val >= 2^24 then
-					return nil, h2_errors.PROTOCOL_ERROR:traceback("SETTINGS_MAX_FRAME_SIZE must be less than 2^24")
+					return nil, h2_errors.PROTOCOL_ERROR:new_traceback("SETTINGS_MAX_FRAME_SIZE must be less than 2^24")
 				end
 			end
 			peer_settings[id] = val
@@ -676,14 +676,14 @@ frame_handlers[0x5] = function(stream, flags, payload)
 	if not stream.connection.acked_settings[0x2] then
 		-- An endpoint that has both set this parameter to 0 and had it acknowledged MUST
 		-- treat the receipt of a PUSH_PROMISE frame as a connection error of type PROTOCOL_ERROR.
-		return nil, h2_errors.PROTOCOL_ERROR:traceback("SETTINGS_ENABLE_PUSH is 0")
+		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("SETTINGS_ENABLE_PUSH is 0")
 	elseif stream.type == "server" then
 		-- A client cannot push. Thus, servers MUST treat the receipt of a PUSH_PROMISE
 		-- frame as a connection error of type PROTOCOL_ERROR.
-		return nil, h2_errors.PROTOCOL_ERROR:traceback("A client cannot push")
+		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("A client cannot push")
 	end
 	if stream.id == 0 then
-		return nil, h2_errors.PROTOCOL_ERROR:traceback("'PUSH_PROMISE' frames MUST be associated with a stream")
+		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("'PUSH_PROMISE' frames MUST be associated with a stream")
 	end
 
 	local end_headers = band(flags, 0x04) ~= 0
@@ -705,7 +705,7 @@ frame_handlers[0x5] = function(stream, flags, payload)
 	pos = pos + 4
 
 	if #payload - pos + 1 > MAX_HEADER_BUFFER_SIZE then
-		return nil, h2_errors.PROTOCOL_ERROR:traceback("headers too large")
+		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("headers too large")
 	end
 
 	payload = payload:sub(pos)
@@ -723,7 +723,7 @@ frame_handlers[0x5] = function(stream, flags, payload)
 			recv_headers_buffer[recv_headers_buffer_items] = header_fragment
 			recv_headers_buffer_length = recv_headers_buffer_length + #header_fragment
 			if recv_headers_buffer_length > MAX_HEADER_BUFFER_SIZE then
-				return nil, h2_errors.PROTOCOL_ERROR:traceback("headers too large")
+				return nil, h2_errors.PROTOCOL_ERROR:new_traceback("headers too large")
 			end
 		until end_continuations
 
@@ -731,15 +731,15 @@ frame_handlers[0x5] = function(stream, flags, payload)
 	end
 
 	if pad_len > #payload then
-		return nil, h2_errors.PROTOCOL_ERROR:traceback("length of the padding is the length of the frame payload or greater")
+		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("length of the padding is the length of the frame payload or greater")
 	elseif pad_len > 0 and payload:match("[^%z]", -pad_len) then
-		return nil, h2_errors.PROTOCOL_ERROR:traceback("padding not null bytes")
+		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("padding not null bytes")
 	end
 	payload = payload:sub(1, -pad_len-1)
 
 	local headers, newpos = stream.connection.decoding_context:decode_headers(payload)
 	if newpos ~= #payload + 1 then
-		return nil, h2_errors.COMPRESSION_ERROR:traceback("incomplete header fragment")
+		return nil, h2_errors.COMPRESSION_ERROR:new_traceback("incomplete header fragment")
 	end
 
 	local ok, err = validate_headers(headers, true, 1, false)
@@ -780,10 +780,10 @@ end
 -- PING
 frame_handlers[0x6] = function(stream, flags, payload)
 	if stream.id ~= 0 then
-		return nil, h2_errors.PROTOCOL_ERROR:traceback("'PING' must be on stream id 0")
+		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("'PING' must be on stream id 0")
 	end
 	if #payload ~= 8 then
-		return nil, h2_errors.FRAME_SIZE_ERROR:traceback("'PING' frames must be 8 bytes")
+		return nil, h2_errors.FRAME_SIZE_ERROR:new_traceback("'PING' frames must be 8 bytes")
 	end
 
 	local ack = band(flags, 0x1) ~= 0
@@ -814,10 +814,10 @@ end
 -- GOAWAY
 frame_handlers[0x7] = function(stream, flags, payload) -- luacheck: ignore 212
 	if stream.id ~= 0 then
-		return nil, h2_errors.PROTOCOL_ERROR:traceback("'GOAWAY' frames must be on stream id 0")
+		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("'GOAWAY' frames must be on stream id 0")
 	end
 	if #payload < 8 then
-		return nil, h2_errors.FRAME_SIZE_ERROR:traceback("'GOAWAY' frames must be at least 8 bytes")
+		return nil, h2_errors.FRAME_SIZE_ERROR:new_traceback("'GOAWAY' frames must be at least 8 bytes")
 	end
 
 	local last_streamid = sunpack(">I4 I4", payload)
@@ -846,7 +846,7 @@ end
 -- WINDOW_UPDATE
 frame_handlers[0x8] = function(stream, flags, payload) -- luacheck: ignore 212
 	if #payload ~= 4 then
-		return nil, h2_errors.FRAME_SIZE_ERROR:traceback("'WINDOW_UPDATE' frames must be 4 bytes")
+		return nil, h2_errors.FRAME_SIZE_ERROR:new_traceback("'WINDOW_UPDATE' frames must be 4 bytes")
 	end
 	if stream.id ~= 0 and stream.state == "idle" then
 		return nil, h2_errors.PROTOCOL_ERROR([['WINDOW_UPDATE' frames not allowed in "idle" state]], true)
@@ -856,7 +856,7 @@ frame_handlers[0x8] = function(stream, flags, payload) -- luacheck: ignore 212
 	assert(band(tmp, 0x80000000) == 0, "'WINDOW_UPDATE' reserved bit set")
 	local increment = band(tmp, 0x7fffffff)
 	if increment == 0 then
-		return nil, h2_errors.PROTOCOL_ERROR:traceback("'WINDOW_UPDATE' MUST not have an increment of 0", stream.id ~= 0)
+		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("'WINDOW_UPDATE' MUST not have an increment of 0", stream.id ~= 0)
 	end
 
 	local ob
@@ -867,7 +867,7 @@ frame_handlers[0x8] = function(stream, flags, payload) -- luacheck: ignore 212
 	end
 	local newval = ob.peer_flow_credits + increment
 	if newval > 2^31-1 then
-		return nil, h2_errors.FLOW_CONTROL_ERROR:traceback("A sender MUST NOT allow a flow-control window to exceed 2^31-1 octets", stream.id ~= 0)
+		return nil, h2_errors.FLOW_CONTROL_ERROR:new_traceback("A sender MUST NOT allow a flow-control window to exceed 2^31-1 octets", stream.id ~= 0)
 	end
 	ob.peer_flow_credits = newval
 	ob.peer_flow_credits_increase:signal()
@@ -899,9 +899,9 @@ end
 -- CONTINUATION
 frame_handlers[0x9] = function(stream, flags, payload) -- luacheck: ignore 212
 	if stream.id == 0 then
-		return nil, h2_errors.PROTOCOL_ERROR:traceback("'CONTINUATION' frames MUST be associated with a stream")
+		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("'CONTINUATION' frames MUST be associated with a stream")
 	end
-	return nil, h2_errors.PROTOCOL_ERROR:traceback("'CONTINUATION' frames MUST be preceded by a 'HEADERS', 'PUSH_PROMISE' or 'CONTINUATION' frame without the 'END_HEADERS' flag set")
+	return nil, h2_errors.PROTOCOL_ERROR:new_traceback("'CONTINUATION' frames MUST be preceded by a 'HEADERS', 'PUSH_PROMISE' or 'CONTINUATION' frame without the 'END_HEADERS' flag set")
 end
 
 function stream_methods:read_continuation()
@@ -909,7 +909,7 @@ function stream_methods:read_continuation()
 	if typ == nil then
 		return nil, flag, streamid
 	elseif typ ~= 0x9 or self.id ~= streamid then
-		return nil, h2_errors.PROTOCOL_ERROR:traceback("CONTINUATION frame expected")
+		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("CONTINUATION frame expected")
 	end
 	local end_headers = band(flag, 0x04) ~= 0
 	return end_headers, payload
