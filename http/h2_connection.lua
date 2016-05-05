@@ -312,7 +312,8 @@ function connection_methods:new_stream(id)
 			-- Pick next free odd number
 			id = self.highest_odd_stream + 2
 		else
-			error("NYI")
+			-- Pick next free odd number
+			id = self.highest_even_stream + 2
 		end
 		-- TODO: check MAX_CONCURRENT_STREAMS
 	end
