@@ -376,6 +376,11 @@ See [`connection:close()`](#connection:close)
 
 ### `h2_connection:new_stream(id)` <!-- --> {#http.h2_connection:new_stream}
 
+`id` (optional) is the stream id to assign the new stream.  For client initiated streams, this will be the next free odd numbered stream.  
+For server initiated streams, this will be the next free even numbered stream.
+
+See [`connection:new_stream()`](#connection:new_stream) for more information.
+
 
 ### `h2_connection:get_next_incoming_stream(timeout)` <!-- --> {#http.h2_connection:get_next_incoming_stream}
 
