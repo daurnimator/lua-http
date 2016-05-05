@@ -482,6 +482,9 @@ an `http.h2_stream` has the following methods:
 ### `h2_stream:write_headers_frame(payload, end_stream, end_headers, padded, exclusive, stream_dep, weight, timeout)` <!-- --> {#http.h2_stream:write_headers_frame}
 
 
+### `h2_stream:write_priority_frame(exclusive, stream_dep, weight, timeout)` <!-- --> {#http.h2_stream:write_priority_frame}
+
+
 ### `h2_stream:write_rst_stream(err_code, timeout)` <!-- --> {#http.h2_stream:write_rst_stream}
 
 

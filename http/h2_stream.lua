@@ -497,6 +497,17 @@ frame_handlers[0x2] = function(stream, flags, payload) -- luacheck: ignore 212
 	return true
 end
 
+function stream_methods:write_priority_frame(exclusive, stream_dep, weight, timeout)
+	assert(stream_dep < 0x80000000)
+	local tmp = stream_dep
+	if exclusive then
+		tmp = bor(tmp, 0x80000000)
+	end
+	weight = weight and weight - 1 or 0
+	local payload = spack("> I4 B", tmp, weight)
+	return self:write_http2_frame(0x2, 0, payload, timeout)
+end
+
 -- RST_STREAM
 frame_handlers[0x3] = function(stream, flags, payload) -- luacheck: ignore 212
 	if stream.id == 0 then
