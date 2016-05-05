@@ -16,10 +16,6 @@ if _VERSION:match("%d+%.?%d*") < "5.3" then
 	assert = require "compat53.module".assert
 end
 
-local function xor(a, b)
-	return (a and b) or not (a or b)
-end
-
 local MAX_HEADER_BUFFER_SIZE = 400*1024 -- 400 KB is max size in h2o
 
 local frame_handlers = {}
@@ -423,7 +419,7 @@ frame_handlers[0x1] = function(stream, flags, payload)
 		end
 	end
 
-	local ok, err = validate_headers(headers, xor(stream.id % 2 == 0, stream.type == "client"), stream.stats_recv_headers, stream.state == "half closed (remote)" or stream.state == "closed")
+	local ok, err = validate_headers(headers, stream.type ~= "client", stream.stats_recv_headers, stream.state == "half closed (remote)" or stream.state == "closed")
 	if not ok then return nil, err end
 
 	stream.recv_headers_fifo:push(headers)
@@ -980,7 +976,7 @@ end
 
 function stream_methods:write_headers(headers, end_stream, timeout)
 	assert(headers, "missing argument: headers")
-	assert(validate_headers(headers, xor(self.id % 2 == 1, self.type == "client"), self.stats_sent_headers+1, end_stream))
+	assert(validate_headers(headers, self.type == "client", self.stats_sent_headers+1, end_stream))
 	assert(type(end_stream) == "boolean", "'end_stream' MUST be a boolean")
 
 	local padded, exclusive, stream_dep, weight = nil, nil, nil, nil
