@@ -325,7 +325,7 @@ frame_handlers[0x1] = function(stream, flags, payload)
 	if stream.id == 0 then
 		return nil, h2_errors.PROTOCOL_ERROR:traceback("'HEADERS' frames MUST be associated with a stream")
 	end
-	if stream.state ~= "idle" and stream.state ~= "open" and stream.state ~= "half closed (local)" then
+	if stream.state ~= "idle" and stream.state ~= "open" and stream.state ~= "half closed (local)" and stream.state ~= "reserved (remote)" then
 		return nil, h2_errors.STREAM_CLOSED:traceback("'HEADERS' frame not allowed in '" .. stream.state .. "' state", true)
 	end
 
