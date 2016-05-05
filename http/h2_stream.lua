@@ -710,9 +710,9 @@ function stream_methods:write_push_promise_frame(promised_stream_id, payload, en
 		pad_len = spack("> B", padded)
 		padding = ("\0"):rep(padded)
 	end
+	assert(promised_stream_id > 0)
 	assert(promised_stream_id < 0x80000000)
 	assert(promised_stream_id % 2 == 0)
-	assert(promised_stream_id > self.highest_even_stream)
 	-- TODO: promised_stream_id must be valid for sender
 	promised_stream_id = spack(">I4", promised_stream_id)
 	payload = pad_len .. promised_stream_id .. payload .. padding
