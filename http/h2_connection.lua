@@ -197,9 +197,6 @@ function connection_main_loop(self)
 				error(flag)
 			end
 		end
-		if self.need_continuation and (typ ~= 0x9 or streamid ~= self.need_continuation.id) then
-			h2_error.errors.PROTOCOL_ERROR("CONTINUATION frame expected")
-		end
 		local handler = h2_stream.frame_handlers[typ]
 		-- http2 spec section 4.1:
 		-- Implementations MUST ignore and discard any frame that has a type that is unknown.
