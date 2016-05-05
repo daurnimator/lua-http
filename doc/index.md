@@ -376,6 +376,11 @@ See [`connection:close()`](#connection:close)
 
 ### `h2_connection:new_stream(id)` <!-- --> {#http.h2_connection:new_stream}
 
+`id` (optional) is the stream id to assign the new stream.  For client initiated streams, this will be the next free odd numbered stream.  
+For server initiated streams, this will be the next free even numbered stream.
+
+See [`connection:new_stream()`](#connection:new_stream) for more information.
+
 
 ### `h2_connection:get_next_incoming_stream(timeout)` <!-- --> {#http.h2_connection:get_next_incoming_stream}
 
@@ -481,6 +486,16 @@ an `http.h2_stream` has the following methods:
 
 
 ### `h2_stream:write_settings_frame(ACK, settings, timeout)` <!-- --> {#http.h2_stream:write_settings_frame}
+
+
+### `h2_stream:write_push_promise_frame(promised_stream_id, payload, end_headers, padded, timeout)` <!-- --> {#http.h2_stream:write_push_promise_frame}
+
+
+### `h2_stream:push_promise(headers, timeout)` <!-- --> {#http.h2_stream:push_promise}
+
+Pushes a new promise to the client.
+
+Returns the new stream as a [h2_stream](#http.h2_stream).
 
 
 ### `h2_stream:write_ping_frame(ACK, payload, timeout)` <!-- --> {#http.h2_stream:write_ping_frame}

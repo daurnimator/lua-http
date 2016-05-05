@@ -16,10 +16,6 @@ if _VERSION:match("%d+%.?%d*") < "5.3" then
 	assert = require "compat53.module".assert
 end
 
-local function xor(a, b)
-	return (a and b) or not (a or b)
-end
-
 local MAX_HEADER_BUFFER_SIZE = 400*1024 -- 400 KB is max size in h2o
 
 local frame_handlers = {}
@@ -69,11 +65,6 @@ local function new_stream(connection, id)
 
 		recv_headers_fifo = new_fifo();
 		recv_headers_cond = cc.new();
-		-- Used as storage over CONTINUATION frames
-		recv_headers_padding = nil;
-		recv_headers_buffer = nil;
-		recv_headers_buffer_items = nil;
-		recv_headers_buffer_length = nil;
 
 		chunk_fifo = new_fifo();
 		chunk_cond = cc.new();
@@ -329,46 +320,12 @@ local function validate_headers(headers, is_request, nth_header, ended_stream)
 	return true
 end
 
-local function handle_end_headers(stream)
-	-- We have a full header block
-	stream.connection.need_continuation = nil
-
-	-- Have to decode now or the hpack dynamic table will go out of sync
-	local payload = table.concat(stream.recv_headers_buffer, nil, 1, stream.recv_headers_buffer_items)
-
-	local pad_len = stream.recv_headers_padding
-	if pad_len > #payload then
-		return nil, h2_errors.PROTOCOL_ERROR:traceback("length of the padding is the length of the frame payload or greater")
-	elseif pad_len > 0 and payload:match("[^%z]", -pad_len) then
-		return nil, h2_errors.PROTOCOL_ERROR:traceback("padding not null bytes")
-	end
-	payload = payload:sub(1, -pad_len-1)
-
-	local headers, newpos = stream.connection.decoding_context:decode_headers(payload)
-	if newpos ~= #payload + 1 then
-		return nil, h2_errors.COMPRESSION_ERROR:traceback("incomplete header fragment")
-	end
-
-	local ok, err = validate_headers(headers, xor(stream.id % 2 == 0, stream.type == "client"), stream.stats_recv_headers, stream.state == "half closed (remote)" or stream.state == "closed")
-	if not ok then return nil, err end
-
-	stream.recv_headers_fifo:push(headers)
-	stream.recv_headers_cond:signal()
-
-	stream.recv_headers_buffer = nil
-	stream.recv_headers_buffer_items = nil
-	stream.recv_headers_buffer_length = nil
-	stream.recv_headers_padding = nil
-
-	return true
-end
-
 -- HEADERS
 frame_handlers[0x1] = function(stream, flags, payload)
 	if stream.id == 0 then
 		return nil, h2_errors.PROTOCOL_ERROR:traceback("'HEADERS' frames MUST be associated with a stream")
 	end
-	if stream.state ~= "idle" and stream.state ~= "open" and stream.state ~= "half closed (local)" then
+	if stream.state ~= "idle" and stream.state ~= "open" and stream.state ~= "half closed (local)" and stream.state ~= "reserved (remote)" then
 		return nil, h2_errors.STREAM_CLOSED:traceback("'HEADERS' frame not allowed in '" .. stream.state .. "' state", true)
 	end
 
@@ -379,12 +336,13 @@ frame_handlers[0x1] = function(stream, flags, payload)
 
 	-- index where payload body starts
 	local pos = 1
+	local pad_len
 
 	if padded then
-		stream.recv_headers_padding = sunpack("> B", payload, pos)
+		pad_len = sunpack("> B", payload, pos)
 		pos = 2
 	else
-		stream.recv_headers_padding = 0
+		pad_len = 0
 	end
 
 	if priority then
@@ -413,10 +371,39 @@ frame_handlers[0x1] = function(stream, flags, payload)
 		payload = payload:sub(pos)
 	end
 
+	if not end_headers then
+		local recv_headers_buffer = { payload }
+		local recv_headers_buffer_items = 1
+		local recv_headers_buffer_length = #payload
+		repeat
+			local end_continuations, header_fragment = stream:read_continuation()
+			if not end_continuations then
+				return nil, header_fragment
+			end
+			recv_headers_buffer_items = recv_headers_buffer_items + 1
+			recv_headers_buffer[recv_headers_buffer_items] = header_fragment
+			recv_headers_buffer_length = recv_headers_buffer_length + #header_fragment
+			if recv_headers_buffer_length > MAX_HEADER_BUFFER_SIZE then
+				return nil, h2_errors.PROTOCOL_ERROR:traceback("headers too large")
+			end
+		until end_continuations
+
+		payload = table.concat(recv_headers_buffer, "", 1, recv_headers_buffer_items)
+	end
+
+	if pad_len > #payload then
+		return nil, h2_errors.PROTOCOL_ERROR:traceback("length of the padding is the length of the frame payload or greater")
+	elseif pad_len > 0 and payload:match("[^%z]", -pad_len) then
+		return nil, h2_errors.PROTOCOL_ERROR:traceback("padding not null bytes")
+	end
+	payload = payload:sub(1, -pad_len-1)
+
+	local headers, newpos = stream.connection.decoding_context:decode_headers(payload)
+	if newpos ~= #payload + 1 then
+		return nil, h2_errors.COMPRESSION_ERROR:traceback("incomplete header fragment")
+	end
+
 	stream.stats_recv_headers = stream.stats_recv_headers + 1
-	stream.recv_headers_buffer = { payload }
-	stream.recv_headers_buffer_items = 1
-	stream.recv_headers_buffer_length = #payload
 
 	if end_stream then
 		if stream.state == "half closed (local)" then
@@ -432,13 +419,11 @@ frame_handlers[0x1] = function(stream, flags, payload)
 		end
 	end
 
-	-- Handle end_headers after states are set
-	if end_headers then
-		local ok, err = handle_end_headers(stream)
-		if not ok then return nil, err end
-	else
-		stream.connection.need_continuation = stream
-	end
+	local ok, err = validate_headers(headers, stream.type ~= "client", stream.stats_recv_headers, stream.state == "half closed (remote)" or stream.state == "closed")
+	if not ok then return nil, err end
+
+	stream.recv_headers_fifo:push(headers)
+	stream.recv_headers_cond:signal()
 
 	return true
 end
@@ -693,23 +678,92 @@ frame_handlers[0x5] = function(stream, flags, payload)
 	local end_headers = band(flags, 0x04) ~= 0
 	local padded = band(flags, 0x8) ~= 0
 
+	-- index where payload body starts
+	local pos = 1
+	local pad_len
+
 	if padded then
-		local pad_len = sunpack("> B", payload)
-		if pad_len >= #payload then -- >= will take care of the pad_len itself
-			return nil, h2_errors.PROTOCOL_ERROR:traceback("length of the padding is the length of the frame payload or greater")
-		elseif payload:match("[^%z]", -pad_len) then
-			return nil, h2_errors.PROTOCOL_ERROR:traceback("padding not null bytes")
-		end
-		payload = payload:sub(2, -pad_len-1)
+		pad_len = sunpack("> B", payload, pos)
+		pos = 2
+	else
+		pad_len = 0
 	end
 
-	local tmp = sunpack(">I4", payload)
-	local exclusive = band(tmp, 0x80000000) ~= 0
-	local promised_stream = band(tmp, 0x7fffffff)
-	local header_fragment = payload:sub(5)
+	local tmp = sunpack(">I4", payload, pos)
+	local promised_stream_id = band(tmp, 0x7fffffff)
+	pos = pos + 4
 
-	error(string.format("NYI: PUSH_PROMISE (id=%d, exclusive?=%s, promised=%d, #fragment=%d)",
-		stream.id, end_headers, tostring(exclusive), promised_stream, header_fragment))
+	if #payload - pos + 1 > MAX_HEADER_BUFFER_SIZE then
+		return nil, h2_errors.PROTOCOL_ERROR:traceback("headers too large")
+	end
+
+	payload = payload:sub(pos)
+
+	if not end_headers then
+		local recv_headers_buffer = { payload }
+		local recv_headers_buffer_items = 1
+		local recv_headers_buffer_length = #payload
+		repeat
+			local end_continuations, header_fragment = stream:read_continuation()
+			if not end_continuations then
+				return nil, header_fragment
+			end
+			recv_headers_buffer_items = recv_headers_buffer_items + 1
+			recv_headers_buffer[recv_headers_buffer_items] = header_fragment
+			recv_headers_buffer_length = recv_headers_buffer_length + #header_fragment
+			if recv_headers_buffer_length > MAX_HEADER_BUFFER_SIZE then
+				return nil, h2_errors.PROTOCOL_ERROR:traceback("headers too large")
+			end
+		until end_continuations
+
+		payload = table.concat(recv_headers_buffer, "", 1, recv_headers_buffer_items)
+	end
+
+	if pad_len > #payload then
+		return nil, h2_errors.PROTOCOL_ERROR:traceback("length of the padding is the length of the frame payload or greater")
+	elseif pad_len > 0 and payload:match("[^%z]", -pad_len) then
+		return nil, h2_errors.PROTOCOL_ERROR:traceback("padding not null bytes")
+	end
+	payload = payload:sub(1, -pad_len-1)
+
+	local headers, newpos = stream.connection.decoding_context:decode_headers(payload)
+	if newpos ~= #payload + 1 then
+		return nil, h2_errors.COMPRESSION_ERROR:traceback("incomplete header fragment")
+	end
+
+	local ok, err = validate_headers(headers, true, 1, false)
+	if not ok then return nil, err end
+
+	local promised_stream = stream.connection:new_stream(promised_stream_id)
+	stream:reprioritise(promised_stream)
+	promised_stream:set_state("reserved (remote)")
+	promised_stream.recv_headers_fifo:push(headers)
+	stream.connection.new_streams:push(promised_stream)
+	stream.connection.new_streams_cond:signal(1)
+
+	return true
+end
+
+function stream_methods:write_push_promise_frame(promised_stream_id, payload, end_headers, padded, timeout)
+	assert(self.state == "open" or self.state == "half closed (remote)")
+	assert(self.id ~= 0)
+	local pad_len, padding = "", ""
+	local flags = 0
+	if end_headers then
+		flags = bor(flags, 0x4)
+	end
+	if padded then
+		flags = bor(flags, 0x8)
+		pad_len = spack("> B", padded)
+		padding = ("\0"):rep(padded)
+	end
+	assert(promised_stream_id > 0)
+	assert(promised_stream_id < 0x80000000)
+	assert(promised_stream_id % 2 == 0)
+	-- TODO: promised_stream_id must be valid for sender
+	promised_stream_id = spack(">I4", promised_stream_id)
+	payload = pad_len .. promised_stream_id .. payload .. padding
+	return self:write_http2_frame(0x5, flags, payload, timeout)
 end
 
 -- PING
@@ -832,31 +886,22 @@ function stream_methods:write_window_update(inc)
 end
 
 -- CONTINUATION
-frame_handlers[0x9] = function(stream, flags, payload)
+frame_handlers[0x9] = function(stream, flags, payload) -- luacheck: ignore 212
 	if stream.id == 0 then
 		return nil, h2_errors.PROTOCOL_ERROR:traceback("'CONTINUATION' frames MUST be associated with a stream")
 	end
-	if stream.recv_headers_buffer_length == nil then
-		return nil, h2_errors.PROTOCOL_ERROR:traceback("'CONTINUATION' frames MUST be preceded by a 'HEADERS', 'PUSH_PROMISE' or 'CONTINUATION' frame without the 'END_HEADERS' flag set")
-	end
+	return nil, h2_errors.PROTOCOL_ERROR:traceback("'CONTINUATION' frames MUST be preceded by a 'HEADERS', 'PUSH_PROMISE' or 'CONTINUATION' frame without the 'END_HEADERS' flag set")
+end
 
-	local end_headers = band(flags, 0x04) ~= 0
-	local header_fragment = payload
-
-	local l = stream.recv_headers_buffer_length + #header_fragment
-	if l > MAX_HEADER_BUFFER_SIZE then
-		return nil, h2_errors.PROTOCOL_ERROR:traceback("headers too large")
+function stream_methods:read_continuation()
+	local typ, flag, streamid, payload = self:read_http2_frame()
+	if typ == nil then
+		return nil, flag, streamid
+	elseif typ ~= 0x9 or self.id ~= streamid then
+		return nil, h2_errors.PROTOCOL_ERROR:traceback("CONTINUATION frame expected")
 	end
-	local i = stream.recv_headers_buffer_items + 1
-	stream.recv_headers_buffer[i] = header_fragment
-	stream.recv_headers_buffer_items = i
-	stream.recv_headers_buffer_length = l
-
-	if end_headers then
-		return handle_end_headers(stream)
-	else
-		return true
-	end
+	local end_headers = band(flag, 0x04) ~= 0
+	return end_headers, payload
 end
 
 function stream_methods:write_continuation_frame(payload, end_headers, timeout)
@@ -947,39 +992,66 @@ function stream_methods:unget(str)
 	self.chunk_fifo:insert(1, chunk)
 end
 
-function stream_methods:write_headers(headers, end_stream, timeout)
+local function write_headers(self, func, headers, timeout)
 	local deadline = timeout and (monotime()+timeout)
-	assert(headers, "missing argument: headers")
-	assert(type(end_stream) == "boolean", "'end_stream' MUST be a boolean")
-	assert(validate_headers(headers, xor(self.id % 2 == 1, self.type == "client"), self.stats_sent_headers+1, end_stream))
 	local encoding_context = self.connection.encoding_context
 	encoding_context:encode_headers(headers)
 	local payload = encoding_context:render_data()
 	encoding_context:clear_data()
 
 	local SETTINGS_MAX_FRAME_SIZE = self.connection.peer_settings[0x5]
-	local padded, exclusive, stream_dep, weight = nil, nil, nil, nil
 	if #payload <= SETTINGS_MAX_FRAME_SIZE then
-		assert(self:write_headers_frame(payload, end_stream, true, padded, exclusive, stream_dep, weight, timeout))
+		assert(func(payload, true, deadline))
 	else
 		do
 			local partial = payload:sub(1, SETTINGS_MAX_FRAME_SIZE)
-			assert(self:write_headers_frame(partial, end_stream, false, padded, exclusive, stream_dep, weight, timeout))
+			assert(func(partial, false, deadline))
 		end
 		local sent = SETTINGS_MAX_FRAME_SIZE
 		local max = #payload-SETTINGS_MAX_FRAME_SIZE
 		while sent < max do
 			local partial = payload:sub(sent+1, sent+SETTINGS_MAX_FRAME_SIZE)
-			assert(self:write_continuation_frame(partial, false, deadline and (deadline-monotime())))
+			assert(self:write_continuation_frame(partial, false, deadline and deadline-monotime()))
 			sent = sent + SETTINGS_MAX_FRAME_SIZE
 		end
 		do
 			local partial = payload:sub(sent+1)
-			assert(self:write_continuation_frame(partial, true, deadline and (deadline-monotime())))
+			assert(self:write_continuation_frame(partial, true, deadline and deadline-monotime()))
 		end
 	end
+end
+
+function stream_methods:write_headers(headers, end_stream, timeout)
+	assert(headers, "missing argument: headers")
+	assert(validate_headers(headers, self.type == "client", self.stats_sent_headers+1, end_stream))
+	assert(type(end_stream) == "boolean", "'end_stream' MUST be a boolean")
+
+	local padded, exclusive, stream_dep, weight = nil, nil, nil, nil
+	write_headers(self, function(payload, end_headers, deadline)
+		return self:write_headers_frame(payload, end_stream, end_headers, padded, exclusive, stream_dep, weight, deadline and deadline-monotime())
+	end, headers, timeout)
 
 	return true
+end
+
+function stream_methods:push_promise(headers, timeout)
+	assert(self.type == "server")
+	assert(headers, "missing argument: headers")
+	assert(validate_headers(headers, true, 1, false))
+	assert(headers:has(":authority"))
+
+	local promised_stream = self.connection:new_stream()
+	self:reprioritise(promised_stream)
+	local promised_stream_id = promised_stream.id
+
+	local padded = nil
+	write_headers(self, function(payload, end_headers, deadline)
+		return self:write_push_promise_frame(promised_stream_id, payload, end_headers, padded, deadline)
+	end, headers, timeout)
+
+	promised_stream:set_state("reserved (local)")
+
+	return promised_stream
 end
 
 function stream_methods:write_chunk(payload, end_stream, timeout)
