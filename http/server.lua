@@ -230,8 +230,8 @@ Takes a table of options:
   - `.client_timeout`: Timeout (in seconds) to wait for client to send first bytes and/or complete TLS handshake (default: 10)
 ]]
 local function new_server(tbl)
-	local socket = assert(tbl.socket)
-	local on_stream = assert(tbl.on_stream)
+	local socket = assert(tbl.socket, "missing 'socket'")
+	local on_stream = assert(tbl.on_stream, "missing 'on_stream'")
 
 	local cq = cqueues.new()
 
