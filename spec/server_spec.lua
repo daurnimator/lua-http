@@ -4,6 +4,13 @@ describe("http.server module", function()
 	local new_headers = require "http.headers".new
 	local cqueues = require "cqueues"
 	local cs = require "cqueues.socket"
+	it("__tostring works", function()
+		local s = server.new {
+			socket = (cs.pair());
+			on_stream = error;
+		}
+		assert.same("http.server{", tostring(s):match("^.-%{"))
+	end)
 	local function simple_test(family, tls, version)
 		local cq = cqueues.new()
 		local options = {

@@ -74,15 +74,18 @@ local function new_stream(connection)
 end
 
 local valid_states = {
-	["idle"] = true; -- initial
-	["open"] = true; -- have sent or received headers; haven't sent body yet
-	["half closed (local)"] = true; -- have sent whole body
-	["half closed (remote)"] = true; -- have received whole body
-	["closed"] = true; -- complete
+	["idle"] = 1; -- initial
+	["open"] = 2; -- have sent or received headers; haven't sent body yet
+	["half closed (local)"] = 3; -- have sent whole body
+	["half closed (remote)"] = 3; -- have received whole body
+	["closed"] = 4; -- complete
 }
 function stream_methods:set_state(new)
-	assert(valid_states[new])
+	local new_order = assert(valid_states[new])
 	local old = self.state
+	if new_order <= valid_states[old] then
+		error("invalid state progression ('"..old.."' to '"..new.."')")
+	end
 	self.state = new
 	if self.type == "server" then
 		-- If we have just finished reading the request
@@ -449,6 +452,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 	local connection_header = headers:get_split_as_sequence("connection")
 	local transfer_encoding_header = headers:get_split_as_sequence("transfer-encoding")
 	local cl = headers:get("content-length") -- ignore subsequent content-length values
+	local add_te_gzip = false
 	if self.req_method == "CONNECT" and (self.type == "client" or status_code == "200") then
 		-- successful CONNECT requests always continue until the connection is closed
 		self.body_write_type = "close"
@@ -551,14 +555,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		if has_zlib then
 			if self.type == "client" then
 				-- If we support zlib; add a "te" header indicating we support the gzip transfer-encoding
-				if not has(connection_header, "te") then
-					connection_header.n = connection_header.n + 1
-					connection_header[connection_header.n] = "te"
-				end
-				local ok, err, errno = self.connection:write_header("te", "gzip", deadline and (deadline-monotime()))
-				if not ok then
-					return nil, err, errno
-				end
+				add_te_gzip = true
 			else -- server
 				-- Whether to use transfer-encoding: gzip
 				if self.body_write_deflate -- only use if client sent the TE header allowing it
@@ -604,6 +601,17 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		end
 	end
 
+	if add_te_gzip then
+		-- Doesn't matter if it gets added more than once.
+		if not has(connection_header, "te") then
+			connection_header.n = connection_header.n + 1
+			connection_header[connection_header.n] = "te"
+		end
+		local ok, err, errno = self.connection:write_header("te", "gzip", deadline and deadline-monotime())
+		if not ok then
+			return nil, err, errno
+		end
+	end
 	-- Write transfer-encoding, content-length and connection headers separately
 	if transfer_encoding_header.n > 0 then
 		-- Add to connection header

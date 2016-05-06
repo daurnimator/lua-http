@@ -113,21 +113,39 @@ function request_methods:clone()
 end
 
 function request_methods:to_url()
-	-- TODO: userinfo section (username/password)
+	local scheme = self.headers:get(":scheme")
 	local method = self.headers:get(":method")
-	if method == "CONNECT" then
-		local scheme = self.tls and "https" or "http"
-		local authority = http_util.to_authority(self.host, self.port, scheme)
-		return scheme .. "://" .. authority
-	else
-		local scheme = self.headers:get(":scheme")
-		local authority = self.headers:get(":authority")
-		if authority == nil then
-			authority = http_util.to_authority(self.host, self.port, scheme)
-		end
-		local path = self.headers:get(":path")
-		return scheme .. "://" .. authority .. path
+	local path
+	if scheme == nil then
+		scheme = self.tls and "https" or "http"
 	end
+	local authority
+	local authorization_field
+	if method == "CONNECT" then
+		authorization_field = "proxy-authorization"
+		path = ""
+	else
+		authority = self.headers:get(":authority")
+		-- TODO: validate authority can fit in a url
+		path = self.headers:get(":path")
+		-- TODO: validate path is valid for uri?
+		authorization_field = "authorization"
+	end
+	if authority == nil then
+		authority = http_util.to_authority(self.host, self.port, scheme)
+	end
+	local authorization = self.headers:get(authorization_field)
+	if authorization then
+		local auth_type, userinfo = authorization:match("^%s*(%S+)%s+(%S+)%s*$")
+		if auth_type and auth_type:lower() == "basic" then
+			userinfo = basexx.from_base64(userinfo)
+			userinfo = http_util.encodeURI(userinfo)
+			authority = userinfo .. "@" .. authority
+		else
+			error("authorization cannot be converted to uri")
+		end
+	end
+	return scheme .. "://" .. authority .. path
 end
 
 function request_methods:new_stream(timeout)
@@ -232,7 +250,8 @@ function request_methods:handle_redirect(orig_headers)
 		new_req.headers:delete("content-location")
 		new_req.headers:delete("content-type")
 		-- Other...
-		if new_req.headers:get("expect") == "100-continue" then
+		local expect = new_req.headers:get("expect")
+		if expect and expect:lower() == "100-continue" then
 			new_req.headers:delete("expect")
 		end
 		new_req.body = nil
@@ -270,7 +289,8 @@ function request_methods:go(timeout)
 
 	local headers
 	if self.body then
-		if self.headers:get("expect") == "100-continue" then
+		local expect = self.headers:get("expect")
+		if expect and expect:lower() == "100-continue" then
 			-- Try to wait for 100-continue before proceeding
 			if deadline then
 				local err, errno

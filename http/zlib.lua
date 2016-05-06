@@ -36,13 +36,15 @@ elseif zlib._VERSION:match "^lzlib" then
 
 	function _M.inflate()
 		-- the function may get called multiple times
-		local _chunk
+		local tmp
 		local stream = zlib.inflate(function()
-			return _chunk
+			local chunk = tmp
+			tmp = nil
+			return chunk
 		end)
 		return function(chunk, end_stream)
 			-- lzlib doesn't report end of string
-			_chunk = chunk
+			tmp = chunk
 			local data = assert(stream:read("*a"))
 			if end_stream then
 				stream:close()

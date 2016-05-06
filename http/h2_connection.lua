@@ -197,9 +197,6 @@ function connection_main_loop(self)
 				error(flag)
 			end
 		end
-		if self.need_continuation and (typ ~= 0x9 or streamid ~= self.need_continuation.id) then
-			h2_error.errors.PROTOCOL_ERROR("CONTINUATION frame expected")
-		end
 		local handler = h2_stream.frame_handlers[typ]
 		-- http2 spec section 4.1:
 		-- Implementations MUST ignore and discard any frame that has a type that is unknown.
@@ -315,7 +312,8 @@ function connection_methods:new_stream(id)
 			-- Pick next free odd number
 			id = self.highest_odd_stream + 2
 		else
-			error("NYI")
+			-- Pick next free odd number
+			id = self.highest_even_stream + 2
 		end
 		-- TODO: check MAX_CONCURRENT_STREAMS
 	end
@@ -383,7 +381,7 @@ function connection_methods:read_http2_frame(timeout)
 	end
 	local size, typ, flags, streamid = sunpack(">I3 B B I4", frame_header)
 	if size > self.acked_settings[0x5] then
-		return nil, h2_error.errors.FRAME_SIZE_ERROR:traceback("frame too large")
+		return nil, h2_error.errors.FRAME_SIZE_ERROR:new_traceback("frame too large")
 	end
 	-- reserved bit MUST be ignored by receivers
 	streamid = band(streamid, 0x7fffffff)
@@ -393,13 +391,10 @@ function connection_methods:read_http2_frame(timeout)
 			-- put frame header back into socket so a retry will work
 			local ok, errno3 = self.socket:unget(frame_header)
 			if not ok then
-				local err3 = onerror(self.socket, "unget", errno3, 2)
-				error(err3)
+				return nil, onerror(self.socket, "unget", errno3, 2)
 			end
-			return nil, err2, errno2
-		else
-			return nil, err2, errno2
 		end
+		return nil, err2, errno2
 	end
 	return typ, flags, streamid, payload
 end
@@ -411,7 +406,7 @@ end
 function connection_methods:write_http2_frame(typ, flags, streamid, payload, timeout)
 	local deadline = timeout and (monotime()+timeout)
 	if #payload > self.peer_settings[0x5] then
-		return nil, h2_error.errors.FRAME_SIZE_ERROR:traceback("frame too large")
+		return nil, h2_error.errors.FRAME_SIZE_ERROR:new_traceback("frame too large")
 	end
 	local header = spack(">I3 B B I4", #payload, typ, flags, streamid)
 	local ok, err, errno = self.socket:xwrite(header, "f", timeout)

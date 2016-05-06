@@ -48,8 +48,8 @@ local websocket_mt = {
 }
 
 function websocket_mt:__tostring()
-	return string.format("http.websocket{type=%s;readyState=%d;protocol=%s}",
-		self.type, self.readyState, self.protocol)
+	return string.format("http.websocket{type=%q;readyState=%d}",
+		self.type, self.readyState)
 end
 
 local magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
