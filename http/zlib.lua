@@ -38,7 +38,9 @@ elseif zlib._VERSION:match "^lzlib" then
 		-- the function may get called multiple times
 		local _chunk
 		local stream = zlib.inflate(function()
-			return _chunk
+			local chunk = _chunk
+			_chunk = nil
+			return chunk
 		end)
 		return function(chunk, end_stream)
 			-- lzlib doesn't report end of string
