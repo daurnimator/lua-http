@@ -94,27 +94,6 @@ local function wrap_socket(self, socket, deadline)
 	return conn, is_h2
 end
 
-local function on_connection(self, conn)
-	local cq = cqueues.running()
-	local err, errno
-	while true do
-		local stream
-		stream, err, errno = conn:get_next_incoming_stream()
-		if stream == nil then
-			break
-		end
-		cq:wrap(self.on_stream, self, stream)
-	end
-	-- wait for streams to complete?
-	conn:close()
-	self.n_connections = self.n_connections - 1
-	self.connection_done:signal(1)
-	if (err ~= ce.EPIPE and errno ~= ce.ECONNRESET and errno ~= ce.ENOTCONN)
-	  or (cs.type(conn.socket) == "socket" and conn.socket:pending() ~= 0) then
-		error(err)
-	end
-end
-
 local function server_loop(self)
 	local cq = cqueues.running()
 	while true do
@@ -156,7 +135,23 @@ local function server_loop(self)
 						error(err)
 					end
 				else
-					cqueues.running():wrap(on_connection, self, conn)
+					local err
+					while true do
+						local stream
+						stream, err, errno = conn:get_next_incoming_stream()
+						if stream == nil then
+							break
+						end
+						cq:wrap(self.on_stream, self, stream)
+					end
+					-- wait for streams to complete?
+					conn:close()
+					self.n_connections = self.n_connections - 1
+					self.connection_done:signal(1)
+					if (err ~= ce.EPIPE and errno ~= ce.ECONNRESET and errno ~= ce.ENOTCONN)
+					  or (cs.type(conn.socket) == "socket" and conn.socket:pending() ~= 0) then
+						error(err)
+					end
 				end
 			end)
 		end
