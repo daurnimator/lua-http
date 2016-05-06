@@ -391,13 +391,10 @@ function connection_methods:read_http2_frame(timeout)
 			-- put frame header back into socket so a retry will work
 			local ok, errno3 = self.socket:unget(frame_header)
 			if not ok then
-				local err3 = onerror(self.socket, "unget", errno3, 2)
-				error(err3)
+				return nil, onerror(self.socket, "unget", errno3, 2)
 			end
-			return nil, err2, errno2
-		else
-			return nil, err2, errno2
 		end
+		return nil, err2, errno2
 	end
 	return typ, flags, streamid, payload
 end
