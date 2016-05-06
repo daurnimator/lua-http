@@ -46,7 +46,7 @@ local ok, http_zlib = pcall(require, "http.zlib");
 			.. "\195\161\101\1\190\4\200\15\7\206\143\188\72\18\196\129\99\195"
 			.. "\242\43\204\190\66\158\36\223\57\167\170\187\154\108\114\102"
 			.. "\163\93\95\96\105\177\34\217\93\85\231\212\185\87\157\170\179\23"
-			, true)
+			, false)
 	end);
 	-- lzlib doesn't report a missing end of string in inflate
 	(http_zlib.engine == "lzlib" and pending or it)("decompressor fails on incorrect end_stream flag", function()
