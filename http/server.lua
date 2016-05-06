@@ -125,9 +125,8 @@ local function server_loop(self)
 		else
 			self.n_connections = self.n_connections + 1
 			cq:wrap(function()
-				local conn, is_h2, errno = wrap_socket(self, socket)
+				local conn, err, errno = wrap_socket(self, socket)
 				if not conn then
-					local err = is_h2
 					socket:close()
 					if err ~= ce.EPIPE -- client closed connection
 						and err ~= ce.ETIMEDOUT -- an operation timed out
@@ -135,7 +134,6 @@ local function server_loop(self)
 						error(err)
 					end
 				else
-					local err
 					while true do
 						local stream
 						stream, err, errno = conn:get_next_incoming_stream()
