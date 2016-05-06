@@ -95,7 +95,6 @@ local function wrap_socket(self, socket, deadline)
 end
 
 local function server_loop(self)
-	local cq = cqueues.running()
 	while true do
 		if self.n_connections >= self.max_concurrent then
 			cqueues.poll(self.connection_done)
@@ -124,7 +123,7 @@ local function server_loop(self)
 			end
 		else
 			self.n_connections = self.n_connections + 1
-			cq:wrap(function()
+			self.cq:wrap(function()
 				local conn, err, errno = wrap_socket(self, socket)
 				if not conn then
 					socket:close()
@@ -140,7 +139,7 @@ local function server_loop(self)
 						if stream == nil then
 							break
 						end
-						cq:wrap(self.on_stream, self, stream)
+						self.cq:wrap(self.on_stream, self, stream)
 					end
 					-- wait for streams to complete?
 					conn:close()
