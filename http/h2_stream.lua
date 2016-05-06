@@ -374,14 +374,10 @@ frame_handlers[0x1] = function(stream, flags, payload)
 		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("headers too large")
 	end
 
-	if pos > 1 then
-		payload = payload:sub(pos)
-	end
-
 	if not end_headers then
 		local recv_headers_buffer = { payload }
 		local recv_headers_buffer_items = 1
-		local recv_headers_buffer_length = #payload
+		local recv_headers_buffer_length = #payload - pos + 1
 		repeat
 			local end_continuations, header_fragment = stream:read_continuation()
 			if not end_continuations then
@@ -398,14 +394,16 @@ frame_handlers[0x1] = function(stream, flags, payload)
 		payload = table.concat(recv_headers_buffer, "", 1, recv_headers_buffer_items)
 	end
 
-	if pad_len > #payload then
-		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("length of the padding is the length of the frame payload or greater")
-	elseif pad_len > 0 and payload:match("[^%z]", -pad_len) then
-		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("padding not null bytes")
+	if pad_len > 0 then
+		if pad_len + pos - 1 > #payload then
+			return nil, h2_errors.PROTOCOL_ERROR:new_traceback("length of the padding is the length of the frame payload or greater")
+		elseif payload:match("[^%z]", -pad_len) then
+			return nil, h2_errors.PROTOCOL_ERROR:new_traceback("padding not null bytes")
+		end
+		payload = payload:sub(1, -pad_len-1)
 	end
-	payload = payload:sub(1, -pad_len-1)
 
-	local headers, newpos = stream.connection.decoding_context:decode_headers(payload)
+	local headers, newpos = stream.connection.decoding_context:decode_headers(payload, nil, pos)
 	if newpos ~= #payload + 1 then
 		return nil, h2_errors.COMPRESSION_ERROR:new_traceback("incomplete header fragment")
 	end
@@ -715,12 +713,10 @@ frame_handlers[0x5] = function(stream, flags, payload)
 		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("headers too large")
 	end
 
-	payload = payload:sub(pos)
-
 	if not end_headers then
 		local recv_headers_buffer = { payload }
 		local recv_headers_buffer_items = 1
-		local recv_headers_buffer_length = #payload
+		local recv_headers_buffer_length = #payload - pos + 1
 		repeat
 			local end_continuations, header_fragment = stream:read_continuation()
 			if not end_continuations then
@@ -737,14 +733,16 @@ frame_handlers[0x5] = function(stream, flags, payload)
 		payload = table.concat(recv_headers_buffer, "", 1, recv_headers_buffer_items)
 	end
 
-	if pad_len > #payload then
-		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("length of the padding is the length of the frame payload or greater")
-	elseif pad_len > 0 and payload:match("[^%z]", -pad_len) then
-		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("padding not null bytes")
+	if pad_len > 0 then
+		if pad_len + pos - 1 > #payload then
+			return nil, h2_errors.PROTOCOL_ERROR:new_traceback("length of the padding is the length of the frame payload or greater")
+		elseif payload:match("[^%z]", -pad_len) then
+			return nil, h2_errors.PROTOCOL_ERROR:new_traceback("padding not null bytes")
+		end
+		payload = payload:sub(1, -pad_len-1)
 	end
-	payload = payload:sub(1, -pad_len-1)
 
-	local headers, newpos = stream.connection.decoding_context:decode_headers(payload)
+	local headers, newpos = stream.connection.decoding_context:decode_headers(payload, nil, pos)
 	if newpos ~= #payload + 1 then
 		return nil, h2_errors.COMPRESSION_ERROR:new_traceback("incomplete header fragment")
 	end
