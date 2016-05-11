@@ -230,7 +230,7 @@ function request_methods:handle_redirect(orig_headers)
 		unsecured HTTP request if the referring page was received with a secure protocol.]]
 		new_req.headers:delete("referer")
 	else
-		new_req.headers:upsert("referer", self:to_url())
+		new_req.headers:upsert("referer", self:to_url(true))
 	end
 	-- Change POST requests to a body-less GET on redirect?
 	local orig_status = orig_headers:get(":status")
