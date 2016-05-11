@@ -41,7 +41,7 @@ local function new_from_uri_t(uri_t, headers)
 		is_connect = headers:get(":method") == "CONNECT"
 	end
 	if is_connect then
-		assert(uri_t.path == "", "CONNECT requests cannot have a path")
+		assert(uri_t.path == nil or uri_t.path == "", "CONNECT requests cannot have a path")
 		assert(uri_t.query == nil, "CONNECT requests cannot have a query")
 		assert(headers:has(":authority"), ":authority required for CONNECT requests")
 	else
@@ -196,11 +196,11 @@ function request_methods:handle_redirect(orig_headers)
 		new_req.sendname = nil
 	end
 	if is_connect then
-		assert(uri_t.path == "", "CONNECT requests cannot have a path")
+		assert(uri_t.path == nil or uri_t.path == "", "CONNECT requests cannot have a path")
 		assert(uri_t.query == nil, "CONNECT requests cannot have a query")
 	else
 		local new_path
-		if uri_t.path == "" then
+		if uri_t.path == nil or uri_t.path == "" then
 			new_path = "/"
 		else
 			new_path = http_util.encodeURI(uri_t.path)
