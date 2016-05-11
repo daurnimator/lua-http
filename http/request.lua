@@ -296,11 +296,15 @@ function request_methods:go(timeout)
 			if deadline then
 				local err, errno
 				headers, err, errno = stream:get_headers(math.min(self.expect_100_timeout, deadline-monotime()))
-				if headers == nil and (err ~= ce.TIMEOUT or monotime() > deadline) then return nil, err, errno end
+				if headers == nil and (err ~= ce.ETIMEDOUT or monotime() > deadline) then
+					return nil, err, errno
+				end
 			else
 				local err, errno
 				headers, err, errno = stream:get_headers(self.expect_100_timeout)
-				if headers == nil and err ~= ce.TIMEOUT then return nil, err, errno end
+				if headers == nil and err ~= ce.ETIMEDOUT then
+					return nil, err, errno
+				end
 			end
 			if headers and headers:get(":status") ~= "100" then
 				skip_body = true
