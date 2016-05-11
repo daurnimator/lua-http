@@ -7,7 +7,7 @@ This module a few key differences:
   - The user-agent will be from lua-http
   - lua-http features (such as HTTPS and HTTP2) will be used where possible
   - trailers are currently discarded
-  - error messages are differents
+  - error messages are different
 ]]
 
 local monotime = require "cqueues".monotime
@@ -17,8 +17,8 @@ local version = require "http.version"
 local reason_phrases = require "http.h1_reason_phrases"
 
 local _M = {
-	PROXY = nil; -- default proxy used for connections;
-	TIMEOUT = 60; -- timeout for all I/O operations;
+	PROXY = nil; -- default proxy used for connections
+	TIMEOUT = 60; -- timeout for all I/O operations
 	-- default user agent reported to server.
 	USERAGENT = string.format("%s/%s (luasocket compatibility layer)",
 		version.name, version.version);
