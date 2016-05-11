@@ -289,6 +289,7 @@ function request_methods:go(timeout)
 
 	local headers
 	if self.body then
+		local skip_body = false
 		local expect = self.headers:get("expect")
 		if expect and expect:lower() == "100-continue" then
 			-- Try to wait for 100-continue before proceeding
@@ -301,8 +302,12 @@ function request_methods:go(timeout)
 				headers, err, errno = stream:get_headers(self.expect_100_timeout)
 				if headers == nil and err ~= ce.TIMEOUT then return nil, err, errno end
 			end
+			if headers and headers:get(":status") ~= "100" then
+				skip_body = true
+			end
 		end
-		if type(self.body) == "string" then
+		if skip_body then -- luacheck: ignore 542
+		elseif type(self.body) == "string" then
 			local ok, err, errno = stream:write_body_from_string(self.body, deadline and (deadline-monotime()))
 			if not ok then return nil, err, errno end
 		elseif io.type(self.body) == "file" then
