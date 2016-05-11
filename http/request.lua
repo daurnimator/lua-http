@@ -190,12 +190,15 @@ function request_methods:handle_redirect(orig_headers)
 		end
 	end
 	if uri_t.host ~= nil then
-		local new_scheme = new_req.headers:get(":scheme")
 		new_req.host = uri_t.host
-		new_req.port = uri_t.port or http_util.scheme_to_port[new_scheme]
-		if not is_connect then
+		local new_scheme
+		if is_connect then
+			new_scheme = new_req.tls and "https" or "http"
+		else
+			new_scheme = new_req.headers:get(":scheme")
 			new_req.headers:upsert(":authority", http_util.to_authority(uri_t.host, uri_t.port, new_scheme))
 		end
+		new_req.port = uri_t.port or http_util.scheme_to_port[new_scheme]
 		new_req.sendname = nil
 	end
 	if is_connect then
