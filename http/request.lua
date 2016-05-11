@@ -112,7 +112,7 @@ function request_methods:clone()
 	}, request_mt)
 end
 
-function request_methods:to_url()
+function request_methods:to_url(no_userinfo)
 	local scheme = self.headers:get(":scheme")
 	local method = self.headers:get(":method")
 	local path
@@ -134,8 +134,8 @@ function request_methods:to_url()
 	if authority == nil then
 		authority = http_util.to_authority(self.host, self.port, scheme)
 	end
-	local authorization = self.headers:get(authorization_field)
-	if authorization then
+	if not no_userinfo and self.headers:has(authorization_field) then
+		local authorization = self.headers:get(authorization_field)
 		local auth_type, userinfo = authorization:match("^%s*(%S+)%s+(%S+)%s*$")
 		if auth_type and auth_type:lower() == "basic" then
 			userinfo = basexx.from_base64(userinfo)
