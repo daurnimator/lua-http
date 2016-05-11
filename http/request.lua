@@ -215,8 +215,11 @@ function request_methods:handle_redirect(orig_headers)
 			new_path = http_util.encodeURI(uri_t.path)
 			if new_path:sub(1, 1) ~= "/" then -- relative path
 				local orig_target = self.headers:get(":path")
-				local orig_path = assert(uri_ref:match(orig_target)).path
-				orig_path = http_util.encodeURI(orig_path)
+				orig_target = uri_ref:match(orig_target)
+				if not orig_target then
+					return nil, "base path not valid for relative redirect", ce.EINVAL
+				end
+				local orig_path = http_util.encodeURI(orig_target.path or "/")
 				new_path = http_util.resolve_relative_path(orig_path, new_path)
 			end
 		end
