@@ -172,7 +172,10 @@ function request_methods:handle_redirect(orig_headers)
 	if not location then
 		return nil, "missing location header for redirect", ce.EINVAL
 	end
-	local uri_t = assert(uri_ref:match(location), "invalid URI")
+	local uri_t = uri_ref:match(location)
+	if not uri_t then
+		return nil, "invalid URI in location header", ce.EINVAL
+	end
 	local new_req = self:clone()
 	new_req.max_redirects = max_redirects - 1
 	local is_connect = new_req.headers:get(":method") == "CONNECT"
@@ -196,8 +199,11 @@ function request_methods:handle_redirect(orig_headers)
 		new_req.sendname = nil
 	end
 	if is_connect then
-		assert(uri_t.path == nil or uri_t.path == "", "CONNECT requests cannot have a path")
-		assert(uri_t.query == nil, "CONNECT requests cannot have a query")
+		if uri_t.path ~= nil and uri_t.path ~= "" then
+			return nil, "CONNECT requests cannot have a path", ce.EINVAL
+		elseif uri_t.query ~= nil then
+			return nil, "CONNECT requests cannot have a query", ce.EINVAL
+		end
 	else
 		local new_path
 		if uri_t.path == nil or uri_t.path == "" then
