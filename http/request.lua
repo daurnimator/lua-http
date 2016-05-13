@@ -179,28 +179,54 @@ function request_methods:handle_redirect(orig_headers)
 	local new_req = self:clone()
 	new_req.max_redirects = max_redirects - 1
 	local is_connect = new_req.headers:get(":method") == "CONNECT"
-	if uri_t.scheme ~= nil then
+	local new_scheme = uri_t.scheme
+	if new_scheme then
 		if not is_connect then
-			new_req.headers:upsert(":scheme", uri_t.scheme)
+			new_req.headers:upsert(":scheme", new_scheme)
 		end
-		if uri_t.scheme == "https" or uri_t.scheme == "wss" then
+		if new_scheme == "https" or new_scheme == "wss" then
 			new_req.tls = self.tls or true
 		else
 			new_req.tls = false
 		end
-	end
-	if uri_t.host ~= nil then
-		new_req.host = uri_t.host
-		local new_scheme
-		if is_connect then
-			new_scheme = new_req.tls and "https" or "http"
-		else
+	else
+		if not is_connect then
 			new_scheme = new_req.headers:get(":scheme")
+		end
+		if new_scheme == nil then
+			new_scheme = self.tls and "https" or "http"
+		end
+	end
+	local orig_target
+	local target_authority
+	if not is_connect then
+		orig_target = self.headers:get(":path")
+		orig_target = uri_ref:match(orig_target)
+		if orig_target and orig_target.host then
+			-- was originally a proxied request
+			local new_authority
+			if uri_t.host then -- we have a new host
+				new_authority = http_util.to_authority(uri_t.host, uri_t.port, new_scheme)
+				new_req.headers:upsert(":authority", new_authority)
+			else
+				new_authority = self.headers:get(":authority")
+			end
+			if new_authority == nil then
+				new_authority = http_util.to_authority(self.host, self.port, new_scheme)
+			end
+			-- prefix for new target
+			target_authority = new_scheme .. "://" .. new_authority
+		end
+	end
+	if target_authority == nil and uri_t.host then
+		-- we have a new host and it wasn't placed into :authority
+		new_req.host = uri_t.host
+		if not is_connect then
 			new_req.headers:upsert(":authority", http_util.to_authority(uri_t.host, uri_t.port, new_scheme))
 		end
 		new_req.port = uri_t.port or http_util.scheme_to_port[new_scheme]
 		new_req.sendname = nil
-	end
+	end -- otherwise same host as original request; don't need change anything
 	if is_connect then
 		if uri_t.path ~= nil and uri_t.path ~= "" then
 			return nil, "CONNECT requests cannot have a path", ce.EINVAL
@@ -214,8 +240,6 @@ function request_methods:handle_redirect(orig_headers)
 		else
 			new_path = http_util.encodeURI(uri_t.path)
 			if new_path:sub(1, 1) ~= "/" then -- relative path
-				local orig_target = self.headers:get(":path")
-				orig_target = uri_ref:match(orig_target)
 				if not orig_target then
 					return nil, "base path not valid for relative redirect", ce.EINVAL
 				end
@@ -225,6 +249,9 @@ function request_methods:handle_redirect(orig_headers)
 		end
 		if uri_t.query then
 			new_path = new_path .. "?" .. http_util.encodeURI(uri_t.query)
+		end
+		if target_authority then
+			new_path = target_authority .. new_path
 		end
 		new_req.headers:upsert(":path", new_path)
 	end
