@@ -83,7 +83,7 @@ local function apply_mask(str, key)
 		local key_index = (i-1)%4 + 1
 		data[i] = string.char(bit.bxor(key[key_index], str:byte(i)))
 	end
-	return table.concat(data)
+	return table.concat(data, "", 1, #str)
 end
 
 local function build_frame(desc)
