@@ -178,7 +178,8 @@ function request_methods:handle_redirect(orig_headers)
 	end
 	local new_req = self:clone()
 	new_req.max_redirects = max_redirects - 1
-	local is_connect = new_req.headers:get(":method") == "CONNECT"
+	local method = new_req.headers:get(":method")
+	local is_connect = method == "CONNECT"
 	local new_scheme = uri_t.scheme
 	if new_scheme then
 		if not is_connect then
@@ -276,7 +277,7 @@ function request_methods:handle_redirect(orig_headers)
 	if (orig_status == "303"
 		or (orig_status == "301" and not self.post301)
 		or (orig_status == "302" and not self.post302)
-		) and self.headers:get(":method") == "POST"
+		) and method == "POST"
 	then
 		new_req.headers:upsert(":method", "GET")
 		-- Remove headers that don't make sense without a body
