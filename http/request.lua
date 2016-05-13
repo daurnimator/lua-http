@@ -81,8 +81,10 @@ local function new_from_uri_t(uri_t, headers)
 end
 
 local function new_from_uri(uri, ...)
-	local uri_t = assert(uri_patt:match(uri), "invalid URI")
-	return new_from_uri_t(uri_t, ...)
+	if type(uri) == "string" then
+		uri = assert(uri_patt:match(uri), "invalid URI")
+	end
+	return new_from_uri_t(uri, ...)
 end
 
 local function new_connect(uri, connect_authority)

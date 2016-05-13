@@ -485,7 +485,7 @@ describe("http.request module", function()
 				s:close()
 			end)
 			cq:wrap(function()
-				local req = request.new_from_uri_t {
+				local req = request.new_from_uri {
 					scheme = "http";
 					host = host;
 					port = port;

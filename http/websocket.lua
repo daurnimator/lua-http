@@ -482,8 +482,10 @@ local function new_from_uri_t(uri_t, protocols)
 end
 
 local function new_from_uri(uri, ...)
-	local uri_t = assert(uri_patts.uri:match(uri), "invalid URI")
-	return new_from_uri_t(uri_t, ...)
+	if type(uri) == "string" then
+		uri = assert(uri_patts.uri:match(uri), "invalid URI")
+	end
+	return new_from_uri_t(uri, ...)
 end
 
 --[[ Takes a response to a websocket upgrade request,
