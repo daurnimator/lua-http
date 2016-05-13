@@ -494,7 +494,7 @@ describe("http.request module", function()
 			assert_loop(cq, TEST_TIMEOUT)
 			assert.truthy(cq:empty())
 		end
-		it("works with #local server", function()
+		it("works with local server", function()
 			test(function(stream)
 				assert(stream:get_headers())
 				local resp_headers = new_headers()
