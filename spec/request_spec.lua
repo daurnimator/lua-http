@@ -564,5 +564,32 @@ describe("http.request module", function()
 				stream:shutdown()
 			end)
 		end)
+		it("follows redirects", function()
+			local n = 0
+			test(function(stream)
+				n = n + 1
+				if n == 1 then
+					local h = assert(stream:get_headers())
+					assert.same("/", h:get(":path"))
+					local resp_headers = new_headers()
+					resp_headers:append(":status", "302")
+					resp_headers:append("location", "/foo")
+					assert(stream:write_headers(resp_headers, true))
+					return true
+				elseif n == 2 then
+					local h = assert(stream:get_headers())
+					assert.same("/foo", h:get(":path"))
+					local resp_headers = new_headers()
+					resp_headers:append(":status", "200")
+					assert(stream:write_headers(resp_headers, false))
+					assert(stream:write_chunk("hello world", true))
+				end
+			end, function(req)
+				local headers, stream = assert(req:go())
+				assert.same("200", headers:get(":status"))
+				assert.same("hello world", assert(stream:get_body_as_string()))
+				stream:shutdown()
+			end)
+		end)
 	end)
 end)
