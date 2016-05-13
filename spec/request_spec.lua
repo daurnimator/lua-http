@@ -476,8 +476,9 @@ describe("http.request module", function()
 			local _, host, port = s:localname()
 			cq:wrap(function()
 				s:run(function(stream)
-					s:pause()
-					server_cb(stream)
+					if not server_cb(stream) then
+						s:pause()
+					end
 					stream:shutdown()
 					stream.connection:shutdown()
 				end)
