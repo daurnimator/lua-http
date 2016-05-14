@@ -607,7 +607,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 			connection_header.n = connection_header.n + 1
 			connection_header[connection_header.n] = "te"
 		end
-		local ok, err, errno = self.connection:write_header("te", "gzip", deadline and deadline-monotime())
+		local ok, err, errno = self.connection:write_header("te", "gzip, deflate", deadline and deadline-monotime())
 		if not ok then
 			return nil, err, errno
 		end
