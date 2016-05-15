@@ -365,10 +365,14 @@ function request_methods:go(timeout)
 				local chunk = self.body()
 				if chunk then
 					local ok, err2, errno2 = stream:write_chunk(chunk, false, deadline and (deadline-monotime()))
-					if not ok then return nil, err2, errno2 end
+					if not ok then
+						return nil, err2, errno2
+					end
 				else
 					local ok, err2, errno2 = stream:write_chunk("", true, deadline and (deadline-monotime()))
-					if not ok then return nil, err2, errno2 end
+					if not ok then
+						return nil, err2, errno2
+					end
 					break
 				end
 			end
@@ -378,14 +382,18 @@ function request_methods:go(timeout)
 		repeat -- Skip through 100-continue headers
 			local err, errno
 			headers, err, errno = stream:get_headers(deadline and (deadline-monotime()))
-			if headers == nil then return nil, err, errno end
+			if headers == nil then
+				return nil, err, errno
+			end
 		until headers:get(":status") ~= "100"
 	end
 
 	if self.follow_redirects and headers:get(":status"):sub(1,1) == "3" then
 		stream:shutdown()
 		local new_req, err2, errno2 = self:handle_redirect(headers)
-		if not new_req then return nil, err2, errno2 end
+		if not new_req then
+			return nil, err2, errno2
+		end
 		return new_req:go(deadline and (deadline-monotime()))
 	end
 
