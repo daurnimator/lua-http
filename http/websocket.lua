@@ -90,7 +90,7 @@ local function apply_mask(str, key)
 		local key_index = (i-1)%4 + 1
 		data[i] = string.char(bit.bxor(key[key_index], str:byte(i)))
 	end
-	return table.concat(data)
+	return table.concat(data, "", 1, #str)
 end
 
 local function build_frame(desc)
@@ -489,8 +489,10 @@ local function new_from_uri_t(uri_t, protocols)
 end
 
 local function new_from_uri(uri, ...)
-	local uri_t = assert(uri_patts.uri:match(uri), "invalid URI")
-	return new_from_uri_t(uri_t, ...)
+	if type(uri) == "string" then
+		uri = assert(uri_patts.uri:match(uri), "invalid URI")
+	end
+	return new_from_uri_t(uri, ...)
 end
 
 --[[ Takes a response to a websocket upgrade request,

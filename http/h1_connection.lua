@@ -19,7 +19,14 @@ function connection_mt:__tostring()
 end
 
 local function onerror(socket, op, why, lvl) -- luacheck: ignore 212
-	if why == ce.EPIPE or why == ce.ETIMEDOUT then
+	if why == ce.EPIPE then
+		return why
+	elseif why == ce.ETIMEDOUT then
+		if op == "fill" or op == "read" then
+			socket:clearerr("r")
+		elseif op == "flush" then
+			socket:clearerr("w")
+		end
 		return why
 	end
 	return string.format("%s: %s", op, ce.strerror(why)), why
@@ -172,6 +179,7 @@ function connection_methods:read_request_line(timeout)
 		if not ok then
 			return nil, onerror(self.socket, "unget", errno2)
 		end
+		self.socket:seterror("r", ce.EPIPE)
 		return nil, ce.EPIPE
 	end
 	httpversion = httpversion == "1.0" and 1.0 or 1.1 -- Avoid tonumber() due to locale issues
@@ -189,6 +197,7 @@ function connection_methods:read_status_line(timeout)
 		if not ok then
 			return nil, onerror(self.socket, "unget", errno2)
 		end
+		self.socket:seterror("r", ce.EPIPE)
 		return nil, ce.EPIPE
 	end
 	httpversion = httpversion == "1.0" and 1.0 or 1.1 -- Avoid tonumber() due to locale issues
@@ -218,6 +227,7 @@ function connection_methods:read_headers_done(timeout)
 		if not ok then
 			return nil, onerror(self.socket, "unget", errno2)
 		end
+		self.socket:seterror("r", ce.EPIPE)
 		return nil, ce.EPIPE
 	end
 end
@@ -252,6 +262,7 @@ function connection_methods:read_body_chunk(timeout)
 		if not unget_ok1 then
 			return nil, onerror(self.socket, "unget", unget_errno1)
 		end
+		self.socket:seterror("r", ce.EPIPE)
 		return nil, ce.EPIPE
 	elseif #chunk_size > 8 then
 		self.socket:seterror("r", ce.E2BIG)
@@ -271,6 +282,7 @@ function connection_methods:read_body_chunk(timeout)
 			if not unget_ok1 then
 				return nil, onerror(self.socket, "unget", unget_errno1)
 			end
+			self.socket:seterror("r", ce.EPIPE)
 			return nil, err3 or ce.EPIPE, errno3
 		end
 		local crlf, err4, errno4 = self.socket:xread(2, deadline and (deadline-monotime()))
@@ -291,6 +303,7 @@ function connection_methods:read_body_chunk(timeout)
 		if not unget_ok1 then
 			return nil, onerror(self.socket, "unget", unget_errno1)
 		end
+		self.socket:seterror("r", ce.EPIPE)
 		return nil, err4 or ce.EPIPE, errno4
 	end
 end

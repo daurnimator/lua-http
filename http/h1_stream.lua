@@ -344,28 +344,26 @@ function stream_methods:read_headers(timeout)
 		no_body = false
 		self.body_read_type = "close"
 	end
+	if has_zlib and self.type == "server" and self.state == "open" and headers:has("te") then
+		local te = TE:match(headers:get_comma_separated("te"))
+		for _, v in ipairs(te) do
+			local tcoding = v[1]
+			if (tcoding == "gzip" or tcoding == "x-gzip" or tcoding "deflate")
+				and (v.q == nil or v.q ~= 0) then
+				v.q = nil
+				self.body_write_deflate_encoding = v
+				self.body_write_deflate = zlib.deflate()
+				break
+			end
+		end
+	end
 	if no_body then
 		if self.state == "open" then
 			self:set_state("half closed (remote)")
 		else -- self.state == "half closed (local)"
 			self:set_state("closed")
 		end
-	else
-		if self.type == "server" and has_zlib and headers:has("te") then
-			local te = TE:match(headers:get_comma_separated("te"))
-			for _, v in ipairs(te) do
-				local tcoding = v[1]
-				if (tcoding == "gzip" or tcoding == "x-gzip" or tcoding "deflate")
-					and (v.q == nil or v.q ~= 0) then
-					v.q = nil
-					self.body_write_deflate_encoding = v
-					self.body_write_deflate = zlib.deflate()
-					break
-				end
-			end
-		end
 	end
-
 	return headers
 end
 
@@ -659,7 +657,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		if not has(connection_header, "te") then
 			table.insert(connection_header, "te")
 		end
-		local ok, err, errno = self.connection:write_header("te", "gzip", deadline and deadline-monotime())
+		local ok, err, errno = self.connection:write_header("te", "gzip, deflate", deadline and deadline-monotime())
 		if not ok then
 			return nil, err, errno
 		end

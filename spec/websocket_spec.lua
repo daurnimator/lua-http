@@ -255,7 +255,7 @@ describe("http.websocket module two sided tests", function()
 			s:close()
 		end)
 		cq:wrap(function()
-			local ws = websocket.new_from_uri_t({
+			local ws = websocket.new_from_uri({
 				scheme = "ws";
 				host = host;
 				port = port;
