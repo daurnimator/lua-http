@@ -321,22 +321,20 @@ function stream_methods:read_headers(timeout)
 		no_body = false
 		self.body_read_type = "close"
 	end
+	if has_zlib and self.type == "server" and self.state == "open" then
+		local te = headers:get_split_as_sequence("te")
+		-- TODO: need to take care of quality suffixes ("deflate; q=0.5")
+		if has_any(te, "gzip", "deflate") then
+			self.body_write_deflate = zlib.deflate()
+		end
+	end
 	if no_body then
 		if self.state == "open" then
 			self:set_state("half closed (remote)")
 		else -- self.state == "half closed (local)"
 			self:set_state("closed")
 		end
-	else
-		if self.type == "server" then
-			local te = headers:get_split_as_sequence("te")
-			-- TODO: need to take care of quality suffixes ("deflate; q=0.5")
-			if has_zlib and has_any(te, "gzip", "deflate") then
-				self.body_write_deflate = zlib.deflate()
-			end
-		end
 	end
-
 	return headers
 end
 
