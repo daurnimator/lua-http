@@ -425,6 +425,8 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 				path = assert(headers:get(":authority"), "missing authority")
 				assert(not headers:has(":path"), "CONNECT requests should not have a path")
 			else
+				-- RFC 7230 Section 5.4: A client MUST send a Host header field in all HTTP/1.1 request messages.
+				assert(self.connection.version < 1.1 or headers:has(":authority"), "missing authority")
 				path = assert(headers:get(":path"), "missing path")
 			end
 			if self.req_locked then
