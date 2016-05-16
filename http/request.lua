@@ -326,7 +326,10 @@ function request_methods:go(timeout)
 
 	do -- Write outgoing headers
 		local ok, err, errno = stream:write_headers(self.headers, not self.body, deadline and (deadline-monotime()))
-		if not ok then return nil, err, errno end
+		if not ok then
+			stream:shutdown()
+			return nil, err, errno
+		end
 	end
 
 	local headers
@@ -339,12 +342,14 @@ function request_methods:go(timeout)
 				local err, errno
 				headers, err, errno = stream:get_headers(math.min(self.expect_100_timeout, deadline-monotime()))
 				if headers == nil and (err ~= ce.ETIMEDOUT or monotime() > deadline) then
+					stream:shutdown()
 					return nil, err, errno
 				end
 			else
 				local err, errno
 				headers, err, errno = stream:get_headers(self.expect_100_timeout)
 				if headers == nil and err ~= ce.ETIMEDOUT then
+					stream:shutdown()
 					return nil, err, errno
 				end
 			end
@@ -352,29 +357,30 @@ function request_methods:go(timeout)
 				skip_body = true
 			end
 		end
-		if skip_body then -- luacheck: ignore 542
-		elseif type(self.body) == "string" then
-			local ok, err, errno = stream:write_body_from_string(self.body, deadline and (deadline-monotime()))
-			if not ok then return nil, err, errno end
-		elseif io.type(self.body) == "file" then
-			local ok, err, errno = stream:write_body_from_file(self.body, deadline and (deadline-monotime()))
-			if not ok then return nil, err, errno end
-		elseif type(self.body) == "function" then
-			-- call function to get body segments
-			while true do
-				local chunk = self.body()
-				if chunk then
-					local ok, err2, errno2 = stream:write_chunk(chunk, false, deadline and (deadline-monotime()))
-					if not ok then
-						return nil, err2, errno2
+		if not skip_body then
+			local ok, err, errno
+			if type(self.body) == "string" then
+				ok, err, errno = stream:write_body_from_string(self.body, deadline and deadline-monotime())
+			elseif io.type(self.body) == "file" then
+				ok, err, errno = stream:write_body_from_file(self.body, deadline and deadline-monotime())
+			elseif type(self.body) == "function" then
+				-- call function to get body segments
+				while true do
+					local chunk = self.body()
+					if chunk then
+						ok, err, errno = stream:write_chunk(chunk, false, deadline and deadline-monotime())
+						if not ok then
+							break
+						end
+					else
+						ok, err, errno = stream:write_chunk("", true, deadline and deadline-monotime())
+						break
 					end
-				else
-					local ok, err2, errno2 = stream:write_chunk("", true, deadline and (deadline-monotime()))
-					if not ok then
-						return nil, err2, errno2
-					end
-					break
 				end
+			end
+			if not ok then
+				stream:shutdown()
+				return nil, err, errno
 			end
 		end
 	end
@@ -383,6 +389,7 @@ function request_methods:go(timeout)
 			local err, errno
 			headers, err, errno = stream:get_headers(deadline and (deadline-monotime()))
 			if headers == nil then
+				stream:shutdown()
 				return nil, err, errno
 			end
 		until headers:get(":status") ~= "100"
