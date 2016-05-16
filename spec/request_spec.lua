@@ -530,9 +530,7 @@ describe("http.request module", function()
 				stream:shutdown()
 			end)
 		end)
-		-- This test currently doesn't pass due to ETIMEDOUT being preserved by cqueues
-		-- See https://github.com/wahern/cqueues/issues/143
-		pending("continues (eventually) if there is no 100-continue", function()
+		it("continues (eventually) if there is no 100-continue", function()
 			test(function(stream)
 				assert(stream:get_headers())
 				assert.same("foo", assert(stream:get_body_as_string()))
