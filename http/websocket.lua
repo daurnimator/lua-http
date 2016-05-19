@@ -353,7 +353,7 @@ function websocket_methods:receive(timeout)
 					endpoint MUST _Fail the WebSocket Connection_.]]
 					local valid_utf8, err_pos = validate_utf8(databuffer)
 					if not valid_utf8 then
-						return close_helper(self, 1002, string.format("invalid utf-8 at position %d", err_pos))
+						return close_helper(self, 1007, string.format("invalid utf-8 at position %d", err_pos))
 					end
 				elseif databuffer_type == 0x2 then
 					databuffer_type = "binary"
