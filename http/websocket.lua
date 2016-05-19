@@ -386,8 +386,10 @@ function websocket_methods:receive(timeout)
 					self.got_close_code = 1005
 					status_code = 1000
 				elseif status_code < 1000 then
+					self.got_close_code = true
 					return close_helper(self, 1002, "Closed with invalid status code", deadline)
 				elseif ((status_code > 1003 and status_code < 1007) or status_code > 1011) and status_code < 3000 then
+					self.got_close_code = true
 					return close_helper(self, 1002, "Closed with reserved status code", deadline)
 				else
 					self.got_close_code = status_code
