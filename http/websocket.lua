@@ -152,10 +152,15 @@ local function build_frame(desc)
 end
 
 local function build_close(code, message, mask)
-	local data = spack(">I2", code)
-	if message then
-		assert(#message<=123, "Close reason must be <=123 bytes")
-		data = data .. message
+	local data
+	if code then
+		data = spack(">I2", code)
+		if message then
+			assert(#message<=123, "Close reason must be <=123 bytes")
+			data = data .. message
+		end
+	else
+		data = ""
 	end
 	return {
 		opcode = 0x8;

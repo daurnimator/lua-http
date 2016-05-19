@@ -54,6 +54,14 @@ describe("http.websocket module's internal functions work", function()
 	it("build_close validates string length", function()
 		assert.has.errors(function() websocket.build_close(1000, ("f"):rep(200), false) end)
 	end)
+	it("build_close can generate frames without a code", function()
+		assert.same({
+			opcode = 0x8;
+			FIN = true;
+			MASK = false;
+			data = "";
+		}, websocket.build_close(nil, nil, false))
+	end)
 	it("parse_close works", function()
 		assert.same({nil, nil}, {websocket.parse_close ""})
 		assert.same({1000, nil}, {websocket.parse_close "\3\232"})
