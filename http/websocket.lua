@@ -681,8 +681,9 @@ local function new_from_stream(headers, stream)
 	return self
 end
 
-function websocket_methods:accept(protocols, timeout)
+function websocket_methods:accept(options, timeout)
 	assert(self.type == "server" and self.readyState == 0)
+	options = options or {}
 
 	local response_headers = new_headers()
 	response_headers:upsert(":status", "101")
@@ -692,8 +693,8 @@ function websocket_methods:accept(protocols, timeout)
 
 	local chosen_protocol
 	if self.protocols then
-		if protocols then
-			for _, protocol in ipairs(protocols) do
+		if options.protocols then
+			for _, protocol in ipairs(options.protocols) do
 				if self.protocols[protocol] then
 					chosen_protocol = protocol
 					break

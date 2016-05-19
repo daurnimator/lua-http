@@ -954,11 +954,13 @@ Amount of time (in seconds) to wait between sending a close frame and actually c
 Defaults to `3` seconds.
 
 
-### `websocket:accept(protocols, timeout)` <!-- --> {#http.websocket:accept}
+### `websocket:accept(options, timeout)` <!-- --> {#http.websocket:accept}
 
 Completes negotiation with a websocket client.
 
-  - `protocols` (optional) should be a lua table containing a sequence of protocols to to allow from the client
+  - `options` is a table containing:
+
+	  - `protocols` (optional) should be a lua table containing a sequence of protocols to to allow from the client
 
 Usually called after a successful [`new_from_stream`](#http.websocket.new_from_stream)
 

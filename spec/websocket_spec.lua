@@ -289,7 +289,9 @@ describe("http.websocket module two sided tests", function()
 				local headers = assert(stream:get_headers())
 				s:pause()
 				local ws = websocket.new_from_stream(headers, stream)
-				assert(ws:accept({"my awesome-protocol", "foo"}))
+				assert(ws:accept {
+					protocols = {"my awesome-protocol", "foo"};
+				})
 				-- Should prefer client protocol preference
 				assert.same("foo", ws.protocol)
 				assert(ws:close())
