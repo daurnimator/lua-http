@@ -287,15 +287,17 @@ local function close_helper(self, code, reason, deadline)
 		self.readyState = 2
 	end
 
-	-- Do not close socket straight away, wait for acknowledgement from server
-	local read_deadline = monotime() + self.close_timeout
-	if deadline then
-		read_deadline = math.min(read_deadline, deadline)
-	end
-	while not self.got_close_code do
-		if not self:receive(read_deadline-monotime()) then
-			break
+	if code ~= 1002 and not self.got_close_code then
+		-- Do not close socket straight away, wait for acknowledgement from server
+		local read_deadline = monotime() + self.close_timeout
+		if deadline then
+			read_deadline = math.min(read_deadline, deadline)
 		end
+		repeat
+			if not self:receive(read_deadline-monotime()) then
+				break
+			end
+		until self.got_close_code
 	end
 
 	if self.readyState < 3 then
