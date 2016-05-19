@@ -26,7 +26,7 @@ local basexx = require "basexx"
 local spack = string.pack or require "compat53.string".pack
 local sunpack = string.unpack or require "compat53.string".unpack
 local unpack = table.unpack or unpack -- luacheck: ignore 113
-local utf8_len = (utf8 or require "compat53.utf8").len -- luacheck: ignore 113
+local utf8 = utf8 or require "compat53.utf8" -- luacheck: ignore 113
 local cqueues = require "cqueues"
 local monotime = cqueues.monotime
 local ce = require "cqueues.errno"
@@ -73,6 +73,20 @@ end
 to U+007E not including separator characters as defined in [RFC2616] ]]
 local function validate_protocol(p)
 	return p:match("^[\33\35-\39\42\43\45\46\48-\57\65-\90\94-\122\124\126\127]+$")
+end
+
+local function validate_utf8(s)
+	local ok, pos = utf8.len(s)
+	if not ok then
+		return nil, pos
+	end
+	-- UTF-16 surrogates not allowed
+	for p, c in utf8.codes(s) do
+		if c >= 0xD800 and c <= 0xDFFF then
+			return nil, p
+		end
+	end
+	return true
 end
 
 -- XORs the string `str` with a 32bit key
@@ -337,7 +351,7 @@ function websocket_methods:receive(timeout)
 					When an endpoint is to interpret a byte stream as UTF-8 but finds
 					that the byte stream is not, in fact, a valid UTF-8 stream, that
 					endpoint MUST _Fail the WebSocket Connection_.]]
-					local valid_utf8, err_pos = utf8_len(databuffer)
+					local valid_utf8, err_pos = validate_utf8(databuffer)
 					if not valid_utf8 then
 						return close_helper(self, 1002, string.format("invalid utf-8 at position %d", err_pos))
 					end
