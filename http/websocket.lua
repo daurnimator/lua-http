@@ -391,7 +391,13 @@ function websocket_methods:receive(timeout)
 					return close_helper(self, 1002, "Closed with reserved status code", deadline)
 				else
 					self.got_close_code = status_code
-					self.got_close_message = message
+					if message then
+						local valid_utf8, err_pos = validate_utf8(message)
+						if not valid_utf8 then
+							return close_helper(self, 1007, string.format("invalid utf-8 at position %d", err_pos))
+						end
+						self.got_close_message = message
+					end
 				end
 				--[[ RFC 6455 5.5.1
 				When sending a Close frame in response, the endpoint typically
