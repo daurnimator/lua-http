@@ -378,14 +378,16 @@ function websocket_methods:receive(timeout)
 					Close control frame by an endpoint.  It is designated for use in
 					applications expecting a status code to indicate that no status
 					code was actually present.]]
-					status_code = 1005
+					self.got_close_code = 1005
+					status_code = 1000
 				elseif status_code < 1000 then
 					return close_helper(self, 1002, "Closed with invalid status code", deadline)
 				elseif ((status_code > 1003 and status_code < 1007) or status_code > 1011) and status_code < 3000 then
 					return close_helper(self, 1002, "Closed with reserved status code", deadline)
+				else
+					self.got_close_code = status_code
+					self.got_close_message = message
 				end
-				self.got_close_code = status_code
-				self.got_close_message = message
 				--[[ RFC 6455 5.5.1
 				When sending a Close frame in response, the endpoint typically
 				echos the status code it received.]]
