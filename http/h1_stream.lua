@@ -411,7 +411,8 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		if status_code then
 			-- Should send status line
 			local reason_phrase = reason_phrases[status_code]
-			local ok, err, errno = self.connection:write_status_line(self.connection.version, status_code, reason_phrase, deadline and (deadline-monotime()))
+			local version = math.min(self.connection.version, self.peer_version)
+			local ok, err, errno = self.connection:write_status_line(version, status_code, reason_phrase, deadline and deadline-monotime())
 			if not ok then
 				return nil, err, errno
 			end
