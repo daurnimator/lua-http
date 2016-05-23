@@ -256,9 +256,6 @@ end
 
 function websocket_methods:send(data, opcode, timeout)
 	assert(type(data) == "string")
-	if self.readyState >= 2 then
-		return nil, "WebSocket closed, unable to send data", ce.EPIPE
-	end
 	if opcode == "text" or opcode == nil then
 		opcode = 0x1
 	elseif opcode == "binary" then
@@ -284,10 +281,9 @@ local function close_helper(self, code, reason, deadline)
 		local close_frame = build_close(code, reason, self.type == "client")
 		-- ignore failure
 		self:send_frame(close_frame, deadline and deadline-monotime())
-		self.readyState = 2
 	end
 
-	if code ~= 1002 and not self.got_close_code then
+	if code ~= 1002 and not self.got_close_code and self.readyState == 2 then
 		-- Do not close socket straight away, wait for acknowledgement from server
 		local read_deadline = monotime() + self.close_timeout
 		if deadline then
@@ -301,8 +297,8 @@ local function close_helper(self, code, reason, deadline)
 	end
 
 	if self.readyState < 3 then
-		self.readyState = 3
 		self.socket:shutdown()
+		self.readyState = 3
 		cqueues.poll()
 		cqueues.poll()
 		self.socket:close()
@@ -319,7 +315,9 @@ function websocket_methods:close(code, reason, timeout)
 end
 
 function websocket_methods:receive(timeout)
-	if self.readyState < 1 or self.readyState > 2 then
+	if self.readyState < 1 then
+		return nil, ce.strerror(ce.ENOTCONN), ce.ENOTCONN
+	elseif self.readyState > 2 then
 		return nil, ce.strerror(ce.EPIPE), ce.EPIPE
 	end
 	local deadline = timeout and (monotime()+timeout)
