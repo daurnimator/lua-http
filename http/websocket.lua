@@ -273,7 +273,13 @@ function websocket_methods:send(data, opcode, timeout)
 end
 
 local function close_helper(self, code, reason, deadline)
-	if self.readyState == 3 then
+	if self.readyState < 1 then
+		self.request = nil
+		self.stream = nil
+		self.readyState = 3
+		-- return value doesn't matter; this branch cannot be called from anywhere that uses it
+		return nil, ce.strerror(ce.ENOTCONN), ce.ENOTCONN
+	elseif self.readyState == 3 then
 		return nil, ce.strerror(ce.EPIPE), ce.EPIPE
 	end
 

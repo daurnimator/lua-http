@@ -74,6 +74,10 @@ describe("http.websocket", function()
 		local ws = websocket.new_from_uri("wss://example.com")
 		assert.same("http.websocket{", tostring(ws):match("^.-%{"))
 	end)
+	it("close on a new websocket doesn't throw an error", function()
+		local ws = websocket.new_from_uri("wss://example.com")
+		ws:close() -- this shouldn't throw
+	end)
 end)
 describe("http.websocket module two sided tests", function()
 	local server = require "http.server"
