@@ -461,8 +461,10 @@ function connection_methods:ack_settings()
 	local n = self.send_settings_acked + 1
 	self.send_settings_acked = n
 	local acked_settings = self.send_settings[n]
-	self.send_settings[n] = nil
-	self.acked_settings = merge_settings(acked_settings, self.acked_settings)
+	if acked_settings then
+		self.send_settings[n] = nil
+		self.acked_settings = merge_settings(acked_settings, self.acked_settings)
+	end
 	self.send_settings_ack_cond:signal(1)
 end
 
