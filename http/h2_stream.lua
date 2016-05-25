@@ -673,7 +673,14 @@ function stream_methods:write_settings_frame(ACK, settings, timeout)
 		flags = 0
 		payload = pack_settings_payload(settings)
 	end
-	return self:write_http2_frame(0x4, flags, payload, timeout)
+	local ok, err, errno = self:write_http2_frame(0x4, flags, payload, timeout)
+	if ok and not ACK then
+		local n = self.connection.send_settings.n + 1
+		self.connection.send_settings.n = n
+		self.connection.send_settings[n] = settings
+		ok = n
+	end
+	return ok, err, errno
 end
 
 -- PUSH_PROMISE

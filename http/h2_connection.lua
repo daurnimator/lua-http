@@ -469,12 +469,9 @@ function connection_methods:ack_settings()
 end
 
 function connection_methods:settings(tbl, timeout)
-	local deadline = timeout and (monotime()+timeout)
-	local n = self.send_settings.n + 1
-	self.send_settings.n = n
-	self.send_settings[n] = tbl
-	local ok, err, errno = self.stream0:write_settings_frame(false, tbl, timeout)
-	if not ok then
+	local deadline = timeout and monotime()+timeout
+	local n, err, errno = self.stream0:write_settings_frame(false, tbl, timeout)
+	if not n then
 		return nil, err, errno
 	end
 	-- Now wait for ACK
