@@ -364,7 +364,10 @@ function request_methods:go(timeout)
 			if type(body) == "string" then
 				ok, err, errno = stream:write_body_from_string(body, deadline and deadline-monotime())
 			elseif io.type(body) == "file" then
-				ok, err, errno = stream:write_body_from_file(body, deadline and deadline-monotime())
+				ok, err, errno = body:seek("set")
+				if ok then
+					ok, err, errno = stream:write_body_from_file(body, deadline and deadline-monotime())
+				end
 			elseif type(body) == "function" then
 				-- call function to get body segments
 				while true do
