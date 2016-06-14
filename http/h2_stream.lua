@@ -362,12 +362,15 @@ frame_handlers[0x1] = function(stream, flags, payload)
 		pos = pos + 5
 
 		local new_parent = stream.connection.streams[stream_dep]
-		if new_parent == nil then
-			error("parent doesn't exist " .. stream_dep) -- FIXME
+
+		-- 5.3.1. Stream Dependencies
+		-- A dependency on a stream that is not currently in the tree
+		-- results in that stream being given a default priority
+		if new_parent then
+			local ok, err = new_parent:reprioritise(stream, exclusive)
+			if not ok then return nil, err end
+			stream.weight = weight
 		end
-		local ok, err = new_parent:reprioritise(stream, exclusive)
-		if not ok then return nil, err end
-		stream.weight = weight
 	end
 
 	if #payload - pos + 1 > MAX_HEADER_BUFFER_SIZE then
