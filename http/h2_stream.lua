@@ -608,7 +608,9 @@ frame_handlers[0x4] = function(stream, flags, payload)
 		end
 		stream.connection:set_peer_settings(peer_settings)
 		-- Ack server's settings
-		return stream:write_settings_frame(true)
+		-- XXX: This shouldn't ignore all errors (it probably should not flush)
+		stream:write_settings_frame(true)
+		return true
 	end
 end
 
@@ -852,7 +854,12 @@ function stream_methods:write_goaway_frame(last_streamid, err_code, debug_msg, t
 	if debug_msg then
 		payload = payload .. debug_msg
 	end
-	return self:write_http2_frame(0x7, flags, payload, timeout)
+	local ok, err, errno = self:write_http2_frame(0x7, flags, payload, timeout)
+	if not ok then
+		return nil, err, errno
+	end
+	self.connection.send_goaway_lowest = math.min(last_streamid, self.connection.send_goaway_lowest or math.huge)
+	return true
 end
 
 -- WINDOW_UPDATE
