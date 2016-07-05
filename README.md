@@ -35,6 +35,7 @@ This will automatically install run-time lua dependencies for you.
   - [cqueues](http://25thandclement.com/~william/projects/cqueues.html) >= 20150907
   - [luaossl](http://25thandclement.com/~william/projects/luaossl.html) >= 20150727
   - [basexx](https://github.com/aiq/basexx/) >= 0.2.0
+  - [lpeg](http://www.inf.puc-rio.br/~roberto/lpeg/lpeg.html)
   - [lpeg_patterns](https://github.com/daurnimator/lpeg_patterns) >= 0.2
   - [fifo](https://github.com/daurnimator/fifo.lua)
 
