@@ -558,9 +558,6 @@ Creates and returns a new headers object.
 ### `headers:get_comma_separated(name)` <!-- --> {#http.headers:get_comma_separated}
 
 
-### `headers:get_split_as_sequence(name)` <!-- --> {#http.headers:get_split_as_sequence}
-
-
 ### `headers:modifyi(i, value, never_index)` <!-- --> {#http.headers:modifyi}
 
 
@@ -902,18 +899,18 @@ Joins the `host` and `port` to create a valid authority component.
 Omits the port if it is the default for the `scheme`.
 
 
-### `split_header(str)` <!-- --> {#http.util.split_header}
-
-Many HTTP headers are specified to be comma seperated elements with optional whitespace. This function returns a table with a sequence of these elements.
-
-The returned table has an `n` field containing the number of elements.
-
-
 ### `imf_date(time)` <!-- --> {#http.util.imf_date}
 
 Returns the time in HTTP preferred date format (See [RFC 7231 section 7.1.1.1](https://tools.ietf.org/html/rfc7231#section-7.1.1.1))
 
 `time` defaults to the current time
+
+
+### `maybe_quote(str)` <!-- --> {#http.util.maybe_quote}
+
+  - If `str` is a valid `token`, return it as-is.
+  - If `str` would be valid as a `quoted-string`, return the quoted version
+  - Otherwise, returns `nil`
 
 
 ## http.version

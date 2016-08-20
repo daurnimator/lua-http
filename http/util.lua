@@ -1,3 +1,6 @@
+local lpeg = require "lpeg"
+local http_patts = require "lpeg_patterns.http"
+
 -- Encodes a character as a percent encoded string
 local function char_to_pchar(c)
 	return string.format("%%%02X", c:byte(1,1))
@@ -168,29 +171,21 @@ local function to_authority(host, port, scheme)
 	return authority
 end
 
--- Many HTTP headers contain comma seperated values
--- This function returns an iterator over header components
-local function each_header_component(str)
-	return str:gmatch(" *([^ ,][^,]-) *%f[,%z]")
-end
-
-local function split_header(str)
-	if str == nil then
-		return { n = 0 }
-	end
-	local r, n = { n = nil }, 0
-	for elem in each_header_component(str) do
-		n = n + 1
-		r[n] = elem
-	end
-	r.n = n
-	return r
-end
-
 -- HTTP prefered date format
 -- See RFC 7231 section 7.1.1.1
 local function imf_date(time)
 	return os.date("!%a, %d %b %Y %H:%M:%S GMT", time)
+end
+
+-- This pattern checks if it's argument is a valid token, if so, it returns it as is.
+-- Otherwise, it returns it as a quoted string (with any special characters escaped)
+local maybe_quote do
+	local EOF = lpeg.P(-1)
+	local patt = http_patts.token * EOF
+		+ lpeg.Cs(lpeg.Cc'"' * ((lpeg.S"\\\"") / "\\%0" + http_patts.qdtext)^0 * lpeg.Cc'"') * EOF
+	maybe_quote = function (s)
+		return patt:match(s)
+	end
 end
 
 return {
@@ -204,6 +199,6 @@ return {
 	scheme_to_port = scheme_to_port;
 	split_authority = split_authority;
 	to_authority = to_authority;
-	split_header = split_header;
 	imf_date = imf_date;
+	maybe_quote = maybe_quote;
 }

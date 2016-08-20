@@ -18,8 +18,8 @@ dependencies = {
 	"cqueues >= 20160808";
 	"luaossl >= 20150727";
 	"basexx >= 0.2.0";
-	"lpeg_patterns >= 0.2";
 	"lpeg";
+	"lpeg_patterns >= 0.3";
 	"fifo";
 }
 
