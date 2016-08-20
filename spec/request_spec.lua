@@ -23,7 +23,7 @@ describe("http.request module", function()
 			assert.same("https", req.headers:get ":scheme")
 			assert.same(nil, req.body)
 		end
-		do -- with needs url normalisation
+		do -- needs url normalisation
 			local req = request.new_from_uri("HTTP://exaMple.com/1%323%2f45?foo=ba%26r&another=more")
 			assert.same("example.com", req.host)
 			assert.same(80, req.port)
