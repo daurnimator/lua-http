@@ -330,7 +330,7 @@ an `http.h1_stream` has the following methods:
 An HTTP 2 connection can have multiple streams active and transmitting data at once,
 hence an `http.h2_connection` acts much like a scheduler.
 
-### `new(socket, conn_type, settings, timeout)` <!-- --> {#http.h2_connection.new}
+### `new(socket, conn_type, settings)` <!-- --> {#http.h2_connection.new}
 
 
 ### `h2_connection:pollfd()` <!-- --> {#http.h2_connection:pollfd}
@@ -951,11 +951,13 @@ Amount of time (in seconds) to wait between sending a close frame and actually c
 Defaults to `3` seconds.
 
 
-### `websocket:accept(protocols, timeout)` <!-- --> {#http.websocket:accept}
+### `websocket:accept(options, timeout)` <!-- --> {#http.websocket:accept}
 
 Completes negotiation with a websocket client.
 
-  - `protocols` (optional) should be a lua table containing a sequence of protocols to to allow from the client
+  - `options` is a table containing:
+
+	  - `protocols` (optional) should be a lua table containing a sequence of protocols to to allow from the client
 
 Usually called after a successful [`new_from_stream`](#http.websocket.new_from_stream)
 
