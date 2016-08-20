@@ -49,11 +49,9 @@ local function new_from_uri_t(uri_t, headers)
 		local path = uri_t.path
 		if path == nil or path == "" then
 			path = "/"
-		else
-			path = http_util.encodeURI(path)
 		end
 		if uri_t.query then
-			path = path .. "?" .. http_util.encodeURI(uri_t.query)
+			path = path .. "?" .. uri_t.query
 		end
 		headers:upsert(":path", path)
 		headers:upsert(":scheme", scheme)
@@ -65,7 +63,8 @@ local function new_from_uri_t(uri_t, headers)
 		else
 			field = "authorization"
 		end
-		headers:append(field, "basic " .. basexx.to_base64(uri_t.userinfo), true)
+		local userinfo = http_util.decodeURIComponent(uri_t.userinfo) -- XXX: this doesn't seem right, but it's same behaviour as curl
+		headers:append(field, "basic " .. basexx.to_base64(userinfo), true)
 	end
 	if not headers:has("user-agent") then
 		headers:append("user-agent", default_user_agent)
@@ -241,17 +240,17 @@ function request_methods:handle_redirect(orig_headers)
 		if uri_t.path == nil or uri_t.path == "" then
 			new_path = "/"
 		else
-			new_path = http_util.encodeURI(uri_t.path)
+			new_path = uri_t.path
 			if new_path:sub(1, 1) ~= "/" then -- relative path
 				if not orig_target then
 					return nil, "base path not valid for relative redirect", ce.EINVAL
 				end
-				local orig_path = http_util.encodeURI(orig_target.path or "/")
+				local orig_path = orig_target.path or "/"
 				new_path = http_util.resolve_relative_path(orig_path, new_path)
 			end
 		end
 		if uri_t.query then
-			new_path = new_path .. "?" .. http_util.encodeURI(uri_t.query)
+			new_path = new_path .. "?" .. uri_t.query
 		end
 		if target_authority then
 			new_path = target_authority .. new_path
@@ -364,7 +363,10 @@ function request_methods:go(timeout)
 			if type(body) == "string" then
 				ok, err, errno = stream:write_body_from_string(body, deadline and deadline-monotime())
 			elseif io.type(body) == "file" then
-				ok, err, errno = stream:write_body_from_file(body, deadline and deadline-monotime())
+				ok, err, errno = body:seek("set")
+				if ok then
+					ok, err, errno = stream:write_body_from_file(body, deadline and deadline-monotime())
+				end
 			elseif type(body) == "function" then
 				-- call function to get body segments
 				while true do

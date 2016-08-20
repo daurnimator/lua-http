@@ -460,7 +460,8 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		if status_code then
 			-- Should send status line
 			local reason_phrase = reason_phrases[status_code]
-			local ok, err, errno = self.connection:write_status_line(self.connection.version, status_code, reason_phrase, deadline and (deadline-monotime()))
+			local version = math.min(self.connection.version, self.peer_version)
+			local ok, err, errno = self.connection:write_status_line(version, status_code, reason_phrase, deadline and deadline-monotime())
 			if not ok then
 				return nil, err, errno
 			end
@@ -474,6 +475,8 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 				path = assert(headers:get(":authority"), "missing authority")
 				assert(not headers:has(":path"), "CONNECT requests should not have a path")
 			else
+				-- RFC 7230 Section 5.4: A client MUST send a Host header field in all HTTP/1.1 request messages.
+				assert(self.connection.version < 1.1 or headers:has(":authority"), "missing authority")
 				path = assert(headers:get(":path"), "missing path")
 			end
 			if self.req_locked then

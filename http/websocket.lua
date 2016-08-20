@@ -26,7 +26,7 @@ local basexx = require "basexx"
 local spack = string.pack or require "compat53.string".pack
 local sunpack = string.unpack or require "compat53.string".unpack
 local unpack = table.unpack or unpack -- luacheck: ignore 113
-local utf8_len = (utf8 or require "compat53.utf8").len -- luacheck: ignore 113
+local utf8 = utf8 or require "compat53.utf8" -- luacheck: ignore 113
 local cqueues = require "cqueues"
 local monotime = cqueues.monotime
 local ce = require "cqueues.errno"
@@ -80,6 +80,20 @@ end
 to U+007E not including separator characters as defined in [RFC2616] ]]
 local function validate_protocol(p)
 	return p:match("^[\33\35-\39\42\43\45\46\48-\57\65-\90\94-\122\124\126\127]+$")
+end
+
+local function validate_utf8(s)
+	local ok, pos = utf8.len(s)
+	if not ok then
+		return nil, pos
+	end
+	-- UTF-16 surrogates not allowed
+	for p, c in utf8.codes(s) do
+		if c >= 0xD800 and c <= 0xDFFF then
+			return nil, p
+		end
+	end
+	return true
 end
 
 -- XORs the string `str` with a 32bit key
@@ -145,10 +159,15 @@ local function build_frame(desc)
 end
 
 local function build_close(code, message, mask)
-	local data = spack(">I2", code)
-	if message then
-		assert(#message<=123, "Close reason must be <=123 bytes")
-		data = data .. message
+	local data
+	if code then
+		data = spack(">I2", code)
+		if message then
+			assert(#message<=123, "Close reason must be <=123 bytes")
+			data = data .. message
+		end
+	else
+		data = ""
 	end
 	return {
 		opcode = 0x8;
@@ -244,9 +263,6 @@ end
 
 function websocket_methods:send(data, opcode, timeout)
 	assert(type(data) == "string")
-	if self.readyState >= 2 then
-		return nil, "WebSocket closed, unable to send data", ce.EPIPE
-	end
 	if opcode == "text" or opcode == nil then
 		opcode = 0x1
 	elseif opcode == "binary" then
@@ -264,7 +280,13 @@ function websocket_methods:send(data, opcode, timeout)
 end
 
 local function close_helper(self, code, reason, deadline)
-	if self.readyState == 3 then
+	if self.readyState < 1 then
+		self.request = nil
+		self.stream = nil
+		self.readyState = 3
+		-- return value doesn't matter; this branch cannot be called from anywhere that uses it
+		return nil, ce.strerror(ce.ENOTCONN), ce.ENOTCONN
+	elseif self.readyState == 3 then
 		return nil, ce.strerror(ce.EPIPE), ce.EPIPE
 	end
 
@@ -272,23 +294,24 @@ local function close_helper(self, code, reason, deadline)
 		local close_frame = build_close(code, reason, self.type == "client")
 		-- ignore failure
 		self:send_frame(close_frame, deadline and deadline-monotime())
-		self.readyState = 2
 	end
 
-	-- Do not close socket straight away, wait for acknowledgement from server
-	local read_deadline = monotime() + self.close_timeout
-	if deadline then
-		read_deadline = math.min(read_deadline, deadline)
-	end
-	while not self.got_close_code do
-		if not self:receive(read_deadline-monotime()) then
-			break
+	if code ~= 1002 and not self.got_close_code and self.readyState == 2 then
+		-- Do not close socket straight away, wait for acknowledgement from server
+		local read_deadline = monotime() + self.close_timeout
+		if deadline then
+			read_deadline = math.min(read_deadline, deadline)
 		end
+		repeat
+			if not self:receive(read_deadline-monotime()) then
+				break
+			end
+		until self.got_close_code
 	end
 
 	if self.readyState < 3 then
-		self.readyState = 3
 		self.socket:shutdown()
+		self.readyState = 3
 		cqueues.poll()
 		cqueues.poll()
 		self.socket:close()
@@ -305,7 +328,9 @@ function websocket_methods:close(code, reason, timeout)
 end
 
 function websocket_methods:receive(timeout)
-	if self.readyState < 1 or self.readyState > 2 then
+	if self.readyState < 1 then
+		return nil, ce.strerror(ce.ENOTCONN), ce.ENOTCONN
+	elseif self.readyState > 2 then
 		return nil, ce.strerror(ce.EPIPE), ce.EPIPE
 	end
 	local deadline = timeout and (monotime()+timeout)
@@ -344,9 +369,9 @@ function websocket_methods:receive(timeout)
 					When an endpoint is to interpret a byte stream as UTF-8 but finds
 					that the byte stream is not, in fact, a valid UTF-8 stream, that
 					endpoint MUST _Fail the WebSocket Connection_.]]
-					local valid_utf8, err_pos = utf8_len(databuffer)
+					local valid_utf8, err_pos = validate_utf8(databuffer)
 					if not valid_utf8 then
-						return close_helper(self, 1002, string.format("invalid utf-8 at position %d", err_pos))
+						return close_helper(self, 1007, string.format("invalid utf-8 at position %d", err_pos))
 					end
 				elseif databuffer_type == 0x2 then
 					databuffer_type = "binary"
@@ -371,14 +396,24 @@ function websocket_methods:receive(timeout)
 					Close control frame by an endpoint.  It is designated for use in
 					applications expecting a status code to indicate that no status
 					code was actually present.]]
-					status_code = 1005
+					self.got_close_code = 1005
+					status_code = 1000
 				elseif status_code < 1000 then
+					self.got_close_code = true
 					return close_helper(self, 1002, "Closed with invalid status code", deadline)
 				elseif ((status_code > 1003 and status_code < 1007) or status_code > 1011) and status_code < 3000 then
+					self.got_close_code = true
 					return close_helper(self, 1002, "Closed with reserved status code", deadline)
+				else
+					self.got_close_code = status_code
+					if message then
+						local valid_utf8, err_pos = validate_utf8(message)
+						if not valid_utf8 then
+							return close_helper(self, 1007, string.format("invalid utf-8 at position %d", err_pos))
+						end
+						self.got_close_message = message
+					end
 				end
-				self.got_close_code = status_code
-				self.got_close_message = message
 				--[[ RFC 6455 5.5.1
 				When sending a Close frame in response, the endpoint typically
 				echos the status code it received.]]
@@ -680,8 +715,9 @@ local function new_from_stream(headers, stream)
 	return self
 end
 
-function websocket_methods:accept(protocols, timeout)
+function websocket_methods:accept(options, timeout)
 	assert(self.type == "server" and self.readyState == 0)
+	options = options or {}
 
 	local response_headers = new_headers()
 	response_headers:upsert(":status", "101")
@@ -691,8 +727,8 @@ function websocket_methods:accept(protocols, timeout)
 
 	local chosen_protocol
 	if self.protocols then
-		if protocols then
-			for _, protocol in ipairs(protocols) do
+		if options.protocols then
+			for _, protocol in ipairs(options.protocols) do
 				if self.protocols[protocol] then
 					chosen_protocol = protocol
 					break
