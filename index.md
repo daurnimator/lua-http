@@ -2,6 +2,8 @@
 
 lua-http is an HTTP library for Lua, it supports: both client and server operations, both HTTP 1 and HTTP 2.
 
+HTTP over TLS (i.e. HTTPS) is fully supported.
+
 
 ## Conventions
 
@@ -99,8 +101,13 @@ The underlying [*connection*](#connection) object
 
 ### `stream:get_headers(timeout)` <!-- --> {#stream:get_headers}
 
+Retrieves the next complete headers object (i.e. a block of headers or trailers) from the stream.
+
 
 ### `stream:write_headers(headers, end_stream, timeout)` <!-- --> {#stream:write_headers}
+
+Write the given [`headers`](#http.headers) object to the stream.
+Takes a flag indicating if this is the last chunk in the stream, if `true` the stream will be closed.
 
 
 ### `stream:get_next_chunk(timeout)` <!-- --> {#stream:get_next_chunk}
@@ -113,8 +120,13 @@ Returns nothing
 
 ### `stream:write_chunk(chunk, end_stream, timeout)` <!-- --> {#stream:write_chunk}
 
+Write the string `chunk` to the stream body.
+Takes a flag indicating if this is the last chunk in the stream, if `true` the stream will be closed.
+
 
 ### `stream:shutdown()` <!-- --> {#stream:shutdown}
+
+Close the stream.
 
 
 # Modules
