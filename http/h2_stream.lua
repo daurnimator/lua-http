@@ -1131,7 +1131,7 @@ function stream_methods:write_chunk(payload, end_stream, timeout)
 		end
 		timeout = deadline and (deadline-monotime())
 	end
-	local ok, err, errno = self:write_data_frame(payload:sub(sent+1), end_stream, timeout)
+	local ok, err, errno = self:write_data_frame(payload:sub(sent+1), end_stream, false, timeout)
 	if not ok then
 		return nil, err, errno
 	end
