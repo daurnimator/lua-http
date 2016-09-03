@@ -131,7 +131,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.h1_stream:read_headers"><code>h1_stream:read_headers(timeout)</code> <!-- --></a></li>
 </ul></li>
 <li><a href="#http.h2_connection">http.h2_connection</a><ul>
-<li><a href="#http.h2_connection.new"><code>new(socket, conn_type, settings, timeout)</code> <!-- --></a></li>
+<li><a href="#http.h2_connection.new"><code>new(socket, conn_type, settings)</code> <!-- --></a></li>
 <li><a href="#http.h2_connection:pollfd"><code>h2_connection:pollfd()</code> <!-- --></a></li>
 <li><a href="#http.h2_connection:events"><code>h2_connection:events()</code> <!-- --></a></li>
 <li><a href="#http.h2_connection:timeout"><code>h2_connection:timeout()</code> <!-- --></a></li>
@@ -191,7 +191,6 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.headers:get_as_sequence"><code>headers:get_as_sequence(name)</code> <!-- --></a></li>
 <li><a href="#http.headers:get"><code>headers:get(name)</code> <!-- --></a></li>
 <li><a href="#http.headers:get_comma_separated"><code>headers:get_comma_separated(name)</code> <!-- --></a></li>
-<li><a href="#http.headers:get_split_as_sequence"><code>headers:get_split_as_sequence(name)</code> <!-- --></a></li>
 <li><a href="#http.headers:modifyi"><code>headers:modifyi(i, value, never_index)</code> <!-- --></a></li>
 <li><a href="#http.headers:upsert"><code>headers:upsert(name, value, never_index)</code> <!-- --></a></li>
 <li><a href="#http.headers:sort"><code>headers:sort()</code> <!-- --></a></li>
@@ -275,8 +274,8 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.util.scheme_to_port"><code>scheme_to_port</code> <!-- --></a></li>
 <li><a href="#http.util.split_authority"><code>split_authority(authority, scheme)</code> <!-- --></a></li>
 <li><a href="#http.util.to_authority"><code>to_authority(host, port, scheme)</code> <!-- --></a></li>
-<li><a href="#http.util.split_header"><code>split_header(str)</code> <!-- --></a></li>
 <li><a href="#http.util.imf_date"><code>imf_date(time)</code> <!-- --></a></li>
+<li><a href="#http.util.maybe_quote"><code>maybe_quote(str)</code> <!-- --></a></li>
 </ul></li>
 <li><a href="#http.version">http.version</a><ul>
 <li><a href="#http.version.name"><code>name</code> <!-- --></a></li>
@@ -286,7 +285,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.websocket.new_from_uri"><code>new_from_uri(uri, protocols)</code> <!-- --></a></li>
 <li><a href="#http.websocket.new_from_stream"><code>new_from_stream(headers, stream)</code> <!-- --></a></li>
 <li><a href="#http.websocket.close_timeout"><code>websocket.close_timeout</code> <!-- --></a></li>
-<li><a href="#http.websocket:accept"><code>websocket:accept(protocols, timeout)</code> <!-- --></a></li>
+<li><a href="#http.websocket:accept"><code>websocket:accept(options, timeout)</code> <!-- --></a></li>
 <li><a href="#http.websocket:connect"><code>websocket:connect(timeout)</code> <!-- --></a></li>
 <li><a href="#http.websocket:receive"><code>websocket:receive(timeout)</code> <!-- --></a></li>
 <li><a href="#http.websocket:each"><code>websocket:each()</code> <!-- --></a></li>
@@ -319,6 +318,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <section id="introduction" class="level1">
 <h1>Introduction</h1>
 <p>lua-http is an HTTP library for Lua, it supports: both client and server operations, both HTTP 1 and HTTP 2.</p>
+<p>HTTP over TLS (i.e. HTTPS) is fully supported.</p>
 <section id="conventions" class="level2">
 <h2>Conventions</h2>
 <p>Operations that may block the current coroutine take an optional timeout.</p>
@@ -394,9 +394,11 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 </section>
 <section id="stream:get_headers" class="level3">
 <h3><code>stream:get_headers(timeout)</code> <!-- --></h3>
+<p>Retrieves the next complete headers object (i.e. a block of headers or trailers) from the stream.</p>
 </section>
 <section id="stream:write_headers" class="level3">
 <h3><code>stream:write_headers(headers, end_stream, timeout)</code> <!-- --></h3>
+<p>Write the given <a href="#http.headers"><code>headers</code></a> object to the stream. Takes a flag indicating if this is the last chunk in the stream, if <code>true</code> the stream will be closed.</p>
 </section>
 <section id="stream:get_next_chunk" class="level3">
 <h3><code>stream:get_next_chunk(timeout)</code> <!-- --></h3>
@@ -407,9 +409,11 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 </section>
 <section id="stream:write_chunk" class="level3">
 <h3><code>stream:write_chunk(chunk, end_stream, timeout)</code> <!-- --></h3>
+<p>Write the string <code>chunk</code> to the stream body. Takes a flag indicating if this is the last chunk in the stream, if <code>true</code> the stream will be closed.</p>
 </section>
 <section id="stream:shutdown" class="level3">
 <h3><code>stream:shutdown()</code> <!-- --></h3>
+<p>Close the stream.</p>
 </section>
 </section>
 </section>
@@ -603,7 +607,7 @@ defaults to <code>false</code></p></li>
 <h2>http.h2_connection</h2>
 <p>An HTTP 2 connection can have multiple streams active and transmitting data at once, hence an <code>http.h2_connection</code> acts much like a scheduler.</p>
 <section id="http.h2_connection.new" class="level3">
-<h3><code>new(socket, conn_type, settings, timeout)</code> <!-- --></h3>
+<h3><code>new(socket, conn_type, settings)</code> <!-- --></h3>
 </section>
 <section id="http.h2_connection:pollfd" class="level3">
 <h3><code>h2_connection:pollfd()</code> <!-- --></h3>
@@ -804,9 +808,6 @@ For server initiated streams, this will be the next free even numbered stream.</
 </section>
 <section id="http.headers:get_comma_separated" class="level3">
 <h3><code>headers:get_comma_separated(name)</code> <!-- --></h3>
-</section>
-<section id="http.headers:get_split_as_sequence" class="level3">
-<h3><code>headers:get_split_as_sequence(name)</code> <!-- --></h3>
 </section>
 <section id="http.headers:modifyi" class="level3">
 <h3><code>headers:modifyi(i, value, never_index)</code> <!-- --></h3>
@@ -1104,15 +1105,18 @@ For server initiated streams, this will be the next free even numbered stream.</
 <h3><code>to_authority(host, port, scheme)</code> <!-- --></h3>
 <p>Joins the <code>host</code> and <code>port</code> to create a valid authority component. Omits the port if it is the default for the <code>scheme</code>.</p>
 </section>
-<section id="http.util.split_header" class="level3">
-<h3><code>split_header(str)</code> <!-- --></h3>
-<p>Many HTTP headers are specified to be comma seperated elements with optional whitespace. This function returns a table with a sequence of these elements.</p>
-<p>The returned table has an <code>n</code> field containing the number of elements.</p>
-</section>
 <section id="http.util.imf_date" class="level3">
 <h3><code>imf_date(time)</code> <!-- --></h3>
 <p>Returns the time in HTTP preferred date format (See <a href="https://tools.ietf.org/html/rfc7231#section-7.1.1.1">RFC 7231 section 7.1.1.1</a>)</p>
 <p><code>time</code> defaults to the current time</p>
+</section>
+<section id="http.util.maybe_quote" class="level3">
+<h3><code>maybe_quote(str)</code> <!-- --></h3>
+<ul>
+<li>If <code>str</code> is a valid <code>token</code>, return it as-is.</li>
+<li>If <code>str</code> would be valid as a <code>quoted-string</code>, return the quoted version</li>
+<li>Otherwise, returns <code>nil</code></li>
+</ul>
 </section>
 </section>
 <section id="http.version" class="level2">
@@ -1149,10 +1153,13 @@ For server initiated streams, this will be the next free even numbered stream.</
 <p>Amount of time (in seconds) to wait between sending a close frame and actually closing the connection. Defaults to <code>3</code> seconds.</p>
 </section>
 <section id="http.websocket:accept" class="level3">
-<h3><code>websocket:accept(protocols, timeout)</code> <!-- --></h3>
+<h3><code>websocket:accept(options, timeout)</code> <!-- --></h3>
 <p>Completes negotiation with a websocket client.</p>
 <ul>
+<li><p><code>options</code> is a table containing:</p>
+<ul>
 <li><code>protocols</code> (optional) should be a lua table containing a sequence of protocols to to allow from the client</li>
+</ul></li>
 </ul>
 <p>Usually called after a successful <a href="#http.websocket.new_from_stream"><code>new_from_stream</code></a></p>
 </section>

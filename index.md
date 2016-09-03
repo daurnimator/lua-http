@@ -2,6 +2,8 @@
 
 lua-http is an HTTP library for Lua, it supports: both client and server operations, both HTTP 1 and HTTP 2.
 
+HTTP over TLS (i.e. HTTPS) is fully supported.
+
 
 ## Conventions
 
@@ -99,8 +101,13 @@ The underlying [*connection*](#connection) object
 
 ### `stream:get_headers(timeout)` <!-- --> {#stream:get_headers}
 
+Retrieves the next complete headers object (i.e. a block of headers or trailers) from the stream.
+
 
 ### `stream:write_headers(headers, end_stream, timeout)` <!-- --> {#stream:write_headers}
+
+Write the given [`headers`](#http.headers) object to the stream.
+Takes a flag indicating if this is the last chunk in the stream, if `true` the stream will be closed.
 
 
 ### `stream:get_next_chunk(timeout)` <!-- --> {#stream:get_next_chunk}
@@ -113,8 +120,13 @@ Returns nothing
 
 ### `stream:write_chunk(chunk, end_stream, timeout)` <!-- --> {#stream:write_chunk}
 
+Write the string `chunk` to the stream body.
+Takes a flag indicating if this is the last chunk in the stream, if `true` the stream will be closed.
+
 
 ### `stream:shutdown()` <!-- --> {#stream:shutdown}
+
+Close the stream.
 
 
 # Modules
@@ -330,7 +342,7 @@ an `http.h1_stream` has the following methods:
 An HTTP 2 connection can have multiple streams active and transmitting data at once,
 hence an `http.h2_connection` acts much like a scheduler.
 
-### `new(socket, conn_type, settings, timeout)` <!-- --> {#http.h2_connection.new}
+### `new(socket, conn_type, settings)` <!-- --> {#http.h2_connection.new}
 
 
 ### `h2_connection:pollfd()` <!-- --> {#http.h2_connection:pollfd}
@@ -556,9 +568,6 @@ Creates and returns a new headers object.
 
 
 ### `headers:get_comma_separated(name)` <!-- --> {#http.headers:get_comma_separated}
-
-
-### `headers:get_split_as_sequence(name)` <!-- --> {#http.headers:get_split_as_sequence}
 
 
 ### `headers:modifyi(i, value, never_index)` <!-- --> {#http.headers:modifyi}
@@ -902,18 +911,18 @@ Joins the `host` and `port` to create a valid authority component.
 Omits the port if it is the default for the `scheme`.
 
 
-### `split_header(str)` <!-- --> {#http.util.split_header}
-
-Many HTTP headers are specified to be comma seperated elements with optional whitespace. This function returns a table with a sequence of these elements.
-
-The returned table has an `n` field containing the number of elements.
-
-
 ### `imf_date(time)` <!-- --> {#http.util.imf_date}
 
 Returns the time in HTTP preferred date format (See [RFC 7231 section 7.1.1.1](https://tools.ietf.org/html/rfc7231#section-7.1.1.1))
 
 `time` defaults to the current time
+
+
+### `maybe_quote(str)` <!-- --> {#http.util.maybe_quote}
+
+  - If `str` is a valid `token`, return it as-is.
+  - If `str` would be valid as a `quoted-string`, return the quoted version
+  - Otherwise, returns `nil`
 
 
 ## http.version
@@ -954,11 +963,13 @@ Amount of time (in seconds) to wait between sending a close frame and actually c
 Defaults to `3` seconds.
 
 
-### `websocket:accept(protocols, timeout)` <!-- --> {#http.websocket:accept}
+### `websocket:accept(options, timeout)` <!-- --> {#http.websocket:accept}
 
 Completes negotiation with a websocket client.
 
-  - `protocols` (optional) should be a lua table containing a sequence of protocols to to allow from the client
+  - `options` is a table containing:
+
+	  - `protocols` (optional) should be a lua table containing a sequence of protocols to to allow from the client
 
 Usually called after a successful [`new_from_stream`](#http.websocket.new_from_stream)
 
