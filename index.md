@@ -951,7 +951,7 @@ Creates a new `http.websocket` object of type `"client"` from the given URI.
 
 Attempts to create a new `http.websocket` object of type `"server"` from the given request headers and stream.
 
-  - [`headers`](#http.headers) should be headers of a suspected websocket upgrade request from a HTTP 1 client.
+  - [`headers`](#http.headers) should be headers of a suspected websocket upgrade request from an HTTP 1 client.
   - [`stream`](#http.h1_stream) should be a live HTTP 1 stream of the `"server"` type.
 
 This function does **not** have side effects, and is hence okay to use tentatively.
