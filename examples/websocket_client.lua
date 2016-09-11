@@ -10,7 +10,7 @@ Example of websocket client usage
 
 local websocket = require "http.websocket"
 
-local ws = websocket.new_from_uri("ws://ws-feed.exchange.coinbase.com")
+local ws = websocket.new_from_uri("wss://ws-feed.exchange.coinbase.com")
 assert(ws:connect())
 assert(ws:send([[{"type": "subscribe", "product_id": "BTC-USD"}]]))
 for _=1, 5 do
