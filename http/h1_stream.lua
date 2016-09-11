@@ -674,7 +674,9 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		for i, v in ipairs(transfer_encoding_header) do
 			local params = {v[1]}
 			for k, vv in pairs(v) do
-				params[#params+1] = k .. "=" .. util.maybe_quote(vv)
+				if type(k) == "string" then
+					params[#params+1] = k .. "=" .. util.maybe_quote(vv)
+				end
 			end
 			value[i] = table.concat(params, ";")
 		end
