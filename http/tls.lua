@@ -687,7 +687,7 @@ end
 
 local function new_client_context()
 	local ctx = openssl_ctx.new("TLSv1_2", false)
-	ctx:setCipherList(modern_cipher_list)
+	ctx:setCipherList(intermediate_cipher_list)
 	ctx:setOptions(openssl_ctx.OP_NO_COMPRESSION+openssl_ctx.OP_SINGLE_ECDH_USE)
 	ctx:setEphemeralKey(openssl_pkey.new{ type = "EC", curve = "prime256v1" })
 	return ctx
@@ -695,7 +695,7 @@ end
 
 local function new_server_context()
 	local ctx = openssl_ctx.new("TLSv1_2", true)
-	ctx:setCipherList(modern_cipher_list)
+	ctx:setCipherList(intermediate_cipher_list)
 	ctx:setOptions(openssl_ctx.OP_NO_COMPRESSION+openssl_ctx.OP_SINGLE_ECDH_USE)
 	ctx:setEphemeralKey(openssl_pkey.new{ type = "EC", curve = "prime256v1" })
 	return ctx
