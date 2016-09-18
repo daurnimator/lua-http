@@ -311,6 +311,16 @@ function socks_methods:negotiate(host, port, timeout)
 	return true
 end
 
+function socks_methods:take_socket()
+	local s = self.socket
+	if s == nil then
+		-- already taken
+		return nil
+	end
+	self.socket = nil
+	return s
+end
+
 return {
 	connect = connect;
 	fdopen = fdopen;
