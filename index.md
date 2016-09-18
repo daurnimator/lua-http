@@ -837,6 +837,11 @@ Returns a *http.socks* object.
 Specifies if the destination host should be resolved locally.
 
 
+### `socks:clone()` <!-- --> {#http.socks:clone}
+
+Make a clone of a given socks object.
+
+
 ### `socks:add_username_password_auth(username, password)` <!-- --> {#http.socks:add_username_password_auth}
 
 Add username + password authorisation to the set of allowed authorisation methods with the given credentials.
