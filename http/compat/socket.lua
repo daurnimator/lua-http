@@ -132,9 +132,7 @@ function M.request(reqt, b)
 		end
 	end
 	req.headers:upsert("user-agent", M.USERAGENT)
-	if proxy then
-		error("PROXYs are not currently supported by lua-http")
-	end
+	req:use_proxy(proxy)
 	if user_headers then
 		for name, field in pairs(user_headers) do
 			if name == "host" then
