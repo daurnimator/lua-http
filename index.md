@@ -288,6 +288,9 @@ See [`connection:new_stream()`](#connection:new_stream)
 See [`connection:get_next_incoming_stream()`](#connection:get_next_incoming_stream)
 
 
+### `h1_connection:flush(...)` <!-- --> {#http.h1_connection:flush}
+
+
 ### `h1_connection:read_request_line(timeout)` <!-- --> {#http.h1_connection:read_request_line}
 
 
