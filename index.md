@@ -708,6 +708,15 @@ Respect RFC 2616 Section 10.3.3 and **don't** convert POST requests into body-le
 Defaults to `false`.
 
 
+### `request:clone()` <!-- --> {#http.request:clone}
+
+Creates and returns a clone of the request.
+
+The clone has its own deep copy of the [`.headers`](#http.request.headers) field.
+
+The [`.tls`](#http.request.tls) and [`.body`](#http.request.body) fields are shallow copied from the original request.
+
+
 ### `request:set_body(body)` <!-- --> {#http.request:set_body}
 
 Allows setting a request body. `body` may be a string, function or lua file object.
@@ -715,15 +724,6 @@ Allows setting a request body. `body` may be a string, function or lua file obje
   - If `body` is a string it will be sent as given.
   - If `body` is a function, it will be called repeatedly like an iterator. It should return chunks of the request body as a string or `nil` if done.
   - If `body` is a lua file object, it will be [`:seek`'d](http://www.lua.org/manual/5.3/manual.html#pdf-file:seek) to the start, then sent as a body. Any errors encountered during file operations **will be thrown**.
-
-
-### `request:clone()` <!-- --> {#http.request:clone}
-
-Creates and returns a clone of the request.
-
-The clone has its own deep copy of the [`.headers`](#http.request.headers) field.
-
-The [`.tls`](#http.request.tls) and body fields are shallow copied from the original request.
 
 
 ### `request:go(timeout)` <!-- --> {#http.request:timeout}
