@@ -11,6 +11,8 @@ local x509 = require "openssl.x509"
 local name = require "openssl.x509.name"
 local altname = require "openssl.x509.altname"
 
+local hang_timeout = 0.03
+
 local function onerror(socket, op, why, lvl) -- luacheck: ignore 212
 	if why == ce.EPIPE or why == ce.ETIMEDOUT then
 		return why
@@ -82,7 +84,7 @@ local function wrap_socket(self, socket, deadline)
 	end
 	local conn, err, errno
 	if is_h2 then
-		conn, err, errno = h2_connection.new(socket, "server", nil, deadline and (deadline-monotime()))
+		conn, err, errno = h2_connection.new(socket, "server", nil)
 	else
 		conn, err, errno = h1_connection.new(socket, "server", 1.1)
 	end
@@ -97,7 +99,8 @@ local function handle_client(conn, on_stream)
 	while true do
 		local stream, err, errno = conn:get_next_incoming_stream()
 		if stream == nil then
-			if (err == ce.EPIPE or errno == ce.ECONNRESET or errno == ce.ENOTCONN) and conn.socket:pending() == 0 then
+			if (err == ce.EPIPE or errno == ce.ECONNRESET or errno == ce.ENOTCONN)
+			  and (conn.socket == nil or conn.socket:pending() == 0) then
 				break
 			else
 				return nil, err, errno
@@ -158,14 +161,15 @@ local server_mt = {
 	__index = server_methods;
 }
 
---[[ Starts listening on the given socket
+function server_mt:__tostring()
+	return string.format("http.server{socket=%s;n_connections=%d}",
+		tostring(self.socket), self.n_connections)
+end
+
+--[[ Creates a new server object
 
 Takes a table of options:
-  - `.host`: address to bind to (required)
-  - `.port`: port to bind to (optional if tls isn't `nil`, in which case defaults to 80 for `.tls == false` or 443 if `.tls == true`)
-  - `.v6only`: allow ipv6 only (no ipv4-mapped-ipv6)
-  - `.reuseaddr`: turn on SO_REUSEADDR flag?
-  - `.reuseport`: turn on SO_REUSEPORT flag?
+  - `.socket`: A cqueues socket object
   - `.tls`: `nil`: allow both tls and non-tls connections
   -         `true`: allows tls connections only
   -         `false`: allows non-tls connections only
@@ -174,11 +178,47 @@ Takes a table of options:
   - `.max_concurrent`: Maximum number of connections to allow live at a time (default: infinity)
   - `.client_timeout`: Timeout (in seconds) to wait for client to send first bytes and/or complete TLS handshake (default: 10)
 ]]
+local function new_server(tbl)
+	local socket = assert(tbl.socket)
+
+	-- Return errors rather than throwing
+	socket:onerror(function(s, op, why, lvl) -- luacheck: ignore 431 212
+		return why
+	end)
+
+	return setmetatable({
+		socket = socket;
+		tls = tbl.tls;
+		ctx = tbl.ctx;
+		max_concurrent = tbl.max_concurrent;
+		n_connections = 0;
+		pause_cond = cc.new();
+		paused = true;
+		connection_done = cc.new(); -- signalled when connection has been closed
+		client_timeout = tbl.client_timeout;
+	}, server_mt)
+end
+
+--[[
+Extra options:
+  - `.family`: protocol family
+  - `.host`: address to bind to (required if not `.path`)
+  - `.port`: port to bind to (optional if tls isn't `nil`, in which case defaults to 80 for `.tls == false` or 443 if `.tls == true`)
+  - `.path`: path to UNIX socket (required if not `.host`)
+  - `.v6only`: allow ipv6 only (no ipv4-mapped-ipv6)
+  - `.mode`: fchmod or chmod socket after creating UNIX domain socket
+  - `.mask`: set and restore umask when binding UNIX domain socket
+  - `.unlink`: unlink socket path before binding?
+  - `.reuseaddr`: turn on SO_REUSEADDR flag?
+  - `.reuseport`: turn on SO_REUSEPORT flag?
+]]
 local function listen(tbl)
 	local tls = tbl.tls
-	local host = assert(tbl.host, "need host")
+	local host = tbl.host
+	local path = tbl.path
+	assert(host or path, "need host or path")
 	local port = tbl.port
-	if port == nil then
+	if host and port == nil then
 		if tls == true then
 			port = "443"
 		elseif tls == false then
@@ -189,31 +229,31 @@ local function listen(tbl)
 	end
 	local ctx = tbl.ctx
 	if ctx == nil and tls ~= false then
-		ctx = new_ctx(host)
+		if host then
+			ctx = new_ctx(host)
+		else
+			error("Custom OpenSSL context required when using a UNIX domain socket")
+		end
 	end
 	local s = assert(cs.listen{
+		family = tbl.family;
 		host = host;
 		port = port;
-		v6only = tbl.v6only;
+		path = path;
+		mode = tbl.mode;
+		mask = tbl.mask;
+		unlink = tbl.unlink;
 		reuseaddr = tbl.reuseaddr;
 		reuseport = tbl.reuseport;
+		v6only = tbl.v6only;
 	})
-	-- Return errors rather than throwing
-	s:onerror(function(s, op, why, lvl) -- luacheck: ignore 431 212
-		return why
-	end)
-
-	return setmetatable({
+	return new_server {
 		socket = s;
 		tls = tls;
 		ctx = ctx;
 		max_concurrent = tbl.max_concurrent;
-		n_connections = 0;
-		pause_cond = cc.new();
-		paused = true;
-		connection_done = cc.new(); -- signalled when connection has been closed
 		client_timeout = tbl.client_timeout;
-	}, server_mt)
+	}
 end
 
 -- Actually wait for and *do* the binding
@@ -239,26 +279,29 @@ function server_methods:close()
 end
 
 function server_methods:run(on_stream, cq)
-	cq = cq or cqueues.running()
+	cq = assert(cq or cqueues.running())
 	self.paused = false
 	repeat
 		if self.n_connections >= self.max_concurrent then
-			self.connection_done:wait()
+			cqueues.poll(self.connection_done, self.pause_cond)
+			if self.paused then
+				break
+			end
 		end
-		local socket, accept_err = self.socket:accept({nodelay = true;}, 0)
+		local socket, accept_errno = self.socket:accept({nodelay = true;}, 0)
 		if socket == nil then
-			if accept_err == ce.ETIMEDOUT then
+			if accept_errno == ce.ETIMEDOUT then
 				-- Yield this thread until a client arrives or server paused
 				cqueues.poll(self.socket, self.pause_cond)
-			elseif accept_err == ce.EMFILE then
+			elseif accept_errno == ce.EMFILE then
 				-- Wait for another request to finish
-				if not self.connection_done:wait(0.1) then
-					-- If we're stuck waiting for more than 100ms, run a garbage collection sweep
+				if cqueues.poll(self.connection_done, self.pause_cond, hang_timeout) == hang_timeout then
+					-- If we're stuck waiting, run a garbage collection sweep
 					-- This can prevent a hang
 					collectgarbage()
 				end
 			else
-				error(ce.strerror(accept_err))
+				return nil, ce.strerror(accept_errno), accept_errno
 			end
 		else
 			self.n_connections = self.n_connections + 1
@@ -290,5 +333,7 @@ function server_methods:run(on_stream, cq)
 end
 
 return {
+	new = new_server;
 	listen = listen;
+	mt = server_mt;
 }

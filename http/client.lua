@@ -68,7 +68,7 @@ local function negotiate(s, options, timeout)
 				h2_errors.PROTOCOL_ERROR("ALPN is not h2")
 			end
 		end
-		return new_h2_connection(s, "client", options.h2_settings, deadline and (deadline-monotime()))
+		return new_h2_connection(s, "client", options.h2_settings)
 	else
 		error("Unknown HTTP version: " .. tostring(version))
 	end
@@ -80,6 +80,7 @@ local function connect(options, timeout)
 		family = options.family;
 		host = options.host;
 		port = options.port;
+		path = options.path;
 		sendname = options.sendname;
 		v6only = options.v6only;
 		nodelay = true;

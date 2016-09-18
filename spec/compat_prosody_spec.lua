@@ -1,18 +1,8 @@
-local TEST_TIMEOUT = 2
 describe("http.compat.prosody module", function()
 	local cqueues = require "cqueues"
 	local request = require "http.compat.prosody".request
 	local new_headers = require "http.headers".new
 	local server = require "http.server"
-	local function assert_loop(cq, timeout)
-		local ok, err, _, thd = cq:loop(timeout)
-		if not ok then
-			if thd then
-				err = debug.traceback(thd, err)
-			end
-			error(err, 2)
-		end
-	end
 	it("invalid uris fail", function()
 		local s = spy.new(function() end)
 		assert(cqueues.new():wrap(function()

@@ -15,6 +15,49 @@ local new_from_uri = require "http.request".new_from_uri
 local cqueues = require "cqueues"
 local ce = require "cqueues.errno"
 
+local function do_request(self, callback)
+	local headers, stream = self:go()
+	if headers == nil then
+		-- `stream` is error message
+		if stream == ce.EPIPE then
+			stream = ce.strerror(stream)
+		end
+		callback(stream, 0, self)
+		return
+	end
+	local response_body, err = stream:get_body_as_string()
+	stream:shutdown()
+	if response_body == nil then
+		if err == ce.EPIPE then
+			err = ce.strerror(err)
+		end
+		callback(err, 0, self)
+		return
+	end
+	-- code might not be convertible to a number in http2, so need `or` case
+	local code = headers:get(":status")
+	code = tonumber(code, 10) or code
+	-- convert headers to table with comma separated values
+	local headers_as_kv = {}
+	for key, value in headers:each() do
+		if key ~= ":status" then
+			local old = headers_as_kv[key]
+			if old then
+				headers_as_kv[key] = old .. "," .. value
+			else
+				headers_as_kv[key] = value
+			end
+		end
+	end
+	local response = {
+		code = code;
+		httpversion = stream.peer_version;
+		headers = headers_as_kv;
+		body = response_body;
+	}
+	callback(response_body, code, response, self)
+end
+
 local function new_prosody(url, ex, callback)
 	local cq = assert(cqueues.running(), "must be running inside a cqueue")
 	local ok, req = pcall(new_from_uri, url)
@@ -41,48 +84,7 @@ local function new_prosody(url, ex, callback)
 			req.tls = ex.sslctx
 		end
 	end
-	cq:wrap(function(self)
-		local headers, stream = self:go()
-		if headers == nil then
-			-- `stream` is error message
-			if stream == ce.EPIPE then
-				stream = ce.strerror(stream)
-			end
-			callback(stream, 0, self)
-			return
-		end
-		local response_body, err = stream:get_body_as_string()
-		stream:shutdown()
-		if response_body == nil then
-			if err == ce.EPIPE then
-				err = ce.strerror(err)
-			end
-			callback(err, 0, self)
-			return
-		end
-		-- code might not be convertible to a number in http2, so need `or` case
-		local code = headers:get(":status")
-		code = tonumber(code, 10) or code
-		-- convert headers to table with comma separated values
-		local headers_as_kv = {}
-		for key, value in headers:each() do
-			if key ~= ":status" then
-				local old = headers_as_kv[key]
-				if old then
-					headers_as_kv[key] = old .. "," .. value
-				else
-					headers_as_kv[key] = value
-				end
-			end
-		end
-		local response = {
-			code = code;
-			httpversion = stream.peer_version;
-			headers = headers_as_kv;
-			body = response_body;
-		}
-		callback(response_body, code, response, self)
-	end, req)
+	cq:wrap(do_request, req, callback)
 	return req
 end
 

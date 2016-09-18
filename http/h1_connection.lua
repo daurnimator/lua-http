@@ -19,7 +19,14 @@ function connection_mt:__tostring()
 end
 
 local function onerror(socket, op, why, lvl) -- luacheck: ignore 212
-	if why == ce.EPIPE or why == ce.ETIMEDOUT then
+	if why == ce.EPIPE then
+		return why
+	elseif why == ce.ETIMEDOUT then
+		if op == "fill" or op == "read" then
+			socket:clearerr("r")
+		elseif op == "flush" then
+			socket:clearerr("w")
+		end
 		return why
 	end
 	return string.format("%s: %s", op, ce.strerror(why)), why
@@ -88,24 +95,29 @@ function connection_methods:take_socket()
 		return nil
 	end
 	self.socket = nil
+	self:shutdown()
 	-- Reset socket to some defaults
 	s:onerror(nil)
 	return s
 end
 
 function connection_methods:shutdown(dir)
-	self.socket:shutdown(dir)
-end
-
-function connection_methods:close()
 	while self.pipeline:length() > 0 do
 		local stream = self.pipeline:peek()
 		stream:shutdown()
 	end
+	if self.socket then
+		self.socket:shutdown(dir)
+	end
+end
+
+function connection_methods:close()
 	self:shutdown()
-	cqueues.poll()
-	cqueues.poll()
-	self.socket:close()
+	if self.socket then
+		cqueues.poll()
+		cqueues.poll()
+		self.socket:close()
+	end
 end
 
 function connection_methods:new_stream()
@@ -167,9 +179,11 @@ function connection_methods:read_request_line(timeout)
 		if not ok then
 			return nil, onerror(self.socket, "unget", errno2)
 		end
+		self.socket:seterror("r", ce.EPIPE)
 		return nil, ce.EPIPE
 	end
-	return method, path, tonumber(httpversion)
+	httpversion = httpversion == "1.0" and 1.0 or 1.1 -- Avoid tonumber() due to locale issues
+	return method, path, httpversion
 end
 
 function connection_methods:read_status_line(timeout)
@@ -183,9 +197,11 @@ function connection_methods:read_status_line(timeout)
 		if not ok then
 			return nil, onerror(self.socket, "unget", errno2)
 		end
+		self.socket:seterror("r", ce.EPIPE)
 		return nil, ce.EPIPE
 	end
-	return tonumber(httpversion), status_code, reason_phrase
+	httpversion = httpversion == "1.0" and 1.0 or 1.1 -- Avoid tonumber() due to locale issues
+	return httpversion, status_code, reason_phrase
 end
 
 function connection_methods:read_header(timeout)
@@ -194,7 +210,8 @@ function connection_methods:read_header(timeout)
 		-- Note: the *h read returns *just* nil when data is a non-mime compliant header
 		return nil, err or ce.EPIPE, errno
 	end
-	local key, val = line:match("^([^%s:]+): *(.*)$")
+	-- header fields can have optional surrounding whitespace
+	local key, val = line:match("^([^%s:]+):[ \t]*(.-)[ \t]*$")
 	-- don't need to validate, the *h read mode ensures a valid header
 	return key, val
 end
@@ -210,6 +227,7 @@ function connection_methods:read_headers_done(timeout)
 		if not ok then
 			return nil, onerror(self.socket, "unget", errno2)
 		end
+		self.socket:seterror("r", ce.EPIPE)
 		return nil, ce.EPIPE
 	end
 end
@@ -244,6 +262,7 @@ function connection_methods:read_body_chunk(timeout)
 		if not unget_ok1 then
 			return nil, onerror(self.socket, "unget", unget_errno1)
 		end
+		self.socket:seterror("r", ce.EPIPE)
 		return nil, ce.EPIPE
 	elseif #chunk_size > 8 then
 		self.socket:seterror("r", ce.E2BIG)
@@ -263,6 +282,7 @@ function connection_methods:read_body_chunk(timeout)
 			if not unget_ok1 then
 				return nil, onerror(self.socket, "unget", unget_errno1)
 			end
+			self.socket:seterror("r", ce.EPIPE)
 			return nil, err3 or ce.EPIPE, errno3
 		end
 		local crlf, err4, errno4 = self.socket:xread(2, deadline and (deadline-monotime()))
@@ -283,6 +303,7 @@ function connection_methods:read_body_chunk(timeout)
 		if not unget_ok1 then
 			return nil, onerror(self.socket, "unget", unget_errno1)
 		end
+		self.socket:seterror("r", ce.EPIPE)
 		return nil, err4 or ce.EPIPE, errno4
 	end
 end

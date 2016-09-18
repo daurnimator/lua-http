@@ -1,26 +1,32 @@
-local TEST_TIMEOUT = 2
 describe("http.server module", function()
 	local server = require "http.server"
 	local client = require "http.client"
 	local new_headers = require "http.headers".new
 	local cqueues = require "cqueues"
-	local function assert_loop(cq, timeout)
-		local ok, err, _, thd = cq:loop(timeout)
-		if not ok then
-			if thd then
-				err = debug.traceback(thd, err)
-			end
-			error(err, 2)
-		end
-	end
-	local function simple_test(tls, version)
+	local cs = require "cqueues.socket"
+	it("__tostring works", function()
+		local s = server.new({socket = (cs.pair())})
+		assert.same("http.server{", tostring(s):match("^.-%{"))
+	end)
+	local function simple_test(family, tls, version)
 		local cq = cqueues.new()
-		local s = server.listen {
-			host = "localhost";
-			port = 0;
+		local options = {
+			family = family;
+			tls = tls;
 		}
+		if family == cs.AF_UNIX then
+			local socket_path = os.tmpname()
+			finally(function()
+				os.remove(socket_path)
+			end)
+			options.path = socket_path
+			options.unlink = true
+		else
+			options.host = "localhost"
+			options.port = 0
+		end
+		local s = server.listen(options)
 		assert(s:listen())
-		local _, host, port = s:localname()
 		local on_stream = spy.new(function(stream)
 			stream:get_headers()
 			stream:shutdown()
@@ -31,14 +37,24 @@ describe("http.server module", function()
 			s:close()
 		end)
 		cq:wrap(function()
-			local conn = client.connect {
-				host = host;
-				port = port;
+			local client_path
+			local client_family, client_host, client_port = s:localname()
+			if client_family == cs.AF_UNIX then
+				client_path = client_host
+				client_host = nil
+			end
+			local client_options = {
+				family = client_family;
+				host = client_host;
+				port = client_port;
+				path = client_path;
 				tls = tls;
 				version = version;
 			}
+			local conn = client.connect(client_options)
 			local stream = conn:new_stream()
 			local headers = new_headers()
+			headers:append(":authority", "myauthority")
 			headers:append(":method", "GET")
 			headers:append(":path", "/")
 			headers:append(":scheme", "http")
@@ -50,16 +66,61 @@ describe("http.server module", function()
 		assert.truthy(cq:empty())
 		assert.spy(on_stream).was.called()
 	end
-	it("works with plain http 1.1", function()
-		simple_test(false, 1.1)
+	it("works with plain http 1.1 using IP", function()
+		simple_test(cs.AF_INET, false, 1.1)
 	end)
-	it("works with https 1.1", function()
-		simple_test(true, 1.1)
+	it("works with https 1.1 using IP", function()
+		simple_test(cs.AF_INET, true, 1.1)
 	end)
-	it("works with plain http 2.0", function()
-		simple_test(false, 2.0)
+	it("works with plain http 2.0 using IP", function()
+		simple_test(cs.AF_INET, false, 2.0)
 	end);
-	(require "http.tls".has_alpn and it or pending)("works with https 2.0", function()
-		simple_test(true, 2.0)
+	(require "http.tls".has_alpn and it or pending)("works with https 2.0 using IP", function()
+		simple_test(cs.AF_INET, true, 2.0)
+	end)
+	--[[ TLS tests are pending for now as UNIX sockets don't automatically
+	generate a TLS context ]]
+	it("works with plain http 1.1 using UNIX socket", function()
+		simple_test(cs.AF_UNIX, false, 1.1)
+	end)
+	pending("works with https 1.1 using UNIX socket", function()
+		simple_test(cs.AF_UNIX, true, 1.1)
+	end)
+	it("works with plain http 2.0 using UNIX socket", function()
+		simple_test(cs.AF_UNIX, false, 2.0)
+	end);
+	pending("works with https 2.0 using UNIX socket", function()
+		simple_test(cs.AF_UNIX, true, 2.0)
+	end)
+	it("taking socket from underlying connection is handled well by server", function()
+		local cq = cqueues.new()
+		local s = server.listen {
+			host = "localhost";
+			port = 0;
+		}
+		assert(s:listen())
+		local _, host, port = s:localname()
+		local on_stream = spy.new(function(stream)
+			local sock = stream.connection:take_socket()
+			s:pause()
+			assert.same("test", sock:read("*a"))
+			sock:close()
+		end)
+		cq:wrap(function()
+			s:run(on_stream)
+			s:close()
+		end)
+		cq:wrap(function()
+			local sock = cs.connect {
+				host = host;
+				port = port;
+			}
+			assert(sock:write("test"))
+			assert(sock:flush())
+			sock:close()
+		end)
+		assert_loop(cq, TEST_TIMEOUT)
+		assert.truthy(cq:empty())
+		assert.spy(on_stream).was.called()
 	end)
 end)

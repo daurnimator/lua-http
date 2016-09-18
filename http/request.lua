@@ -22,12 +22,14 @@ local request_mt = {
 }
 
 local default_user_agent = string.format("%s/%s", version.name, version.version)
+local default_proxies = http_util.read_proxy_vars()
 
 local EOF = lpeg.P(-1)
 local uri_patt = uri_patts.uri * EOF
 local uri_ref = uri_patts.uri_reference * EOF
 
 local function new_from_uri_t(uri_t, headers)
+	assert(type(uri_t) == "table")
 	local scheme = assert(uri_t.scheme, "URI missing scheme")
 	assert(scheme == "https" or scheme == "http" or scheme == "ws" or scheme == "wss", "scheme not valid")
 	local host = tostring(assert(uri_t.host, "URI must include a host")) -- tostring required to e.g. convert lpeg_patterns IPv6 objects
@@ -41,7 +43,7 @@ local function new_from_uri_t(uri_t, headers)
 		is_connect = headers:get(":method") == "CONNECT"
 	end
 	if is_connect then
-		assert(uri_t.path == "", "CONNECT requests cannot have a path")
+		assert(uri_t.path == nil or uri_t.path == "", "CONNECT requests cannot have a path")
 		assert(uri_t.query == nil, "CONNECT requests cannot have a query")
 		assert(headers:has(":authority"), ":authority required for CONNECT requests")
 	else
@@ -49,11 +51,9 @@ local function new_from_uri_t(uri_t, headers)
 		local path = uri_t.path
 		if path == nil or path == "" then
 			path = "/"
-		else
-			path = http_util.encodeURI(path)
 		end
 		if uri_t.query then
-			path = path .. "?" .. http_util.encodeURI(uri_t.query)
+			path = path .. "?" .. uri_t.query
 		end
 		headers:upsert(":path", path)
 		headers:upsert(":scheme", scheme)
@@ -65,7 +65,8 @@ local function new_from_uri_t(uri_t, headers)
 		else
 			field = "authorization"
 		end
-		headers:append(field, "basic " .. basexx.to_base64(uri_t.userinfo), true)
+		local userinfo = http_util.decodeURIComponent(uri_t.userinfo) -- XXX: this doesn't seem right, but it's same behaviour as curl
+		headers:append(field, "basic " .. basexx.to_base64(userinfo), true)
 	end
 	if not headers:has("user-agent") then
 		headers:append("user-agent", default_user_agent)
@@ -77,12 +78,18 @@ local function new_from_uri_t(uri_t, headers)
 		headers = headers;
 		body = nil;
 	}, request_mt)
+	local proxy = default_proxies:choose(scheme, host)
+	if proxy then
+		self:use_proxy(proxy)
+	end
 	return self
 end
 
-local function new_from_uri(uri)
-	local uri_t = assert(uri_patt:match(uri), "invalid URI")
-	return new_from_uri_t(uri_t)
+local function new_from_uri(uri, ...)
+	if type(uri) == "string" then
+		uri = assert(uri_patt:match(uri), "invalid URI")
+	end
+	return new_from_uri_t(uri, ...)
 end
 
 local function new_connect(uri, connect_authority)
@@ -91,30 +98,6 @@ local function new_connect(uri, connect_authority)
 	headers:append(":authority", connect_authority)
 	headers:append(":method", "CONNECT")
 	return new_from_uri_t(uri_t, headers)
-end
-
-local function new_from_stream(stream)
-	local host, port
-	local ssl = stream:checktls()
-	local request_headers = stream:get_headers()
-	local scheme = request_headers:get(":scheme") or (ssl and "https" or "http")
-	if request_headers:has(":authority") then
-		host, port = http_util.split_authority(request_headers:get(":authority"), scheme)
-	else
-		local fam -- luacheck: ignore 231
-		fam, host, port = stream:localname()
-		host = ssl:getHostName() or host
-	end
-
-	local self = setmetatable({
-		host = host;
-		port = port;
-		tls = ssl ~= nil; -- TODO: create ssl context?
-		headers = request_headers;
-		body = stream:read_body_to_tmpfile(request_headers); -- TODO: doesn't make sense for CONNECT
-	}, request_mt)
-
-	return self
 end
 
 function request_methods:clone()
@@ -136,22 +119,56 @@ function request_methods:clone()
 	}, request_mt)
 end
 
-function request_methods:to_url()
-	-- TODO: userinfo section (username/password)
+function request_methods:to_uri(with_userinfo)
+	local scheme = self.headers:get(":scheme")
 	local method = self.headers:get(":method")
-	if method == "CONNECT" then
-		local scheme = self.tls and "https" or "http"
-		local authority = http_util.to_authority(self.host, self.port, scheme)
-		return scheme .. "://" .. authority
-	else
-		local scheme = self.headers:get(":scheme")
-		local authority = self.headers:get(":authority")
-		if authority == nil then
-			authority = http_util.to_authority(self.host, self.port, scheme)
-		end
-		local path = self.headers:get(":path")
-		return scheme .. "://" .. authority .. path
+	local path
+	if scheme == nil then
+		scheme = self.tls and "https" or "http"
 	end
+	local authority
+	local authorization_field
+	if method == "CONNECT" then
+		authorization_field = "proxy-authorization"
+		path = ""
+	else
+		path = self.headers:get(":path")
+		local path_t
+		if method == "OPTIONS" and path == "*" then
+			path = ""
+		else
+			path_t = uri_ref:match(path)
+			assert(path_t, "path not a valid uri reference")
+		end
+		if path_t and path_t.host then
+			-- path was a full URI. This is used for proxied requests.
+			scheme = path_t.scheme or scheme
+			path = path_t.path or ""
+			if path_t.query then
+				path = path .. "?" .. path_t.query
+			end
+			authority = http_util.to_authority(path_t.host, path_t.port, scheme)
+		else
+			authority = self.headers:get(":authority")
+			-- TODO: validate authority can fit in a url
+		end
+		authorization_field = "authorization"
+	end
+	if authority == nil then
+		authority = http_util.to_authority(self.host, self.port, scheme)
+	end
+	if with_userinfo and self.headers:has(authorization_field) then
+		local authorization = self.headers:get(authorization_field)
+		local auth_type, userinfo = authorization:match("^%s*(%S+)%s+(%S+)%s*$")
+		if auth_type and auth_type:lower() == "basic" then
+			userinfo = basexx.from_base64(userinfo)
+			userinfo = http_util.encodeURI(userinfo)
+			authority = userinfo .. "@" .. authority
+		else
+			error("authorization cannot be converted to uri")
+		end
+	end
+	return scheme .. "://" .. authority .. path
 end
 
 function request_methods:new_stream(timeout)
@@ -169,6 +186,64 @@ function request_methods:new_stream(timeout)
 	return connection:new_stream()
 end
 
+function request_methods:use_proxy_from_uri_t(uri_t)
+	if uri_t == nil then -- Remove proxy
+		local path = self.headers:get(":path")
+		local method = self.headers:get(":method")
+		if not path or method == "CONNECT" then
+			return true
+		end
+		local path_t = uri_ref:match(path)
+		if path_t and path_t.host then
+			local newpath
+			if method == "OPTIONS" and path_t.path == nil then
+				newpath = "*"
+			else
+				newpath = path_t.path or ""
+				if path_t.query then
+					newpath = newpath .. "?" .. path_t.query
+				end
+			end
+			self.host = path_t.host
+			self.port = path_t.port or http_util.scheme_to_port[path_t.scheme]
+			self.tls = path_t.scheme == "https"
+			self.headers:upsert(":path", newpath)
+			self.headers:delete("proxy-authorization")
+		end
+		return true
+	end
+	assert(type(uri_t) == "table")
+	if uri_t.scheme == "http" then
+		if self.headers:get(":method") == "CONNECT" then
+			error("cannot use HTTP Proxy with CONNECT method")
+		end
+		if uri_t.path ~= nil and uri_t.path ~= "" then
+			error("a HTTP proxy cannot have a path component")
+		end
+		local old_url = self:to_uri(false)
+		self.host = assert(uri_t.host, "proxy is missing host")
+		self.port = uri_t.port or http_util.scheme_to_port[uri_t.scheme]
+		self.tls = false
+		-- proxy requests get a uri that includes host as their path
+		self.headers:upsert(":path", old_url)
+		if uri_t.userinfo then
+			self.headers:upsert("proxy-authorization", "basic " .. basexx.to_base64(uri_t.userinfo), true)
+		else
+			self.headers:delete("proxy-authorization")
+		end
+		return true
+	else
+		error(string.format("unsupported proxy type (%s)", uri_t.scheme))
+	end
+end
+
+function request_methods:use_proxy(uri)
+	if type(uri) == "string" then
+		uri = assert(uri_patt:match(uri), "invalid URI")
+	end
+	return self:use_proxy_from_uri_t(uri)
+end
+
 function request_methods:handle_redirect(orig_headers)
 	local max_redirects = self.max_redirects
 	if max_redirects <= 0 then
@@ -178,47 +253,87 @@ function request_methods:handle_redirect(orig_headers)
 	if not location then
 		return nil, "missing location header for redirect", ce.EINVAL
 	end
-	local uri_t = assert(uri_ref:match(location), "invalid URI")
+	local uri_t = uri_ref:match(location)
+	if not uri_t then
+		return nil, "invalid URI in location header", ce.EINVAL
+	end
 	local new_req = self:clone()
 	new_req.max_redirects = max_redirects - 1
-	local is_connect = new_req.headers:get(":method") == "CONNECT"
-	if uri_t.scheme ~= nil then
+	local method = new_req.headers:get(":method")
+	local is_connect = method == "CONNECT"
+	local new_scheme = uri_t.scheme
+	if new_scheme then
 		if not is_connect then
-			new_req.headers:upsert(":scheme", uri_t.scheme)
+			new_req.headers:upsert(":scheme", new_scheme)
 		end
-		if uri_t.scheme == "https" or uri_t.scheme == "wss" then
+		if new_scheme == "https" or new_scheme == "wss" then
 			new_req.tls = self.tls or true
 		else
 			new_req.tls = false
 		end
+	else
+		if not is_connect then
+			new_scheme = new_req.headers:get(":scheme")
+		end
+		if new_scheme == nil then
+			new_scheme = self.tls and "https" or "http"
+		end
 	end
-	if uri_t.host ~= nil then
-		local new_scheme = new_req.headers:get(":scheme")
+	local orig_target
+	local target_authority
+	if not is_connect then
+		orig_target = self.headers:get(":path")
+		orig_target = uri_ref:match(orig_target)
+		if orig_target and orig_target.host then
+			-- was originally a proxied request
+			local new_authority
+			if uri_t.host then -- we have a new host
+				new_authority = http_util.to_authority(uri_t.host, uri_t.port, new_scheme)
+				new_req.headers:upsert(":authority", new_authority)
+			else
+				new_authority = self.headers:get(":authority")
+			end
+			if new_authority == nil then
+				new_authority = http_util.to_authority(self.host, self.port, new_scheme)
+			end
+			-- prefix for new target
+			target_authority = new_scheme .. "://" .. new_authority
+		end
+	end
+	if target_authority == nil and uri_t.host then
+		-- we have a new host and it wasn't placed into :authority
 		new_req.host = uri_t.host
-		new_req.port = uri_t.port or http_util.scheme_to_port[new_scheme]
 		if not is_connect then
 			new_req.headers:upsert(":authority", http_util.to_authority(uri_t.host, uri_t.port, new_scheme))
 		end
+		new_req.port = uri_t.port or http_util.scheme_to_port[new_scheme]
 		new_req.sendname = nil
-	end
+	end -- otherwise same host as original request; don't need change anything
 	if is_connect then
-		assert(uri_t.path == "", "CONNECT requests cannot have a path")
-		assert(uri_t.query == nil, "CONNECT requests cannot have a query")
+		if uri_t.path ~= nil and uri_t.path ~= "" then
+			return nil, "CONNECT requests cannot have a path", ce.EINVAL
+		elseif uri_t.query ~= nil then
+			return nil, "CONNECT requests cannot have a query", ce.EINVAL
+		end
 	else
 		local new_path
-		if uri_t.path == "" then
+		if uri_t.path == nil or uri_t.path == "" then
 			new_path = "/"
 		else
-			new_path = http_util.encodeURI(uri_t.path)
+			new_path = uri_t.path
 			if new_path:sub(1, 1) ~= "/" then -- relative path
-				local orig_target = self.headers:get(":path")
-				local orig_path = assert(uri_ref:match(orig_target)).path
-				orig_path = http_util.encodeURI(orig_path)
+				if not orig_target then
+					return nil, "base path not valid for relative redirect", ce.EINVAL
+				end
+				local orig_path = orig_target.path or "/"
 				new_path = http_util.resolve_relative_path(orig_path, new_path)
 			end
 		end
 		if uri_t.query then
-			new_path = new_path .. "?" .. http_util.encodeURI(uri_t.query)
+			new_path = new_path .. "?" .. uri_t.query
+		end
+		if target_authority then
+			new_path = target_authority .. new_path
 		end
 		new_req.headers:upsert(":path", new_path)
 	end
@@ -236,14 +351,14 @@ function request_methods:handle_redirect(orig_headers)
 		unsecured HTTP request if the referring page was received with a secure protocol.]]
 		new_req.headers:delete("referer")
 	else
-		new_req.headers:upsert("referer", self:to_url())
+		new_req.headers:upsert("referer", self:to_uri(false))
 	end
 	-- Change POST requests to a body-less GET on redirect?
 	local orig_status = orig_headers:get(":status")
 	if (orig_status == "303"
 		or (orig_status == "301" and not self.post301)
 		or (orig_status == "302" and not self.post302)
-		) and self.headers:get(":method") == "POST"
+		) and method == "POST"
 	then
 		new_req.headers:upsert(":method", "GET")
 		-- Remove headers that don't make sense without a body
@@ -256,7 +371,8 @@ function request_methods:handle_redirect(orig_headers)
 		new_req.headers:delete("content-location")
 		new_req.headers:delete("content-type")
 		-- Other...
-		if new_req.headers:get("expect") == "100-continue" then
+		local expect = new_req.headers:get("expect")
+		if expect and expect:lower() == "100-continue" then
 			new_req.headers:delete("expect")
 		end
 		new_req.body = nil
@@ -276,6 +392,7 @@ function request_methods:set_body(body)
 	if not length or length > 1024 then
 		self.headers:append("expect", "100-continue")
 	end
+	return true
 end
 
 function request_methods:go(timeout)
@@ -287,43 +404,68 @@ function request_methods:go(timeout)
 		if stream == nil then return nil, err, errno end
 	end
 
+	local body = self.body
+
 	do -- Write outgoing headers
-		local ok, err, errno = stream:write_headers(self.headers, not self.body, deadline and (deadline-monotime()))
-		if not ok then return nil, err, errno end
+		local ok, err, errno = stream:write_headers(self.headers, body == nil, deadline and deadline-monotime())
+		if not ok then
+			stream:shutdown()
+			return nil, err, errno
+		end
 	end
 
 	local headers
-	if self.body then
-		if self.headers:get("expect") == "100-continue" then
+	if body then
+		local expect = self.headers:get("expect")
+		if expect and expect:lower() == "100-continue" then
 			-- Try to wait for 100-continue before proceeding
 			if deadline then
 				local err, errno
 				headers, err, errno = stream:get_headers(math.min(self.expect_100_timeout, deadline-monotime()))
-				if headers == nil and (err ~= ce.TIMEOUT or monotime() > deadline) then return nil, err, errno end
+				if headers == nil and (err ~= ce.ETIMEDOUT or monotime() > deadline) then
+					stream:shutdown()
+					return nil, err, errno
+				end
 			else
 				local err, errno
 				headers, err, errno = stream:get_headers(self.expect_100_timeout)
-				if headers == nil and err ~= ce.TIMEOUT then return nil, err, errno end
+				if headers == nil and err ~= ce.ETIMEDOUT then
+					stream:shutdown()
+					return nil, err, errno
+				end
+			end
+			if headers and headers:get(":status") ~= "100" then
+				-- Don't send body
+				body = nil
 			end
 		end
-		if type(self.body) == "string" then
-			local ok, err, errno = stream:write_body_from_string(self.body, deadline and (deadline-monotime()))
-			if not ok then return nil, err, errno end
-		elseif io.type(self.body) == "file" then
-			local ok, err, errno = stream:write_body_from_file(self.body, deadline and (deadline-monotime()))
-			if not ok then return nil, err, errno end
-		elseif type(self.body) == "function" then
-			-- call function to get body segments
-			while true do
-				local chunk = self.body()
-				if chunk then
-					local ok, err2, errno2 = stream:write_chunk(chunk, false, deadline and (deadline-monotime()))
-					if not ok then return nil, err2, errno2 end
-				else
-					local ok, err2, errno2 = stream:write_chunk("", true, deadline and (deadline-monotime()))
-					if not ok then return nil, err2, errno2 end
-					break
+		if body then
+			local ok, err, errno
+			if type(body) == "string" then
+				ok, err, errno = stream:write_body_from_string(body, deadline and deadline-monotime())
+			elseif io.type(body) == "file" then
+				ok, err, errno = body:seek("set")
+				if ok then
+					ok, err, errno = stream:write_body_from_file(body, deadline and deadline-monotime())
 				end
+			elseif type(body) == "function" then
+				-- call function to get body segments
+				while true do
+					local chunk = body()
+					if chunk then
+						ok, err, errno = stream:write_chunk(chunk, false, deadline and deadline-monotime())
+						if not ok then
+							break
+						end
+					else
+						ok, err, errno = stream:write_chunk("", true, deadline and deadline-monotime())
+						break
+					end
+				end
+			end
+			if not ok then
+				stream:shutdown()
+				return nil, err, errno
 			end
 		end
 	end
@@ -331,14 +473,19 @@ function request_methods:go(timeout)
 		repeat -- Skip through 100-continue headers
 			local err, errno
 			headers, err, errno = stream:get_headers(deadline and (deadline-monotime()))
-			if headers == nil then return nil, err, errno end
+			if headers == nil then
+				stream:shutdown()
+				return nil, err, errno
+			end
 		until headers:get(":status") ~= "100"
 	end
 
 	if self.follow_redirects and headers:get(":status"):sub(1,1) == "3" then
 		stream:shutdown()
 		local new_req, err2, errno2 = self:handle_redirect(headers)
-		if not new_req then return nil, err2, errno2 end
+		if not new_req then
+			return nil, err2, errno2
+		end
 		return new_req:go(deadline and (deadline-monotime()))
 	end
 
@@ -346,9 +493,10 @@ function request_methods:go(timeout)
 end
 
 return {
+	new_from_uri_t = new_from_uri_t;
 	new_from_uri = new_from_uri;
 	new_connect = new_connect;
-	new_from_stream = new_from_stream;
 	methods = request_methods;
 	mt = request_mt;
+	default_proxies = default_proxies;
 }

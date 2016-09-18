@@ -1,19 +1,9 @@
-local TEST_TIMEOUT = 2
 describe("http.tls module", function()
 	local tls = require "http.tls"
 	local cqueues = require "cqueues"
 	local cs = require "cqueues.socket"
 	local openssl_ctx = require "openssl.ssl.context"
 	local openssl_pkey = require "openssl.pkey"
-	local function assert_loop(cq, timeout)
-		local ok, err, _, thd = cq:loop(timeout)
-		if not ok then
-			if thd then
-				err = debug.traceback(thd, err)
-			end
-			error(err, 2)
-		end
-	end
 	it("banned ciphers list denies a negotiated banned cipher", function()
 		local c, s = cs.pair()
 		local cq = cqueues.new()

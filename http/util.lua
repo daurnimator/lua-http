@@ -1,3 +1,6 @@
+local lpeg = require "lpeg"
+local http_patts = require "lpeg_patterns.http"
+
 -- Encodes a character as a percent encoded string
 local function char_to_pchar(c)
 	return string.format("%%%02X", c:byte(1,1))
@@ -168,29 +171,93 @@ local function to_authority(host, port, scheme)
 	return authority
 end
 
--- Many HTTP headers contain comma seperated values
--- This function returns an iterator over header components
-local function each_header_component(str)
-	return str:gmatch(" *([^ ,][^,]-) *%f[,%z]")
+-- Proxy from e.g. environmental variables.
+local proxies_methods = {}
+local proxies_mt = {
+	__name = "http.util.proxies";
+	__index = proxies_methods;
+}
+
+local function read_proxy_vars(getenv)
+	local self = setmetatable({
+		http_proxy = nil;
+		https_proxy = nil;
+		all_proxy = nil;
+		no_proxy = nil;
+	}, proxies_mt)
+	self:update(getenv)
+	return self
 end
 
-local function split_header(str)
-	if str == nil then
-		return { n = 0 }
+function proxies_methods:update(getenv)
+	if getenv == nil then
+		getenv = os.getenv
 	end
-	local r, n = { n = nil }, 0
-	for elem in each_header_component(str) do
-		n = n + 1
-		r[n] = elem
+	-- prefers lower case over upper case; except for http_proxy where no upper case
+	if getenv "GATEWAY_INTERFACE" then -- Mitigate httpoxy. see https://httpoxy.org/
+		self.http_proxy = getenv "CGI_HTTP_PROXY"
+	else
+		self.http_proxy = getenv "http_proxy"
 	end
-	r.n = n
-	return r
+	self.https_proxy = getenv "https_proxy" or getenv "HTTPS_PROXY";
+	self.all_proxy = getenv "all_proxy" or getenv "ALL_PROXY";
+	self.no_proxy = getenv "no_proxy" or getenv "NO_PROXY";
+	return true
+end
+
+-- Finds the correct proxy for a given scheme/host
+function proxies_methods:choose(scheme, host)
+	if self.no_proxy == "*" then
+		return nil
+	elseif self.no_proxy then
+		-- cache no_proxy_set by overwriting self.no_proxy
+		if type(self.no_proxy) == "string" then
+			local no_proxy_set = {}
+			-- wget allows domains in no_proxy list to be prefixed by "."
+			-- e.g. no_proxy=.mit.edu
+			for host_suffix in self.no_proxy:gmatch("%.?([^,]+)") do
+				no_proxy_set[host_suffix] = true
+			end
+			self.no_proxy_set = no_proxy_set
+		end
+		-- From curl docs:
+		-- matched as either a domain which contains the hostname, or the
+		-- hostname itself. For example local.com would match local.com,
+		-- local.com:80, and www.local.com, but not www.notlocal.com.
+		for pos in host:gmatch("%f[^%z%.]()") do
+			local host_suffix = host:sub(pos, -1)
+			if self.no_proxy_set[host_suffix] then
+				return nil
+			end
+		end
+	end
+	if scheme == "http" or scheme == "ws" then
+		if self.http_proxy then
+			return self.http_proxy
+		end
+	elseif scheme == "https" or scheme == "wss" then
+		if self.https_proxy then
+			return self.https_proxy
+		end
+	end
+	return self.all_proxy
 end
 
 -- HTTP prefered date format
 -- See RFC 7231 section 7.1.1.1
 local function imf_date(time)
 	return os.date("!%a, %d %b %Y %H:%M:%S GMT", time)
+end
+
+-- This pattern checks if it's argument is a valid token, if so, it returns it as is.
+-- Otherwise, it returns it as a quoted string (with any special characters escaped)
+local maybe_quote do
+	local EOF = lpeg.P(-1)
+	local patt = http_patts.token * EOF
+		+ lpeg.Cs(lpeg.Cc'"' * ((lpeg.S"\\\"") / "\\%0" + http_patts.qdtext)^0 * lpeg.Cc'"') * EOF
+	maybe_quote = function (s)
+		return patt:match(s)
+	end
 end
 
 return {
@@ -204,6 +271,7 @@ return {
 	scheme_to_port = scheme_to_port;
 	split_authority = split_authority;
 	to_authority = to_authority;
-	split_header = split_header;
+	read_proxy_vars = read_proxy_vars;
 	imf_date = imf_date;
+	maybe_quote = maybe_quote;
 }

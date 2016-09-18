@@ -2,8 +2,8 @@
 
 ## Features
 
-  - Optionally asynchronous (including DNS lookups and SSL)
-  - Supports HTTP version 1.0, 1.1 and 2
+  - Optionally asynchronous (including DNS lookups and TLS)
+  - Supports HTTP(S) version 1.0, 1.1 and 2
   - Functionality for both client and server
   - Websockets
   - Compatible with Lua 5.1, 5.2, 5.3 and [LuaJIT](http://luajit.org/)
@@ -32,9 +32,10 @@ This will automatically install run-time lua dependencies for you.
 
 ## Dependencies
 
-  - [cqueues](http://25thandclement.com/~william/projects/cqueues.html) >= 20150907
+  - [cqueues](http://25thandclement.com/~william/projects/cqueues.html) >= 20160808
   - [luaossl](http://25thandclement.com/~william/projects/luaossl.html) >= 20150727
   - [basexx](https://github.com/aiq/basexx/) >= 0.2.0
+  - [lpeg](http://www.inf.puc-rio.br/~roberto/lpeg/lpeg.html)
   - [lpeg_patterns](https://github.com/daurnimator/lpeg_patterns) >= 0.2
   - [fifo](https://github.com/daurnimator/fifo.lua)
 

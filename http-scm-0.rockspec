@@ -15,10 +15,11 @@ dependencies = {
 	"lua >= 5.1";
 	"compat53 >= 0.3"; -- Only if lua < 5.3
 	"bit32"; -- Only if lua == 5.1
-	"cqueues >= 20150907";
+	"cqueues >= 20160808";
 	"luaossl >= 20150727";
 	"basexx >= 0.2.0";
-	"lpeg_patterns >= 0.2";
+	"lpeg";
+	"lpeg_patterns >= 0.3";
 	"fifo";
 }
 
@@ -42,7 +43,9 @@ build = {
 		["http.tls"] = "http/tls.lua";
 		["http.util"] = "http/util.lua";
 		["http.version"] = "http/version.lua";
+		["http.websocket"] = "http/websocket.lua";
 		["http.zlib"] = "http/zlib.lua";
 		["http.compat.prosody"] = "http/compat/prosody.lua";
+		["http.compat.socket"] = "http/compat/socket.lua";
 	};
 }
