@@ -4,25 +4,25 @@ describe("http.socks module", function()
 	local cqueues = require "cqueues"
 	local cs = require "cqueues.socket"
 	local ce = require "cqueues.errno"
-	local IPv4address = require "lpeg_patterns.IPv4".IPv4address
-	local IPv6address = require "lpeg_patterns.IPv6".IPv6address
-	local function assert_loop(cq, timeout)
-		local ok, err, _, thd = cq:loop(timeout)
-		if not ok then
-			if thd then
-				err = debug.traceback(thd, err)
-			end
-			error(err, 2)
-		end
-	end
+	it("works with connect constructor", function()
+		assert(http_socks.connect("socks5://127.0.0.1"))
+		assert(http_socks.connect("socks5h://username:password@127.0.0.1"))
+	end)
+	it("fails on unknown protocols", function()
+		assert.has.errors(function()
+			http_socks.connect("socks3://host")
+		end)
+	end)
+	it("fails when userinfo is missing password", function()
+		assert.has.errors(function()
+			http_socks.connect("socks5h://user@host")
+		end)
+	end)
 	it("can negotiate a IPv4 connection with no auth", function()
 		local c, s = cs.pair()
 		local cq = cqueues.new()
 		cq:wrap(function()
-			assert(http_socks.socks5_negotiate(c, {
-				host = IPv4address:match "127.0.0.1";
-				port = 123;
-			}))
+			assert(http_socks.fdopen(c):negotiate("127.0.0.1", 123))
 		end)
 		cq:wrap(function()
 			assert.same("\5", s:read(1))
@@ -40,12 +40,9 @@ describe("http.socks module", function()
 		local c, s = cs.pair()
 		local cq = cqueues.new()
 		cq:wrap(function()
-			assert(http_socks.socks5_negotiate(c, {
-				host = IPv6address:match "::1";
-				port = 123;
-				username = "open";
-				password = "sesame";
-			}))
+			c = http_socks.fdopen(c)
+			assert(c:add_username_password_auth("open", "sesame"))
+			assert(c:negotiate("::1", 123))
 		end)
 		cq:wrap(function()
 			assert.same("\5", s:read(1))
@@ -61,16 +58,13 @@ describe("http.socks module", function()
 		assert_loop(cq, TEST_TIMEOUT)
 		assert.truthy(cq:empty())
 	end)
-	it("incorrect username+password fails with EACCES", function()
+	it("fails incorrect username+password with EACCES", function()
 		local c, s = cs.pair()
 		local cq = cqueues.new()
 		cq:wrap(function()
-			assert.same({nil, ce.EACCES}, { http_socks.socks5_negotiate(c, {
-				host = "unused";
-				port = 123;
-				username = "open";
-				password = "sesame";
-			})})
+			c = http_socks.fdopen(c)
+			assert(c:add_username_password_auth("open", "sesame"))
+			assert.same({nil, ce.EACCES}, { c:negotiate("unused", 123) })
 		end)
 		cq:wrap(function()
 			assert.same("\5", s:read(1))

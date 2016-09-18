@@ -18,24 +18,94 @@ local IPv4 = require "lpeg_patterns.IPv4"
 local IPv6 = require "lpeg_patterns.IPv6"
 local uri_patts = require "lpeg_patterns.uri"
 local http_util = require "http.util"
-local client = require "http.client"
 
 local EOF = require "lpeg".P(-1)
 local IPv4address = require "lpeg_patterns.IPv4".IPv4address
 local IPv6address = require "lpeg_patterns.IPv6".IPv6address
 local IPaddress = (IPv4address + IPv6address) * EOF
 
+local socks_methods = {}
+local socks_mt = {
+	__name = "http.socks";
+	__index = socks_methods;
+}
+
+local function new()
+	return setmetatable({
+		version = 5;
+		socket = nil;
+		needs_resolve = false;
+		available_auth_methods = { "\0", ["\0"] = true; };
+		username = nil;
+		password = nil;
+		dst_family = nil;
+		dst_host = nil;
+		dst_port = nil;
+	}, socks_mt)
+end
+
+local function connect(socks_uri)
+	if type(socks_uri) == "string" then
+		socks_uri = assert(uri_patts.uri:match(socks_uri), "invalid URI")
+	end
+	local self = new()
+	if socks_uri.scheme == "socks5" then
+		self.needs_resolve = true
+	elseif socks_uri.scheme ~= "socks5h" then
+		error("only SOCKS5 proxys supported")
+	end
+	assert(socks_uri.path == nil, "path not expected")
+	local username, password
+	if socks_uri.userinfo then
+		username, password = socks_uri.userinfo:match("^([^:]*):(.*)$")
+		if username == nil then
+			error("invalid username/password format")
+		end
+	end
+	-- TODO: https://github.com/wahern/cqueues/issues/124
+	local socket, errno = cs.connect {
+		host = socks_uri.host;
+		port = socks_uri.port or 1080;
+		sendname = false; -- Want to specify later; see https://github.com/wahern/cqueues/issues/137
+		nodelay = true;
+	}
+	if socket == nil then
+		return nil, ce.strerror(errno), errno
+	end
+	self.socket = socket
+	if username then
+		self:add_username_password_auth(username, password)
+	end
+	return self
+end
+
+local function fdopen(socket)
+	local self = new()
+	self.socket = socket
+	return self
+end
+
+function socks_methods:add_username_password_auth(username, password)
+	self.username = http_util.decodeURIComponent(username)
+	self.password = http_util.decodeURIComponent(password)
+	if not self.available_auth_methods["\2"] then
+		table.insert(self.available_auth_methods, "\2")
+		self.available_auth_methods["\2"] = true
+	end
+	return true
+end
+
 -- RFC 1929
-local function username_password_auth(s, username, password, deadline)
+local function username_password_auth(self, deadline)
 	do
-		local data = spack("Bs1s1", 1, username, password)
-		local ok, err, errno = s:xwrite(data, "n", deadline and deadline-monotime())
+		local data = spack("Bs1s1", 1, self.username, self.password)
+		local ok, err, errno = self.socket:xwrite(data, "bn", deadline and deadline-monotime())
 		if not ok then
 			return nil, err or ce.EPIPE, errno
 		end
 	end
 	do
-		local version, err, errno = s:xread(1, deadline and deadline-monotime())
+		local version, err, errno = self.socket:xread(1, "b", deadline and deadline-monotime())
 		if not version then
 			return nil, err or ce.EPIPE, errno
 		end
@@ -44,7 +114,7 @@ local function username_password_auth(s, username, password, deadline)
 		end
 	end
 	do
-		local ok, err, errno = s:xread(1, deadline and deadline-monotime())
+		local ok, err, errno = self.socket:xread(1, "b", deadline and deadline-monotime())
 		if not ok then
 			return nil, err or ce.EPIPE, errno
 		end
@@ -55,23 +125,26 @@ local function username_password_auth(s, username, password, deadline)
 	return true
 end
 
-local function socks5_negotiate_deadline(s, options, deadline)
-	local available_auth_methods = {
-		"\0", ["\0"] = true;
-	}
-	if options.username then
-		table.insert(available_auth_methods, "\2")
-		available_auth_methods["\2"] = true
+function socks_methods:negotiate(host, port, timeout)
+	local deadline = timeout and monotime()+timeout
+
+	assert(host, "host expected")
+	local ip = IPaddress:match(host)
+	port = assert(tonumber(port), "numeric port expected")
+
+	if self.needs_resolve and not ip then
+		error("NYI: need to resolve locally")
 	end
+
 	do
-		local data = "\5"..string.char(#available_auth_methods)..table.concat(available_auth_methods)
-		local ok, err, errno = s:xwrite(data, "n", deadline and deadline-monotime())
+		local data = "\5"..string.char(#self.available_auth_methods)..table.concat(self.available_auth_methods)
+		local ok, err, errno = self.socket:xwrite(data, "bn", deadline and deadline-monotime())
 		if not ok then
 			return nil, err or ce.EPIPE, errno
 		end
 	end
 	do
-		local byte, err, errno = s:xread(1, deadline and deadline-monotime())
+		local byte, err, errno = self.socket:xread(1, "b", deadline and deadline-monotime())
 		if not byte then
 			return nil, err or ce.EPIPE, errno
 		elseif byte ~= "\5" then
@@ -80,46 +153,40 @@ local function socks5_negotiate_deadline(s, options, deadline)
 	end
 	local auth_method do
 		local err, errno
-		auth_method, err, errno = s:xread(1, deadline and deadline-monotime())
+		auth_method, err, errno = self.socket:xread(1, "b", deadline and deadline-monotime())
 		if not auth_method then
 			return nil, err or ce.EPIPE, errno
 		end
-		if available_auth_methods[auth_method] == nil then
+		if self.available_auth_methods[auth_method] == nil then
 			return nil, "Unknown authentication method"
 		end
 	end
 	if auth_method == "\0" then -- luacheck: ignore 542
 		-- do nothing
 	elseif auth_method == "\2" then
-		local ok, err, errno = username_password_auth(s, options.username, options.password, deadline)
+		local ok, err, errno = username_password_auth(self, deadline)
 		if not ok then
 			return nil, err, errno
 		end
 	else
-		error("unreachable")
+		error("unreachable") -- implies `available_auth_methods` was edited while this was in progress
 	end
 	do
-		local host = options.host
-		if type(host) == "string" then
-			-- convert to ip address
-			host = IPaddress:match(host) or host
-		end
-		local port = tonumber(options.port)
 		local data
-		if getmetatable(host) == IPv4.IPv4_mt then
-			data = spack(">BBx Bc4I2", 5, 1, 1, host:binary(), port)
-		elseif getmetatable(host) == IPv6.IPv6_mt then
-			data = spack(">BBx Bc16I2", 5, 1, 4, host:binary(), port)
+		if getmetatable(ip) == IPv4.IPv4_mt then
+			data = spack(">BBx Bc4I2", 5, 1, 1, ip:binary(), port)
+		elseif getmetatable(ip) == IPv6.IPv6_mt then
+			data = spack(">BBx Bc16I2", 5, 1, 4, ip:binary(), port)
 		else -- domain name
 			data = spack(">BBx Bs1I2", 5, 1, 3, host, port)
 		end
-		local ok, err, errno = s:xwrite(data, "n", deadline and deadline-monotime())
+		local ok, err, errno = self.socket:xwrite(data, "bn", deadline and deadline-monotime())
 		if not ok then
 			return nil, err or ce.EPIPE, errno
 		end
 	end
 	do
-		local byte, err, errno = s:xread(1, deadline and deadline-monotime())
+		local byte, err, errno = self.socket:xread(1, "b", deadline and deadline-monotime())
 		if not byte then
 			return nil, err or ce.EPIPE, errno
 		elseif byte ~= "\5" then
@@ -127,7 +194,7 @@ local function socks5_negotiate_deadline(s, options, deadline)
 		end
 	end
 	do
-		local code, err, errno = s:xread(1, deadline and deadline-monotime())
+		local code, err, errno = self.socket:xread(1, "b", deadline and deadline-monotime())
 		if not code then
 			return nil, err or ce.EPIPE, errno
 		elseif code ~= "\0" then
@@ -162,44 +229,43 @@ local function socks5_negotiate_deadline(s, options, deadline)
 		end
 	end
 	do
-		local byte, err, errno = s:xread(1, deadline and deadline-monotime())
+		local byte, err, errno = self.socket:xread(1, "b", deadline and deadline-monotime())
 		if not byte then
 			return nil, err or ce.EPIPE, errno
 		elseif byte ~= "\0" then
 			return nil, "Reserved field set to non-zero"
 		end
 	end
-	local dst_fam, dst_host, dst_port
-	do
-		local atype, err, errno = s:xread(1, deadline and deadline-monotime())
+	local dst_family, dst_host, dst_port do
+		local atype, err, errno = self.socket:xread(1, "b", deadline and deadline-monotime())
 		if not atype then
 			return nil, err or ce.EPIPE, errno
 		end
 		if atype == "\1" then
 			local ipv4
-			ipv4, err, errno = s:xread(4, deadline and deadline-monotime())
+			ipv4, err, errno = self.socket:xread(4, "b", deadline and deadline-monotime())
 			if not ipv4 then
 				return nil, err or ce.EPIPE, errno
 			end
-			dst_fam = cs.AF_INET
+			dst_family = cs.AF_INET
 			dst_host = string.format("%d.%d.%d.%d", ipv4:byte(1, 4))
 		elseif atype == "\4" then
 			local ipv6
-			ipv6, err, errno = s:xread(16, deadline and deadline-monotime())
+			ipv6, err, errno = self.socket:xread(16, "b", deadline and deadline-monotime())
 			if not ipv6 then
 				return nil, err or ce.EPIPE, errno
 			end
-			dst_fam = cs.AF_INET6
+			dst_family = cs.AF_INET6
 			dst_host = string.format("%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x",
 				ipv6:byte(1, 16))
 		elseif atype == "\3" then
 			local len
-			len, err, errno = s:xread(1, deadline and deadline-monotime())
+			len, err, errno = self.socket:xread(1, "b", deadline and deadline-monotime())
 			if not len then
 				return nil, err or ce.EPIPE, errno
 			end
-			dst_fam = cs.AF_UNSPEC
-			dst_host, err, errno = s:xread(string.byte(len), deadline and deadline-monotime())
+			dst_family = cs.AF_UNSPEC
+			dst_host, err, errno = self.socket:xread(string.byte(len), "b", deadline and deadline-monotime())
 			if not dst_host then
 				return nil, err or ce.EPIPE, errno
 			end
@@ -208,85 +274,19 @@ local function socks5_negotiate_deadline(s, options, deadline)
 		end
 	end
 	do
-		local dst_port_bin, err, errno = s:xread(2, deadline and deadline-monotime())
+		local dst_port_bin, err, errno = self.socket:xread(2, "b", deadline and deadline-monotime())
 		if not dst_port_bin then
 			return nil, err or ce.EPIPE, errno
 		end
 		dst_port = sunpack(">I2", dst_port_bin)
 	end
-	return dst_fam, dst_host, dst_port
-end
-
--- Wrapper that takes timeout instead of deadline
-local function socks5_negotiate(s, options, timeout)
-	return socks5_negotiate_deadline(s, options, timeout and (monotime()+timeout))
-end
-
-local function connect(socks_uri, options, timeout)
-	local deadline = timeout and monotime()+timeout
-	if type(socks_uri) == "string" then
-		socks_uri = assert(uri_patts.uri:match(socks_uri), "invalid URI")
-	end
-	local host = options.host
-	local needs_resolve
-	if socks_uri.scheme == "socks5" then
-		if not IPaddress:match(host) then
-			needs_resolve = true
-		end
-	elseif socks_uri.scheme ~= "socks5h" then
-		error("only SOCKS5 proxys supported")
-	end
-	assert(socks_uri.path == "", "path not expected")
-	local username, password
-	if socks_uri.userinfo then
-		username, password = socks_uri.userinfo:match("^([^:]*):(.*)$")
-		if username == nil then
-			error("invalid username/password format")
-		end
-		username = http_util.decodeURIComponent(username)
-		password = http_util.decodeURIComponent(password)
-	end
-	if needs_resolve then
-		error("NYI: need to resolve locally")
-	end
-	local s do
-		-- TODO: https://github.com/wahern/cqueues/issues/124
-		local errno
-		s, errno = cs.connect {
-			family = options.family;
-			host = socks_uri.host;
-			port = socks_uri.port;
-			-- the sendname that will be used for the HTTP connection (not for the SOCKS connection)
-			-- This shouldn't need to be specified at this time, see https://github.com/wahern/cqueues/issues/137
-			sendname = options.sendname or options.host or false;
-			nodelay = true;
-		}
-		if s == nil then
-			return nil, ce.strerror(errno), errno
-		end
-	end
-	local dst_fam, dst_host, dst_port do
-		dst_fam, dst_host, dst_port = socks5_negotiate_deadline(s, {
-			host = host;
-			port = options.port;
-			username = username;
-			password = password;
-		}, deadline)
-		if not dst_fam then
-			s:close()
-			return nil, dst_host, dst_port
-		end
-	end
-	local conn, err, errno = client.negotiate(s, options, deadline and deadline-monotime())
-	if not conn then
-		s:close()
-		return nil, err, errno
-	end
-	-- TODO: return dst_fam, dst_host, dst_port somehow
-	return conn
+	self.dst_family = dst_family
+	self.dst_host = dst_host
+	self.dst_port = dst_port
+	return true
 end
 
 return {
-	socks5_negotiate = socks5_negotiate;
 	connect = connect;
+	fdopen = fdopen;
 }
