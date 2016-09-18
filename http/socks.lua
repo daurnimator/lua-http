@@ -34,6 +34,9 @@ local function new()
 	return setmetatable({
 		version = 5;
 		socket = nil;
+		family = nil;
+		host = nil;
+		port = nil;
 		needs_resolve = false;
 		available_auth_methods = { "\0", ["\0"] = true; };
 		username = nil;
@@ -62,17 +65,8 @@ local function connect(socks_uri)
 			error("invalid username/password format")
 		end
 	end
-	-- TODO: https://github.com/wahern/cqueues/issues/124
-	local socket, errno = cs.connect {
-		host = socks_uri.host;
-		port = socks_uri.port or 1080;
-		sendname = false; -- Want to specify later; see https://github.com/wahern/cqueues/issues/137
-		nodelay = true;
-	}
-	if socket == nil then
-		return nil, ce.strerror(errno), errno
-	end
-	self.socket = socket
+	self.host = socks_uri.host
+	self.port = socks_uri.port or 1080
 	if username then
 		self:add_username_password_auth(username, password)
 	end
@@ -129,9 +123,25 @@ function socks_methods:negotiate(host, port, timeout)
 	local deadline = timeout and monotime()+timeout
 
 	assert(host, "host expected")
-	local ip = IPaddress:match(host)
 	port = assert(tonumber(port), "numeric port expected")
 
+	if self.socket == nil then
+		assert(self.host)
+		-- TODO: https://github.com/wahern/cqueues/issues/124
+		local socket, errno = cs.connect {
+			family = self.family;
+			host = self.host;
+			port = self.port;
+			sendname = host or false; -- Want to specify later; see https://github.com/wahern/cqueues/issues/137
+			nodelay = true;
+		}
+		if socket == nil then
+			return nil, ce.strerror(errno), errno
+		end
+		self.socket = socket
+	end
+
+	local ip = IPaddress:match(host)
 	if self.needs_resolve and not ip then
 		error("NYI: need to resolve locally")
 	end
