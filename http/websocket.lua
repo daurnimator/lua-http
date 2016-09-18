@@ -480,6 +480,7 @@ local function new(type)
 		protocols = nil;
 		-- only used by client:
 		request = nil;
+		headers = nil;
 		-- only used by server:
 		stream = nil;
 	}, websocket_mt)
@@ -580,7 +581,6 @@ local function handle_websocket_response(self, headers, stream)
 		end
 	end
 
-
 	--[[ If the response lacks a Sec-WebSocket-Accept header field or
 	the Sec-WebSocket-Accept contains a value other than the
 	base64-encoded SHA-1 of the concatenation of the Sec-WebSocket-
@@ -625,6 +625,7 @@ local function handle_websocket_response(self, headers, stream)
 	assert(self.socket == nil, "websocket:connect called twice")
 	self.socket = assert(stream.connection:take_socket())
 	self.request = nil
+	self.headers = headers
 	self.readyState = 1
 	self.protocol = protocol
 
