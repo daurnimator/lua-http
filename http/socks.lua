@@ -100,6 +100,10 @@ local function socks5_negotiate_deadline(s, options, deadline)
 	end
 	do
 		local host = options.host
+		if type(host) == "string" then
+			-- convert to ip address
+			host = IPaddress:match(host) or host
+		end
 		local port = tonumber(options.port)
 		local data
 		if getmetatable(host) == IPv4.IPv4_mt then
