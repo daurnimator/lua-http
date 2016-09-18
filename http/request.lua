@@ -114,7 +114,7 @@ function request_methods:clone()
 	}, request_mt)
 end
 
-function request_methods:to_url(with_userinfo)
+function request_methods:to_uri(with_userinfo)
 	local scheme = self.headers:get(":scheme")
 	local method = self.headers:get(":method")
 	local path
@@ -283,7 +283,7 @@ function request_methods:handle_redirect(orig_headers)
 		unsecured HTTP request if the referring page was received with a secure protocol.]]
 		new_req.headers:delete("referer")
 	else
-		new_req.headers:upsert("referer", self:to_url(false))
+		new_req.headers:upsert("referer", self:to_uri(false))
 	end
 	-- Change POST requests to a body-less GET on redirect?
 	local orig_status = orig_headers:get(":status")
