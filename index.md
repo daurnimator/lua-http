@@ -814,6 +814,20 @@ Cause [`server:run`](#http.server:run) to stop processing new clients and return
 ### `server:run(on_stream, cq)` <!-- --> {#http.server:run}
 
 
+## http.socks
+
+Implements a subset of the SOCKS proxy protocol.
+
+### `socks.connect(uri, options, timeout)`  <!-- --> {#http.socks.connect}
+
+  - `uri` a string with the address of the SOCKS server. A scheme of `"socks5"` will resolve locally, a scheme of `"socks5h"` will resolve on the SOCKS server. If the URI has a userinfo component it will be sent to the SOCKS server as a username and password.
+  - `options` is a table containing:
+
+	  - `host` (required) a string to pass to the SOCKS server as the host to connect to
+	  - `port` (required) a number to pass to the SOCKS server as the port to connect to
+	  - `family` (optional): address family to use when connecting to the SOCKS server
+
+
 ## http.stream_common
 
 The module `http.stream_common` provides common functions for streams (no matter the underlying protocol version). It exports a table `methods` of functions that build on top of the lower level [*stream*](#stream) interface.
