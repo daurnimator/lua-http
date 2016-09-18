@@ -183,12 +183,9 @@ end
 
 function request_methods:use_proxy_from_uri_t(uri_t)
 	if uri_t == nil then -- Remove proxy
-		local method = self.headers:get(":method")
-		if method == "CONNECT" then
-			return
-		end
 		local path = self.headers:get(":path")
-		if not path then
+		local method = self.headers:get(":method")
+		if not path or method == "CONNECT" then
 			return
 		end
 		local path_t = uri_ref:match(path)
