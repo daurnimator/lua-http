@@ -223,39 +223,42 @@ local function socks5_negotiate(s, options, timeout)
 end
 
 local function connect(socks_uri, options, timeout)
-	local deadline = timeout and (monotime()+timeout)
-	local uri_t = assert(uri_patts.uri:match(socks_uri), "invalid URI")
-	local host = IPaddress:match(options.host)
-	if uri_t.scheme == "socks5" then
-		host = options.host
-	elseif uri_t.scheme == "socks5h" then
-		if host == nil then
-			-- need to resolve locally
-			error("NYI")
+	local deadline = timeout and monotime()+timeout
+	if type(socks_uri) == "string" then
+		socks_uri = assert(uri_patts.uri:match(socks_uri), "invalid URI")
+	end
+	local host = options.host
+	local needs_resolve
+	if socks_uri.scheme == "socks5" then
+		if not IPaddress:match(host) then
+			needs_resolve = true
 		end
-	else
+	elseif socks_uri.scheme ~= "socks5h" then
 		error("only SOCKS5 proxys supported")
 	end
-	assert(uri_t.path == "", "path not expected")
+	assert(socks_uri.path == "", "path not expected")
 	local username, password
-	if uri_t.userinfo then
-		username, password = uri_t.userinfo:match("^([^:]*):(.*)$")
+	if socks_uri.userinfo then
+		username, password = socks_uri.userinfo:match("^([^:]*):(.*)$")
 		if username == nil then
 			error("invalid username/password format")
 		end
 		username = http_util.decodeURIComponent(username)
 		password = http_util.decodeURIComponent(password)
 	end
+	if needs_resolve then
+		error("NYI: need to resolve locally")
+	end
 	local s do
 		-- TODO: https://github.com/wahern/cqueues/issues/124
 		local errno
 		s, errno = cs.connect {
 			family = options.family;
-			host = uri_t.host;
-			port = uri_t.port;
+			host = socks_uri.host;
+			port = socks_uri.port;
 			-- the sendname that will be used for the HTTP connection (not for the SOCKS connection)
+			-- This shouldn't need to be specified at this time, see https://github.com/wahern/cqueues/issues/137
 			sendname = options.sendname or options.host or false;
-			v6only = options.v6only;
 			nodelay = true;
 		}
 		if s == nil then
