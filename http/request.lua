@@ -182,6 +182,34 @@ function request_methods:new_stream(timeout)
 end
 
 function request_methods:use_proxy_from_uri_t(uri_t)
+	if uri_t == nil then -- Remove proxy
+		local method = self.headers:get(":method")
+		if method == "CONNECT" then
+			return
+		end
+		local path = self.headers:get(":path")
+		if not path then
+			return
+		end
+		local path_t = uri_ref:match(path)
+		if path_t and path_t.host then
+			local newpath
+			if method == "OPTIONS" and path_t.path == nil then
+				newpath = "*"
+			else
+				newpath = path_t.path or ""
+				if path_t.query then
+					newpath = newpath .. "?" .. path_t.query
+				end
+			end
+			self.host = path_t.host
+			self.port = path_t.port or http_util.scheme_to_port[path_t.scheme]
+			self.tls = path_t.scheme == "https"
+			self.headers:upsert(":path", newpath)
+			self.headers:delete("proxy-authorization")
+		end
+		return
+	end
 	assert(type(uri_t) == "table")
 	if uri_t.scheme == "http" then
 		if self.headers:get(":method") == "CONNECT" then
@@ -198,6 +226,8 @@ function request_methods:use_proxy_from_uri_t(uri_t)
 		self.headers:upsert(":path", old_url)
 		if uri_t.userinfo then
 			self.headers:upsert("proxy-authorization", "basic " .. basexx.to_base64(uri_t.userinfo), true)
+		else
+			self.headers:delete("proxy-authorization")
 		end
 	else
 		error(string.format("unsupported proxy type (%s)", uri_t.scheme))
