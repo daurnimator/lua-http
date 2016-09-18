@@ -73,7 +73,9 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#connection:checktls"><code>connection:checktls()</code> <!-- --></a></li>
 <li><a href="#connection:localname"><code>connection:localname()</code> <!-- --></a></li>
 <li><a href="#connection:peername"><code>connection:peername()</code> <!-- --></a></li>
+<li><a href="#connection:shutdown"><code>connection:shutdown()</code> <!-- --></a></li>
 <li><a href="#connection:close"><code>connection:close()</code> <!-- --></a></li>
+<li><a href="#connection:new_stream"><code>connection:new_stream()</code> <!-- --></a></li>
 <li><a href="#connection:get_next_incoming_stream"><code>connection:get_next_incoming_stream(timeout)</code> <!-- --></a></li>
 </ul></li>
 <li><a href="#stream">stream</a><ul>
@@ -99,6 +101,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 </ul></li>
 <li><a href="#http.h1_connection">http.h1_connection</a><ul>
 <li><a href="#http.h1_connection.new"><code>new(socket, conn_type, version)</code> <!-- --></a></li>
+<li><a href="#http.h1_connection.version"><code>h1_connection.version</code> <!-- --></a></li>
 <li><a href="#http.h1_connection:checktls"><code>h1_connection:checktls()</code> <!-- --></a></li>
 <li><a href="#http.h1_connection:localname"><code>h1_connection:localname()</code> <!-- --></a></li>
 <li><a href="#http.h1_connection:peername"><code>h1_connection:peername()</code> <!-- --></a></li>
@@ -132,6 +135,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 </ul></li>
 <li><a href="#http.h2_connection">http.h2_connection</a><ul>
 <li><a href="#http.h2_connection.new"><code>new(socket, conn_type, settings)</code> <!-- --></a></li>
+<li><a href="#http.h2_connection.version"><code>h2_connection.version</code> <!-- --></a></li>
 <li><a href="#http.h2_connection:pollfd"><code>h2_connection:pollfd()</code> <!-- --></a></li>
 <li><a href="#http.h2_connection:events"><code>h2_connection:events()</code> <!-- --></a></li>
 <li><a href="#http.h2_connection:timeout"><code>h2_connection:timeout()</code> <!-- --></a></li>
@@ -229,8 +233,11 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.request.max_redirects"><code>request.max_redirects</code> <!-- --></a></li>
 <li><a href="#http.request.post301"><code>request.post301</code> <!-- --></a></li>
 <li><a href="#http.request.post302"><code>request.post302</code> <!-- --></a></li>
-<li><a href="#http.request:set_body"><code>request:set_body(body)</code> <!-- --></a></li>
 <li><a href="#http.request:clone"><code>request:clone()</code> <!-- --></a></li>
+<li><a href="#http.request:use_proxy"><code>request:use_proxy(uri)</code> <!-- --></a></li>
+<li><a href="#http.request:handle_redirect"><code>request:handle_redirect(headers)</code> <!-- --></a></li>
+<li><a href="#http.request:to_uri"><code>request:to_uri(with_userinfo)</code> <!-- --></a></li>
+<li><a href="#http.request:set_body"><code>request:set_body(body)</code> <!-- --></a></li>
 <li><a href="#http.request:timeout"><code>request:go(timeout)</code> <!-- --></a></li>
 </ul></li>
 <li><a href="#http.server">http.server</a><ul>
@@ -274,6 +281,9 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.util.scheme_to_port"><code>scheme_to_port</code> <!-- --></a></li>
 <li><a href="#http.util.split_authority"><code>split_authority(authority, scheme)</code> <!-- --></a></li>
 <li><a href="#http.util.to_authority"><code>to_authority(host, port, scheme)</code> <!-- --></a></li>
+<li><a href="#http.util.read_proxy_vars"><code>read_proxy_vars(getenv)</code> <!-- --></a></li>
+<li><a href="#http.util.proxies:update"><code>proxies:update(getenv)</code> <!-- --></a></li>
+<li><a href="#http.util.proxies:choose"><code>proxies:choose(scheme, host)</code> <!-- --></a></li>
 <li><a href="#http.util.imf_date"><code>imf_date(time)</code> <!-- --></a></li>
 <li><a href="#http.util.maybe_quote"><code>maybe_quote(str)</code> <!-- --></a></li>
 </ul></li>
@@ -378,11 +388,19 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <section id="connection:peername" class="level3">
 <h3><code>connection:peername()</code> <!-- --></h3>
 </section>
+<section id="connection:shutdown" class="level3">
+<h3><code>connection:shutdown()</code> <!-- --></h3>
+</section>
 <section id="connection:close" class="level3">
 <h3><code>connection:close()</code> <!-- --></h3>
 </section>
+<section id="connection:new_stream" class="level3">
+<h3><code>connection:new_stream()</code> <!-- --></h3>
+<p>Create a new <a href="#stream">stream</a> on the connection.</p>
+</section>
 <section id="connection:get_next_incoming_stream" class="level3">
 <h3><code>connection:get_next_incoming_stream(timeout)</code> <!-- --></h3>
+<p>Returns the next peer initiated <a href="#stream">stream</a> on the connection.</p>
 </section>
 </section>
 <section id="stream" class="level2">
@@ -507,6 +525,10 @@ defaults to <code>false</code></p></li>
 <section id="http.h1_connection.new" class="level3">
 <h3><code>new(socket, conn_type, version)</code> <!-- --></h3>
 </section>
+<section id="http.h1_connection.version" class="level3">
+<h3><code>h1_connection.version</code> <!-- --></h3>
+<p>Either <code>1.0</code> or <code>1.1</code></p>
+</section>
 <section id="http.h1_connection:checktls" class="level3">
 <h3><code>h1_connection:checktls()</code> <!-- --></h3>
 <p>See <a href="#connection:checktls"><code>connection:checktls()</code></a></p>
@@ -527,6 +549,7 @@ defaults to <code>false</code></p></li>
 </section>
 <section id="http.h1_connection:shutdown" class="level3">
 <h3><code>h1_connection:shutdown(dir)</code> <!-- --></h3>
+<p>See <a href="#connection:shutdown"><code>connection:shutdown()</code></a></p>
 </section>
 <section id="http.h1_connection:close" class="level3">
 <h3><code>h1_connection:close()</code> <!-- --></h3>
@@ -534,6 +557,7 @@ defaults to <code>false</code></p></li>
 </section>
 <section id="http.h1_connection:new_stream" class="level3">
 <h3><code>h1_connection:new_stream()</code> <!-- --></h3>
+<p>See <a href="#connection:new_stream"><code>connection:new_stream()</code></a></p>
 </section>
 <section id="http.h1_connection:get_next_incoming_stream" class="level3">
 <h3><code>h1_connection:get_next_incoming_stream(timeout)</code> <!-- --></h3>
@@ -609,6 +633,10 @@ defaults to <code>false</code></p></li>
 <section id="http.h2_connection.new" class="level3">
 <h3><code>new(socket, conn_type, settings)</code> <!-- --></h3>
 </section>
+<section id="http.h2_connection.version" class="level3">
+<h3><code>h2_connection.version</code> <!-- --></h3>
+<p><code>2</code></p>
+</section>
 <section id="http.h2_connection:pollfd" class="level3">
 <h3><code>h2_connection:pollfd()</code> <!-- --></h3>
 </section>
@@ -641,6 +669,7 @@ defaults to <code>false</code></p></li>
 </section>
 <section id="http.h2_connection:shutdown" class="level3">
 <h3><code>h2_connection:shutdown()</code> <!-- --></h3>
+<p>See <a href="#connection:shutdown"><code>connection:shutdown()</code></a></p>
 </section>
 <section id="http.h2_connection:close" class="level3">
 <h3><code>h2_connection:close()</code> <!-- --></h3>
@@ -930,6 +959,28 @@ For server initiated streams, this will be the next free even numbered stream.</
 <h3><code>request.post302</code> <!-- --></h3>
 <p>Respect RFC 2616 Section 10.3.3 and <strong>don't</strong> convert POST requests into body-less GET requests when following a 302 redirect. The non-RFC behaviour is ubiquitous in web browsers and assumed by servers. Modern HTTP endpoints send status code 307 to indicate that they don't want the method to be changed. Defaults to <code>false</code>.</p>
 </section>
+<section id="http.request:clone" class="level3">
+<h3><code>request:clone()</code> <!-- --></h3>
+<p>Creates and returns a clone of the request.</p>
+<p>The clone has its own deep copies of the <a href="#http.request.headers"><code>.headers</code></a> and <a href="#http.request.h2_settings"><code>.h2_settings</code></a> fields.</p>
+<p>The <a href="#http.request.tls"><code>.tls</code></a> and <a href="#http.request.body"><code>.body</code></a> fields are shallow copied from the original request.</p>
+</section>
+<section id="http.request:use_proxy" class="level3">
+<h3><code>request:use_proxy(uri)</code> <!-- --></h3>
+<p>Edits a request to go through the given proxy. If <code>uri</code> is <code>nil</code>, removes the current proxy.</p>
+<p>Current supports http proxies.</p>
+</section>
+<section id="http.request:handle_redirect" class="level3">
+<h3><code>request:handle_redirect(headers)</code> <!-- --></h3>
+<p>Process a redirect.</p>
+<p><code>headers</code> should be response headers for a redirect.</p>
+<p>Returns a new <code>request</code> object that will fetch from new location.</p>
+</section>
+<section id="http.request:to_uri" class="level3">
+<h3><code>request:to_uri(with_userinfo)</code> <!-- --></h3>
+<p>Returns a URI for the request.</p>
+<p>If <code>with_userinfo</code> is <code>true</code> and the request has an <code>authorization</code> header (or <code>proxy-authorization</code> for a CONNECT request), the returned URI will contain a userinfo component.</p>
+</section>
 <section id="http.request:set_body" class="level3">
 <h3><code>request:set_body(body)</code> <!-- --></h3>
 <p>Allows setting a request body. <code>body</code> may be a string, function or lua file object.</p>
@@ -938,12 +989,6 @@ For server initiated streams, this will be the next free even numbered stream.</
 <li>If <code>body</code> is a function, it will be called repeatedly like an iterator. It should return chunks of the request body as a string or <code>nil</code> if done.</li>
 <li>If <code>body</code> is a lua file object, it will be <a href="http://www.lua.org/manual/5.3/manual.html#pdf-file:seek"><code>:seek</code>'d</a> to the start, then sent as a body. Any errors encountered during file operations <strong>will be thrown</strong>.</li>
 </ul>
-</section>
-<section id="http.request:clone" class="level3">
-<h3><code>request:clone()</code> <!-- --></h3>
-<p>Creates and returns a clone of the request.</p>
-<p>The clone has its own deep copy of the <a href="#http.request.headers"><code>.headers</code></a> field.</p>
-<p>The <a href="#http.request.tls"><code>.tls</code></a> and body fields are shallow copied from the original request.</p>
 </section>
 <section id="http.request:timeout" class="level3">
 <h3><code>request:go(timeout)</code> <!-- --></h3>
@@ -1105,6 +1150,20 @@ For server initiated streams, this will be the next free even numbered stream.</
 <h3><code>to_authority(host, port, scheme)</code> <!-- --></h3>
 <p>Joins the <code>host</code> and <code>port</code> to create a valid authority component. Omits the port if it is the default for the <code>scheme</code>.</p>
 </section>
+<section id="http.util.read_proxy_vars" class="level3">
+<h3><code>read_proxy_vars(getenv)</code> <!-- --></h3>
+<p>Returns a 'proxies' object initialised as if <a href="#http.util.proxies:update"><code>proxies:update(getenv)</code></a> was called.</p>
+</section>
+<section id="http.util.proxies:update" class="level3">
+<h3><code>proxies:update(getenv)</code> <!-- --></h3>
+<p><code>getenv</code> defaults to <a href="http://www.lua.org/manual/5.3/manual.html#pdf-os.getenv"><code>os.getenv</code></a></p>
+<p>Re-read environmental variables (using the given function) that are used to control if requests go through a proxy.</p>
+</section>
+<section id="http.util.proxies:choose" class="level3">
+<h3><code>proxies:choose(scheme, host)</code> <!-- --></h3>
+<p>Returns the proxy to use for the given <code>scheme</code> and <code>host</code> as a URI.</p>
+<p>Useful for passing to <a href="#http.request:use_proxy"><code>request:use_proxy()</code></a>.</p>
+</section>
 <section id="http.util.imf_date" class="level3">
 <h3><code>imf_date(time)</code> <!-- --></h3>
 <p>Returns the time in HTTP preferred date format (See <a href="https://tools.ietf.org/html/rfc7231#section-7.1.1.1">RFC 7231 section 7.1.1.1</a>)</p>
@@ -1143,7 +1202,7 @@ For server initiated streams, this will be the next free even numbered stream.</
 <h3><code>new_from_stream(headers, stream)</code> <!-- --></h3>
 <p>Attempts to create a new <code>http.websocket</code> object of type <code>&quot;server&quot;</code> from the given request headers and stream.</p>
 <ul>
-<li><a href="#http.headers"><code>headers</code></a> should be headers of a suspected websocket upgrade request from a HTTP 1 client.</li>
+<li><a href="#http.headers"><code>headers</code></a> should be headers of a suspected websocket upgrade request from an HTTP 1 client.</li>
 <li><a href="#http.h1_stream"><code>stream</code></a> should be a live HTTP 1 stream of the <code>&quot;server&quot;</code> type.</li>
 </ul>
 <p>This function does <strong>not</strong> have side effects, and is hence okay to use tentatively.</p>
