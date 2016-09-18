@@ -726,7 +726,7 @@ Process a redirect.
 Returns a new `request` object that will fetch from new location.
 
 
-### `request:to_url(with_userinfo)` <!-- --> {#http.request:to_url}
+### `request:to_uri(with_userinfo)` <!-- --> {#http.request:to_uri}
 
 Returns a URI for the request.
 
