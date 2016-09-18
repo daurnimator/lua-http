@@ -645,6 +645,11 @@ The TLS SNI host name used.
 The HTTP version to use; leave as `nil` to auto-select.
 
 
+### `request.h2_settings` <!-- --> {#http.request.h2_settings}
+
+HTTP2 settings to use. As passed to [`http.h2_connection.new`](#http.h2_connection.new)
+
+
 ### `request.headers` <!-- --> {#http.request.headers}
 
 A [*http.headers*](#http.headers) object of headers that will be sent in the request.
