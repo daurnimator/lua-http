@@ -221,6 +221,15 @@ function headers_methods:sort()
 	rebuild_index(self)
 end
 
+function headers_methods:dump(file, prefix)
+	file = file or io.stderr
+	prefix = prefix or ""
+	for name, value in self:each() do
+		assert(file:write(string.format("%s%s: %s\n", prefix, name, value)))
+	end
+	assert(file:flush())
+end
+
 return {
 	new = new_headers;
 	methods = headers_methods;

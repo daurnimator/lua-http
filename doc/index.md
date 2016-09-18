@@ -605,6 +605,9 @@ Creates and returns a new headers object.
 ### `headers:sort()` <!-- --> {#http.headers:sort}
 
 
+### `headers:dump(file)` <!-- --> {#http.headers:dump}
+
+
 ## http.hpack
 
 ### `new(SETTINGS_HEADER_TABLE_SIZE)` <!-- --> {#http.hpack.new}

@@ -11,6 +11,7 @@ interface headers
 	const modifyi : (self, integer, string, boolean?) -> ()
 	const upsert : (self, string, string, boolean?) -> ()
 	const sort : (self) -> ()
+	const dump : (self, nil|file, nil|string) -> ()
 end
 
 new : () -> (headers)
