@@ -176,6 +176,36 @@ function request_methods:new_stream(timeout)
 	return connection:new_stream()
 end
 
+function request_methods:use_proxy_from_uri_t(uri_t)
+	assert(type(uri_t) == "table")
+	if uri_t.scheme == "http" then
+		if self.headers:get(":method") == "CONNECT" then
+			error("cannot use HTTP Proxy with CONNECT method")
+		end
+		if uri_t.path ~= nil and uri_t.path ~= "" then
+			error("a HTTP proxy cannot have a path component")
+		end
+		local old_url = self:to_uri(false)
+		self.host = assert(uri_t.host, "proxy is missing host")
+		self.port = uri_t.port or http_util.scheme_to_port[uri_t.scheme]
+		self.tls = false
+		-- proxy requests get a uri that includes host as their path
+		self.headers:upsert(":path", old_url)
+		if uri_t.userinfo then
+			self.headers:upsert("proxy-authorization", "basic " .. basexx.to_base64(uri_t.userinfo), true)
+		end
+	else
+		error(string.format("unsupported proxy type (%s)", uri_t.scheme))
+	end
+end
+
+function request_methods:use_proxy(uri)
+	if type(uri) == "string" then
+		uri = assert(uri_patt:match(uri), "invalid URI")
+	end
+	return self:use_proxy_from_uri_t(uri)
+end
+
 function request_methods:handle_redirect(orig_headers)
 	local max_redirects = self.max_redirects
 	if max_redirects <= 0 then
