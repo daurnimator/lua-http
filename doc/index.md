@@ -937,11 +937,14 @@ Omits the port if it is the default for the `scheme`.
 
 ### `read_proxy_vars(getenv)` <!-- --> {#http.util.read_proxy_vars}
 
+Returns a 'proxies' object initialised as if [`proxies:update(getenv)`](#http.util.proxies:update) was called.
+
+
+### `proxies:update(getenv)` <!-- --> {#http.util.proxies:update}
+
 `getenv` defaults to [`os.getenv`](http://www.lua.org/manual/5.3/manual.html#pdf-os.getenv)
 
-Read environmental variables (using the given function) that are used to control if requests go through a proxy.
-
-Returns a 'proxies' object with a single method [`:choose()`](#http.util.proxies:choose)
+Re-read environmental variables (using the given function) that are used to control if requests go through a proxy.
 
 
 ### `proxies:choose(scheme, host)` <!-- --> {#http.util.proxies:choose}

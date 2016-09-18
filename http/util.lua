@@ -178,6 +178,33 @@ local proxies_mt = {
 	__index = proxies_methods;
 }
 
+local function read_proxy_vars(getenv)
+	local self = setmetatable({
+		http_proxy = nil;
+		https_proxy = nil;
+		all_proxy = nil;
+		no_proxy = nil;
+	}, proxies_mt)
+	self:update(getenv)
+	return self
+end
+
+function proxies_methods:update(getenv)
+	if getenv == nil then
+		getenv = os.getenv
+	end
+	-- prefers lower case over upper case; except for http_proxy where no upper case
+	if getenv "GATEWAY_INTERFACE" then -- Mitigate httpoxy. see https://httpoxy.org/
+		self.http_proxy = getenv "CGI_HTTP_PROXY"
+	else
+		self.http_proxy = getenv "http_proxy"
+	end
+	self.https_proxy = getenv "https_proxy" or getenv "HTTPS_PROXY";
+	self.all_proxy = getenv "all_proxy" or getenv "ALL_PROXY";
+	self.no_proxy = getenv "no_proxy" or getenv "NO_PROXY";
+	return true
+end
+
 -- Finds the correct proxy for a given scheme/host
 function proxies_methods:choose(scheme, host)
 	if self.no_proxy == "*" then
@@ -214,25 +241,6 @@ function proxies_methods:choose(scheme, host)
 		end
 	end
 	return self.all_proxy
-end
-
--- prefers lower case over upper case; except for http_proxy where no upper case
-local function read_proxy_vars(getenv)
-	if getenv == nil then
-		getenv = os.getenv
-	end
-	local r = setmetatable({
-		http_proxy = nil;
-		https_proxy = getenv "https_proxy" or getenv "HTTPS_PROXY";
-		all_proxy = getenv "all_proxy" or getenv "ALL_PROXY";
-		no_proxy = getenv "no_proxy" or getenv "NO_PROXY";
-	}, proxies_mt)
-	if getenv "GATEWAY_INTERFACE" then -- Mitigate httpoxy. see https://httpoxy.org/
-		r.http_proxy = getenv "CGI_HTTP_PROXY"
-	else
-		r.http_proxy = getenv "http_proxy"
-	end
-	return r
 end
 
 -- HTTP prefered date format
