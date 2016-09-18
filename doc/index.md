@@ -726,6 +726,13 @@ Process a redirect.
 Returns a new `request` object that will fetch from new location.
 
 
+### `request:to_url(with_userinfo)` <!-- --> {#http.request:to_url}
+
+Returns a URI for the request.
+
+If `with_userinfo` is `true` and the request has an `authorization` header (or `proxy-authorization` for a CONNECT request), the returned URI will contain a userinfo component.
+
+
 ### `request:set_body(body)` <!-- --> {#http.request:set_body}
 
 Allows setting a request body. `body` may be a string, function or lua file object.

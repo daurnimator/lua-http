@@ -113,7 +113,7 @@ function request_methods:clone()
 	}, request_mt)
 end
 
-function request_methods:to_url(no_userinfo)
+function request_methods:to_url(with_userinfo)
 	local scheme = self.headers:get(":scheme")
 	local method = self.headers:get(":method")
 	local path
@@ -135,7 +135,7 @@ function request_methods:to_url(no_userinfo)
 	if authority == nil then
 		authority = http_util.to_authority(self.host, self.port, scheme)
 	end
-	if not no_userinfo and self.headers:has(authorization_field) then
+	if with_userinfo and self.headers:has(authorization_field) then
 		local authorization = self.headers:get(authorization_field)
 		local auth_type, userinfo = authorization:match("^%s*(%S+)%s+(%S+)%s*$")
 		if auth_type and auth_type:lower() == "basic" then
@@ -271,7 +271,7 @@ function request_methods:handle_redirect(orig_headers)
 		unsecured HTTP request if the referring page was received with a secure protocol.]]
 		new_req.headers:delete("referer")
 	else
-		new_req.headers:upsert("referer", self:to_url(true))
+		new_req.headers:upsert("referer", self:to_url(false))
 	end
 	-- Change POST requests to a body-less GET on redirect?
 	local orig_status = orig_headers:get(":status")
