@@ -83,10 +83,20 @@ The HTTP version as a number
 ### `connection:peername()` <!-- --> {#connection:peername}
 
 
+### `connection:shutdown()` <!-- --> {#connection:shutdown}
+
+
 ### `connection:close()` <!-- --> {#connection:close}
 
 
+### `connection:new_stream()` <!-- --> {#connection:new_stream}
+
+Create a new [stream](#stream) on the connection.
+
+
 ### `connection:get_next_incoming_stream(timeout)` <!-- --> {#connection:get_next_incoming_stream}
+
+Returns the next peer initiated [stream](#stream) on the connection.
 
 
 ## stream
@@ -232,6 +242,11 @@ local myconnection = http_client.connect {
 ### `new(socket, conn_type, version)` <!-- --> {#http.h1_connection.new}
 
 
+### `h1_connection.version` <!-- --> {#http.h1_connection.version}
+
+Either `1.0` or `1.1`
+
+
 ### `h1_connection:checktls()` <!-- --> {#http.h1_connection:checktls}
 
 See [`connection:checktls()`](#connection:checktls)
@@ -255,6 +270,8 @@ See [`connection:peername()`](#connection:peername)
 
 ### `h1_connection:shutdown(dir)` <!-- --> {#http.h1_connection:shutdown}
 
+See [`connection:shutdown()`](#connection:shutdown)
+
 
 ### `h1_connection:close()` <!-- --> {#http.h1_connection:close}
 
@@ -262,6 +279,8 @@ See [`connection:close()`](#connection:close)
 
 
 ### `h1_connection:new_stream()` <!-- --> {#http.h1_connection:new_stream}
+
+See [`connection:new_stream()`](#connection:new_stream)
 
 
 ### `h1_connection:get_next_incoming_stream(timeout)` <!-- --> {#http.h1_connection:get_next_incoming_stream}
@@ -345,6 +364,11 @@ hence an `http.h2_connection` acts much like a scheduler.
 ### `new(socket, conn_type, settings)` <!-- --> {#http.h2_connection.new}
 
 
+### `h2_connection.version` <!-- --> {#http.h2_connection.version}
+
+`2`
+
+
 ### `h2_connection:pollfd()` <!-- --> {#http.h2_connection:pollfd}
 
 
@@ -379,6 +403,8 @@ See [`connection:peername()`](#connection:peername)
 
 
 ### `h2_connection:shutdown()` <!-- --> {#http.h2_connection:shutdown}
+
+See [`connection:shutdown()`](#connection:shutdown)
 
 
 ### `h2_connection:close()` <!-- --> {#http.h2_connection:close}
