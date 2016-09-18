@@ -79,6 +79,21 @@ local function fdopen(socket)
 	return self
 end
 
+function socks_methods:clone()
+	if self.socket then
+		error("cannot clone live http.socks object")
+	end
+	local clone = new()
+	clone.family = self.family
+	clone.host = self.host
+	clone.port = self.port
+	clone.needs_resolve = self.needs_resolve
+	if self.username then
+		clone:add_username_password_auth(self.username, self.password)
+	end
+	return clone
+end
+
 function socks_methods:add_username_password_auth(username, password)
 	self.username = http_util.decodeURIComponent(username)
 	self.password = http_util.decodeURIComponent(password)
