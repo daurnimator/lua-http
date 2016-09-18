@@ -719,7 +719,8 @@ The [`.tls`](#http.request.tls) and [`.body`](#http.request.body) fields are sha
 
 ### `request:use_proxy(uri)` <!-- --> {#http.request:use_proxy}
 
-Edits a request to go through a proxy.
+Edits a request to go through the given proxy.
+If `uri` is `nil`, removes the current proxy.
 
 Current supports http proxies.
 
