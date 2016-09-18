@@ -935,6 +935,22 @@ Joins the `host` and `port` to create a valid authority component.
 Omits the port if it is the default for the `scheme`.
 
 
+### `read_proxy_vars(getenv)` <!-- --> {#http.util.read_proxy_vars}
+
+`getenv` defaults to [`os.getenv`](http://www.lua.org/manual/5.3/manual.html#pdf-os.getenv)
+
+Read environmental variables (using the given function) that are used to control if requests go through a proxy.
+
+Returns a 'proxies' object with a single method [`:choose()`](#http.util.proxies:choose)
+
+
+### `proxies:choose(scheme, host)` <!-- --> {#http.util.proxies:choose}
+
+Returns the proxy to use for the given `scheme` and `host` as a URI.
+
+Useful for passing to [`request:use_proxy()`](#http.request:use_proxy).
+
+
 ### `imf_date(time)` <!-- --> {#http.util.imf_date}
 
 Returns the time in HTTP preferred date format (See [RFC 7231 section 7.1.1.1](https://tools.ietf.org/html/rfc7231#section-7.1.1.1))
