@@ -712,9 +712,18 @@ Defaults to `false`.
 
 Creates and returns a clone of the request.
 
-The clone has its own deep copy of the [`.headers`](#http.request.headers) field.
+The clone has its own deep copies of the [`.headers`](#http.request.headers) and [`.h2_settings`](#http.request.h2_settings) fields.
 
 The [`.tls`](#http.request.tls) and [`.body`](#http.request.body) fields are shallow copied from the original request.
+
+
+### `request:handle_redirect(headers)` <!-- --> {#http.request:handle_redirect}
+
+Process a redirect.
+
+`headers` should be response headers for a redirect.
+
+Returns a new `request` object that will fetch from new location.
 
 
 ### `request:set_body(body)` <!-- --> {#http.request:set_body}
