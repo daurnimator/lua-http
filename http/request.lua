@@ -127,10 +127,21 @@ function request_methods:to_url(with_userinfo)
 		authorization_field = "proxy-authorization"
 		path = ""
 	else
-		authority = self.headers:get(":authority")
-		-- TODO: validate authority can fit in a url
 		path = self.headers:get(":path")
-		-- TODO: validate path is valid for uri?
+		local path_t = uri_ref:match(path)
+		assert(path_t, "path not a valid uri reference")
+		if path_t.host then
+			-- path was a full URI. This is used for proxied requests.
+			scheme = path_t.scheme or scheme
+			path = path_t.path or ""
+			if path_t.query then
+				path = path .. "?" .. path_t.query
+			end
+			authority = http_util.to_authority(path_t.host, path_t.port, scheme)
+		else
+			authority = self.headers:get(":authority")
+			-- TODO: validate authority can fit in a url
+		end
 		authorization_field = "authorization"
 	end
 	if authority == nil then
