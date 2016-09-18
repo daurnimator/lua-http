@@ -22,6 +22,7 @@ local request_mt = {
 }
 
 local default_user_agent = string.format("%s/%s", version.name, version.version)
+local default_proxies = http_util.read_proxy_vars()
 
 local EOF = lpeg.P(-1)
 local uri_patt = uri_patts.uri * EOF
@@ -77,6 +78,10 @@ local function new_from_uri_t(uri_t, headers)
 		headers = headers;
 		body = nil;
 	}, request_mt)
+	local proxy = default_proxies:choose(scheme, host)
+	if proxy then
+		self:use_proxy(proxy)
+	end
 	return self
 end
 
@@ -493,4 +498,5 @@ return {
 	new_connect = new_connect;
 	methods = request_methods;
 	mt = request_mt;
+	default_proxies = default_proxies;
 }
