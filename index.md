@@ -855,6 +855,11 @@ Complete the SOCKS connection.
   - `port` (required) a number to pass to the SOCKS server as the port to connect to
 
 
+### `socks:take_socket()` <!-- --> {#http.socks:take_socket}
+
+Take possesion of the socket object managed by the http.socks object. Returns the socket (or `nil` if not available).
+
+
 ## http.stream_common
 
 The module `http.stream_common` provides common functions for streams (no matter the underlying protocol version). It exports a table `methods` of functions that build on top of the lower level [*stream*](#stream) interface.
