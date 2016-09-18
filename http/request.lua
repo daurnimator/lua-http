@@ -128,9 +128,14 @@ function request_methods:to_uri(with_userinfo)
 		path = ""
 	else
 		path = self.headers:get(":path")
-		local path_t = uri_ref:match(path)
-		assert(path_t, "path not a valid uri reference")
-		if path_t.host then
+		local path_t
+		if method == "OPTIONS" and path == "*" then
+			path = ""
+		else
+			path_t = uri_ref:match(path)
+			assert(path_t, "path not a valid uri reference")
+		end
+		if path_t and path_t.host then
 			-- path was a full URI. This is used for proxied requests.
 			scheme = path_t.scheme or scheme
 			path = path_t.path or ""
