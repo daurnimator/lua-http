@@ -186,7 +186,7 @@ function request_methods:use_proxy_from_uri_t(uri_t)
 		local path = self.headers:get(":path")
 		local method = self.headers:get(":method")
 		if not path or method == "CONNECT" then
-			return
+			return true
 		end
 		local path_t = uri_ref:match(path)
 		if path_t and path_t.host then
@@ -205,7 +205,7 @@ function request_methods:use_proxy_from_uri_t(uri_t)
 			self.headers:upsert(":path", newpath)
 			self.headers:delete("proxy-authorization")
 		end
-		return
+		return true
 	end
 	assert(type(uri_t) == "table")
 	if uri_t.scheme == "http" then
@@ -226,6 +226,7 @@ function request_methods:use_proxy_from_uri_t(uri_t)
 		else
 			self.headers:delete("proxy-authorization")
 		end
+		return true
 	else
 		error(string.format("unsupported proxy type (%s)", uri_t.scheme))
 	end
@@ -386,6 +387,7 @@ function request_methods:set_body(body)
 	if not length or length > 1024 then
 		self.headers:append("expect", "100-continue")
 	end
+	return true
 end
 
 function request_methods:go(timeout)
