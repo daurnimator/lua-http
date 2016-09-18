@@ -281,6 +281,7 @@ describe("http.websocket module two sided tests", function()
 		assert.truthy(cq:empty())
 	end)
 	it("works when using uri table constructor and protocols", function()
+		local new_headers = require "http.headers".new
 		local cq = cqueues.new()
 		local s = server.listen {
 			host = "localhost";
@@ -293,7 +294,11 @@ describe("http.websocket module two sided tests", function()
 				local headers = assert(stream:get_headers())
 				s:pause()
 				local ws = websocket.new_from_stream(headers, stream)
+				local response_headers = new_headers()
+				response_headers:upsert(":status", "101")
+				response_headers:upsert("server", "lua-http websocket test")
 				assert(ws:accept {
+					headers = response_headers;
 					protocols = {"my awesome-protocol", "foo"};
 				})
 				-- Should prefer client protocol preference

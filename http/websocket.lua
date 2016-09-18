@@ -719,7 +719,12 @@ function websocket_methods:accept(options, timeout)
 	assert(self.type == "server" and self.readyState == 0)
 	options = options or {}
 
-	local response_headers = new_headers()
+	local response_headers
+	if options.headers then
+		response_headers = options.headers:clone()
+	else
+		response_headers = new_headers()
+	end
 	response_headers:upsert(":status", "101")
 	response_headers:upsert("upgrade", "websocket")
 	response_headers:upsert("connection", "upgrade")
