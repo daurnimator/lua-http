@@ -717,6 +717,13 @@ The clone has its own deep copies of the [`.headers`](#http.request.headers) and
 The [`.tls`](#http.request.tls) and [`.body`](#http.request.body) fields are shallow copied from the original request.
 
 
+### `request:use_proxy(uri)` <!-- --> {#http.request:use_proxy}
+
+Edits a request to go through a proxy.
+
+Current supports http proxies.
+
+
 ### `request:handle_redirect(headers)` <!-- --> {#http.request:handle_redirect}
 
 Process a redirect.
