@@ -28,8 +28,12 @@ local EOF = lpeg.P(-1)
 local uri_patt = uri_patts.uri * EOF
 local uri_ref = uri_patts.uri_reference * EOF
 
-local function new_from_uri_t(uri_t, headers)
-	assert(type(uri_t) == "table")
+local function new_from_uri(uri_t, headers)
+	if type(uri_t) == "string" then
+		uri_t = assert(uri_patt:match(uri_t), "invalid URI")
+	else
+		assert(type(uri_t) == "table")
+	end
 	local scheme = assert(uri_t.scheme, "URI missing scheme")
 	assert(scheme == "https" or scheme == "http" or scheme == "ws" or scheme == "wss", "scheme not valid")
 	local host = tostring(assert(uri_t.host, "URI must include a host")) -- tostring required to e.g. convert lpeg_patterns IPv6 objects
@@ -85,19 +89,11 @@ local function new_from_uri_t(uri_t, headers)
 	return self
 end
 
-local function new_from_uri(uri, ...)
-	if type(uri) == "string" then
-		uri = assert(uri_patt:match(uri), "invalid URI")
-	end
-	return new_from_uri_t(uri, ...)
-end
-
 local function new_connect(uri, connect_authority)
-	local uri_t = assert(uri_patt:match(uri), "invalid URI")
 	local headers = new_headers()
 	headers:append(":authority", connect_authority)
 	headers:append(":method", "CONNECT")
-	return new_from_uri_t(uri_t, headers)
+	return new_from_uri(uri, headers)
 end
 
 function request_methods:clone()
@@ -186,7 +182,7 @@ function request_methods:new_stream(timeout)
 	return connection:new_stream()
 end
 
-function request_methods:use_proxy_from_uri_t(uri_t)
+function request_methods:use_proxy(uri_t)
 	if uri_t == nil then -- Remove proxy
 		local path = self.headers:get(":path")
 		local method = self.headers:get(":method")
@@ -212,7 +208,11 @@ function request_methods:use_proxy_from_uri_t(uri_t)
 		end
 		return true
 	end
-	assert(type(uri_t) == "table")
+	if type(uri_t) == "string" then
+		uri_t = assert(uri_patt:match(uri_t), "invalid URI")
+	else
+		assert(type(uri_t) == "table")
+	end
 	if uri_t.scheme == "http" then
 		if self.headers:get(":method") == "CONNECT" then
 			error("cannot use HTTP Proxy with CONNECT method")
@@ -235,13 +235,6 @@ function request_methods:use_proxy_from_uri_t(uri_t)
 	else
 		error(string.format("unsupported proxy type (%s)", uri_t.scheme))
 	end
-end
-
-function request_methods:use_proxy(uri)
-	if type(uri) == "string" then
-		uri = assert(uri_patt:match(uri), "invalid URI")
-	end
-	return self:use_proxy_from_uri_t(uri)
 end
 
 function request_methods:handle_redirect(orig_headers)
@@ -493,7 +486,6 @@ function request_methods:go(timeout)
 end
 
 return {
-	new_from_uri_t = new_from_uri_t;
 	new_from_uri = new_from_uri;
 	new_connect = new_connect;
 	methods = request_methods;
