@@ -215,8 +215,7 @@ Creates a new connection to an HTTP server.
 		  - `true` indicates to copy the `host` field
 		  - `false` disables SNI
 
-	  - `v6only` (boolean, optional): if the `IPV6_V6ONLY` flag should be set on the underlying socket.  
-		defaults to `false`  
+	  - `v6only` (boolean, optional): if the `IPV6_V6ONLY` flag should be set on the underlying socket.
 
   - `timeout` (optional) is the maximum amount of time (in seconds) to allow for connection to be established.
 
