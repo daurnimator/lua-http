@@ -221,7 +221,6 @@ Creates a new connection to an HTTP server.
 
 	This includes time for DNS lookup, connection, TLS negotiation (if tls enabled) and in the case of HTTP2: settings exchange.
 
-
 #### Example {#http.client.connect-example}
 
 Connect to a local HTTP server running on port 8000
