@@ -288,6 +288,9 @@ See [`connection:new_stream()`](#connection:new_stream)
 See [`connection:get_next_incoming_stream()`](#connection:get_next_incoming_stream)
 
 
+### `h1_connection:flush(...)` <!-- --> {#http.h1_connection:flush}
+
+
 ### `h1_connection:read_request_line(timeout)` <!-- --> {#http.h1_connection:read_request_line}
 
 
@@ -603,6 +606,9 @@ Creates and returns a new headers object.
 
 
 ### `headers:sort()` <!-- --> {#http.headers:sort}
+
+
+### `headers:dump(file)` <!-- --> {#http.headers:dump}
 
 
 ## http.hpack
@@ -1016,12 +1022,12 @@ Creates a new `http.websocket` object of type `"client"` from the given URI.
   - `protocols` (optional) should be a lua table containing a sequence of protocols to send to the server
 
 
-### `new_from_stream(headers, stream)` <!-- --> {#http.websocket.new_from_stream}
+### `new_from_stream(stream, headers)` <!-- --> {#http.websocket.new_from_stream}
 
 Attempts to create a new `http.websocket` object of type `"server"` from the given request headers and stream.
 
-  - [`headers`](#http.headers) should be headers of a suspected websocket upgrade request from an HTTP 1 client.
   - [`stream`](#http.h1_stream) should be a live HTTP 1 stream of the `"server"` type.
+  - [`headers`](#http.headers) should be headers of a suspected websocket upgrade request from an HTTP 1 client.
 
 This function does **not** have side effects, and is hence okay to use tentatively.
 
@@ -1038,6 +1044,7 @@ Completes negotiation with a websocket client.
 
   - `options` is a table containing:
 
+	  - `headers` (optional) a [headers](#http.headers) object to use as a prototype for the response headers
 	  - `protocols` (optional) should be a lua table containing a sequence of protocols to to allow from the client
 
 Usually called after a successful [`new_from_stream`](#http.websocket.new_from_stream)
