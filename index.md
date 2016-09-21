@@ -1022,12 +1022,12 @@ Creates a new `http.websocket` object of type `"client"` from the given URI.
   - `protocols` (optional) should be a lua table containing a sequence of protocols to send to the server
 
 
-### `new_from_stream(headers, stream)` <!-- --> {#http.websocket.new_from_stream}
+### `new_from_stream(stream, headers)` <!-- --> {#http.websocket.new_from_stream}
 
 Attempts to create a new `http.websocket` object of type `"server"` from the given request headers and stream.
 
-  - [`headers`](#http.headers) should be headers of a suspected websocket upgrade request from an HTTP 1 client.
   - [`stream`](#http.h1_stream) should be a live HTTP 1 stream of the `"server"` type.
+  - [`headers`](#http.headers) should be headers of a suspected websocket upgrade request from an HTTP 1 client.
 
 This function does **not** have side effects, and is hence okay to use tentatively.
 
