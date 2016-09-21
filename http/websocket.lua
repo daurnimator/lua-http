@@ -635,7 +635,7 @@ function websocket_methods:connect(timeout)
 end
 
 -- Given an incoming HTTP1 request, attempts to upgrade it to a websocket connection
-local function new_from_stream(headers, stream)
+local function new_from_stream(stream, headers)
 	assert(stream.connection.type == "server")
 
 	if stream.connection.version < 1 or stream.connection.version >= 2 then
