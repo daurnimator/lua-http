@@ -1045,7 +1045,7 @@ Completes negotiation with a websocket client.
   - `options` is a table containing:
 
 	  - `headers` (optional) a [headers](#http.headers) object to use as a prototype for the response headers
-	  - `protocols` (optional) should be a lua table containing a sequence of protocols to to allow from the client
+	  - `protocols` (optional) should be a lua table containing a sequence of protocols to allow from the client
 
 Usually called after a successful [`new_from_stream`](#http.websocket.new_from_stream)
 
