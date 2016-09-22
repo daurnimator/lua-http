@@ -213,28 +213,33 @@ function request_methods:use_proxy(uri_t)
 	else
 		assert(type(uri_t) == "table")
 	end
-	if uri_t.scheme == "http" then
-		if self.headers:get(":method") == "CONNECT" then
-			error("cannot use HTTP Proxy with CONNECT method")
-		end
-		if uri_t.path ~= nil and uri_t.path ~= "" then
-			error("a HTTP proxy cannot have a path component")
-		end
-		local old_url = self:to_uri(false)
-		self.host = assert(uri_t.host, "proxy is missing host")
-		self.port = uri_t.port or http_util.scheme_to_port[uri_t.scheme]
-		self.tls = false
-		-- proxy requests get a uri that includes host as their path
-		self.headers:upsert(":path", old_url)
-		if uri_t.userinfo then
-			self.headers:upsert("proxy-authorization", "basic " .. basexx.to_base64(uri_t.userinfo), true)
+	if uri_t.scheme == "http" or uri_t.scheme == "https" then
+		if self.tls then
+			-- Proxy via a CONNECT request
+			error("NYI: Proxy via a CONNECT request")
 		else
-			self.headers:delete("proxy-authorization")
+			if self.headers:get(":method") == "CONNECT" then
+				error("cannot use HTTP Proxy with CONNECT method")
+			end
+			if uri_t.path ~= nil and uri_t.path ~= "" then
+				error("a HTTP proxy cannot have a path component")
+			end
+			local old_url = self:to_uri(false)
+			self.host = assert(uri_t.host, "proxy is missing host")
+			self.port = uri_t.port or http_util.scheme_to_port[uri_t.scheme]
+			self.tls = false
+			-- proxy requests get a uri that includes host as their path
+			self.headers:upsert(":path", old_url)
+			if uri_t.userinfo then
+				self.headers:upsert("proxy-authorization", "basic " .. basexx.to_base64(uri_t.userinfo), true)
+			else
+				self.headers:delete("proxy-authorization")
+			end
 		end
-		return true
 	else
 		error(string.format("unsupported proxy type (%s)", uri_t.scheme))
 	end
+	return true
 end
 
 function request_methods:handle_redirect(orig_headers)
