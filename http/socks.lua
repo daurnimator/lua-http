@@ -259,7 +259,7 @@ function socks_methods:negotiate(host, port, timeout)
 			else
 				err = "Unknown code"
 			end
-			return nil, string.format("SOCKS5 error %d: %s", code, err), errno
+			return nil, string.format("SOCKS5 error %d: %s", num_code, err), errno
 		end
 	end
 	do

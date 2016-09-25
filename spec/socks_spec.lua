@@ -78,4 +78,38 @@ describe("http.socks module", function()
 		assert_loop(cq, TEST_TIMEOUT)
 		assert.truthy(cq:empty())
 	end)
+	it("fails with correct error messages", function()
+		for i, correct_errno in ipairs({
+			false;
+			ce.EACCES;
+			ce.ENETUNREACH;
+			ce.EHOSTUNREACH;
+			ce.ECONNREFUSED;
+			ce.ETIMEDOUT;
+			ce.EOPNOTSUPP;
+			ce.EAFNOSUPPORT;
+		}) do
+			local c, s = cs.pair()
+			local cq = cqueues.new()
+			cq:wrap(function()
+				c = http_socks.fdopen(c)
+				local ok, _, errno = c:negotiate("127.0.0.1", 123)
+				assert.falsy(ok)
+				if correct_errno then
+					assert.same(correct_errno, errno)
+				end
+			end)
+			cq:wrap(function()
+				assert.same("\5", s:read(1))
+				local n = assert(s:read(1)):byte()
+				local available_auth = assert(s:read(n))
+				assert.same("\0", available_auth)
+				assert(s:xwrite("\5\0", "n"))
+				assert.same("\5\1\0\1\127\0\0\1\0\123", s:read(10))
+				assert(s:xwrite("\5" .. string.char(i), "n"))
+			end)
+			assert_loop(cq, TEST_TIMEOUT)
+			assert.truthy(cq:empty())
+		end
+	end)
 end)
