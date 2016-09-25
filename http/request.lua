@@ -166,17 +166,6 @@ function request_methods:to_uri(with_userinfo)
 	return scheme .. "://" .. authority .. path
 end
 
-local function get_connection(host, port, tls, sendname, version, timeout)
-	-- TODO: pooling
-	return client.connect({
-		host = host;
-		port = port;
-		tls = tls;
-		sendname = sendname;
-		version = version;
-	}, timeout)
-end
-
 function request_methods:handle_redirect(orig_headers)
 	local max_redirects = self.max_redirects
 	if max_redirects <= 0 then
@@ -336,6 +325,8 @@ function request_methods:go(timeout)
 	local port = self.port
 	local tls = self.tls
 
+	local connection
+
 	local proxy = self.proxy
 	if proxy == nil and self.proxies then
 		assert(getmetatable(self.proxies) == http_proxies.mt, "proxies property should be a http.proxies object")
@@ -351,7 +342,40 @@ function request_methods:go(timeout)
 		if proxy.scheme == "http" or proxy.scheme == "https" then
 			if tls then
 				-- Proxy via a CONNECT request
-				error("NYI: Proxy via a CONNECT request")
+				local authority = http_util.to_authority(host, port, nil)
+				local connect_request = new_connect(proxy, authority)
+				connect_request.proxy = false
+				connect_request.version = 1.1 -- TODO: CONNECT over HTTP/2
+				if tls then
+					if connect_request.tls then
+						error("NYI: TLS over TLS")
+					else
+						-- Hack until https://github.com/wahern/cqueues/issues/137 is fixed
+						connect_request.sendname = self.sendname
+					end
+				end
+				-- Perform CONNECT request
+				local headers, stream, errno = connect_request:go(deadline and deadline-monotime())
+				if not headers then
+					return nil, stream, errno
+				end
+				-- RFC 7231 Section 4.3.6:
+				-- Any 2xx (Successful) response indicates that the sender (and all
+				-- inbound proxies) will switch to tunnel mode
+				local status_reply = headers:get(":status")
+				if status_reply:sub(1, 1) ~= "2" then
+					stream:shutdown()
+					return nil, ce.strerror(ce.ECONNREFUSED), ce.ECONNREFUSED
+				end
+				local sock = stream.connection:take_socket()
+				local err, errno2
+				connection, err, errno2 = client.negotiate(sock, {
+					tls = tls;
+					version = self.version;
+				}, deadline and deadline-monotime())
+				if connection == nil then
+					return nil, err, errno2
+				end
 			else
 				if request_headers:get(":method") == "CONNECT" then
 					error("cannot use HTTP Proxy with CONNECT method")
@@ -374,11 +398,22 @@ function request_methods:go(timeout)
 		end
 	end
 
-	local stream do
-		local connection, err, errno = get_connection(host, port, tls, self.sendname, self.version, deadline and deadline-monotime())
+	if not connection then
+		local err, errno
+		connection, err, errno = client.connect({
+			host = host;
+			port = port;
+			tls = tls;
+			sendname = self.sendname;
+			version = self.version;
+		}, deadline and deadline-monotime())
 		if connection == nil then
 			return nil, err, errno
 		end
+	end
+
+	local stream do
+		local err, errno
 		stream, err, errno = connection:new_stream()
 		if stream == nil then
 			return nil, err, errno
