@@ -5,9 +5,12 @@ local client_connect = require "http.client".connect
 local new_headers = require "http.headers".new
 local http_proxies = require "http.proxies"
 local http_util = require "http.util"
-local version = require "http.version"
+local http_version = require "http.version"
 local monotime = require "cqueues".monotime
 local ce = require "cqueues.errno"
+
+local default_user_agent = string.format("%s/%s", http_version.name, http_version.version)
+local default_proxies = http_proxies.new():update()
 
 local request_methods = {
 	expect_100_timeout = 1;
@@ -21,9 +24,6 @@ local request_mt = {
 	__name = "http.request";
 	__index = request_methods;
 }
-
-local default_user_agent = string.format("%s/%s", version.name, version.version)
-local default_proxies = http_proxies.new():update()
 
 local EOF = lpeg.P(-1)
 local uri_patt = uri_patts.uri * EOF
