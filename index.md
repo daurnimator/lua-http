@@ -667,16 +667,18 @@ Creates and returns a new headers object.
 
 ## http.proxies
 
-### `read_proxy_vars(getenv)` <!-- --> {#http.proxies.read_proxy_vars}
+### `new()` <!-- --> {#http.proxies.new}
 
-Returns a 'proxies' object initialised as if [`proxies:update(getenv)`](#http.proxies.proxies:update) was called.
+Returns an empty 'proxies' object
 
 
 ### `proxies:update(getenv)` <!-- --> {#http.proxies:update}
 
 `getenv` defaults to [`os.getenv`](http://www.lua.org/manual/5.3/manual.html#pdf-os.getenv)
 
-Re-read environmental variables (using the given function) that are used to control if requests go through a proxy.
+Reads environmental variables that are used to control if requests go through a proxy.
+
+Returns `proxies`.
 
 
 ### `proxies:choose(scheme, host)` <!-- --> {#http.proxies:choose}
