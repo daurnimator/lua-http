@@ -831,6 +831,52 @@ Cause [`server:run`](#http.server:run) to stop processing new clients and return
 ### `server:run(on_stream, cq)` <!-- --> {#http.server:run}
 
 
+## http.socks
+
+Implements a subset of the SOCKS proxy protocol.
+
+### `connect(uri)` <!-- --> {#http.socks.connect}
+
+  - `uri` is a string with the address of the SOCKS server. A scheme of `"socks5"` will resolve hosts locally, a scheme of `"socks5h"` will resolve hosts on the SOCKS server. If the URI has a userinfo component it will be sent to the SOCKS server as a username and password.
+
+Returns a *http.socks* object.
+
+
+### `fdopen(socket)` <!-- --> {#http.socks.fdopen}
+
+  - `socket` should be a cqueues socket object
+
+Returns a *http.socks* object.
+
+
+### `socks.needs_resolve` <!-- --> {#http.socks.needs_resolve}
+
+Specifies if the destination host should be resolved locally.
+
+
+### `socks:clone()` <!-- --> {#http.socks:clone}
+
+Make a clone of a given socks object.
+
+
+### `socks:add_username_password_auth(username, password)` <!-- --> {#http.socks:add_username_password_auth}
+
+Add username + password authorisation to the set of allowed authorisation methods with the given credentials.
+
+
+### `socks:negotiate(host, port, timeout)` <!-- --> {#http.socks:negotiate}
+
+Complete the SOCKS connection.
+
+  - `host` (required) a string to pass to the SOCKS server as the host to connect to. Will be resolved locally if [`.needs_resolve`](#http.socks.needs_resolve) is `true`
+  - `port` (required) a number to pass to the SOCKS server as the port to connect to
+
+
+### `socks:take_socket()` <!-- --> {#http.socks:take_socket}
+
+Take possesion of the socket object managed by the http.socks object. Returns the socket (or `nil` if not available).
+
+
 ## http.stream_common
 
 The module `http.stream_common` provides common functions for streams (no matter the underlying protocol version). It exports a table `methods` of functions that build on top of the lower level [*stream*](#stream) interface.
