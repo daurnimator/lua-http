@@ -685,8 +685,6 @@ Returns `proxies`.
 
 Returns the proxy to use for the given `scheme` and `host` as a URI.
 
-Useful for passing to [`request:use_proxy()`](#http.request:use_proxy).
-
 
 ## http.request
 
@@ -723,6 +721,12 @@ The TLS SNI host name used.
 ### `request.version` <!-- --> {#http.request.version}
 
 The HTTP version to use; leave as `nil` to auto-select.
+
+
+### `request.proxy` <!-- --> {#http.request.proxy}
+
+Specifies the a proxy that the request will be made through.
+The value should be a uri or `false` to turn off proxying for the request.
 
 
 ### `request.headers` <!-- --> {#http.request.headers}
@@ -768,14 +772,6 @@ Creates and returns a clone of the request.
 The clone has its own deep copies of the [`.headers`](#http.request.headers) and [`.h2_settings`](#http.request.h2_settings) fields.
 
 The [`.tls`](#http.request.tls) and [`.body`](#http.request.body) fields are shallow copied from the original request.
-
-
-### `request:use_proxy(uri)` <!-- --> {#http.request:use_proxy}
-
-Edits a request to go through the given proxy.
-If `uri` is `nil`, removes the current proxy.
-
-Current supports http proxies.
 
 
 ### `request:handle_redirect(headers)` <!-- --> {#http.request:handle_redirect}
