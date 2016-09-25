@@ -36,6 +36,7 @@ build = {
 		["http.h2_stream"] = "http/h2_stream.lua";
 		["http.headers"] = "http/headers.lua";
 		["http.hpack"] = "http/hpack.lua";
+		["http.proxies"] = "http/proxies.lua";
 		["http.request"] = "http/request.lua";
 		["http.server"] = "http/server.lua";
 		["http.stream_common"] = "http/stream_common.lua";

@@ -3,6 +3,7 @@ local uri_patts = require "lpeg_patterns.uri"
 local basexx = require "basexx"
 local client_connect = require "http.client".connect
 local new_headers = require "http.headers".new
+local http_proxies = require "http.proxies"
 local http_util = require "http.util"
 local version = require "http.version"
 local monotime = require "cqueues".monotime
@@ -22,7 +23,7 @@ local request_mt = {
 }
 
 local default_user_agent = string.format("%s/%s", version.name, version.version)
-local default_proxies = http_util.read_proxy_vars()
+local default_proxies = http_proxies.read_proxy_vars()
 
 local EOF = lpeg.P(-1)
 local uri_patt = uri_patts.uri * EOF
