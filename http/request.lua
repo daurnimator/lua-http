@@ -3,6 +3,7 @@ local uri_patts = require "lpeg_patterns.uri"
 local basexx = require "basexx"
 local client = require "http.client"
 local new_headers = require "http.headers".new
+local http_socks = require "http.socks"
 local http_proxies = require "http.proxies"
 local http_util = require "http.util"
 local http_version = require "http.version"
@@ -337,7 +338,7 @@ function request_methods:go(timeout)
 		if type(proxy) == "string" then
 			proxy = assert(uri_patt:match(proxy), "invalid proxy URI")
 		else
-			assert(type(proxy) == "table")
+			assert(type(proxy) == "table" and getmetatable(proxy) == nil and proxy.scheme, "invalid proxy URI")
 		end
 		if proxy.scheme == "http" or proxy.scheme == "https" then
 			if tls then
@@ -393,6 +394,23 @@ function request_methods:go(timeout)
 				if proxy.userinfo then
 					request_headers:upsert("proxy-authorization", "basic " .. basexx.to_base64(proxy.userinfo), true)
 				end
+			end
+		elseif proxy.scheme:match "^socks" then
+			-- https://github.com/wahern/cqueues/issues/137
+			assert(self.sendname == nil or self.sendname == host, "NYI: custom SNI over socket")
+			local socks = http_socks.connect(proxy)
+			local ok, err, errno = socks:negotiate(host, port, deadline and deadline-monotime())
+			if not ok then
+				return nil, err, errno
+			end
+			local sock = socks:take_socket()
+			connection, err, errno = client.negotiate(sock, {
+				tls = tls;
+				version = self.version;
+			}, deadline and deadline-monotime())
+			if connection == nil then
+				sock:close()
+				return nil, err, errno
 			end
 		else
 			error(string.format("unsupported proxy type (%s)", proxy.scheme))
