@@ -147,7 +147,7 @@ function socks_methods:negotiate(host, port, timeout)
 			family = self.family;
 			host = self.host;
 			port = self.port;
-			sendname = host or false; -- Want to specify later; see https://github.com/wahern/cqueues/issues/137
+			sendname = host; -- Want to specify later; see https://github.com/wahern/cqueues/issues/137
 			nodelay = true;
 		}
 		if socket == nil then
