@@ -188,6 +188,31 @@ local maybe_quote do
 	end
 end
 
+-- A pcall relative that can be yielded over in PUC 5.1
+local yieldable_pcall
+-- See if pcall can be yielded over
+if coroutine.wrap(function() return pcall(coroutine.yield, true) end)() then
+	yieldable_pcall = pcall
+else
+	local function handle_resume(co, ok, ...)
+		if not ok then
+			return false, ...
+		elseif coroutine.status(co) == "dead" then
+			return true, ...
+		end
+		return handle_resume(co, coroutine.resume(co, coroutine.yield(...)))
+	end
+	yieldable_pcall = function(func, ...)
+		if debug.getinfo(func, "S").what == "C" then
+			local C_func = func
+			-- Can't give C functions to coroutine.create
+			func = function(...) return C_func(...) end
+		end
+		local co = coroutine.create(func)
+		return handle_resume(co, coroutine.resume(co, ...))
+	end
+end
+
 return {
 	encodeURI = encodeURI;
 	encodeURIComponent = encodeURIComponent;
@@ -201,4 +226,5 @@ return {
 	to_authority = to_authority;
 	imf_date = imf_date;
 	maybe_quote = maybe_quote;
+	yieldable_pcall = yieldable_pcall;
 }

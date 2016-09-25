@@ -109,4 +109,27 @@ describe("http.util module", function()
 			check("\127")
 		end)
 	end)
+	describe("yieldable_pcall", function()
+		it("returns multiple return values", function()
+			assert.same({true, 1, 2, 3, 4, nil, nil, nil, nil, nil, nil, "foo"},
+				{util.yieldable_pcall(function() return 1, 2, 3, 4, nil, nil, nil, nil, nil, nil, "foo" end)})
+		end)
+		it("protects from errors", function()
+			assert.falsy(util.yieldable_pcall(error))
+		end)
+		it("returns error objects", function()
+			local err = {"myerror"}
+			local ok, err2 = util.yieldable_pcall(error, err)
+			assert.falsy(ok)
+			assert.equal(err, err2)
+		end)
+		it("works on all levels", function()
+			local f = coroutine.wrap(function()
+				return util.yieldable_pcall(coroutine.yield, true)
+			end)
+			assert.truthy(f()) -- 'true' that was yielded
+			assert.truthy(f()) -- 'true' from the pcall
+			assert.has.errors(f) -- cannot resume dead coroutine
+		end)
+	end)
 end)
