@@ -652,7 +652,6 @@ describe("http.request module", function()
 			end)
 		end)
 		it(":handle_redirect doesn't drop proxy use within a domain", function()
-			local headers = require "http.headers"
 			test(function(stream)
 				local h = assert(stream:get_headers())
 				local _, host, port = stream:localname()
@@ -667,7 +666,7 @@ describe("http.request module", function()
 					port = req.port;
 					userinfo = "user:pass";
 				}
-				local orig_headers = headers.new()
+				local orig_headers = new_headers()
 				orig_headers:append(":status", "302")
 				orig_headers:append("location", "/foo")
 				local new_req = req:handle_redirect(orig_headers)
