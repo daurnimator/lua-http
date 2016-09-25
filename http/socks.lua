@@ -30,6 +30,13 @@ local socks_mt = {
 	__index = socks_methods;
 }
 
+local function onerror(socket, op, why, lvl) -- luacheck: ignore 212
+	if why == ce.EPIPE or why == ce.ETIMEDOUT then
+		return why
+	end
+	return string.format("%s: %s", op, ce.strerror(why)), why
+end
+
 local function new()
 	return setmetatable({
 		version = 5;
@@ -75,6 +82,7 @@ end
 
 local function fdopen(socket)
 	local self = new()
+	socket:onerror(onerror)
 	self.socket = socket
 	return self
 end
@@ -153,6 +161,7 @@ function socks_methods:negotiate(host, port, timeout)
 		if socket == nil then
 			return nil, ce.strerror(errno), errno
 		end
+		socket:onerror(onerror)
 		self.socket = socket
 	end
 
