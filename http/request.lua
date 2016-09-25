@@ -374,6 +374,7 @@ function request_methods:go(timeout)
 					version = self.version;
 				}, deadline and deadline-monotime())
 				if connection == nil then
+					sock:close()
 					return nil, err, errno2
 				end
 			else
