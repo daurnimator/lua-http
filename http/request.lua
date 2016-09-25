@@ -23,7 +23,7 @@ local request_mt = {
 }
 
 local default_user_agent = string.format("%s/%s", version.name, version.version)
-local default_proxies = http_proxies.read_proxy_vars()
+local default_proxies = http_proxies.new():update()
 
 local EOF = lpeg.P(-1)
 local uri_patt = uri_patts.uri * EOF

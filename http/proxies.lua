@@ -6,15 +6,13 @@ local proxies_mt = {
 	__index = proxies_methods;
 }
 
-local function read_proxy_vars(getenv)
-	local self = setmetatable({
+local function new()
+	return setmetatable({
 		http_proxy = nil;
 		https_proxy = nil;
 		all_proxy = nil;
 		no_proxy = nil;
 	}, proxies_mt)
-	self:update(getenv)
-	return self
 end
 
 function proxies_methods:update(getenv)
@@ -30,7 +28,7 @@ function proxies_methods:update(getenv)
 	self.https_proxy = getenv "https_proxy" or getenv "HTTPS_PROXY";
 	self.all_proxy = getenv "all_proxy" or getenv "ALL_PROXY";
 	self.no_proxy = getenv "no_proxy" or getenv "NO_PROXY";
-	return true
+	return self
 end
 
 -- Finds the correct proxy for a given scheme/host
@@ -72,7 +70,7 @@ function proxies_methods:choose(scheme, host)
 end
 
 return {
-	read_proxy_vars = read_proxy_vars;
+	new = new;
 	methods = proxies_methods;
 	mt = proxies_mt;
 }

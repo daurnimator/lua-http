@@ -1,8 +1,8 @@
 describe("http.proxies module", function()
 	local http_proxies = require "http.proxies"
 
-	it("read_proxy_vars works", function()
-		local proxies = http_proxies.read_proxy_vars(function(k) return ({
+	it("works", function()
+		local proxies = http_proxies.new():update(function(k) return ({
 			http_proxy = "http://http.proxy";
 			https_proxy = "http://https.proxy";
 			all_proxy = "http://all.proxy";
@@ -34,8 +34,8 @@ describe("http.proxies module", function()
 		assert.same(nil, proxies:choose("http", "extra.dot.com"))
 		assert.same("http://http.proxy", proxies:choose("http", "dot.com"))
 	end)
-	it("read_proxy_vars isn't vulnerable to httpoxy", function()
-		assert.same({}, http_proxies.read_proxy_vars(function(k) return ({
+	it("isn't vulnerable to httpoxy", function()
+		assert.same({}, http_proxies.new():update(function(k) return ({
 			GATEWAY_INTERFACE = "CGI/1.1";
 			http_proxy = "vulnerable to httpoxy";
 		})[k] end))
