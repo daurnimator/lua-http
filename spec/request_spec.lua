@@ -48,6 +48,20 @@ describe("http.request module", function()
 			assert.same(nil, req.body)
 		end
 	end)
+	it("can construct a request with custom proxies object", function()
+		local http_proxies = require "http.proxies"
+		-- No proxies
+		local proxies = http_proxies.new():update(function() end)
+		local req = request.new_from_uri("http://example.com", nil, proxies)
+		assert.same("example.com", req.host)
+		assert.same(80, req.port)
+		assert.falsy(req.tls)
+		assert.same("example.com", req.headers:get ":authority")
+		assert.same("GET", req.headers:get ":method")
+		assert.same("/", req.headers:get ":path")
+		assert.same("http", req.headers:get ":scheme")
+		assert.same(nil, req.body)
+	end)
 	it("can construct a CONNECT request", function()
 		do -- http url; no path
 			local req = request.new_connect("http://example.com", "connect.me")

@@ -29,7 +29,7 @@ local EOF = lpeg.P(-1)
 local uri_patt = uri_patts.uri * EOF
 local uri_ref = uri_patts.uri_reference * EOF
 
-local function new_from_uri(uri_t, headers)
+local function new_from_uri(uri_t, headers, proxies)
 	if type(uri_t) == "string" then
 		uri_t = assert(uri_patt:match(uri_t), "invalid URI")
 	else
@@ -83,18 +83,25 @@ local function new_from_uri(uri_t, headers)
 		headers = headers;
 		body = nil;
 	}, request_mt)
-	local proxy = default_proxies:choose(scheme, host)
-	if proxy then
-		self:use_proxy(proxy)
+	if proxies == nil then
+		proxies = default_proxies
+	elseif proxies ~= false then
+		assert(getmetatable(proxies) == http_proxies.mt, "proxies argument should be a http.proxies object")
+	end
+	if proxies then
+		local proxy = proxies:choose(scheme, host)
+		if proxy then
+			self:use_proxy(proxy)
+		end
 	end
 	return self
 end
 
-local function new_connect(uri, connect_authority)
+local function new_connect(uri, connect_authority, proxies)
 	local headers = new_headers()
 	headers:append(":authority", connect_authority)
 	headers:append(":method", "CONNECT")
-	return new_from_uri(uri, headers)
+	return new_from_uri(uri, headers, proxies)
 end
 
 function request_methods:clone()
