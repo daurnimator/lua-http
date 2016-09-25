@@ -44,7 +44,7 @@ function proxies_methods:choose(scheme, host)
 			for host_suffix in self.no_proxy:gmatch("%.?([^,]+)") do
 				no_proxy_set[host_suffix] = true
 			end
-			self.no_proxy_set = no_proxy_set
+			self.no_proxy = no_proxy_set
 		end
 		-- From curl docs:
 		-- matched as either a domain which contains the hostname, or the
@@ -52,7 +52,7 @@ function proxies_methods:choose(scheme, host)
 		-- local.com:80, and www.local.com, but not www.notlocal.com.
 		for pos in host:gmatch("%f[^%z%.]()") do
 			local host_suffix = host:sub(pos, -1)
-			if self.no_proxy_set[host_suffix] then
+			if self.no_proxy[host_suffix] then
 				return nil
 			end
 		end

@@ -42,6 +42,7 @@ describe("http.proxies module", function()
 			no_proxy = "foo,bar.com,.extra.dot.com";
 		})[k] end)
 		assert.same("http://http.proxy", proxies:choose("http", "myhost"))
+		assert.is.table(proxies.no_proxy)
 		assert.same(nil, proxies:choose("http", "foo"))
 		assert.same(nil, proxies:choose("http", "bar.com"))
 		assert.same(nil, proxies:choose("http", "subdomain.bar.com"))
