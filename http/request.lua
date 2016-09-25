@@ -1,14 +1,19 @@
 local lpeg = require "lpeg"
 local uri_patts = require "lpeg_patterns.uri"
 local basexx = require "basexx"
-local client_connect = require "http.client".connect
+local client = require "http.client"
 local new_headers = require "http.headers".new
+local http_proxies = require "http.proxies"
 local http_util = require "http.util"
-local version = require "http.version"
+local http_version = require "http.version"
 local monotime = require "cqueues".monotime
 local ce = require "cqueues.errno"
 
+local default_user_agent = string.format("%s/%s", http_version.name, http_version.version)
+local default_proxies = http_proxies.new():update()
+
 local request_methods = {
+	proxies = default_proxies;
 	expect_100_timeout = 1;
 	follow_redirects = true;
 	max_redirects = 5;
@@ -21,15 +26,16 @@ local request_mt = {
 	__index = request_methods;
 }
 
-local default_user_agent = string.format("%s/%s", version.name, version.version)
-local default_proxies = http_util.read_proxy_vars()
-
 local EOF = lpeg.P(-1)
 local uri_patt = uri_patts.uri * EOF
 local uri_ref = uri_patts.uri_reference * EOF
 
-local function new_from_uri_t(uri_t, headers)
-	assert(type(uri_t) == "table")
+local function new_from_uri(uri_t, headers)
+	if type(uri_t) == "string" then
+		uri_t = assert(uri_patt:match(uri_t), "invalid URI")
+	else
+		assert(type(uri_t) == "table")
+	end
 	local scheme = assert(uri_t.scheme, "URI missing scheme")
 	assert(scheme == "https" or scheme == "http" or scheme == "ws" or scheme == "wss", "scheme not valid")
 	local host = tostring(assert(uri_t.host, "URI must include a host")) -- tostring required to e.g. convert lpeg_patterns IPv6 objects
@@ -71,33 +77,20 @@ local function new_from_uri_t(uri_t, headers)
 	if not headers:has("user-agent") then
 		headers:append("user-agent", default_user_agent)
 	end
-	local self = setmetatable({
+	return setmetatable({
 		host = host;
 		port = port;
 		tls = (scheme == "https" or scheme == "wss");
 		headers = headers;
 		body = nil;
 	}, request_mt)
-	local proxy = default_proxies:choose(scheme, host)
-	if proxy then
-		self:use_proxy(proxy)
-	end
-	return self
-end
-
-local function new_from_uri(uri, ...)
-	if type(uri) == "string" then
-		uri = assert(uri_patt:match(uri), "invalid URI")
-	end
-	return new_from_uri_t(uri, ...)
 end
 
 local function new_connect(uri, connect_authority)
-	local uri_t = assert(uri_patt:match(uri), "invalid URI")
 	local headers = new_headers()
 	headers:append(":authority", connect_authority)
 	headers:append(":method", "CONNECT")
-	return new_from_uri_t(uri_t, headers)
+	return new_from_uri(uri, headers)
 end
 
 function request_methods:clone()
@@ -107,10 +100,12 @@ function request_methods:clone()
 		tls = self.tls;
 		sendname = self.sendname;
 		version = self.version;
+		proxy = self.proxy;
 
 		headers = self.headers:clone();
 		body = self.body;
 
+		proxies = rawget(self, "proxies");
 		expect_100_timeout = rawget(self, "expect_100_timeout");
 		follow_redirects = rawget(self, "follow_redirects");
 		max_redirects = rawget(self, "max_redirects");
@@ -169,79 +164,6 @@ function request_methods:to_uri(with_userinfo)
 		end
 	end
 	return scheme .. "://" .. authority .. path
-end
-
-function request_methods:new_stream(timeout)
-	-- TODO: pooling
-	local connection, err, errno = client_connect({
-		host = self.host;
-		port = self.port;
-		tls = self.tls;
-		sendname = self.sendname;
-		version = self.version;
-	}, timeout)
-	if connection == nil then
-		return nil, err, errno
-	end
-	return connection:new_stream()
-end
-
-function request_methods:use_proxy_from_uri_t(uri_t)
-	if uri_t == nil then -- Remove proxy
-		local path = self.headers:get(":path")
-		local method = self.headers:get(":method")
-		if not path or method == "CONNECT" then
-			return true
-		end
-		local path_t = uri_ref:match(path)
-		if path_t and path_t.host then
-			local newpath
-			if method == "OPTIONS" and path_t.path == nil then
-				newpath = "*"
-			else
-				newpath = path_t.path or ""
-				if path_t.query then
-					newpath = newpath .. "?" .. path_t.query
-				end
-			end
-			self.host = path_t.host
-			self.port = path_t.port or http_util.scheme_to_port[path_t.scheme]
-			self.tls = path_t.scheme == "https"
-			self.headers:upsert(":path", newpath)
-			self.headers:delete("proxy-authorization")
-		end
-		return true
-	end
-	assert(type(uri_t) == "table")
-	if uri_t.scheme == "http" then
-		if self.headers:get(":method") == "CONNECT" then
-			error("cannot use HTTP Proxy with CONNECT method")
-		end
-		if uri_t.path ~= nil and uri_t.path ~= "" then
-			error("a HTTP proxy cannot have a path component")
-		end
-		local old_url = self:to_uri(false)
-		self.host = assert(uri_t.host, "proxy is missing host")
-		self.port = uri_t.port or http_util.scheme_to_port[uri_t.scheme]
-		self.tls = false
-		-- proxy requests get a uri that includes host as their path
-		self.headers:upsert(":path", old_url)
-		if uri_t.userinfo then
-			self.headers:upsert("proxy-authorization", "basic " .. basexx.to_base64(uri_t.userinfo), true)
-		else
-			self.headers:delete("proxy-authorization")
-		end
-		return true
-	else
-		error(string.format("unsupported proxy type (%s)", uri_t.scheme))
-	end
-end
-
-function request_methods:use_proxy(uri)
-	if type(uri) == "string" then
-		uri = assert(uri_patt:match(uri), "invalid URI")
-	end
-	return self:use_proxy_from_uri_t(uri)
 end
 
 function request_methods:handle_redirect(orig_headers)
@@ -398,16 +320,110 @@ end
 function request_methods:go(timeout)
 	local deadline = timeout and (monotime()+timeout)
 
+	local request_headers = self.headers
+	local host = self.host
+	local port = self.port
+	local tls = self.tls
+
+	local connection
+
+	local proxy = self.proxy
+	if proxy == nil and self.proxies then
+		assert(getmetatable(self.proxies) == http_proxies.mt, "proxies property should be a http.proxies object")
+		local scheme = tls and "https" or "http" -- rather than :scheme
+		proxy = self.proxies:choose(scheme, host)
+	end
+	if proxy then
+		if type(proxy) == "string" then
+			proxy = assert(uri_patt:match(proxy), "invalid proxy URI")
+		else
+			assert(type(proxy) == "table")
+		end
+		if proxy.scheme == "http" or proxy.scheme == "https" then
+			if tls then
+				-- Proxy via a CONNECT request
+				local authority = http_util.to_authority(host, port, nil)
+				local connect_request = new_connect(proxy, authority)
+				connect_request.proxy = false
+				connect_request.version = 1.1 -- TODO: CONNECT over HTTP/2
+				if tls then
+					if connect_request.tls then
+						error("NYI: TLS over TLS")
+					else
+						-- Hack until https://github.com/wahern/cqueues/issues/137 is fixed
+						connect_request.sendname = self.sendname
+					end
+				end
+				-- Perform CONNECT request
+				local headers, stream, errno = connect_request:go(deadline and deadline-monotime())
+				if not headers then
+					return nil, stream, errno
+				end
+				-- RFC 7231 Section 4.3.6:
+				-- Any 2xx (Successful) response indicates that the sender (and all
+				-- inbound proxies) will switch to tunnel mode
+				local status_reply = headers:get(":status")
+				if status_reply:sub(1, 1) ~= "2" then
+					stream:shutdown()
+					return nil, ce.strerror(ce.ECONNREFUSED), ce.ECONNREFUSED
+				end
+				local sock = stream.connection:take_socket()
+				local err, errno2
+				connection, err, errno2 = client.negotiate(sock, {
+					tls = tls;
+					version = self.version;
+				}, deadline and deadline-monotime())
+				if connection == nil then
+					sock:close()
+					return nil, err, errno2
+				end
+			else
+				if request_headers:get(":method") == "CONNECT" then
+					error("cannot use HTTP Proxy with CONNECT method")
+				end
+				if proxy.path ~= nil and proxy.path ~= "" then
+					error("a HTTP proxy cannot have a path component")
+				end
+				local old_url = self:to_uri(false)
+				host = assert(proxy.host, "proxy is missing host")
+				port = proxy.port or http_util.scheme_to_port[proxy.scheme]
+				-- proxy requests get a uri that includes host as their path
+				request_headers = request_headers:clone()
+				request_headers:upsert(":path", old_url)
+				if proxy.userinfo then
+					request_headers:upsert("proxy-authorization", "basic " .. basexx.to_base64(proxy.userinfo), true)
+				end
+			end
+		else
+			error(string.format("unsupported proxy type (%s)", proxy.scheme))
+		end
+	end
+
+	if not connection then
+		local err, errno
+		connection, err, errno = client.connect({
+			host = host;
+			port = port;
+			tls = tls;
+			sendname = self.sendname;
+			version = self.version;
+		}, deadline and deadline-monotime())
+		if connection == nil then
+			return nil, err, errno
+		end
+	end
+
 	local stream do
 		local err, errno
-		stream, err, errno = self:new_stream(timeout)
-		if stream == nil then return nil, err, errno end
+		stream, err, errno = connection:new_stream()
+		if stream == nil then
+			return nil, err, errno
+		end
 	end
 
 	local body = self.body
-
 	do -- Write outgoing headers
-		local ok, err, errno = stream:write_headers(self.headers, body == nil, deadline and deadline-monotime())
+		local ok, err, errno = stream:write_headers(request_headers, body == nil, deadline and deadline-monotime())
 		if not ok then
 			stream:shutdown()
 			return nil, err, errno
@@ -416,7 +432,7 @@ function request_methods:go(timeout)
 
 	local headers
 	if body then
-		local expect = self.headers:get("expect")
+		local expect = request_headers:get("expect")
 		if expect and expect:lower() == "100-continue" then
 			-- Try to wait for 100-continue before proceeding
 			if deadline then
@@ -493,10 +509,8 @@ function request_methods:go(timeout)
 end
 
 return {
-	new_from_uri_t = new_from_uri_t;
 	new_from_uri = new_from_uri;
 	new_connect = new_connect;
 	methods = request_methods;
 	mt = request_mt;
-	default_proxies = default_proxies;
 }

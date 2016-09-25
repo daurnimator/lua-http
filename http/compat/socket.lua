@@ -132,7 +132,7 @@ function M.request(reqt, b)
 		end
 	end
 	req.headers:upsert("user-agent", M.USERAGENT)
-	req:use_proxy(proxy)
+	req.proxy = proxy or false
 	if user_headers then
 		for name, field in pairs(user_headers) do
 			if name == "host" then

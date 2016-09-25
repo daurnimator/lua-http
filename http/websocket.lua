@@ -32,7 +32,6 @@ local monotime = cqueues.monotime
 local ce = require "cqueues.errno"
 local lpeg = require "lpeg"
 local http_patts = require "lpeg_patterns.http"
-local uri_patts = require "lpeg_patterns.uri"
 local rand = require "openssl.rand"
 local digest = require "openssl.digest"
 local bit = require "http.bit"
@@ -487,11 +486,12 @@ local function new(type)
 	return self
 end
 
-local function new_from_uri_t(uri_t, protocols)
-	local scheme = assert(type(uri_t) == "table" and uri_t.scheme, "URI missing scheme")
+local function new_from_uri(uri, protocols)
+	local request = http_request.new_from_uri(uri)
+	local scheme = request.headers:get(":scheme")
 	assert(scheme == "ws" or scheme == "wss", "scheme not websocket")
 	local self = new("client")
-	self.request = http_request.new_from_uri_t(uri_t)
+	self.request = request
 	self.request.version = 1.1
 	self.request.headers:append("upgrade", "websocket")
 	self.request.headers:append("connection", "upgrade")
@@ -522,13 +522,6 @@ local function new_from_uri_t(uri_t, protocols)
 		self.request.headers:append("sec-websocket-protocol", table.concat(protocols_copy, ",", 1, n_protocols))
 	end
 	return self
-end
-
-local function new_from_uri(uri, ...)
-	if type(uri) == "string" then
-		uri = assert(uri_patts.uri:match(uri), "invalid URI")
-	end
-	return new_from_uri_t(uri, ...)
 end
 
 --[[ Takes a response to a websocket upgrade request,
@@ -642,7 +635,7 @@ function websocket_methods:connect(timeout)
 end
 
 -- Given an incoming HTTP1 request, attempts to upgrade it to a websocket connection
-local function new_from_stream(headers, stream)
+local function new_from_stream(stream, headers)
 	assert(stream.connection.type == "server")
 
 	if stream.connection.version < 1 or stream.connection.version >= 2 then
@@ -762,7 +755,6 @@ function websocket_methods:accept(options, timeout)
 end
 
 return {
-	new_from_uri_t = new_from_uri_t;
 	new_from_uri = new_from_uri;
 	new_from_stream = new_from_stream;
 	methods = websocket_methods;

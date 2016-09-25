@@ -215,13 +215,11 @@ Creates a new connection to an HTTP server.
 		  - `true` indicates to copy the `host` field
 		  - `false` disables SNI
 
-	  - `v6only` (boolean, optional): if the `IPV6_V6ONLY` flag should be set on the underlying socket.  
-		defaults to `false`  
+	  - `v6only` (boolean, optional): if the `IPV6_V6ONLY` flag should be set on the underlying socket.
 
   - `timeout` (optional) is the maximum amount of time (in seconds) to allow for connection to be established.
 
 	This includes time for DNS lookup, connection, TLS negotiation (if tls enabled) and in the case of HTTP2: settings exchange.
-
 
 #### Example {#http.client.connect-example}
 
@@ -667,6 +665,27 @@ Creates and returns a new headers object.
 ### `hpack_context:decode_headers(payload, header_list, pos)` <!-- --> {#http.hpack:decode_headers}
 
 
+## http.proxies
+
+### `new()` <!-- --> {#http.proxies.new}
+
+Returns an empty 'proxies' object
+
+
+### `proxies:update(getenv)` <!-- --> {#http.proxies:update}
+
+`getenv` defaults to [`os.getenv`](http://www.lua.org/manual/5.3/manual.html#pdf-os.getenv)
+
+Reads environmental variables that are used to control if requests go through a proxy.
+
+Returns `proxies`.
+
+
+### `proxies:choose(scheme, host)` <!-- --> {#http.proxies:choose}
+
+Returns the proxy to use for the given `scheme` and `host` as a URI.
+
+
 ## http.request
 
 ### `new_from_uri(uri)` <!-- --> {#http.request.new_from_uri}
@@ -702,6 +721,12 @@ The TLS SNI host name used.
 ### `request.version` <!-- --> {#http.request.version}
 
 The HTTP version to use; leave as `nil` to auto-select.
+
+
+### `request.proxy` <!-- --> {#http.request.proxy}
+
+Specifies the a proxy that the request will be made through.
+The value should be a uri or `false` to turn off proxying for the request.
 
 
 ### `request.headers` <!-- --> {#http.request.headers}
@@ -747,14 +772,6 @@ Creates and returns a clone of the request.
 The clone has its own deep copies of the [`.headers`](#http.request.headers) and [`.h2_settings`](#http.request.h2_settings) fields.
 
 The [`.tls`](#http.request.tls) and [`.body`](#http.request.body) fields are shallow copied from the original request.
-
-
-### `request:use_proxy(uri)` <!-- --> {#http.request:use_proxy}
-
-Edits a request to go through the given proxy.
-If `uri` is `nil`, removes the current proxy.
-
-Current supports http proxies.
 
 
 ### `request:handle_redirect(headers)` <!-- --> {#http.request:handle_redirect}
@@ -1013,25 +1030,6 @@ Joins the `host` and `port` to create a valid authority component.
 Omits the port if it is the default for the `scheme`.
 
 
-### `read_proxy_vars(getenv)` <!-- --> {#http.util.read_proxy_vars}
-
-Returns a 'proxies' object initialised as if [`proxies:update(getenv)`](#http.util.proxies:update) was called.
-
-
-### `proxies:update(getenv)` <!-- --> {#http.util.proxies:update}
-
-`getenv` defaults to [`os.getenv`](http://www.lua.org/manual/5.3/manual.html#pdf-os.getenv)
-
-Re-read environmental variables (using the given function) that are used to control if requests go through a proxy.
-
-
-### `proxies:choose(scheme, host)` <!-- --> {#http.util.proxies:choose}
-
-Returns the proxy to use for the given `scheme` and `host` as a URI.
-
-Useful for passing to [`request:use_proxy()`](#http.request:use_proxy).
-
-
 ### `imf_date(time)` <!-- --> {#http.util.imf_date}
 
 Returns the time in HTTP preferred date format (See [RFC 7231 section 7.1.1.1](https://tools.ietf.org/html/rfc7231#section-7.1.1.1))
@@ -1068,12 +1066,12 @@ Creates a new `http.websocket` object of type `"client"` from the given URI.
   - `protocols` (optional) should be a lua table containing a sequence of protocols to send to the server
 
 
-### `new_from_stream(headers, stream)` <!-- --> {#http.websocket.new_from_stream}
+### `new_from_stream(stream, headers)` <!-- --> {#http.websocket.new_from_stream}
 
 Attempts to create a new `http.websocket` object of type `"server"` from the given request headers and stream.
 
-  - [`headers`](#http.headers) should be headers of a suspected websocket upgrade request from an HTTP 1 client.
   - [`stream`](#http.h1_stream) should be a live HTTP 1 stream of the `"server"` type.
+  - [`headers`](#http.headers) should be headers of a suspected websocket upgrade request from an HTTP 1 client.
 
 This function does **not** have side effects, and is hence okay to use tentatively.
 
@@ -1091,7 +1089,7 @@ Completes negotiation with a websocket client.
   - `options` is a table containing:
 
 	  - `headers` (optional) a [headers](#http.headers) object to use as a prototype for the response headers
-	  - `protocols` (optional) should be a lua table containing a sequence of protocols to to allow from the client
+	  - `protocols` (optional) should be a lua table containing a sequence of protocols to allow from the client
 
 Usually called after a successful [`new_from_stream`](#http.websocket.new_from_stream)
 
