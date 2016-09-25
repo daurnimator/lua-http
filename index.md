@@ -665,6 +665,27 @@ Creates and returns a new headers object.
 ### `hpack_context:decode_headers(payload, header_list, pos)` <!-- --> {#http.hpack:decode_headers}
 
 
+## http.proxies
+
+### `read_proxy_vars(getenv)` <!-- --> {#http.proxies.read_proxy_vars}
+
+Returns a 'proxies' object initialised as if [`proxies:update(getenv)`](#http.proxies.proxies:update) was called.
+
+
+### `proxies:update(getenv)` <!-- --> {#http.proxies:update}
+
+`getenv` defaults to [`os.getenv`](http://www.lua.org/manual/5.3/manual.html#pdf-os.getenv)
+
+Re-read environmental variables (using the given function) that are used to control if requests go through a proxy.
+
+
+### `proxies:choose(scheme, host)` <!-- --> {#http.proxies:choose}
+
+Returns the proxy to use for the given `scheme` and `host` as a URI.
+
+Useful for passing to [`request:use_proxy()`](#http.request:use_proxy).
+
+
 ## http.request
 
 ### `new_from_uri(uri)` <!-- --> {#http.request.new_from_uri}
@@ -963,25 +984,6 @@ print(http_util.split_authority("example.com", "https")) --> "localhost", 443
 
 Joins the `host` and `port` to create a valid authority component.
 Omits the port if it is the default for the `scheme`.
-
-
-### `read_proxy_vars(getenv)` <!-- --> {#http.util.read_proxy_vars}
-
-Returns a 'proxies' object initialised as if [`proxies:update(getenv)`](#http.util.proxies:update) was called.
-
-
-### `proxies:update(getenv)` <!-- --> {#http.util.proxies:update}
-
-`getenv` defaults to [`os.getenv`](http://www.lua.org/manual/5.3/manual.html#pdf-os.getenv)
-
-Re-read environmental variables (using the given function) that are used to control if requests go through a proxy.
-
-
-### `proxies:choose(scheme, host)` <!-- --> {#http.util.proxies:choose}
-
-Returns the proxy to use for the given `scheme` and `host` as a URI.
-
-Useful for passing to [`request:use_proxy()`](#http.request:use_proxy).
 
 
 ### `imf_date(time)` <!-- --> {#http.util.imf_date}
