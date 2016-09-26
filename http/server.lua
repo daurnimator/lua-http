@@ -122,35 +122,36 @@ local function server_loop(self)
 				error(ce.strerror(accept_errno))
 			end
 		else
-			self.n_connections = self.n_connections + 1
-			self.cq:wrap(function()
-				local conn, err, errno = wrap_socket(self, socket)
-				if not conn then
-					socket:close()
-					if err ~= ce.EPIPE -- client closed connection
-						and err ~= ce.ETIMEDOUT -- an operation timed out
-						and errno ~= ce.ECONNRESET then
-						error(err)
-					end
-				else
-					while true do
-						local stream
-						stream, err, errno = conn:get_next_incoming_stream()
-						if stream == nil then
-							break
-						end
-						self.cq:wrap(self.on_stream, self, stream)
-					end
-					-- wait for streams to complete?
-					conn:close()
-					self.n_connections = self.n_connections - 1
-					self.connection_done:signal(1)
-					if (err ~= ce.EPIPE and errno ~= ce.ECONNRESET and errno ~= ce.ENOTCONN)
-					  or (cs.type(conn.socket) == "socket" and conn.socket:pending() ~= 0) then
-						error(err)
-					end
-				end
-			end)
+			self:add_socket(socket)
+		end
+	end
+end
+
+local function handle_socket(self, socket)
+	local conn, err, errno = wrap_socket(self, socket)
+	if not conn then
+		socket:close()
+		if err ~= ce.EPIPE -- client closed connection
+			and err ~= ce.ETIMEDOUT -- an operation timed out
+			and errno ~= ce.ECONNRESET then
+			error(err)
+		end
+	else
+		while true do
+			local stream
+			stream, err, errno = conn:get_next_incoming_stream()
+			if stream == nil then
+				break
+			end
+			self.cq:wrap(self.on_stream, self, stream)
+		end
+		-- wait for streams to complete?
+		conn:close()
+		self.n_connections = self.n_connections - 1
+		self.connection_done:signal(1)
+		if (err ~= ce.EPIPE and errno ~= ce.ECONNRESET and errno ~= ce.ENOTCONN)
+		  or (cs.type(conn.socket) == "socket" and conn.socket:pending() ~= 0) then
+			error(err)
 		end
 	end
 end
@@ -357,6 +358,11 @@ end
 
 function server_methods:loop(...)
 	return self.cq:loop(...)
+end
+
+function server_methods:add_socket(socket)
+	self.n_connections = self.n_connections + 1
+	self.cq:wrap(handle_socket, self, socket)
 end
 
 return {
