@@ -119,7 +119,7 @@ local function server_loop(self)
 					collectgarbage()
 				end
 			else
-				error(ce.strerror(accept_errno))
+				self:onerror()("accept", accept_errno, 2)
 			end
 		else
 			self:add_socket(socket)
@@ -134,7 +134,7 @@ local function handle_socket(self, socket)
 		if err ~= ce.EPIPE -- client closed connection
 			and err ~= ce.ETIMEDOUT -- an operation timed out
 			and errno ~= ce.ECONNRESET then
-			error(err)
+			self:onerror()("wrap", errno, 2)
 		end
 	else
 		while true do
@@ -151,7 +151,7 @@ local function handle_socket(self, socket)
 		self.connection_done:signal(1)
 		if (err ~= ce.EPIPE and errno ~= ce.ECONNRESET and errno ~= ce.ENOTCONN)
 		  or (cs.type(conn.socket) == "socket" and conn.socket:pending() ~= 0) then
-			error(err)
+			self:onerror()("get_next_incoming_stream", errno, 2)
 		end
 	end
 end
@@ -308,6 +308,17 @@ local function listen(tbl)
 		max_concurrent = tbl.max_concurrent;
 		client_timeout = tbl.client_timeout;
 	}
+end
+
+function server_methods:onerror_(op, why, lvl) -- luacheck: ignore 212
+	local msg = string.format("%s: %s", op, ce.strerror(why))
+	error(msg, lvl)
+end
+
+function server_methods:onerror(new_handler)
+	local old_handler = self.on_error_
+	self.on_error_ = new_handler
+	return old_handler
 end
 
 -- Actually wait for and *do* the binding
