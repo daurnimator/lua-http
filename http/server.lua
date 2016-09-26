@@ -143,7 +143,7 @@ local function handle_socket(self, socket)
 			if stream == nil then
 				break
 			end
-			self.cq:wrap(self.on_stream, self, stream)
+			self.cq:wrap(self.onstream, self, stream)
 		end
 		-- wait for streams to complete?
 		conn:close()
@@ -224,7 +224,7 @@ Takes a table of options:
 ]]
 local function new_server(tbl)
 	local socket = assert(tbl.socket, "missing 'socket'")
-	local on_stream = assert(tbl.on_stream, "missing 'on_stream'")
+	local onstream = assert(tbl.onstream, "missing 'onstream'")
 
 	local cq = cqueues.new()
 
@@ -236,7 +236,7 @@ local function new_server(tbl)
 	local self = setmetatable({
 		cq = cq;
 		socket = socket;
-		on_stream = on_stream;
+		onstream = onstream;
 		tls = tbl.tls;
 		ctx = tbl.ctx;
 		max_concurrent = tbl.max_concurrent;
@@ -302,7 +302,7 @@ local function listen(tbl)
 	})
 	return new_server {
 		socket = s;
-		on_stream = tbl.on_stream;
+		onstream = tbl.onstream;
 		tls = tls;
 		ctx = ctx;
 		max_concurrent = tbl.max_concurrent;

@@ -34,7 +34,7 @@ describe("http.compat.prosody module", function()
 		local s = server.listen {
 			host = "localhost";
 			port = 0;
-			on_stream = function(s, stream)
+			onstream = function(s, stream)
 				local h = assert(stream:get_headers())
 				assert.same("http", h:get ":scheme")
 				assert.same("GET", h:get ":method")
@@ -68,7 +68,7 @@ describe("http.compat.prosody module", function()
 		local s = server.listen {
 			host = "localhost";
 			port = 0;
-			on_stream = function(s, stream)
+			onstream = function(s, stream)
 				local h = assert(stream:get_headers())
 				assert.same("http", h:get ":scheme")
 				assert.same("POST", h:get ":method")

@@ -7,7 +7,7 @@ describe("http.server module", function()
 	it("__tostring works", function()
 		local s = server.new {
 			socket = (cs.pair());
-			on_stream = error;
+			onstream = error;
 		}
 		assert.same("http.server{", tostring(s):match("^.-%{"))
 	end)
@@ -28,12 +28,12 @@ describe("http.server module", function()
 			options.host = "localhost"
 			options.port = 0
 		end
-		local on_stream = spy.new(function(s, stream)
+		local onstream = spy.new(function(s, stream)
 			stream:get_headers()
 			stream:shutdown()
 			s:close()
 		end)
-		options.on_stream = on_stream
+		options.onstream = onstream
 		local s = server.listen(options)
 		assert(s:listen())
 		cq:wrap(function()
@@ -67,7 +67,7 @@ describe("http.server module", function()
 		end)
 		assert_loop(cq, TEST_TIMEOUT)
 		assert.truthy(cq:empty())
-		assert.spy(on_stream).was.called()
+		assert.spy(onstream).was.called()
 	end
 	it("works with plain http 1.1 using IP", function()
 		simple_test(cs.AF_INET, false, 1.1)
@@ -97,7 +97,7 @@ describe("http.server module", function()
 	end)
 	it("taking socket from underlying connection is handled well by server", function()
 		local cq = cqueues.new()
-		local on_stream = spy.new(function(s, stream)
+		local onstream = spy.new(function(s, stream)
 			local sock = stream.connection:take_socket()
 			s:close()
 			assert.same("test", sock:read("*a"))
@@ -106,7 +106,7 @@ describe("http.server module", function()
 		local s = server.listen {
 			host = "localhost";
 			port = 0;
-			on_stream = on_stream;
+			onstream = onstream;
 		}
 		assert(s:listen())
 		local _, host, port = s:localname()
@@ -124,6 +124,6 @@ describe("http.server module", function()
 		end)
 		assert_loop(cq, TEST_TIMEOUT)
 		assert.truthy(cq:empty())
-		assert.spy(on_stream).was.called()
+		assert.spy(onstream).was.called()
 	end)
 end)

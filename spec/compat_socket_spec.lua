@@ -18,7 +18,7 @@ describe("http.compat.socket module", function()
 		local s = server.listen {
 			host = "localhost";
 			port = 0;
-			on_stream = function(s, stream)
+			onstream = function(s, stream)
 				local request_headers = assert(stream:get_headers())
 				assert.same("http", request_headers:get ":scheme")
 				assert.same("GET", request_headers:get ":method")
@@ -52,7 +52,7 @@ describe("http.compat.socket module", function()
 		local s = server.listen {
 			host = "localhost";
 			port = 0;
-			on_stream = function(s, stream)
+			onstream = function(s, stream)
 				local request_headers = assert(stream:get_headers())
 				assert.same("http", request_headers:get ":scheme")
 				assert.same("POST", request_headers:get ":method")
@@ -87,7 +87,7 @@ describe("http.compat.socket module", function()
 		local s = server.listen {
 			host = "localhost";
 			port = 0;
-			on_stream = function(s, stream)
+			onstream = function(s, stream)
 				local a, b = stream:get_headers()
 				local request_headers = assert(a,b)
 				assert.same("http", request_headers:get ":scheme")

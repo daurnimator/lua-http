@@ -259,7 +259,7 @@ describe("http.websocket module two sided tests", function()
 		local s = server.listen {
 			host = "localhost";
 			port = 0;
-			on_stream = function(s, stream)
+			onstream = function(s, stream)
 				local headers = assert(stream:get_headers())
 				local ws = websocket.new_from_stream(stream, headers)
 				assert(ws:accept())
@@ -286,7 +286,7 @@ describe("http.websocket module two sided tests", function()
 		local s = server.listen {
 			host = "localhost";
 			port = 0;
-			on_stream = function(s, stream)
+			onstream = function(s, stream)
 				local headers = assert(stream:get_headers())
 				local ws = websocket.new_from_stream(stream, headers)
 				local response_headers = new_headers()

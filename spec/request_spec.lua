@@ -455,7 +455,7 @@ describe("http.request module", function()
 			local s = server.listen {
 				host = "localhost";
 				port = 0;
-				on_stream = function(s, stream)
+				onstream = function(s, stream)
 					local keep_going = server_cb(stream)
 					stream:shutdown()
 					stream.connection:shutdown()
