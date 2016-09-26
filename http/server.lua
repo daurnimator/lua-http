@@ -95,34 +95,30 @@ local function wrap_socket(self, socket, deadline)
 end
 
 local function server_loop(self)
-	while true do
-		if self.n_connections >= self.max_concurrent then
-			cqueues.poll(self.connection_done)
-		end
+	while self.socket do
 		if self.paused then
 			cqueues.poll(self.pause_cond)
-		end
-		if not self.socket then
-			-- closed
-			break
-		end
-		local socket, accept_errno = self.socket:accept({nodelay = true;}, 0)
-		if socket == nil then
-			if accept_errno == ce.ETIMEDOUT then
-				-- Yield this thread until a client arrives
-				cqueues.poll(self.socket)
-			elseif accept_errno == ce.EMFILE then
-				-- Wait for another request to finish
-				if cqueues.poll(self.connection_done, hang_timeout) == hang_timeout then
-					-- If we're stuck waiting, run a garbage collection sweep
-					-- This can prevent a hang
-					collectgarbage()
+		elseif self.n_connections >= self.max_concurrent then
+			cqueues.poll(self.connection_done)
+		else
+			local socket, accept_errno = self.socket:accept({nodelay = true;}, 0)
+			if socket == nil then
+				if accept_errno == ce.ETIMEDOUT then
+					-- Yield this thread until a client arrives
+					cqueues.poll(self.socket)
+				elseif accept_errno == ce.EMFILE then
+					-- Wait for another request to finish
+					if cqueues.poll(self.connection_done, hang_timeout) == hang_timeout then
+						-- If we're stuck waiting, run a garbage collection sweep
+						-- This can prevent a hang
+						collectgarbage()
+					end
+				else
+					self:onerror()("accept", accept_errno, 2)
 				end
 			else
-				self:onerror()("accept", accept_errno, 2)
+				self:add_socket(socket)
 			end
-		else
-			self:add_socket(socket)
 		end
 	end
 end
