@@ -11,6 +11,15 @@ describe("http.server module", function()
 		}
 		assert.same("http.server{", tostring(s):match("^.-%{"))
 	end)
+	it(":onerror with no arguments doesn't clear", function()
+		local s = server.new {
+			socket = (cs.pair());
+			onstream = error;
+		}
+		local onerror = s:onerror()
+		assert.same("function", type(onerror))
+		assert.same(onerror, s:onerror())
+	end)
 	local function simple_test(family, tls, version)
 		local cq = cqueues.new()
 		local options = {

@@ -311,9 +311,11 @@ function server_methods:onerror_(op, why, lvl) -- luacheck: ignore 212
 	error(msg, lvl)
 end
 
-function server_methods:onerror(new_handler)
-	local old_handler = self.on_error_
-	self.on_error_ = new_handler
+function server_methods:onerror(...)
+	local old_handler = self.onerror_
+	if select("#", ...) > 0 then
+		self.onerror_ = ...
+	end
 	return old_handler
 end
 
