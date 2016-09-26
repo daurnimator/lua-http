@@ -69,7 +69,7 @@ local function wrap_socket(self, socket, deadline)
 			elseif proto == nil or proto == "http/1.1" then
 				is_h2 = false
 			else
-				return nil, "unexpected ALPN protocol: " .. proto
+				return nil, "unexpected ALPN protocol: " .. proto, ce.EPROTONOSUPPORT
 			end
 		end
 	end
