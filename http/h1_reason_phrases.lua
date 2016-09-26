@@ -24,6 +24,7 @@ local reason_phrases = setmetatable({
 	["303"] = "See Other";
 	["304"] = "Not Modified";
 	["305"] = "Use Proxy";
+
 	["307"] = "Temporary Redirect";
 	["308"] = "Permanent Redirect";
 
@@ -58,6 +59,8 @@ local reason_phrases = setmetatable({
 	["429"] = "Too Many Requests";
 
 	["431"] = "Request Header Fields Too Large";
+
+	["451"] = "Unavailable For Legal Reasons";
 
 	["500"] = "Internal Server Error";
 	["501"] = "Not Implemented";

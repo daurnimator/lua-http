@@ -362,12 +362,15 @@ frame_handlers[0x1] = function(stream, flags, payload)
 		pos = pos + 5
 
 		local new_parent = stream.connection.streams[stream_dep]
-		if new_parent == nil then
-			error("parent doesn't exist " .. stream_dep) -- FIXME
+
+		-- 5.3.1. Stream Dependencies
+		-- A dependency on a stream that is not currently in the tree
+		-- results in that stream being given a default priority
+		if new_parent then
+			local ok, err = new_parent:reprioritise(stream, exclusive)
+			if not ok then return nil, err end
+			stream.weight = weight
 		end
-		local ok, err = new_parent:reprioritise(stream, exclusive)
-		if not ok then return nil, err end
-		stream.weight = weight
 	end
 
 	if #payload - pos + 1 > MAX_HEADER_BUFFER_SIZE then
@@ -608,7 +611,9 @@ frame_handlers[0x4] = function(stream, flags, payload)
 		end
 		stream.connection:set_peer_settings(peer_settings)
 		-- Ack server's settings
-		return stream:write_settings_frame(true)
+		-- XXX: This shouldn't ignore all errors (it probably should not flush)
+		stream:write_settings_frame(true)
+		return true
 	end
 end
 
@@ -673,7 +678,14 @@ function stream_methods:write_settings_frame(ACK, settings, timeout)
 		flags = 0
 		payload = pack_settings_payload(settings)
 	end
-	return self:write_http2_frame(0x4, flags, payload, timeout)
+	local ok, err, errno = self:write_http2_frame(0x4, flags, payload, timeout)
+	if ok and not ACK then
+		local n = self.connection.send_settings.n + 1
+		self.connection.send_settings.n = n
+		self.connection.send_settings[n] = settings
+		ok = n
+	end
+	return ok, err, errno
 end
 
 -- PUSH_PROMISE
@@ -845,7 +857,12 @@ function stream_methods:write_goaway_frame(last_streamid, err_code, debug_msg, t
 	if debug_msg then
 		payload = payload .. debug_msg
 	end
-	return self:write_http2_frame(0x7, flags, payload, timeout)
+	local ok, err, errno = self:write_http2_frame(0x7, flags, payload, timeout)
+	if not ok then
+		return nil, err, errno
+	end
+	self.connection.send_goaway_lowest = math.min(last_streamid, self.connection.send_goaway_lowest or math.huge)
+	return true
 end
 
 -- WINDOW_UPDATE
@@ -1114,7 +1131,7 @@ function stream_methods:write_chunk(payload, end_stream, timeout)
 		end
 		timeout = deadline and (deadline-monotime())
 	end
-	local ok, err, errno = self:write_data_frame(payload:sub(sent+1), end_stream, timeout)
+	local ok, err, errno = self:write_data_frame(payload:sub(sent+1), end_stream, false, timeout)
 	if not ok then
 		return nil, err, errno
 	end

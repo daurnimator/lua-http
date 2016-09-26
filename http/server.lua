@@ -84,7 +84,7 @@ local function wrap_socket(self, socket, deadline)
 	end
 	local conn, err, errno
 	if is_h2 then
-		conn, err, errno = h2_connection.new(socket, "server", nil, deadline and (deadline-monotime()))
+		conn, err, errno = h2_connection.new(socket, "server", nil)
 	else
 		conn, err, errno = h1_connection.new(socket, "server", 1.1)
 	end

@@ -8,12 +8,11 @@ Example of websocket client usage
   - Close the socket and clean up.
 ]]
 
-local json = require "cjson"
 local websocket = require "http.websocket"
 
-local ws = websocket.new_from_uri("ws://ws-feed.exchange.coinbase.com")
+local ws = websocket.new_from_uri("wss://ws-feed.exchange.coinbase.com")
 assert(ws:connect())
-assert(ws:send(json.encode({type = "subscribe", product_id = "BTC-USD"})))
+assert(ws:send([[{"type": "subscribe", "product_id": "BTC-USD"}]]))
 for _=1, 5 do
 	local data = assert(ws:receive())
 	print(data)

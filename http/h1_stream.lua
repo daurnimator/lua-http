@@ -3,9 +3,12 @@ local monotime = cqueues.monotime
 local cc = require "cqueues.condition"
 local ce = require "cqueues.errno"
 local new_fifo = require "fifo"
+local lpeg = require "lpeg"
+local http_patts = require "lpeg_patterns.http"
 local new_headers = require "http.headers".new
 local reason_phrases = require "http.h1_reason_phrases"
 local stream_common = require "http.stream_common"
+local util = require "http.util"
 local has_zlib, zlib = pcall(require, "http.zlib")
 
 --[[ Maximum amount of data to read during shutdown before giving up on a clean stream shutdown
@@ -14,10 +17,18 @@ local has_zlib, zlib = pcall(require, "http.zlib")
   - larger than most dynamically generated http documents]]
 local clean_shutdown_limit = 500*1024
 
+local EOF = lpeg.P(-1)
+local Connection = lpeg.Ct(http_patts.Connection) * EOF
+local Content_Encoding = lpeg.Ct(http_patts.Content_Encoding) * EOF
+local Transfer_Encoding = lpeg.Ct(http_patts.Transfer_Encoding + EOF) * EOF
+local TE = lpeg.Ct(http_patts.TE) * EOF
+
 local function has(list, val)
-	for i=1, list.n do
-		if list[i]:lower() == val then
-			return true
+	if list then
+		for i=1, #list do
+			if list[i] == val then
+				return true
+			end
 		end
 	end
 	return false
@@ -65,6 +76,7 @@ local function new_stream(connection)
 		body_buffer = nil;
 		body_write_type = nil; -- "closed", "chunked", "length" or "missing"
 		body_write_left = nil; -- integer: only set when body_write_type == "length"
+		body_write_deflate_encoding = nil;
 		body_write_deflate = nil; -- nil or stateful deflate closure
 		body_read_type = nil;
 		body_read_inflate = nil;
@@ -258,9 +270,14 @@ function stream_methods:read_headers(timeout)
 		end
 	end
 
-	-- if client is sends `Connection: close`, server knows it can close at end of response
-	if has(headers:get_split_as_sequence("connection"), "close") then
-		self.close_when_done = true
+	do -- if client is sends `Connection: close`, server knows it can close at end of response
+		local h = headers:get_comma_separated("connection")
+		if h then
+			local connection_header = Connection:match(h)
+			if connection_header and has(connection_header, "close") then
+				self.close_when_done = true
+			end
+		end
 	end
 
 	-- Now guess if there's a body...
@@ -287,15 +304,21 @@ function stream_methods:read_headers(timeout)
 		end
 	elseif headers:has("transfer-encoding") then
 		no_body = false
-		local transfer_encoding = headers:get_split_as_sequence("transfer-encoding")
-		local n = transfer_encoding.n
-		if transfer_encoding[n] == "chunked" then
+		local transfer_encoding = Transfer_Encoding:match(headers:get_comma_separated("transfer-encoding"))
+		local n = #transfer_encoding
+		local last_transfer_encoding = transfer_encoding[n][1]
+		if last_transfer_encoding == "chunked" then
 			self.body_read_type = "chunked"
 			n = n - 1
+			if n == 0 then
+				last_transfer_encoding = nil
+			else
+				last_transfer_encoding = transfer_encoding[n][1]
+			end
 		else
 			self.body_read_type = "close"
 		end
-		if transfer_encoding[n] == "gzip" or transfer_encoding[n] == "deflate" then
+		if last_transfer_encoding == "gzip" or last_transfer_encoding == "deflate" or last_transfer_encoding == "x-gzip" then
 			self.body_read_inflate = zlib.inflate()
 			n = n - 1
 		end
@@ -321,22 +344,25 @@ function stream_methods:read_headers(timeout)
 		no_body = false
 		self.body_read_type = "close"
 	end
+	if has_zlib and self.type == "server" and self.state == "open" and headers:has("te") then
+		local te = TE:match(headers:get_comma_separated("te"))
+		for _, v in ipairs(te) do
+			local tcoding = v[1]
+			if (tcoding == "gzip" or tcoding == "x-gzip" or tcoding "deflate") and v.q ~= 0 then
+				v.q = nil
+				self.body_write_deflate_encoding = v
+				self.body_write_deflate = zlib.deflate()
+				break
+			end
+		end
+	end
 	if no_body then
 		if self.state == "open" then
 			self:set_state("half closed (remote)")
 		else -- self.state == "half closed (local)"
 			self:set_state("closed")
 		end
-	else
-		if self.type == "server" then
-			local te = headers:get_split_as_sequence("te")
-			-- TODO: need to take care of quality suffixes ("deflate; q=0.5")
-			if has_zlib and has_any(te, "gzip", "deflate") then
-				self.body_write_deflate = zlib.deflate()
-			end
-		end
 	end
-
 	return headers
 end
 
@@ -385,6 +411,27 @@ local ignore_fields = {
 function stream_methods:write_headers(headers, end_stream, timeout)
 	local deadline = timeout and (monotime()+timeout)
 	assert(headers, "missing argument: headers")
+	-- Validate up front
+	local connection_header do
+		local h = headers:get_comma_separated("connection")
+		if h then
+			connection_header = Connection:match(h)
+			if not connection_header then
+				error("invalid connection header")
+			end
+		else
+			connection_header = {}
+		end
+	end
+	local transfer_encoding_header do
+		local h = headers:get_comma_separated("transfer-encoding")
+		if h then
+			transfer_encoding_header = Transfer_Encoding:match(h)
+			if not transfer_encoding_header then
+				error("invalid transfer-encoding header")
+			end
+		end
+	end
 	assert(type(end_stream) == "boolean", "'end_stream' MUST be a boolean")
 	if self.state == "closed" or self.state == "half closed (local)" then
 		return nil, ce.EPIPE
@@ -413,7 +460,8 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		if status_code then
 			-- Should send status line
 			local reason_phrase = reason_phrases[status_code]
-			local ok, err, errno = self.connection:write_status_line(self.connection.version, status_code, reason_phrase, deadline and (deadline-monotime()))
+			local version = math.min(self.connection.version, self.peer_version)
+			local ok, err, errno = self.connection:write_status_line(version, status_code, reason_phrase, deadline and deadline-monotime())
 			if not ok then
 				return nil, err, errno
 			end
@@ -427,6 +475,8 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 				path = assert(headers:get(":authority"), "missing authority")
 				assert(not headers:has(":path"), "CONNECT requests should not have a path")
 			else
+				-- RFC 7230 Section 5.4: A client MUST send a Host header field in all HTTP/1.1 request messages.
+				assert(self.connection.version < 1.1 or headers:has(":authority"), "missing authority")
 				path = assert(headers:get(":path"), "missing path")
 			end
 			if self.req_locked then
@@ -449,15 +499,13 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		end
 	end
 
-	local connection_header = headers:get_split_as_sequence("connection")
-	local transfer_encoding_header = headers:get_split_as_sequence("transfer-encoding")
 	local cl = headers:get("content-length") -- ignore subsequent content-length values
 	local add_te_gzip = false
 	if self.req_method == "CONNECT" and (self.type == "client" or status_code == "200") then
 		-- successful CONNECT requests always continue until the connection is closed
 		self.body_write_type = "close"
 		self.close_when_done = true
-		if self.type == "server" and (cl or transfer_encoding_header.n > 0) then
+		if self.type == "server" and (cl or transfer_encoding_header) then
 			-- RFC 7231 Section 4.3.6:
 			-- A server MUST NOT send any Transfer-Encoding or Content-Length header
 			-- fields in a 2xx (Successful) response to CONNECT.
@@ -483,7 +531,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		if cl then
 			-- RFC 7230 Section 3.3.2:
 			-- A sender MUST NOT send a Content-Length header field in any message that contains a Transfer-Encoding header field.
-			if transfer_encoding_header.n > 0 then
+			if transfer_encoding_header then
 				error("Content-Length not allowed in message with a transfer-encoding")
 			elseif self.type == "server" then
 				-- A server MUST NOT send a Content-Length header field in any response with a status code of 1xx (Informational) or 204 (No Content)
@@ -496,8 +544,8 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 			-- Make sure 'end_stream' is respected
 			if self.type == "server" and (self.req_method == "HEAD" or status_code == "304") then
 				self.body_write_type = "missing"
-			elseif transfer_encoding_header.n > 0 then
-				if transfer_encoding_header[transfer_encoding_header.n] == "chunked" then
+			elseif transfer_encoding_header then
+				if transfer_encoding_header[#transfer_encoding_header][1] == "chunked" then
 					-- Set body type to chunked so that we know how to end the stream
 					self.body_write_type = "chunked"
 				else
@@ -527,7 +575,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 				-- for an HTTP/1.0 server, we fall-back to closing the connection at the end of the stream
 				-- else is an HTTP/1.0 client with `connection: keep-alive` but no other header indicating the body form.
 					-- this cannot be reasonably handled, so throw an error.
-			if transfer_encoding_header[transfer_encoding_header.n] == "chunked" then
+			if transfer_encoding_header and transfer_encoding_header[#transfer_encoding_header][1] == "chunked" then
 				self.body_write_type = "chunked"
 			elseif cl then
 				self.body_write_type = "length"
@@ -537,8 +585,10 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 			elseif self.connection.version == 1.1 and (self.type == "client" or self.peer_version == 1.1) then
 				self.body_write_type = "chunked"
 				-- transfer-encodings are ordered. we need to make sure we place "chunked" last
-				transfer_encoding_header.n = transfer_encoding_header.n + 1
-				transfer_encoding_header[transfer_encoding_header.n] = "chunked"
+				if not transfer_encoding_header then
+					transfer_encoding_header = {nil} -- preallocate
+				end
+				table.insert(transfer_encoding_header, {"chunked"})
 			elseif self.type == "server" then
 				-- default for servers if they don't send a particular header
 				self.body_write_type = "close"
@@ -561,22 +611,25 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 				if self.body_write_deflate -- only use if client sent the TE header allowing it
 					and not cl -- not allowed to use both content-length *and* transfer-encoding
 					and not end_stream -- no point encoding body if there isn't one
-					and not has_any(headers:get_split_as_sequence("content-encoding"), "gzip", "deflate")
+					and not has_any(Content_Encoding:match(headers:get_comma_separated("content-encoding") or ""), "gzip", "x-gzip", "deflate")
 					-- don't bother if content-encoding is already gzip/deflate
 					-- TODO: need to take care of quality suffixes ("deflate; q=0.5")
 				then
-					-- Possibly need to insert before "chunked"
-					local i = transfer_encoding_header.n
-					if transfer_encoding_header[i] == "chunked" then
-						table.insert(transfer_encoding_header, i, "gzip")
-						transfer_encoding_header.n = i + 1
-					elseif transfer_encoding_header[i] ~= "gzip" and transfer_encoding_header[i] ~= "deflate" then
-						i = i + 1
-						transfer_encoding_header[i] = "gzip"
-						transfer_encoding_header.n = i
+					if transfer_encoding_header then
+						local n = #transfer_encoding_header
+						-- Possibly need to insert before "chunked"
+						if transfer_encoding_header[n][1] == "chunked" then
+							transfer_encoding_header[n+1] = transfer_encoding_header[n]
+							transfer_encoding_header[n] = self.body_write_deflate_encoding
+						else
+							transfer_encoding_header[n+1] = self.body_write_deflate_encoding
+						end
+					else
+						transfer_encoding_header = {self.body_write_deflate_encoding}
 					end
 				else
 					-- discard the encoding context (if there was one)
+					self.body_write_deflate_encoding = nil
 					self.body_write_deflate = nil
 				end
 			end
@@ -604,22 +657,30 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 	if add_te_gzip then
 		-- Doesn't matter if it gets added more than once.
 		if not has(connection_header, "te") then
-			connection_header.n = connection_header.n + 1
-			connection_header[connection_header.n] = "te"
+			table.insert(connection_header, "te")
 		end
-		local ok, err, errno = self.connection:write_header("te", "gzip", deadline and deadline-monotime())
+		local ok, err, errno = self.connection:write_header("te", "gzip, deflate", deadline and deadline-monotime())
 		if not ok then
 			return nil, err, errno
 		end
 	end
 	-- Write transfer-encoding, content-length and connection headers separately
-	if transfer_encoding_header.n > 0 then
+	if transfer_encoding_header and transfer_encoding_header[1] then
 		-- Add to connection header
 		if not has(connection_header, "transfer-encoding") then
-			connection_header.n = connection_header.n + 1
-			connection_header[connection_header.n] = "transfer-encoding"
+			table.insert(connection_header, "transfer-encoding")
 		end
-		local value = table.concat(transfer_encoding_header, ",", 1, transfer_encoding_header.n)
+		local value = {}
+		for i, v in ipairs(transfer_encoding_header) do
+			local params = {v[1]}
+			for k, vv in pairs(v) do
+				if type(k) == "string" then
+					params[#params+1] = k .. "=" .. util.maybe_quote(vv)
+				end
+			end
+			value[i] = table.concat(params, ";")
+		end
+		value = table.concat(value, ",")
 		local ok, err, errno = self.connection:write_header("transfer-encoding", value, deadline and (deadline-monotime()))
 		if not ok then
 			return nil, err, errno
@@ -630,8 +691,8 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 			return nil, err, errno
 		end
 	end
-	if connection_header.n > 0 then
-		local value = table.concat(connection_header, ",", 1, connection_header.n)
+	if connection_header and connection_header[1] then
+		local value = table.concat(connection_header, ",")
 		local ok, err, errno = self.connection:write_header("connection", value, deadline and (deadline-monotime()))
 		if not ok then
 			return nil, err, errno

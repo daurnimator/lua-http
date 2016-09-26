@@ -13,7 +13,6 @@ An index of field name => array indices is kept.
 ]]
 
 local unpack = table.unpack or unpack -- luacheck: ignore 113
-local http_util = require "http.util"
 
 local entry_methods = {}
 local entry_mt = {
@@ -182,10 +181,6 @@ function headers_methods:get_comma_separated(name)
 	end
 end
 
-function headers_methods:get_split_as_sequence(name)
-	return http_util.split_header(self:get_comma_separated(name))
-end
-
 function headers_methods:modifyi(i, ...)
 	local e = self._data[i]
 	if e == nil then error("invalid index") end
@@ -224,6 +219,15 @@ end
 function headers_methods:sort()
 	table.sort(self._data, default_cmp)
 	rebuild_index(self)
+end
+
+function headers_methods:dump(file, prefix)
+	file = file or io.stderr
+	prefix = prefix or ""
+	for name, value in self:each() do
+		assert(file:write(string.format("%s%s: %s\n", prefix, name, value)))
+	end
+	assert(file:flush())
 end
 
 return {

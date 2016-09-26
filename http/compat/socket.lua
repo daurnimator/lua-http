@@ -7,7 +7,7 @@ This module a few key differences:
   - The user-agent will be from lua-http
   - lua-http features (such as HTTPS and HTTP2) will be used where possible
   - trailers are currently discarded
-  - error messages are differents
+  - error messages are different
 ]]
 
 local monotime = require "cqueues".monotime
@@ -16,9 +16,9 @@ local request = require "http.request"
 local version = require "http.version"
 local reason_phrases = require "http.h1_reason_phrases"
 
-local _M = {
-	PROXY = nil; -- default proxy used for connections;
-	TIMEOUT = 60; -- timeout for all I/O operations;
+local M = {
+	PROXY = nil; -- default proxy used for connections
+	TIMEOUT = 60; -- timeout for all I/O operations
 	-- default user agent reported to server.
 	USERAGENT = string.format("%s/%s (luasocket compatibility layer)",
 		version.name, version.version);
@@ -47,12 +47,12 @@ local function returns_1()
 	return 1
 end
 
-function _M.request(reqt, b)
-	local deadline = _M.TIMEOUT and (monotime()+_M.TIMEOUT)
+function M.request(reqt, b)
+	local deadline = M.TIMEOUT and monotime()+M.TIMEOUT
 	local req, proxy, user_headers, get_body
 	if type(reqt) == "string" then
 		req = request.new_from_uri(reqt)
-		proxy = _M.PROXY
+		proxy = M.PROXY
 		if b ~= nil then
 			assert(type(b) == "string", "body must be nil or string")
 			req.headers:upsert(":method", "POST")
@@ -63,7 +63,7 @@ function _M.request(reqt, b)
 	else
 		assert(reqt.create == nil, "'create' option not supported")
 		req = request.new_from_uri(reqt.url)
-		proxy = reqt.proxy or _M.PROXY
+		proxy = reqt.proxy or M.PROXY
 		if reqt.host ~= nil then
 			req.host = reqt.host
 		end
@@ -131,10 +131,8 @@ function _M.request(reqt, b)
 			get_body = returns_1
 		end
 	end
-	req.headers:upsert("user-agent", _M.USERAGENT)
-	if proxy then
-		error("PROXYs are not currently supported by lua-http")
-	end
+	req.headers:upsert("user-agent", M.USERAGENT)
+	req.proxy = proxy or false
 	if user_headers then
 		for name, field in pairs(user_headers) do
 			if name == "host" then
@@ -176,4 +174,4 @@ function _M.request(reqt, b)
 	return body, code, headers, status
 end
 
-return _M
+return M

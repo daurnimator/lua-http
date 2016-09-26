@@ -2,6 +2,8 @@
 
 lua-http is an HTTP library for Lua, it supports: both client and server operations, both HTTP 1 and HTTP 2.
 
+HTTP over TLS (i.e. HTTPS) is fully supported.
+
 
 ## Conventions
 
@@ -81,10 +83,20 @@ The HTTP version as a number
 ### `connection:peername()` <!-- --> {#connection:peername}
 
 
+### `connection:shutdown()` <!-- --> {#connection:shutdown}
+
+
 ### `connection:close()` <!-- --> {#connection:close}
 
 
+### `connection:new_stream()` <!-- --> {#connection:new_stream}
+
+Create a new [stream](#stream) on the connection.
+
+
 ### `connection:get_next_incoming_stream(timeout)` <!-- --> {#connection:get_next_incoming_stream}
+
+Returns the next peer initiated [stream](#stream) on the connection.
 
 
 ## stream
@@ -99,8 +111,13 @@ The underlying [*connection*](#connection) object
 
 ### `stream:get_headers(timeout)` <!-- --> {#stream:get_headers}
 
+Retrieves the next complete headers object (i.e. a block of headers or trailers) from the stream.
+
 
 ### `stream:write_headers(headers, end_stream, timeout)` <!-- --> {#stream:write_headers}
+
+Write the given [`headers`](#http.headers) object to the stream.
+Takes a flag indicating if this is the last chunk in the stream, if `true` the stream will be closed.
 
 
 ### `stream:get_next_chunk(timeout)` <!-- --> {#stream:get_next_chunk}
@@ -113,8 +130,13 @@ Returns nothing
 
 ### `stream:write_chunk(chunk, end_stream, timeout)` <!-- --> {#stream:write_chunk}
 
+Write the string `chunk` to the stream body.
+Takes a flag indicating if this is the last chunk in the stream, if `true` the stream will be closed.
+
 
 ### `stream:shutdown()` <!-- --> {#stream:shutdown}
+
+Close the stream.
 
 
 # Modules
@@ -193,13 +215,11 @@ Creates a new connection to an HTTP server.
 		  - `true` indicates to copy the `host` field
 		  - `false` disables SNI
 
-	  - `v6only` (boolean, optional): if the `IPV6_V6ONLY` flag should be set on the underlying socket.  
-		defaults to `false`  
+	  - `v6only` (boolean, optional): if the `IPV6_V6ONLY` flag should be set on the underlying socket.
 
   - `timeout` (optional) is the maximum amount of time (in seconds) to allow for connection to be established.
 
 	This includes time for DNS lookup, connection, TLS negotiation (if tls enabled) and in the case of HTTP2: settings exchange.
-
 
 #### Example {#http.client.connect-example}
 
@@ -218,6 +238,11 @@ local myconnection = http_client.connect {
 ## http.h1_connection
 
 ### `new(socket, conn_type, version)` <!-- --> {#http.h1_connection.new}
+
+
+### `h1_connection.version` <!-- --> {#http.h1_connection.version}
+
+Either `1.0` or `1.1`
 
 
 ### `h1_connection:checktls()` <!-- --> {#http.h1_connection:checktls}
@@ -243,6 +268,8 @@ See [`connection:peername()`](#connection:peername)
 
 ### `h1_connection:shutdown(dir)` <!-- --> {#http.h1_connection:shutdown}
 
+See [`connection:shutdown()`](#connection:shutdown)
+
 
 ### `h1_connection:close()` <!-- --> {#http.h1_connection:close}
 
@@ -251,10 +278,15 @@ See [`connection:close()`](#connection:close)
 
 ### `h1_connection:new_stream()` <!-- --> {#http.h1_connection:new_stream}
 
+See [`connection:new_stream()`](#connection:new_stream)
+
 
 ### `h1_connection:get_next_incoming_stream(timeout)` <!-- --> {#http.h1_connection:get_next_incoming_stream}
 
 See [`connection:get_next_incoming_stream()`](#connection:get_next_incoming_stream)
+
+
+### `h1_connection:flush(...)` <!-- --> {#http.h1_connection:flush}
 
 
 ### `h1_connection:read_request_line(timeout)` <!-- --> {#http.h1_connection:read_request_line}
@@ -330,7 +362,12 @@ an `http.h1_stream` has the following methods:
 An HTTP 2 connection can have multiple streams active and transmitting data at once,
 hence an `http.h2_connection` acts much like a scheduler.
 
-### `new(socket, conn_type, settings, timeout)` <!-- --> {#http.h2_connection.new}
+### `new(socket, conn_type, settings)` <!-- --> {#http.h2_connection.new}
+
+
+### `h2_connection.version` <!-- --> {#http.h2_connection.version}
+
+`2`
 
 
 ### `h2_connection:pollfd()` <!-- --> {#http.h2_connection:pollfd}
@@ -367,6 +404,8 @@ See [`connection:peername()`](#connection:peername)
 
 
 ### `h2_connection:shutdown()` <!-- --> {#http.h2_connection:shutdown}
+
+See [`connection:shutdown()`](#connection:shutdown)
 
 
 ### `h2_connection:close()` <!-- --> {#http.h2_connection:close}
@@ -558,9 +597,6 @@ Creates and returns a new headers object.
 ### `headers:get_comma_separated(name)` <!-- --> {#http.headers:get_comma_separated}
 
 
-### `headers:get_split_as_sequence(name)` <!-- --> {#http.headers:get_split_as_sequence}
-
-
 ### `headers:modifyi(i, value, never_index)` <!-- --> {#http.headers:modifyi}
 
 
@@ -568,6 +604,9 @@ Creates and returns a new headers object.
 
 
 ### `headers:sort()` <!-- --> {#http.headers:sort}
+
+
+### `headers:dump(file)` <!-- --> {#http.headers:dump}
 
 
 ## http.hpack
@@ -626,6 +665,27 @@ Creates and returns a new headers object.
 ### `hpack_context:decode_headers(payload, header_list, pos)` <!-- --> {#http.hpack:decode_headers}
 
 
+## http.proxies
+
+### `new()` <!-- --> {#http.proxies.new}
+
+Returns an empty 'proxies' object
+
+
+### `proxies:update(getenv)` <!-- --> {#http.proxies:update}
+
+`getenv` defaults to [`os.getenv`](http://www.lua.org/manual/5.3/manual.html#pdf-os.getenv)
+
+Reads environmental variables that are used to control if requests go through a proxy.
+
+Returns `proxies`.
+
+
+### `proxies:choose(scheme, host)` <!-- --> {#http.proxies:choose}
+
+Returns the proxy to use for the given `scheme` and `host` as a URI.
+
+
 ## http.request
 
 ### `new_from_uri(uri)` <!-- --> {#http.request.new_from_uri}
@@ -661,6 +721,12 @@ The TLS SNI host name used.
 ### `request.version` <!-- --> {#http.request.version}
 
 The HTTP version to use; leave as `nil` to auto-select.
+
+
+### `request.proxy` <!-- --> {#http.request.proxy}
+
+Specifies the a proxy that the request will be made through.
+The value should be a uri or `false` to turn off proxying for the request.
 
 
 ### `request.headers` <!-- --> {#http.request.headers}
@@ -699,6 +765,31 @@ Respect RFC 2616 Section 10.3.3 and **don't** convert POST requests into body-le
 Defaults to `false`.
 
 
+### `request:clone()` <!-- --> {#http.request:clone}
+
+Creates and returns a clone of the request.
+
+The clone has its own deep copies of the [`.headers`](#http.request.headers) and [`.h2_settings`](#http.request.h2_settings) fields.
+
+The [`.tls`](#http.request.tls) and [`.body`](#http.request.body) fields are shallow copied from the original request.
+
+
+### `request:handle_redirect(headers)` <!-- --> {#http.request:handle_redirect}
+
+Process a redirect.
+
+`headers` should be response headers for a redirect.
+
+Returns a new `request` object that will fetch from new location.
+
+
+### `request:to_uri(with_userinfo)` <!-- --> {#http.request:to_uri}
+
+Returns a URI for the request.
+
+If `with_userinfo` is `true` and the request has an `authorization` header (or `proxy-authorization` for a CONNECT request), the returned URI will contain a userinfo component.
+
+
 ### `request:set_body(body)` <!-- --> {#http.request:set_body}
 
 Allows setting a request body. `body` may be a string, function or lua file object.
@@ -706,15 +797,6 @@ Allows setting a request body. `body` may be a string, function or lua file obje
   - If `body` is a string it will be sent as given.
   - If `body` is a function, it will be called repeatedly like an iterator. It should return chunks of the request body as a string or `nil` if done.
   - If `body` is a lua file object, it will be [`:seek`'d](http://www.lua.org/manual/5.3/manual.html#pdf-file:seek) to the start, then sent as a body. Any errors encountered during file operations **will be thrown**.
-
-
-### `request:clone()` <!-- --> {#http.request:clone}
-
-Creates and returns a clone of the request.
-
-The clone has its own deep copy of the [`.headers`](#http.request.headers) field.
-
-The [`.tls`](#http.request.tls) and body fields are shallow copied from the original request.
 
 
 ### `request:go(timeout)` <!-- --> {#http.request:timeout}
@@ -747,6 +829,52 @@ Cause [`server:run`](#http.server:run) to stop processing new clients and return
 
 
 ### `server:run(on_stream, cq)` <!-- --> {#http.server:run}
+
+
+## http.socks
+
+Implements a subset of the SOCKS proxy protocol.
+
+### `connect(uri)` <!-- --> {#http.socks.connect}
+
+  - `uri` is a string with the address of the SOCKS server. A scheme of `"socks5"` will resolve hosts locally, a scheme of `"socks5h"` will resolve hosts on the SOCKS server. If the URI has a userinfo component it will be sent to the SOCKS server as a username and password.
+
+Returns a *http.socks* object.
+
+
+### `fdopen(socket)` <!-- --> {#http.socks.fdopen}
+
+  - `socket` should be a cqueues socket object
+
+Returns a *http.socks* object.
+
+
+### `socks.needs_resolve` <!-- --> {#http.socks.needs_resolve}
+
+Specifies if the destination host should be resolved locally.
+
+
+### `socks:clone()` <!-- --> {#http.socks:clone}
+
+Make a clone of a given socks object.
+
+
+### `socks:add_username_password_auth(username, password)` <!-- --> {#http.socks:add_username_password_auth}
+
+Add username + password authorisation to the set of allowed authorisation methods with the given credentials.
+
+
+### `socks:negotiate(host, port, timeout)` <!-- --> {#http.socks:negotiate}
+
+Complete the SOCKS connection.
+
+  - `host` (required) a string to pass to the SOCKS server as the host to connect to. Will be resolved locally if [`.needs_resolve`](#http.socks.needs_resolve) is `true`
+  - `port` (required) a number to pass to the SOCKS server as the port to connect to
+
+
+### `socks:take_socket()` <!-- --> {#http.socks:take_socket}
+
+Take possesion of the socket object managed by the http.socks object. Returns the socket (or `nil` if not available).
 
 
 ## http.stream_common
@@ -902,18 +1030,18 @@ Joins the `host` and `port` to create a valid authority component.
 Omits the port if it is the default for the `scheme`.
 
 
-### `split_header(str)` <!-- --> {#http.util.split_header}
-
-Many HTTP headers are specified to be comma seperated elements with optional whitespace. This function returns a table with a sequence of these elements.
-
-The returned table has an `n` field containing the number of elements.
-
-
 ### `imf_date(time)` <!-- --> {#http.util.imf_date}
 
 Returns the time in HTTP preferred date format (See [RFC 7231 section 7.1.1.1](https://tools.ietf.org/html/rfc7231#section-7.1.1.1))
 
 `time` defaults to the current time
+
+
+### `maybe_quote(str)` <!-- --> {#http.util.maybe_quote}
+
+  - If `str` is a valid `token`, return it as-is.
+  - If `str` would be valid as a `quoted-string`, return the quoted version
+  - Otherwise, returns `nil`
 
 
 ## http.version
@@ -938,12 +1066,12 @@ Creates a new `http.websocket` object of type `"client"` from the given URI.
   - `protocols` (optional) should be a lua table containing a sequence of protocols to send to the server
 
 
-### `new_from_stream(headers, stream)` <!-- --> {#http.websocket.new_from_stream}
+### `new_from_stream(stream, headers)` <!-- --> {#http.websocket.new_from_stream}
 
 Attempts to create a new `http.websocket` object of type `"server"` from the given request headers and stream.
 
-  - [`headers`](#http.headers) should be headers of a suspected websocket upgrade request from a HTTP 1 client.
   - [`stream`](#http.h1_stream) should be a live HTTP 1 stream of the `"server"` type.
+  - [`headers`](#http.headers) should be headers of a suspected websocket upgrade request from an HTTP 1 client.
 
 This function does **not** have side effects, and is hence okay to use tentatively.
 
@@ -954,11 +1082,14 @@ Amount of time (in seconds) to wait between sending a close frame and actually c
 Defaults to `3` seconds.
 
 
-### `websocket:accept(protocols, timeout)` <!-- --> {#http.websocket:accept}
+### `websocket:accept(options, timeout)` <!-- --> {#http.websocket:accept}
 
 Completes negotiation with a websocket client.
 
-  - `protocols` (optional) should be a lua table containing a sequence of protocols to to allow from the client
+  - `options` is a table containing:
+
+	  - `headers` (optional) a [headers](#http.headers) object to use as a prototype for the response headers
+	  - `protocols` (optional) should be a lua table containing a sequence of protocols to allow from the client
 
 Usually called after a successful [`new_from_stream`](#http.websocket.new_from_stream)
 
