@@ -336,6 +336,11 @@ function server_methods:pause()
 	self.pause_cond:signal()
 end
 
+function server_methods:resume()
+	self.paused = false
+	self.pause_cond:signal()
+end
+
 function server_methods:close()
 	cqueues.cancel(self.cq:pollfd())
 	self.cq:reset()

@@ -825,7 +825,10 @@ This interface is **unstable**.
 
 ### `server:pause()` <!-- --> {#http.server:pause}
 
-Cause the server loop to stop processing new clients until resumed.
+Cause the server loop to stop processing new clients until [`:resume`](#http.server:resume) is called.
+
+
+### `server:resume()` <!-- --> {#http.server:resume}
 
 
 ### `server:close()` <!-- --> {#http.server:close}
