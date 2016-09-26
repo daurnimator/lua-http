@@ -814,6 +814,9 @@ This interface is **unstable**.
 ### `listen(options)` <!-- --> {#http.server.connect}
 
 
+### `server:onerror(new_handler)` <!-- --> {#http.server:onerror}
+
+
 ### `server:listen(timeout)` <!-- --> {#http.server:listen}
 
 
@@ -822,13 +825,31 @@ This interface is **unstable**.
 
 ### `server:pause()` <!-- --> {#http.server:pause}
 
-Cause [`server:run`](#http.server:run) to stop processing new clients and return.
+Cause the server loop to stop processing new clients until resumed.
 
 
 ### `server:close()` <!-- --> {#http.server:close}
 
 
-### `server:run(on_stream, cq)` <!-- --> {#http.server:run}
+### `server:pollfd()` <!-- --> {#http.server:pollfd}
+
+
+### `server:events()` <!-- --> {#http.server:events}
+
+
+### `server:timeout()` <!-- --> {#http.server:timeout}
+
+
+### `server:empty()` <!-- --> {#http.server:empty}
+
+
+### `server:step()` <!-- --> {#http.server:step}
+
+
+### `server:loop()` <!-- --> {#http.server:loop}
+
+
+### `server:add_socket(socket)` <!-- --> {#http.server:add_socket}
 
 
 ## http.socks
