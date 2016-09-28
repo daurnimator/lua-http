@@ -703,6 +703,44 @@ describe("http.request module", function()
 				stream:shutdown()
 			end)
 		end)
+		it("fails correctly on non CONNECT proxy", function()
+			test(function(stream)
+				local h = assert(stream:get_headers())
+				assert.same("CONNECT", h:get(":method"))
+				local sock = stream.connection:take_socket()
+				assert(sock:write("foo"))
+				sock:close()
+			end, function(req)
+				req.tls = true
+				req.proxy = {
+					scheme = "http";
+					host = req.host;
+					port = req.port;
+					userinfo = "user:pass";
+				}
+				local ok = req:go()
+				assert.falsy(ok)
+			end)
+		end)
+		it("fails correctly on failed CONNECT proxy attempt", function()
+			test(function(stream)
+				local h = assert(stream:get_headers())
+				assert.same("CONNECT", h:get(":method"))
+				local resp_headers = new_headers()
+				resp_headers:append(":status", "400")
+				assert(stream:write_headers(resp_headers, true))
+			end, function(req)
+				req.tls = true
+				req.proxy = {
+					scheme = "http";
+					host = req.host;
+					port = req.port;
+					userinfo = "user:pass";
+				}
+				local ok = req:go()
+				assert.falsy(ok)
+			end)
+		end)
 		it("can make request via SOCKS proxy", function()
 			local cs = require "cqueues.socket"
 			local socks_server = cs.listen {
