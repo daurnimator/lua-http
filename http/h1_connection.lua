@@ -88,13 +88,13 @@ function connection_methods:clearerr(...)
 end
 
 function connection_methods:take_socket()
-	-- TODO: shutdown streams?
 	local s = self.socket
 	if s == nil then
 		-- already taken
 		return nil
 	end
 	self.socket = nil
+	-- Shutdown *after* taking away socket so shutdown handlers can't effect the socket
 	self:shutdown()
 	-- Reset socket to some defaults
 	s:onerror(nil)

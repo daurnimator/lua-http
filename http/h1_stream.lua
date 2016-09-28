@@ -433,7 +433,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		end
 	end
 	assert(type(end_stream) == "boolean", "'end_stream' MUST be a boolean")
-	if self.state == "closed" or self.state == "half closed (local)" then
+	if self.state == "closed" or self.state == "half closed (local)" or self.connection.socket == nil then
 		return nil, ce.EPIPE
 	end
 	local status_code, method
