@@ -456,7 +456,7 @@ describe("http.request module", function()
 				host = "localhost";
 				port = 0;
 				onstream = function(s, stream)
-					local keep_going = server_cb(stream)
+					local keep_going = server_cb(stream, s)
 					stream:shutdown()
 					stream.connection:shutdown()
 					if not keep_going then
@@ -672,6 +672,34 @@ describe("http.request module", function()
 				orig_headers:append("location", "/foo")
 				local new_req = req:handle_redirect(orig_headers)
 				local _, stream = assert(new_req:go())
+				stream:shutdown()
+			end)
+		end)
+		it("CONNECT proxy", function()
+			test(function(stream, s)
+				local h = assert(stream:get_headers())
+				local resp_headers = new_headers()
+				resp_headers:append(":status", "200")
+				assert(stream:write_headers(resp_headers, false))
+				if h:get(":method") == "CONNECT" then
+					assert(stream.connection.version < 2)
+					local sock = assert(stream.connection:take_socket())
+					s:add_socket(sock)
+					return true
+				else
+					assert(stream:write_chunk("hello world", true))
+				end
+			end, function(req)
+				req.tls = true
+				req.proxy = {
+					scheme = "http";
+					host = req.host;
+					port = req.port;
+					userinfo = "user:pass";
+				}
+				local headers, stream = assert(req:go())
+				assert.same("200", headers:get(":status"))
+				assert.same("hello world", assert(stream:get_body_as_string()))
 				stream:shutdown()
 			end)
 		end)
