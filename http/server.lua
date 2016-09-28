@@ -332,11 +332,13 @@ end
 function server_methods:pause()
 	self.paused = true
 	self.pause_cond:signal()
+	return true
 end
 
 function server_methods:resume()
 	self.paused = false
 	self.pause_cond:signal()
+	return true
 end
 
 function server_methods:close()
@@ -348,6 +350,7 @@ function server_methods:close()
 		self.socket:close()
 		self.socket = nil
 	end
+	return true
 end
 
 function server_methods:pollfd()
@@ -377,6 +380,7 @@ end
 function server_methods:add_socket(socket)
 	self.n_connections = self.n_connections + 1
 	self.cq:wrap(handle_socket, self, socket)
+	return true
 end
 
 return {
