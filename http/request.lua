@@ -385,6 +385,7 @@ function request_methods:go(timeout)
 				if proxy.path ~= nil and proxy.path ~= "" then
 					error("a HTTP proxy cannot have a path component")
 				end
+				-- TODO: Check if :path already has authority?
 				local old_url = self:to_uri(false)
 				host = assert(proxy.host, "proxy is missing host")
 				port = proxy.port or http_util.scheme_to_port[proxy.scheme]
@@ -397,7 +398,7 @@ function request_methods:go(timeout)
 			end
 		elseif proxy.scheme:match "^socks" then
 			-- https://github.com/wahern/cqueues/issues/137
-			assert(self.sendname == nil or self.sendname == host, "NYI: custom SNI over socket")
+			assert(self.sendname == nil or self.sendname == host, "NYI: custom SNI over SOCKS")
 			local socks = http_socks.connect(proxy)
 			local ok, err, errno = socks:negotiate(host, port, deadline and deadline-monotime())
 			if not ok then

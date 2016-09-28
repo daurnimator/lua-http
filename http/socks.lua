@@ -6,7 +6,7 @@ currently this code only supports username+password auth (defined in RFC 1929).
 
 URI format is taken from curl:
   - socks5:// is SOCKS5, resolving the authority locally
-  - socks5h:// is SOCK5, but let the proxy resolve the hostname
+  - socks5h:// is SOCKS5, but let the proxy resolve the hostname
 ]]
 
 local monotime = require "cqueues".monotime
@@ -167,6 +167,7 @@ function socks_methods:negotiate(host, port, timeout)
 
 	local ip = IPaddress:match(host)
 	if self.needs_resolve and not ip then
+		-- Waiting on https://github.com/wahern/cqueues/issues/164
 		error("NYI: need to resolve locally")
 	end
 
