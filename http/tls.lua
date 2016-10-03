@@ -689,18 +689,24 @@ for _, v in ipairs {
 	end
 end
 
+local default_tls_options = openssl_ctx.OP_NO_COMPRESSION
+	+ openssl_ctx.OP_SINGLE_ECDH_USE
+	+ openssl_ctx.OP_NO_SSLv2
+	+ openssl_ctx.OP_NO_SSLv3
+	+ openssl_ctx.OP_NO_TLSv1
+
 local function new_client_context()
-	local ctx = openssl_ctx.new("TLSv1_2", false)
+	local ctx = openssl_ctx.new("TLS", false)
 	ctx:setCipherList(intermediate_cipher_list)
-	ctx:setOptions(openssl_ctx.OP_NO_COMPRESSION+openssl_ctx.OP_SINGLE_ECDH_USE)
+	ctx:setOptions(default_tls_options)
 	ctx:setEphemeralKey(openssl_pkey.new{ type = "EC", curve = "prime256v1" })
 	return ctx
 end
 
 local function new_server_context()
-	local ctx = openssl_ctx.new("TLSv1_2", true)
+	local ctx = openssl_ctx.new("TLS", true)
 	ctx:setCipherList(intermediate_cipher_list)
-	ctx:setOptions(openssl_ctx.OP_NO_COMPRESSION+openssl_ctx.OP_SINGLE_ECDH_USE)
+	ctx:setOptions(default_tls_options)
 	ctx:setEphemeralKey(openssl_pkey.new{ type = "EC", curve = "prime256v1" })
 	return ctx
 end
