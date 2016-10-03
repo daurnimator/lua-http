@@ -127,6 +127,8 @@ local function handle_socket(self, socket)
 	local conn, err, errno = wrap_socket(self, socket)
 	if not conn then
 		socket:close()
+		self.n_connections = self.n_connections - 1
+		self.connection_done:signal(1)
 		if err ~= ce.EPIPE -- client closed connection
 			and err ~= ce.ETIMEDOUT -- an operation timed out
 			and errno ~= ce.ECONNRESET then
