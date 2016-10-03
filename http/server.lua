@@ -365,10 +365,12 @@ function server_methods:resume()
 end
 
 function server_methods:close()
-	cqueues.cancel(self.cq:pollfd())
-	self.cq:reset()
-	cqueues.poll()
-	cqueues.poll()
+	if self.cq then
+		cqueues.cancel(self.cq:pollfd())
+		cqueues.poll()
+		cqueues.poll()
+		self.cq = nil
+	end
 	if self.socket then
 		self.socket:close()
 		self.socket = nil
