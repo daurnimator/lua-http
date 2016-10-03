@@ -131,5 +131,15 @@ describe("http.util module", function()
 			assert.truthy(f()) -- 'true' from the pcall
 			assert.has.errors(f) -- cannot resume dead coroutine
 		end)
+		it("works with __call objects", function()
+			local done = false
+			local o = setmetatable({}, {
+				__call=function()
+					done = true
+				end;
+			})
+			util.yieldable_pcall(o)
+			assert.truthy(done)
+		end)
 	end)
 end)

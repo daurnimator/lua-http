@@ -203,7 +203,7 @@ else
 		return handle_resume(co, coroutine.resume(co, coroutine.yield(...)))
 	end
 	yieldable_pcall = function(func, ...)
-		if debug.getinfo(func, "S").what == "C" then
+		if type(func) ~= "function" or debug.getinfo(func, "S").what == "C" then
 			local C_func = func
 			-- Can't give C functions to coroutine.create
 			func = function(...) return C_func(...) end
