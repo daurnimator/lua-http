@@ -211,6 +211,7 @@ end
 --[[ Creates a new server object
 
 Takes a table of options:
+  - `.cq` (optional): A cqueues controller to use
   - `.socket`: A cqueues socket object
   - `.tls`: `nil`: allow both tls and non-tls connections
   -         `true`: allows tls connections only
@@ -221,10 +222,14 @@ Takes a table of options:
   - `.client_timeout`: Timeout (in seconds) to wait for client to send first bytes and/or complete TLS handshake (default: 10)
 ]]
 local function new_server(tbl)
+	local cq = tbl.cq
+	if cq == nil then
+		cq = cqueues.new()
+	else
+		assert(cqueues.type(cq) == "controller", "optional cq field should be a cqueue controller")
+	end
 	local socket = assert(tbl.socket, "missing 'socket'")
 	local onstream = assert(tbl.onstream, "missing 'onstream'")
-
-	local cq = cqueues.new()
 
 	-- Return errors rather than throwing
 	socket:onerror(function(s, op, why, lvl) -- luacheck: ignore 431 212
@@ -299,6 +304,7 @@ local function listen(tbl)
 		v6only = tbl.v6only;
 	})
 	return new_server {
+		cq = tbl.cq;
 		socket = s;
 		onstream = tbl.onstream;
 		tls = tls;

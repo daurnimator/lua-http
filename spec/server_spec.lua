@@ -4,6 +4,15 @@ describe("http.server module", function()
 	local new_headers = require "http.headers".new
 	local cqueues = require "cqueues"
 	local cs = require "cqueues.socket"
+	it("rejects invalid 'cq' field", function()
+		assert.has.errors(function()
+			server.new {
+				socket = (cs.pair());
+				onstream = error;
+				cq = 5;
+			}
+		end)
+	end)
 	it("__tostring works", function()
 		local s = server.new {
 			socket = (cs.pair());
