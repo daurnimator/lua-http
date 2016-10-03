@@ -125,32 +125,36 @@ end
 
 local function handle_socket(self, socket)
 	local conn, err, errno = wrap_socket(self, socket)
+	local error_operation
 	if not conn then
 		socket:close()
-		self.n_connections = self.n_connections - 1
-		self.connection_done:signal(1)
 		if err ~= ce.EPIPE -- client closed connection
 			and err ~= ce.ETIMEDOUT -- an operation timed out
 			and errno ~= ce.ECONNRESET then
-			self:onerror()(self, "wrap", errno, 2)
+			error_operation = "wrap"
 		end
 	else
 		while true do
 			local stream
 			stream, err, errno = conn:get_next_incoming_stream()
 			if stream == nil then
+				if (err ~= ce.EPIPE -- client closed connection
+					and errno ~= ce.ECONNRESET
+					and errno ~= ce.ENOTCONN)
+				  or (cs.type(conn.socket) == "socket" and conn.socket:pending() ~= 0) then
+					error_operation = "get_next_incoming_stream"
+				end
 				break
 			end
 			self.cq:wrap(self.onstream, self, stream)
 		end
 		-- wait for streams to complete?
 		conn:close()
-		self.n_connections = self.n_connections - 1
-		self.connection_done:signal(1)
-		if (err ~= ce.EPIPE and errno ~= ce.ECONNRESET and errno ~= ce.ENOTCONN)
-		  or (cs.type(conn.socket) == "socket" and conn.socket:pending() ~= 0) then
-			self:onerror()(self, "get_next_incoming_stream", errno, 2)
-		end
+	end
+	self.n_connections = self.n_connections - 1
+	self.connection_done:signal(1)
+	if error_operation then
+		self:onerror()(self, error_operation, errno, 2)
 	end
 end
 
