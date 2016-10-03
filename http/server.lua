@@ -154,7 +154,7 @@ local function handle_socket(self, socket)
 	self.n_connections = self.n_connections - 1
 	self.connection_done:signal(1)
 	if error_operation then
-		self:onerror()(self, error_operation, errno, 2)
+		self:onerror()(self, error_operation, errno, 2, err)
 	end
 end
 
@@ -318,8 +318,11 @@ local function listen(tbl)
 	}
 end
 
-function server_methods:onerror_(op, why, lvl) -- luacheck: ignore 212
+function server_methods:onerror_(op, why, lvl, err) -- luacheck: ignore 212
 	local msg = string.format("%s: %s", op, ce.strerror(why))
+	if err then
+		msg = msg .. ": " .. tostring(err)
+	end
 	error(msg, lvl)
 end
 
