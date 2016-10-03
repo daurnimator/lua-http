@@ -175,7 +175,7 @@ function stream_methods:shutdown()
 			if self.body_read_type == "close" then
 				break
 			end
-			if self:get_next_chunk() == nil then
+			if self:get_next_chunk(0) == nil then
 				break -- ignore errors
 			end
 		until (self.stats_recv - start) >= clean_shutdown_limit
