@@ -300,6 +300,10 @@ function connection_methods:loop(...)
 	end
 end
 
+function connection_methods:connect(...)
+	return self.socket:connect(...)
+end
+
 function connection_methods:checktls()
 	return self.socket:checktls()
 end

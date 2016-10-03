@@ -59,6 +59,13 @@ local function new_connection(socket, conn_type, version)
 	return self
 end
 
+function connection_methods:connect(timeout)
+	if self.socket == nil then
+		return nil
+	end
+	return self.socket:connect(timeout)
+end
+
 function connection_methods:checktls()
 	if self.socket == nil then
 		return nil

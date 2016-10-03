@@ -74,6 +74,9 @@ Either `"client"` or `"server"`
 The HTTP version as a number
 
 
+### `connection:connect(timeout)` <!-- --> {#connection:connect}
+
+
 ### `connection:checktls()` <!-- --> {#connection:checktls}
 
 
@@ -245,6 +248,11 @@ local myconnection = http_client.connect {
 Either `1.0` or `1.1`
 
 
+### `h1_connection:connect(timeout)` <!-- --> {#http.h1_connection:connect}
+
+See [`connection:connect(timeout)`](#connection:connect)
+
+
 ### `h1_connection:checktls()` <!-- --> {#http.h1_connection:checktls}
 
 See [`connection:checktls()`](#connection:checktls)
@@ -386,6 +394,11 @@ hence an `http.h2_connection` acts much like a scheduler.
 
 
 ### `h2_connection:loop(timeout)` <!-- --> {#http.h2_connection:loop}
+
+
+### `h2_connection:connect(timeout)` <!-- --> {#http.h2_connection:connect}
+
+See [`connection:connect(timeout)`](#connection:connect)
 
 
 ### `h2_connection:checktls()` <!-- --> {#http.h2_connection:checktls}
