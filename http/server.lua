@@ -114,7 +114,7 @@ local function server_loop(self)
 						collectgarbage()
 					end
 				else
-					self:onerror()("accept", accept_errno, 2)
+					self:onerror()(self, "accept", accept_errno, 2)
 				end
 			else
 				self:add_socket(socket)
@@ -132,7 +132,7 @@ local function handle_socket(self, socket)
 		if err ~= ce.EPIPE -- client closed connection
 			and err ~= ce.ETIMEDOUT -- an operation timed out
 			and errno ~= ce.ECONNRESET then
-			self:onerror()("wrap", errno, 2)
+			self:onerror()(self, "wrap", errno, 2)
 		end
 	else
 		while true do
@@ -149,7 +149,7 @@ local function handle_socket(self, socket)
 		self.connection_done:signal(1)
 		if (err ~= ce.EPIPE and errno ~= ce.ECONNRESET and errno ~= ce.ENOTCONN)
 		  or (cs.type(conn.socket) == "socket" and conn.socket:pending() ~= 0) then
-			self:onerror()("get_next_incoming_stream", errno, 2)
+			self:onerror()(self, "get_next_incoming_stream", errno, 2)
 		end
 	end
 end
