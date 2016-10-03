@@ -6,6 +6,7 @@ local ce = require "cqueues.errno"
 local h1_connection = require "http.h1_connection"
 local h2_connection = require "http.h2_connection"
 local http_tls = require "http.tls"
+local http_util = require "http.util"
 local pkey = require "openssl.pkey"
 local x509 = require "openssl.x509"
 local name = require "openssl.x509.name"
@@ -146,7 +147,14 @@ local function handle_socket(self, socket)
 				end
 				break
 			end
-			self.cq:wrap(self.onstream, self, stream)
+			local ok
+			ok, err = http_util.yieldable_pcall(self.onstream, self, stream)
+			if not ok then
+				error_operation = "onstream"
+				errno = ce.EINVAL
+				stream:shutdown()
+				break
+			end
 		end
 		-- wait for streams to complete?
 		conn:close()
