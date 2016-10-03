@@ -3,6 +3,7 @@ describe("http.server module", function()
 	local client = require "http.client"
 	local new_headers = require "http.headers".new
 	local cqueues = require "cqueues"
+	local ce = require "cqueues.errno"
 	local cs = require "cqueues.socket"
 	it("rejects invalid 'cq' field", function()
 		assert.has.errors(function()
@@ -143,5 +144,55 @@ describe("http.server module", function()
 		assert_loop(cq, TEST_TIMEOUT)
 		assert.truthy(cq:empty())
 		assert.spy(onstream).was.called()
+	end)
+	it("allows pausing+resuming the server", function()
+		local s = server.listen {
+			host = "localhost";
+			port = 0;
+			onstream = function(_, stream)
+				assert(stream:get_headers())
+				local headers = new_headers()
+				headers:append(":status", "200")
+				assert(stream:write_headers(headers, true))
+			end;
+		}
+		assert(s:listen())
+		local client_family, client_host, client_port = s:localname()
+		local client_options = {
+			family = client_family;
+			host = client_host;
+			port = client_port;
+		}
+		local headers = new_headers()
+		headers:append(":authority", "myauthority")
+		headers:append(":method", "GET")
+		headers:append(":path", "/")
+		headers:append(":scheme", "http")
+
+		local cq = cqueues.new()
+		cq:wrap(function()
+			assert_loop(s)
+		end)
+		local function do_req(timeout)
+			local conn = assert(client.connect(client_options))
+			local stream = assert(conn:new_stream())
+			assert(stream:write_headers(headers, true))
+			local ok, err, errno = stream:get_headers(timeout)
+			conn:close()
+			return ok, err, errno
+		end
+		cq:wrap(function()
+			s:pause()
+			assert.same({nil, ce.ETIMEDOUT}, {do_req(0.1)})
+			s:resume()
+			assert.truthy(do_req())
+			s:pause()
+			assert.same({nil, ce.ETIMEDOUT}, {do_req(0.1)})
+			s:resume()
+			assert.truthy(do_req())
+			s:close()
+		end)
+		assert_loop(cq, TEST_TIMEOUT)
+		assert.truthy(cq:empty())
 	end)
 end)
