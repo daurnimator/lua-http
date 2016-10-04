@@ -18,7 +18,7 @@ if http_tls.has_alpn then
 end
 
 local function onerror(socket, op, why, lvl) -- luacheck: ignore 212
-	if why == ce.EPIPE or why == ce.ETIMEDOUT then
+	if why == ce.ETIMEDOUT then
 		return why
 	end
 	return string.format("%s: %s", op, ce.strerror(why)), why

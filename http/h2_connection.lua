@@ -58,7 +58,7 @@ local connection_main_loop
 
 -- An 'onerror' that doesn't throw
 local function onerror(socket, op, why, lvl) -- luacheck: ignore 212
-	if why == ce.EPIPE or why == ce.ETIMEDOUT then
+	if why == ce.ETIMEDOUT then
 		return why
 	end
 	return string.format("%s: %s", op, ce.strerror(why)), why
@@ -216,8 +216,8 @@ function connection_main_loop(self)
 
 	-- create a thread that flushes
 	cqueues.running():wrap(function(socket)
-		local ok, err = socket:flush("n")
-		if not ok and err ~= ce.EPIPE then
+		local ok, err, errno = socket:flush("n")
+		if not ok and errno ~= ce.EPIPE then
 			error(err)
 		end
 	end, self.socket)
@@ -317,21 +317,21 @@ function connection_methods:peername()
 end
 
 function connection_methods:shutdown()
-	local ok, err
+	local ok, err, errno
 	if self.send_goaway_lowest then
-		ok, err = true, nil
+		ok = true
 	else
-		ok, err = self:write_goaway_frame(nil, h2_error.errors.NO_ERROR.code, "connection closed")
-		if not ok and err == ce.EPIPE then
+		ok, err, errno = self:write_goaway_frame(nil, h2_error.errors.NO_ERROR.code, "connection closed")
+		if not ok and errno == ce.EPIPE then
 			-- other end already closed
-			ok, err = true, nil
+			ok, err, errno = true, nil, nil
 		end
 	end
 	for _, stream in pairs(self.streams) do
 		stream:shutdown()
 	end
 	self.socket:shutdown("r")
-	return ok, err
+	return ok, err, errno
 end
 
 function connection_methods:close()
