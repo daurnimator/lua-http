@@ -114,7 +114,7 @@ local function server_loop(self)
 						collectgarbage()
 					end
 				else
-					self:onerror()(self, "accept", accept_errno, 2)
+					self:onerror()(self, self, "accept", ce.strerror(accept_errno), accept_errno)
 				end
 			else
 				self:add_socket(socket)
@@ -124,14 +124,15 @@ local function server_loop(self)
 end
 
 local function handle_socket(self, socket)
+	local error_operation, error_context
 	local conn, err, errno = wrap_socket(self, socket)
-	local error_operation
 	if not conn then
 		socket:close()
 		if err ~= ce.EPIPE -- client closed connection
 			and err ~= ce.ETIMEDOUT -- an operation timed out
 			and errno ~= ce.ECONNRESET then
 			error_operation = "wrap"
+			error_context = socket
 		end
 	else
 		while true do
@@ -143,6 +144,7 @@ local function handle_socket(self, socket)
 					and errno ~= ce.ENOTCONN)
 				  or (cs.type(conn.socket) == "socket" and conn.socket:pending() ~= 0) then
 					error_operation = "get_next_incoming_stream"
+					error_context = conn
 				end
 				break
 			end
@@ -150,7 +152,7 @@ local function handle_socket(self, socket)
 			ok, err = http_util.yieldable_pcall(self.onstream, self, stream)
 			if not ok then
 				error_operation = "onstream"
-				errno = ce.EINVAL
+				error_context = stream
 				stream:shutdown()
 				break
 			end
@@ -161,7 +163,7 @@ local function handle_socket(self, socket)
 	self.n_connections = self.n_connections - 1
 	self.connection_done:signal(1)
 	if error_operation then
-		self:onerror()(self, error_operation, errno, 2, err)
+		self:onerror()(self, error_context, error_operation, err, errno)
 	end
 end
 
@@ -329,12 +331,8 @@ local function listen(tbl)
 	}
 end
 
-function server_methods:onerror_(op, why, lvl, err) -- luacheck: ignore 212
-	local msg = string.format("%s: %s", op, ce.strerror(why))
-	if err then
-		msg = msg .. ": " .. tostring(err)
-	end
-	error(msg, lvl)
+-- dummy function
+function server_methods:onerror_(context, op, err, errno) -- luacheck: ignore 212
 end
 
 function server_methods:onerror(...)
