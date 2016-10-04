@@ -599,8 +599,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		end
 		-- Add 'Connection: close' header if we're going to close after
 		if self.close_when_done and not has(connection_header, "close") then
-			connection_header.n = connection_header.n + 1
-			connection_header[connection_header.n] = "close"
+			table.insert(connection_header, "close")
 		end
 		if has_zlib then
 			if self.type == "client" then
