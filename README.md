@@ -19,8 +19,9 @@ Can be found at [https://daurnimator.github.io/lua-http/](https://daurnimator.gi
 [![Build Status](https://travis-ci.org/daurnimator/lua-http.svg)](https://travis-ci.org/daurnimator/lua-http)
 [![Coverage Status](https://coveralls.io/repos/daurnimator/lua-http/badge.svg?branch=master&service=github)](https://coveralls.io/github/daurnimator/lua-http?branch=master)
 
-  - HTTP client API is reaching stability
-  - The HTTP server API is still changing
+  - First release impending!
+  - HTTP request API is mostly stable
+  - The HTTP server API is reaching stability
 
 
 # Installation

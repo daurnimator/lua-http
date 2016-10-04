@@ -3,10 +3,32 @@ describe("http.server module", function()
 	local client = require "http.client"
 	local new_headers = require "http.headers".new
 	local cqueues = require "cqueues"
+	local ce = require "cqueues.errno"
 	local cs = require "cqueues.socket"
+	it("rejects invalid 'cq' field", function()
+		assert.has.errors(function()
+			server.new {
+				socket = (cs.pair());
+				onstream = error;
+				cq = 5;
+			}
+		end)
+	end)
 	it("__tostring works", function()
-		local s = server.new({socket = (cs.pair())})
+		local s = server.new {
+			socket = (cs.pair());
+			onstream = error;
+		}
 		assert.same("http.server{", tostring(s):match("^.-%{"))
+	end)
+	it(":onerror with no arguments doesn't clear", function()
+		local s = server.new {
+			socket = (cs.pair());
+			onstream = error;
+		}
+		local onerror = s:onerror()
+		assert.same("function", type(onerror))
+		assert.same(onerror, s:onerror())
 	end)
 	local function simple_test(family, tls, version)
 		local cq = cqueues.new()
@@ -25,16 +47,16 @@ describe("http.server module", function()
 			options.host = "localhost"
 			options.port = 0
 		end
-		local s = server.listen(options)
-		assert(s:listen())
-		local on_stream = spy.new(function(stream)
+		local onstream = spy.new(function(s, stream)
 			stream:get_headers()
 			stream:shutdown()
-			s:pause()
-		end)
-		cq:wrap(function()
-			s:run(on_stream)
 			s:close()
+		end)
+		options.onstream = onstream
+		local s = server.listen(options)
+		assert(s:listen())
+		cq:wrap(function()
+			assert_loop(s)
 		end)
 		cq:wrap(function()
 			local client_path
@@ -64,7 +86,7 @@ describe("http.server module", function()
 		end)
 		assert_loop(cq, TEST_TIMEOUT)
 		assert.truthy(cq:empty())
-		assert.spy(on_stream).was.called()
+		assert.spy(onstream).was.called()
 	end
 	it("works with plain http 1.1 using IP", function()
 		simple_test(cs.AF_INET, false, 1.1)
@@ -94,21 +116,21 @@ describe("http.server module", function()
 	end)
 	it("taking socket from underlying connection is handled well by server", function()
 		local cq = cqueues.new()
+		local onstream = spy.new(function(s, stream)
+			local sock = stream.connection:take_socket()
+			s:close()
+			assert.same("test", sock:read("*a"))
+			sock:close()
+		end);
 		local s = server.listen {
 			host = "localhost";
 			port = 0;
+			onstream = onstream;
 		}
 		assert(s:listen())
 		local _, host, port = s:localname()
-		local on_stream = spy.new(function(stream)
-			local sock = stream.connection:take_socket()
-			s:pause()
-			assert.same("test", sock:read("*a"))
-			sock:close()
-		end)
 		cq:wrap(function()
-			s:run(on_stream)
-			s:close()
+			assert_loop(s)
 		end)
 		cq:wrap(function()
 			local sock = cs.connect {
@@ -121,6 +143,56 @@ describe("http.server module", function()
 		end)
 		assert_loop(cq, TEST_TIMEOUT)
 		assert.truthy(cq:empty())
-		assert.spy(on_stream).was.called()
+		assert.spy(onstream).was.called()
+	end)
+	it("allows pausing+resuming the server", function()
+		local s = server.listen {
+			host = "localhost";
+			port = 0;
+			onstream = function(_, stream)
+				assert(stream:get_headers())
+				local headers = new_headers()
+				headers:append(":status", "200")
+				assert(stream:write_headers(headers, true))
+			end;
+		}
+		assert(s:listen())
+		local client_family, client_host, client_port = s:localname()
+		local client_options = {
+			family = client_family;
+			host = client_host;
+			port = client_port;
+		}
+		local headers = new_headers()
+		headers:append(":authority", "myauthority")
+		headers:append(":method", "GET")
+		headers:append(":path", "/")
+		headers:append(":scheme", "http")
+
+		local cq = cqueues.new()
+		cq:wrap(function()
+			assert_loop(s)
+		end)
+		local function do_req(timeout)
+			local conn = assert(client.connect(client_options))
+			local stream = assert(conn:new_stream())
+			assert(stream:write_headers(headers, true))
+			local ok, err, errno = stream:get_headers(timeout)
+			conn:close()
+			return ok, err, errno
+		end
+		cq:wrap(function()
+			s:pause()
+			assert.same({nil, ce.ETIMEDOUT}, {do_req(0.1)})
+			s:resume()
+			assert.truthy(do_req())
+			s:pause()
+			assert.same({nil, ce.ETIMEDOUT}, {do_req(0.1)})
+			s:resume()
+			assert.truthy(do_req())
+			s:close()
+		end)
+		assert_loop(cq, TEST_TIMEOUT)
+		assert.truthy(cq:empty())
 	end)
 end)

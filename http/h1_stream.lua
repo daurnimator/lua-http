@@ -175,7 +175,7 @@ function stream_methods:shutdown()
 			if self.body_read_type == "close" then
 				break
 			end
-			if self:get_next_chunk() == nil then
+			if self:get_next_chunk(0) == nil then
 				break -- ignore errors
 			end
 		until (self.stats_recv - start) >= clean_shutdown_limit
@@ -433,7 +433,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		end
 	end
 	assert(type(end_stream) == "boolean", "'end_stream' MUST be a boolean")
-	if self.state == "closed" or self.state == "half closed (local)" then
+	if self.state == "closed" or self.state == "half closed (local)" or self.connection.socket == nil then
 		return nil, ce.EPIPE
 	end
 	local status_code, method
@@ -599,8 +599,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		end
 		-- Add 'Connection: close' header if we're going to close after
 		if self.close_when_done and not has(connection_header, "close") then
-			connection_header.n = connection_header.n + 1
-			connection_header[connection_header.n] = "close"
+			table.insert(connection_header, "close")
 		end
 		if has_zlib then
 			if self.type == "client" then

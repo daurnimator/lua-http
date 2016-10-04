@@ -59,6 +59,13 @@ local function new_connection(socket, conn_type, version)
 	return self
 end
 
+function connection_methods:connect(timeout)
+	if self.socket == nil then
+		return nil
+	end
+	return self.socket:connect(timeout)
+end
+
 function connection_methods:checktls()
 	if self.socket == nil then
 		return nil
@@ -88,13 +95,13 @@ function connection_methods:clearerr(...)
 end
 
 function connection_methods:take_socket()
-	-- TODO: shutdown streams?
 	local s = self.socket
 	if s == nil then
 		-- already taken
 		return nil
 	end
 	self.socket = nil
+	-- Shutdown *after* taking away socket so shutdown handlers can't effect the socket
 	self:shutdown()
 	-- Reset socket to some defaults
 	s:onerror(nil)
@@ -102,9 +109,11 @@ function connection_methods:take_socket()
 end
 
 function connection_methods:shutdown(dir)
-	while self.pipeline:length() > 0 do
-		local stream = self.pipeline:peek()
-		stream:shutdown()
+	if dir == nil or dir:match("w") then
+		while self.pipeline:length() > 0 do
+			local stream = self.pipeline:peek()
+			stream:shutdown()
+		end
 	end
 	if self.socket then
 		self.socket:shutdown(dir)

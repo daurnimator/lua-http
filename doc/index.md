@@ -74,6 +74,9 @@ Either `"client"` or `"server"`
 The HTTP version as a number
 
 
+### `connection:connect(timeout)` <!-- --> {#connection:connect}
+
+
 ### `connection:checktls()` <!-- --> {#connection:checktls}
 
 
@@ -245,6 +248,11 @@ local myconnection = http_client.connect {
 Either `1.0` or `1.1`
 
 
+### `h1_connection:connect(timeout)` <!-- --> {#http.h1_connection:connect}
+
+See [`connection:connect(timeout)`](#connection:connect)
+
+
 ### `h1_connection:checktls()` <!-- --> {#http.h1_connection:checktls}
 
 See [`connection:checktls()`](#connection:checktls)
@@ -386,6 +394,11 @@ hence an `http.h2_connection` acts much like a scheduler.
 
 
 ### `h2_connection:loop(timeout)` <!-- --> {#http.h2_connection:loop}
+
+
+### `h2_connection:connect(timeout)` <!-- --> {#http.h2_connection:connect}
+
+See [`connection:connect(timeout)`](#connection:connect)
 
 
 ### `h2_connection:checktls()` <!-- --> {#http.h2_connection:checktls}
@@ -814,6 +827,9 @@ This interface is **unstable**.
 ### `listen(options)` <!-- --> {#http.server.connect}
 
 
+### `server:onerror(new_handler)` <!-- --> {#http.server:onerror}
+
+
 ### `server:listen(timeout)` <!-- --> {#http.server:listen}
 
 
@@ -822,13 +838,34 @@ This interface is **unstable**.
 
 ### `server:pause()` <!-- --> {#http.server:pause}
 
-Cause [`server:run`](#http.server:run) to stop processing new clients and return.
+Cause the server loop to stop processing new clients until [`:resume`](#http.server:resume) is called.
+
+
+### `server:resume()` <!-- --> {#http.server:resume}
 
 
 ### `server:close()` <!-- --> {#http.server:close}
 
 
-### `server:run(on_stream, cq)` <!-- --> {#http.server:run}
+### `server:pollfd()` <!-- --> {#http.server:pollfd}
+
+
+### `server:events()` <!-- --> {#http.server:events}
+
+
+### `server:timeout()` <!-- --> {#http.server:timeout}
+
+
+### `server:empty()` <!-- --> {#http.server:empty}
+
+
+### `server:step()` <!-- --> {#http.server:step}
+
+
+### `server:loop()` <!-- --> {#http.server:loop}
+
+
+### `server:add_socket(socket)` <!-- --> {#http.server:add_socket}
 
 
 ## http.socks

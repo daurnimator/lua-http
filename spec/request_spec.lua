@@ -455,18 +455,19 @@ describe("http.request module", function()
 			local s = server.listen {
 				host = "localhost";
 				port = 0;
+				onstream = function(s, stream)
+					local keep_going = server_cb(stream, s)
+					stream:shutdown()
+					stream.connection:shutdown()
+					if not keep_going then
+						s:close()
+					end
+				end;
 			}
 			assert(s:listen())
 			local _, host, port = s:localname()
 			cq:wrap(function()
-				s:run(function(stream)
-					if not server_cb(stream) then
-						s:pause()
-					end
-					stream:shutdown()
-					stream.connection:shutdown()
-				end)
-				s:close()
+				assert_loop(s)
 			end)
 			cq:wrap(function()
 				local req = request.new_from_uri {
@@ -673,6 +674,135 @@ describe("http.request module", function()
 				local _, stream = assert(new_req:go())
 				stream:shutdown()
 			end)
+		end)
+		it("CONNECT proxy", function()
+			test(function(stream, s)
+				local h = assert(stream:get_headers())
+				local resp_headers = new_headers()
+				resp_headers:append(":status", "200")
+				assert(stream:write_headers(resp_headers, false))
+				if h:get(":method") == "CONNECT" then
+					assert(stream.connection.version < 2)
+					local sock = assert(stream.connection:take_socket())
+					s:add_socket(sock)
+					return true
+				else
+					assert(stream:write_chunk("hello world", true))
+				end
+			end, function(req)
+				req.tls = true
+				req.proxy = {
+					scheme = "http";
+					host = req.host;
+					port = req.port;
+					userinfo = "user:pass";
+				}
+				local headers, stream = assert(req:go())
+				assert.same("200", headers:get(":status"))
+				assert.same("hello world", assert(stream:get_body_as_string()))
+				stream:shutdown()
+			end)
+		end)
+		it("fails correctly on non CONNECT proxy", function()
+			test(function(stream)
+				local h = assert(stream:get_headers())
+				assert.same("CONNECT", h:get(":method"))
+				local sock = stream.connection:take_socket()
+				assert(sock:write("foo"))
+				sock:close()
+			end, function(req)
+				req.tls = true
+				req.proxy = {
+					scheme = "http";
+					host = req.host;
+					port = req.port;
+					userinfo = "user:pass";
+				}
+				local ok = req:go()
+				assert.falsy(ok)
+			end)
+		end)
+		it("fails correctly on failed CONNECT proxy attempt", function()
+			test(function(stream)
+				local h = assert(stream:get_headers())
+				assert.same("CONNECT", h:get(":method"))
+				local resp_headers = new_headers()
+				resp_headers:append(":status", "400")
+				assert(stream:write_headers(resp_headers, true))
+			end, function(req)
+				req.tls = true
+				req.proxy = {
+					scheme = "http";
+					host = req.host;
+					port = req.port;
+					userinfo = "user:pass";
+				}
+				local ok = req:go()
+				assert.falsy(ok)
+			end)
+		end)
+		it("can make request via SOCKS proxy", function()
+			local cs = require "cqueues.socket"
+			local socks_server = cs.listen {
+				family = cs.AF_INET;
+				host = "localhost";
+				port = 0;
+			}
+			assert(socks_server:listen())
+			local _, socks_host, socks_port = socks_server:localname()
+
+			local s = server.listen {
+				host = "localhost";
+				port = 0;
+				onstream = function(s, stream)
+					assert(stream:get_headers())
+					local resp_headers = new_headers()
+					resp_headers:append(":status", "200")
+					assert(stream:write_headers(resp_headers, false))
+					assert(stream:write_chunk("hello world", true))
+					stream:shutdown()
+					stream.connection:shutdown()
+					s:close()
+				end;
+			}
+			assert(s:listen())
+			local _, host, port = s:localname()
+
+			local cq = cqueues.new()
+			cq:wrap(function()
+				assert_loop(s)
+			end)
+			cq:wrap(function()
+				local req = request.new_from_uri {
+					scheme = "http";
+					host = host;
+					port = port;
+				}
+				req.proxy = {
+					scheme = "socks5h";
+					host = socks_host;
+					port = socks_port;
+				}
+				local headers, stream = assert(req:go())
+				assert.same("200", headers:get(":status"))
+				assert.same("hello world", assert(stream:get_body_as_string()))
+				stream:shutdown()
+			end)
+			cq:wrap(function() -- SOCKS server
+				local sock = socks_server:accept()
+				assert.same("\5", sock:read(1))
+				local n = assert(sock:read(1)):byte()
+				local available_auth = assert(sock:read(n))
+				assert.same("\0", available_auth)
+				assert(sock:xwrite("\5\0", "n"))
+				assert.same("\5\1\0\1", sock:read(4))
+				assert(sock:read(6)) -- ip + port
+				assert(sock:xwrite("\5\0\0\3\4test\4\210", "n"))
+				s:add_socket(sock)
+			end)
+			assert_loop(cq, TEST_TIMEOUT)
+			assert.truthy(cq:empty())
+			socks_server:close()
 		end)
 	end)
 end)

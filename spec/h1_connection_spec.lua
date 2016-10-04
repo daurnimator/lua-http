@@ -436,6 +436,19 @@ describe("high level http1 connection operations", function()
 		return s, c
 	end
 
+	it(":shutdown('r') shouldn't shutdown streams that have been read", function()
+		local s, c = new_pair(1.1) -- luacheck: ignore 211
+		assert(c:write_request_line("GET", "/", 1.0))
+		assert(c:write_headers_done())
+		assert(c:write_request_line("GET", "/", 1.0))
+		assert(c:write_headers_done())
+		local stream1 = assert(s:get_next_incoming_stream())
+		assert(stream1:read_headers())
+		local stream2 = assert(s:get_next_incoming_stream())
+		assert.same("idle", stream2.state)
+		s:shutdown("r")
+		assert.same("idle", stream2.state)
+	end)
 	it(":get_next_incoming_stream times out", function()
 		local s, c = new_pair(1.1) -- luacheck: ignore 211
 		assert.same({nil, ce.ETIMEDOUT}, {s:get_next_incoming_stream(0.05)})

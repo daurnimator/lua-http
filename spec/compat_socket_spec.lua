@@ -14,17 +14,12 @@ describe("http.compat.socket module", function()
 	end)
 	it("works against builtin server with GET request", function()
 		local cq = cqueues.new()
+		local authority
 		local s = server.listen {
 			host = "localhost";
 			port = 0;
-		}
-		assert(s:listen())
-		local _, host, port = s:localname()
-		local authority = util.to_authority(host, port, "http")
-		cq:wrap(function()
-			s:run(function (stream)
+			onstream = function(s, stream)
 				local request_headers = assert(stream:get_headers())
-				s:pause()
 				assert.same("http", request_headers:get ":scheme")
 				assert.same("GET", request_headers:get ":method")
 				assert.same("/foo", request_headers:get ":path")
@@ -34,8 +29,14 @@ describe("http.compat.socket module", function()
 				headers:append("connection", "close")
 				assert(stream:write_headers(headers, false))
 				assert(stream:write_chunk("hello world", true))
-			end)
-			s:close()
+				s:close()
+			end;
+		}
+		assert(s:listen())
+		local _, host, port = s:localname()
+		authority = util.to_authority(host, port, "http")
+		cq:wrap(function()
+			assert_loop(s)
 		end)
 		cq:wrap(function()
 			local r, e = http.request("http://"..authority.."/foo")
@@ -47,16 +48,11 @@ describe("http.compat.socket module", function()
 	end)
 	it("works against builtin server with POST request", function()
 		local cq = cqueues.new()
+		local authority
 		local s = server.listen {
 			host = "localhost";
 			port = 0;
-		}
-		assert(s:listen())
-		local _, host, port = s:localname()
-		local authority = util.to_authority(host, port, "http")
-		cq:wrap(function()
-			s:run(function (stream)
-				s:pause()
+			onstream = function(s, stream)
 				local request_headers = assert(stream:get_headers())
 				assert.same("http", request_headers:get ":scheme")
 				assert.same("POST", request_headers:get ":method")
@@ -69,8 +65,14 @@ describe("http.compat.socket module", function()
 				headers:append("connection", "close")
 				assert(stream:write_headers(headers, false))
 				assert(stream:write_chunk("hello world", true))
-			end)
-			s:close()
+				s:close()
+			end;
+		}
+		assert(s:listen())
+		local _, host, port = s:localname()
+		authority = util.to_authority(host, port, "http")
+		cq:wrap(function()
+			assert_loop(s)
 		end)
 		cq:wrap(function()
 			local r, e = http.request("http://"..authority.."/foo", "a body")
@@ -85,13 +87,9 @@ describe("http.compat.socket module", function()
 		local s = server.listen {
 			host = "localhost";
 			port = 0;
-		}
-		assert(s:listen())
-		local _, host, port = s:localname()
-		cq:wrap(function()
-			s:run(function (stream)
-				s:pause()
-				local request_headers = assert(stream:get_headers())
+			onstream = function(s, stream)
+				local a, b = stream:get_headers()
+				local request_headers = assert(a,b)
 				assert.same("http", request_headers:get ":scheme")
 				assert.same("PUT", request_headers:get ":method")
 				assert.same("/path?query", request_headers:get ":path")
@@ -106,10 +104,15 @@ describe("http.compat.socket module", function()
 				headers:append("connection", "close")
 				assert(stream:write_headers(headers, false))
 				assert(stream:write_chunk("hello world", true))
-			end)
-			s:close()
+				s:close()
+			end;
+		}
+		assert(s:listen())
+		cq:wrap(function()
+			assert_loop(s)
 		end)
 		cq:wrap(function()
+			local _, host, port = s:localname()
 			local r, e = assert(http.request {
 				url = "http://example.com/path?query";
 				host = host;
