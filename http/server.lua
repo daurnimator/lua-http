@@ -227,6 +227,7 @@ end
 Takes a table of options:
   - `.cq` (optional): A cqueues controller to use
   - `.socket`: A cqueues socket object
+  - `.onerror`: function that will be called when an error occurs (default: do nothing)
   - `.tls`: `nil`: allow both tls and non-tls connections
   -         `true`: allows tls connections only
   -         `false`: allows non-tls connections only
@@ -255,6 +256,7 @@ local function new_server(tbl)
 		cq = cq;
 		socket = socket;
 		onstream = onstream;
+		onerror_ = tbl.onerror;
 		tls = tbl.tls;
 		ctx = tbl.ctx;
 		version = tbl.version;
@@ -323,6 +325,7 @@ local function listen(tbl)
 		cq = tbl.cq;
 		socket = s;
 		onstream = tbl.onstream;
+		onerror = tbl.onerror;
 		tls = tls;
 		ctx = ctx;
 		version = tbl.version;
