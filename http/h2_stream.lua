@@ -950,8 +950,8 @@ end
 
 function stream_methods:shutdown()
 	if self.state ~= "idle" and self.state ~= "closed" and self.id ~= 0 then
-		local ok, err = self:write_rst_stream(0)
-		if not ok and err ~= ce.EPIPE then
+		local ok, err, errno = self:write_rst_stream(0)
+		if not ok and errno ~= ce.EPIPE then
 			error(err)
 		end
 	end
@@ -1034,24 +1034,37 @@ local function write_headers(self, func, headers, timeout)
 
 	local SETTINGS_MAX_FRAME_SIZE = self.connection.peer_settings[0x5]
 	if #payload <= SETTINGS_MAX_FRAME_SIZE then
-		assert(func(payload, true, deadline))
+		local ok, err, errno = func(payload, true, deadline)
+		if not ok then
+			return ok, err, errno
+		end
 	else
 		do
 			local partial = payload:sub(1, SETTINGS_MAX_FRAME_SIZE)
-			assert(func(partial, false, deadline))
+			local ok, err, errno = func(partial, false, deadline)
+			if not ok then
+				return ok, err, errno
+			end
 		end
 		local sent = SETTINGS_MAX_FRAME_SIZE
 		local max = #payload-SETTINGS_MAX_FRAME_SIZE
 		while sent < max do
 			local partial = payload:sub(sent+1, sent+SETTINGS_MAX_FRAME_SIZE)
-			assert(self:write_continuation_frame(partial, false, deadline and deadline-monotime()))
+			local ok, err, errno = self:write_continuation_frame(partial, false, deadline and deadline-monotime())
+			if not ok then
+				return ok, err, errno
+			end
 			sent = sent + SETTINGS_MAX_FRAME_SIZE
 		end
 		do
 			local partial = payload:sub(sent+1)
-			assert(self:write_continuation_frame(partial, true, deadline and deadline-monotime()))
+			local ok, err, errno = self:write_continuation_frame(partial, true, deadline and deadline-monotime())
+			if not ok then
+				return ok, err, errno
+			end
 		end
 	end
+	return true
 end
 
 function stream_methods:write_headers(headers, end_stream, timeout)
@@ -1060,11 +1073,9 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 	assert(type(end_stream) == "boolean", "'end_stream' MUST be a boolean")
 
 	local padded, exclusive, stream_dep, weight = nil, nil, nil, nil
-	write_headers(self, function(payload, end_headers, deadline)
+	return write_headers(self, function(payload, end_headers, deadline)
 		return self:write_headers_frame(payload, end_stream, end_headers, padded, exclusive, stream_dep, weight, deadline and deadline-monotime())
 	end, headers, timeout)
-
-	return true
 end
 
 function stream_methods:push_promise(headers, timeout)
@@ -1078,9 +1089,12 @@ function stream_methods:push_promise(headers, timeout)
 	local promised_stream_id = promised_stream.id
 
 	local padded = nil
-	write_headers(self, function(payload, end_headers, deadline)
+	local ok, err, errno = write_headers(self, function(payload, end_headers, deadline)
 		return self:write_push_promise_frame(promised_stream_id, payload, end_headers, padded, deadline)
 	end, headers, timeout)
+	if not ok then
+		return nil, err, errno
+	end
 
 	promised_stream:set_state("reserved (local)")
 

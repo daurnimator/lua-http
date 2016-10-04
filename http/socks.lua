@@ -31,7 +31,7 @@ local socks_mt = {
 }
 
 local function onerror(socket, op, why, lvl) -- luacheck: ignore 212
-	if why == ce.EPIPE or why == ce.ETIMEDOUT then
+	if why == ce.ETIMEDOUT then
 		return why
 	end
 	return string.format("%s: %s", op, ce.strerror(why)), why

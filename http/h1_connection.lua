@@ -19,9 +19,7 @@ function connection_mt:__tostring()
 end
 
 local function onerror(socket, op, why, lvl) -- luacheck: ignore 212
-	if why == ce.EPIPE then
-		return why
-	elseif why == ce.ETIMEDOUT then
+	if why == ce.ETIMEDOUT then
 		if op == "fill" or op == "read" then
 			socket:clearerr("r")
 		elseif op == "flush" then
