@@ -109,9 +109,11 @@ function connection_methods:take_socket()
 end
 
 function connection_methods:shutdown(dir)
-	while self.pipeline:length() > 0 do
-		local stream = self.pipeline:peek()
-		stream:shutdown()
+	if dir == nil or dir:match("w") then
+		while self.pipeline:length() > 0 do
+			local stream = self.pipeline:peek()
+			stream:shutdown()
+		end
 	end
 	if self.socket then
 		self.socket:shutdown(dir)
