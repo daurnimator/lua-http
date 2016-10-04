@@ -45,7 +45,7 @@ end
 -- Wrap a bare cqueues socket in an HTTP connection of a suitable version
 -- Starts TLS if necessary
 -- this function *should never throw*
-local function wrap_socket(self, socket, deadline)
+local function wrap_socket(self, socket, version, deadline)
 	socket:setmode("b", "b")
 	socket:onerror(onerror)
 	local use_tls = self.tls
@@ -56,7 +56,6 @@ local function wrap_socket(self, socket, deadline)
 			return nil, err, errno
 		end
 	end
-	local is_h2 -- tri-state
 	if use_tls then
 		local ok, err, errno = socket:starttls(self.ctx, deadline and (deadline-monotime()))
 		if not ok then
@@ -65,34 +64,34 @@ local function wrap_socket(self, socket, deadline)
 		local ssl = socket:checktls()
 		if ssl and http_tls.has_alpn then
 			local proto = ssl:getAlpnSelected()
-			if proto == "h2" then
-				is_h2 = true
-			elseif proto == nil or proto == "http/1.1" then
-				is_h2 = false
-			else
+			if proto == "h2" and (version == nil or version == 2) then
+				version = 2
+			elseif (proto == "http/1.1") and (version == nil or version < 2) then
+				version = 1.1
+			elseif proto ~= nil then
 				return nil, "unexpected ALPN protocol: " .. proto, ce.EPROTONOSUPPORT
 			end
 		end
 	end
 	-- Still not sure if incoming connection is an HTTP1 or HTTP2 connection
 	-- Need to sniff for the h2 connection preface to find out for sure
-	if is_h2 == nil then
-		local err, errno
-		is_h2, err, errno = h2_connection.socket_has_preface(socket, true, deadline and (deadline-monotime()))
+	if version == nil then
+		local is_h2, err, errno = h2_connection.socket_has_preface(socket, true, deadline and (deadline-monotime()))
 		if is_h2 == nil then
 			return nil, err, errno
 		end
+		version = is_h2 and 2 or 1.1
 	end
 	local conn, err, errno
-	if is_h2 then
+	if version == 2 then
 		conn, err, errno = h2_connection.new(socket, "server", nil)
 	else
-		conn, err, errno = h1_connection.new(socket, "server", 1.1)
+		conn, err, errno = h1_connection.new(socket, "server", version)
 	end
 	if not conn then
 		return nil, err, errno
 	end
-	return conn, is_h2
+	return conn
 end
 
 local function server_loop(self)
@@ -207,6 +206,7 @@ local function new_ctx(host)
 end
 
 local server_methods = {
+	version = nil;
 	max_concurrent = math.huge;
 	client_timeout = 10;
 }
@@ -230,6 +230,7 @@ Takes a table of options:
   -         `false`: allows non-tls connections only
   - `.ctx`: an `openssl.ssl.context` object to use for tls connections
   - `       `nil`: a self-signed context will be generated
+  - `.version`: the http version to allow to connect (default: any)
   - `.max_concurrent`: Maximum number of connections to allow live at a time (default: infinity)
   - `.client_timeout`: Timeout (in seconds) to wait for client to send first bytes and/or complete TLS handshake (default: 10)
 ]]
@@ -254,6 +255,7 @@ local function new_server(tbl)
 		onstream = onstream;
 		tls = tbl.tls;
 		ctx = tbl.ctx;
+		version = tbl.version;
 		max_concurrent = tbl.max_concurrent;
 		n_connections = 0;
 		pause_cond = cc.new();
@@ -321,6 +323,7 @@ local function listen(tbl)
 		onstream = tbl.onstream;
 		tls = tls;
 		ctx = ctx;
+		version = tbl.version;
 		max_concurrent = tbl.max_concurrent;
 		client_timeout = tbl.client_timeout;
 	}
