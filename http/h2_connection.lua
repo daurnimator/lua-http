@@ -284,19 +284,19 @@ function connection_methods:empty()
 	return self.cq:empty()
 end
 
-function connection_methods:step(...)
+function connection_methods:step(timeout)
 	if self:empty() then
 		return handle_step_return(self, false, ce.EPIPE)
 	else
-		return handle_step_return(self, self.cq:step(...))
+		return handle_step_return(self, self.cq:step(timeout))
 	end
 end
 
-function connection_methods:loop(...)
+function connection_methods:loop(timeout)
 	if self:empty() then
 		return handle_step_return(self, false, ce.EPIPE)
 	else
-		return handle_step_return(self, self.cq:loop(...))
+		return handle_step_return(self, self.cq:loop(timeout))
 	end
 end
 
