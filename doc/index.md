@@ -1275,7 +1275,7 @@ assert(cq:loop())
 
 ## http.compat.socket
 
-Provides compatibility with [luasocket's http.request module](w3.impa.br/~diego/software/luasocket/http.html).
+Provides compatibility with [luasocket's http.request module](http://w3.impa.br/~diego/software/luasocket/http.html).
 
 Differences:
 
