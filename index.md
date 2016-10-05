@@ -74,6 +74,9 @@ Either `"client"` or `"server"`
 The HTTP version as a number
 
 
+### `connection:connect(timeout)` <!-- --> {#connection:connect}
+
+
 ### `connection:checktls()` <!-- --> {#connection:checktls}
 
 
@@ -215,13 +218,11 @@ Creates a new connection to an HTTP server.
 		  - `true` indicates to copy the `host` field
 		  - `false` disables SNI
 
-	  - `v6only` (boolean, optional): if the `IPV6_V6ONLY` flag should be set on the underlying socket.  
-		defaults to `false`  
+	  - `v6only` (boolean, optional): if the `IPV6_V6ONLY` flag should be set on the underlying socket.
 
   - `timeout` (optional) is the maximum amount of time (in seconds) to allow for connection to be established.
 
 	This includes time for DNS lookup, connection, TLS negotiation (if tls enabled) and in the case of HTTP2: settings exchange.
-
 
 #### Example {#http.client.connect-example}
 
@@ -245,6 +246,11 @@ local myconnection = http_client.connect {
 ### `h1_connection.version` <!-- --> {#http.h1_connection.version}
 
 Either `1.0` or `1.1`
+
+
+### `h1_connection:connect(timeout)` <!-- --> {#http.h1_connection:connect}
+
+See [`connection:connect(timeout)`](#connection:connect)
 
 
 ### `h1_connection:checktls()` <!-- --> {#http.h1_connection:checktls}
@@ -388,6 +394,11 @@ hence an `http.h2_connection` acts much like a scheduler.
 
 
 ### `h2_connection:loop(timeout)` <!-- --> {#http.h2_connection:loop}
+
+
+### `h2_connection:connect(timeout)` <!-- --> {#http.h2_connection:connect}
+
+See [`connection:connect(timeout)`](#connection:connect)
 
 
 ### `h2_connection:checktls()` <!-- --> {#http.h2_connection:checktls}
@@ -667,6 +678,27 @@ Creates and returns a new headers object.
 ### `hpack_context:decode_headers(payload, header_list, pos)` <!-- --> {#http.hpack:decode_headers}
 
 
+## http.proxies
+
+### `new()` <!-- --> {#http.proxies.new}
+
+Returns an empty 'proxies' object
+
+
+### `proxies:update(getenv)` <!-- --> {#http.proxies:update}
+
+`getenv` defaults to [`os.getenv`](http://www.lua.org/manual/5.3/manual.html#pdf-os.getenv)
+
+Reads environmental variables that are used to control if requests go through a proxy.
+
+Returns `proxies`.
+
+
+### `proxies:choose(scheme, host)` <!-- --> {#http.proxies:choose}
+
+Returns the proxy to use for the given `scheme` and `host` as a URI.
+
+
 ## http.request
 
 ### `new_from_uri(uri)` <!-- --> {#http.request.new_from_uri}
@@ -702,6 +734,12 @@ The TLS SNI host name used.
 ### `request.version` <!-- --> {#http.request.version}
 
 The HTTP version to use; leave as `nil` to auto-select.
+
+
+### `request.proxy` <!-- --> {#http.request.proxy}
+
+Specifies the a proxy that the request will be made through.
+The value should be a uri or `false` to turn off proxying for the request.
 
 
 ### `request.headers` <!-- --> {#http.request.headers}
@@ -749,14 +787,6 @@ The clone has its own deep copies of the [`.headers`](#http.request.headers) and
 The [`.tls`](#http.request.tls) and [`.body`](#http.request.body) fields are shallow copied from the original request.
 
 
-### `request:use_proxy(uri)` <!-- --> {#http.request:use_proxy}
-
-Edits a request to go through the given proxy.
-If `uri` is `nil`, removes the current proxy.
-
-Current supports http proxies.
-
-
 ### `request:handle_redirect(headers)` <!-- --> {#http.request:handle_redirect}
 
 Process a redirect.
@@ -797,6 +827,9 @@ This interface is **unstable**.
 ### `listen(options)` <!-- --> {#http.server.connect}
 
 
+### `server:onerror(new_handler)` <!-- --> {#http.server:onerror}
+
+
 ### `server:listen(timeout)` <!-- --> {#http.server:listen}
 
 
@@ -805,13 +838,80 @@ This interface is **unstable**.
 
 ### `server:pause()` <!-- --> {#http.server:pause}
 
-Cause [`server:run`](#http.server:run) to stop processing new clients and return.
+Cause the server loop to stop processing new clients until [`:resume`](#http.server:resume) is called.
+
+
+### `server:resume()` <!-- --> {#http.server:resume}
 
 
 ### `server:close()` <!-- --> {#http.server:close}
 
 
-### `server:run(on_stream, cq)` <!-- --> {#http.server:run}
+### `server:pollfd()` <!-- --> {#http.server:pollfd}
+
+
+### `server:events()` <!-- --> {#http.server:events}
+
+
+### `server:timeout()` <!-- --> {#http.server:timeout}
+
+
+### `server:empty()` <!-- --> {#http.server:empty}
+
+
+### `server:step()` <!-- --> {#http.server:step}
+
+
+### `server:loop()` <!-- --> {#http.server:loop}
+
+
+### `server:add_socket(socket)` <!-- --> {#http.server:add_socket}
+
+
+## http.socks
+
+Implements a subset of the SOCKS proxy protocol.
+
+### `connect(uri)` <!-- --> {#http.socks.connect}
+
+  - `uri` is a string with the address of the SOCKS server. A scheme of `"socks5"` will resolve hosts locally, a scheme of `"socks5h"` will resolve hosts on the SOCKS server. If the URI has a userinfo component it will be sent to the SOCKS server as a username and password.
+
+Returns a *http.socks* object.
+
+
+### `fdopen(socket)` <!-- --> {#http.socks.fdopen}
+
+  - `socket` should be a cqueues socket object
+
+Returns a *http.socks* object.
+
+
+### `socks.needs_resolve` <!-- --> {#http.socks.needs_resolve}
+
+Specifies if the destination host should be resolved locally.
+
+
+### `socks:clone()` <!-- --> {#http.socks:clone}
+
+Make a clone of a given socks object.
+
+
+### `socks:add_username_password_auth(username, password)` <!-- --> {#http.socks:add_username_password_auth}
+
+Add username + password authorisation to the set of allowed authorisation methods with the given credentials.
+
+
+### `socks:negotiate(host, port, timeout)` <!-- --> {#http.socks:negotiate}
+
+Complete the SOCKS connection.
+
+  - `host` (required) a string to pass to the SOCKS server as the host to connect to. Will be resolved locally if [`.needs_resolve`](#http.socks.needs_resolve) is `true`
+  - `port` (required) a number to pass to the SOCKS server as the port to connect to
+
+
+### `socks:take_socket()` <!-- --> {#http.socks:take_socket}
+
+Take possesion of the socket object managed by the http.socks object. Returns the socket (or `nil` if not available).
 
 
 ## http.stream_common
@@ -967,25 +1067,6 @@ Joins the `host` and `port` to create a valid authority component.
 Omits the port if it is the default for the `scheme`.
 
 
-### `read_proxy_vars(getenv)` <!-- --> {#http.util.read_proxy_vars}
-
-Returns a 'proxies' object initialised as if [`proxies:update(getenv)`](#http.util.proxies:update) was called.
-
-
-### `proxies:update(getenv)` <!-- --> {#http.util.proxies:update}
-
-`getenv` defaults to [`os.getenv`](http://www.lua.org/manual/5.3/manual.html#pdf-os.getenv)
-
-Re-read environmental variables (using the given function) that are used to control if requests go through a proxy.
-
-
-### `proxies:choose(scheme, host)` <!-- --> {#http.util.proxies:choose}
-
-Returns the proxy to use for the given `scheme` and `host` as a URI.
-
-Useful for passing to [`request:use_proxy()`](#http.request:use_proxy).
-
-
 ### `imf_date(time)` <!-- --> {#http.util.imf_date}
 
 Returns the time in HTTP preferred date format (See [RFC 7231 section 7.1.1.1](https://tools.ietf.org/html/rfc7231#section-7.1.1.1))
@@ -1045,7 +1126,7 @@ Completes negotiation with a websocket client.
   - `options` is a table containing:
 
 	  - `headers` (optional) a [headers](#http.headers) object to use as a prototype for the response headers
-	  - `protocols` (optional) should be a lua table containing a sequence of protocols to to allow from the client
+	  - `protocols` (optional) should be a lua table containing a sequence of protocols to allow from the client
 
 Usually called after a successful [`new_from_stream`](#http.websocket.new_from_stream)
 
@@ -1194,7 +1275,7 @@ assert(cq:loop())
 
 ## http.compat.socket
 
-Provides compatibility with [luasocket's http.request module](w3.impa.br/~diego/software/luasocket/http.html).
+Provides compatibility with [luasocket's http.request module](http://w3.impa.br/~diego/software/luasocket/http.html).
 
 Differences:
 

@@ -70,6 +70,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#connection">connection</a><ul>
 <li><a href="#connection.type"><code>connection.type</code> <!-- --></a></li>
 <li><a href="#connection.version"><code>connection.version</code> <!-- --></a></li>
+<li><a href="#connection:connect"><code>connection:connect(timeout)</code> <!-- --></a></li>
 <li><a href="#connection:checktls"><code>connection:checktls()</code> <!-- --></a></li>
 <li><a href="#connection:localname"><code>connection:localname()</code> <!-- --></a></li>
 <li><a href="#connection:peername"><code>connection:peername()</code> <!-- --></a></li>
@@ -102,6 +103,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.h1_connection">http.h1_connection</a><ul>
 <li><a href="#http.h1_connection.new"><code>new(socket, conn_type, version)</code> <!-- --></a></li>
 <li><a href="#http.h1_connection.version"><code>h1_connection.version</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:connect"><code>h1_connection:connect(timeout)</code> <!-- --></a></li>
 <li><a href="#http.h1_connection:checktls"><code>h1_connection:checktls()</code> <!-- --></a></li>
 <li><a href="#http.h1_connection:localname"><code>h1_connection:localname()</code> <!-- --></a></li>
 <li><a href="#http.h1_connection:peername"><code>h1_connection:peername()</code> <!-- --></a></li>
@@ -143,6 +145,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.h2_connection:empty"><code>h2_connection:empty()</code> <!-- --></a></li>
 <li><a href="#http.h2_connection:step"><code>h2_connection:step(timeout)</code> <!-- --></a></li>
 <li><a href="#http.h2_connection:loop"><code>h2_connection:loop(timeout)</code> <!-- --></a></li>
+<li><a href="#http.h2_connection:connect"><code>h2_connection:connect(timeout)</code> <!-- --></a></li>
 <li><a href="#http.h2_connection:checktls"><code>h2_connection:checktls()</code> <!-- --></a></li>
 <li><a href="#http.h2_connection:localname"><code>h2_connection:localname()</code> <!-- --></a></li>
 <li><a href="#http.h2_connection:peername"><code>h2_connection:peername()</code> <!-- --></a></li>
@@ -221,6 +224,11 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.hpack:encode_headers"><code>hpack_context:encode_headers(headers)</code> <!-- --></a></li>
 <li><a href="#http.hpack:decode_headers"><code>hpack_context:decode_headers(payload, header_list, pos)</code> <!-- --></a></li>
 </ul></li>
+<li><a href="#http.proxies">http.proxies</a><ul>
+<li><a href="#http.proxies.new"><code>new()</code> <!-- --></a></li>
+<li><a href="#http.proxies:update"><code>proxies:update(getenv)</code> <!-- --></a></li>
+<li><a href="#http.proxies:choose"><code>proxies:choose(scheme, host)</code> <!-- --></a></li>
+</ul></li>
 <li><a href="#http.request">http.request</a><ul>
 <li><a href="#http.request.new_from_uri"><code>new_from_uri(uri)</code> <!-- --></a></li>
 <li><a href="#http.request.new_connect"><code>new_connect(uri, connect_authority)</code> <!-- --></a></li>
@@ -229,6 +237,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.request.tls"><code>request.tls</code> <!-- --></a></li>
 <li><a href="#http.request.sendname"><code>request.sendname</code> <!-- --></a></li>
 <li><a href="#http.request.version"><code>request.version</code> <!-- --></a></li>
+<li><a href="#http.request.proxy"><code>request.proxy</code> <!-- --></a></li>
 <li><a href="#http.request.headers"><code>request.headers</code> <!-- --></a></li>
 <li><a href="#http.request.follow_redirects"><code>request.follow_redirects</code> <!-- --></a></li>
 <li><a href="#http.request.expect_100_timeout"><code>request.expect_100_timeout</code> <!-- --></a></li>
@@ -236,7 +245,6 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.request.post301"><code>request.post301</code> <!-- --></a></li>
 <li><a href="#http.request.post302"><code>request.post302</code> <!-- --></a></li>
 <li><a href="#http.request:clone"><code>request:clone()</code> <!-- --></a></li>
-<li><a href="#http.request:use_proxy"><code>request:use_proxy(uri)</code> <!-- --></a></li>
 <li><a href="#http.request:handle_redirect"><code>request:handle_redirect(headers)</code> <!-- --></a></li>
 <li><a href="#http.request:to_uri"><code>request:to_uri(with_userinfo)</code> <!-- --></a></li>
 <li><a href="#http.request:set_body"><code>request:set_body(body)</code> <!-- --></a></li>
@@ -244,11 +252,28 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 </ul></li>
 <li><a href="#http.server">http.server</a><ul>
 <li><a href="#http.server.connect"><code>listen(options)</code> <!-- --></a></li>
+<li><a href="#http.server:onerror"><code>server:onerror(new_handler)</code> <!-- --></a></li>
 <li><a href="#http.server:listen"><code>server:listen(timeout)</code> <!-- --></a></li>
 <li><a href="#http.server:localname"><code>server:localname()</code> <!-- --></a></li>
 <li><a href="#http.server:pause"><code>server:pause()</code> <!-- --></a></li>
+<li><a href="#http.server:resume"><code>server:resume()</code> <!-- --></a></li>
 <li><a href="#http.server:close"><code>server:close()</code> <!-- --></a></li>
-<li><a href="#http.server:run"><code>server:run(on_stream, cq)</code> <!-- --></a></li>
+<li><a href="#http.server:pollfd"><code>server:pollfd()</code> <!-- --></a></li>
+<li><a href="#http.server:events"><code>server:events()</code> <!-- --></a></li>
+<li><a href="#http.server:timeout"><code>server:timeout()</code> <!-- --></a></li>
+<li><a href="#http.server:empty"><code>server:empty()</code> <!-- --></a></li>
+<li><a href="#http.server:step"><code>server:step()</code> <!-- --></a></li>
+<li><a href="#http.server:loop"><code>server:loop()</code> <!-- --></a></li>
+<li><a href="#http.server:add_socket"><code>server:add_socket(socket)</code> <!-- --></a></li>
+</ul></li>
+<li><a href="#http.socks">http.socks</a><ul>
+<li><a href="#http.socks.connect"><code>connect(uri)</code> <!-- --></a></li>
+<li><a href="#http.socks.fdopen"><code>fdopen(socket)</code> <!-- --></a></li>
+<li><a href="#http.socks.needs_resolve"><code>socks.needs_resolve</code> <!-- --></a></li>
+<li><a href="#http.socks:clone"><code>socks:clone()</code> <!-- --></a></li>
+<li><a href="#http.socks:add_username_password_auth"><code>socks:add_username_password_auth(username, password)</code> <!-- --></a></li>
+<li><a href="#http.socks:negotiate"><code>socks:negotiate(host, port, timeout)</code> <!-- --></a></li>
+<li><a href="#http.socks:take_socket"><code>socks:take_socket()</code> <!-- --></a></li>
 </ul></li>
 <li><a href="#http.stream_common">http.stream_common</a><ul>
 <li><a href="#http.stream_common:checktls"><code>stream:checktls()</code> <!-- --></a></li>
@@ -283,9 +308,6 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.util.scheme_to_port"><code>scheme_to_port</code> <!-- --></a></li>
 <li><a href="#http.util.split_authority"><code>split_authority(authority, scheme)</code> <!-- --></a></li>
 <li><a href="#http.util.to_authority"><code>to_authority(host, port, scheme)</code> <!-- --></a></li>
-<li><a href="#http.util.read_proxy_vars"><code>read_proxy_vars(getenv)</code> <!-- --></a></li>
-<li><a href="#http.util.proxies:update"><code>proxies:update(getenv)</code> <!-- --></a></li>
-<li><a href="#http.util.proxies:choose"><code>proxies:choose(scheme, host)</code> <!-- --></a></li>
 <li><a href="#http.util.imf_date"><code>imf_date(time)</code> <!-- --></a></li>
 <li><a href="#http.util.maybe_quote"><code>maybe_quote(str)</code> <!-- --></a></li>
 </ul></li>
@@ -380,6 +402,9 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <section id="connection.version" class="level3">
 <h3><code>connection.version</code> <!-- --></h3>
 <p>The HTTP version as a number</p>
+</section>
+<section id="connection:connect" class="level3">
+<h3><code>connection:connect(timeout)</code> <!-- --></h3>
 </section>
 <section id="connection:checktls" class="level3">
 <h3><code>connection:checktls()</code> <!-- --></h3>
@@ -504,8 +529,7 @@ defaults to <code>true</code>
 <li><code>true</code> indicates to copy the <code>host</code> field</li>
 <li><code>false</code> disables SNI</li>
 </ul></li>
-<li><p><code>v6only</code> (boolean, optional): if the <code>IPV6_V6ONLY</code> flag should be set on the underlying socket.<br />
-defaults to <code>false</code></p></li>
+<li><p><code>v6only</code> (boolean, optional): if the <code>IPV6_V6ONLY</code> flag should be set on the underlying socket.</p></li>
 </ul></li>
 <li><p><code>timeout</code> (optional) is the maximum amount of time (in seconds) to allow for connection to be established.</p>
 <p>This includes time for DNS lookup, connection, TLS negotiation (if tls enabled) and in the case of HTTP2: settings exchange.</p></li>
@@ -530,6 +554,10 @@ defaults to <code>false</code></p></li>
 <section id="http.h1_connection.version" class="level3">
 <h3><code>h1_connection.version</code> <!-- --></h3>
 <p>Either <code>1.0</code> or <code>1.1</code></p>
+</section>
+<section id="http.h1_connection:connect" class="level3">
+<h3><code>h1_connection:connect(timeout)</code> <!-- --></h3>
+<p>See <a href="#connection:connect"><code>connection:connect(timeout)</code></a></p>
 </section>
 <section id="http.h1_connection:checktls" class="level3">
 <h3><code>h1_connection:checktls()</code> <!-- --></h3>
@@ -659,6 +687,10 @@ defaults to <code>false</code></p></li>
 </section>
 <section id="http.h2_connection:loop" class="level3">
 <h3><code>h2_connection:loop(timeout)</code> <!-- --></h3>
+</section>
+<section id="http.h2_connection:connect" class="level3">
+<h3><code>h2_connection:connect(timeout)</code> <!-- --></h3>
+<p>See <a href="#connection:connect"><code>connection:connect(timeout)</code></a></p>
 </section>
 <section id="http.h2_connection:checktls" class="level3">
 <h3><code>h2_connection:checktls()</code> <!-- --></h3>
@@ -913,6 +945,23 @@ For server initiated streams, this will be the next free even numbered stream.</
 <h3><code>hpack_context:decode_headers(payload, header_list, pos)</code> <!-- --></h3>
 </section>
 </section>
+<section id="http.proxies" class="level2">
+<h2>http.proxies</h2>
+<section id="http.proxies.new" class="level3">
+<h3><code>new()</code> <!-- --></h3>
+<p>Returns an empty 'proxies' object</p>
+</section>
+<section id="http.proxies:update" class="level3">
+<h3><code>proxies:update(getenv)</code> <!-- --></h3>
+<p><code>getenv</code> defaults to <a href="http://www.lua.org/manual/5.3/manual.html#pdf-os.getenv"><code>os.getenv</code></a></p>
+<p>Reads environmental variables that are used to control if requests go through a proxy.</p>
+<p>Returns <code>proxies</code>.</p>
+</section>
+<section id="http.proxies:choose" class="level3">
+<h3><code>proxies:choose(scheme, host)</code> <!-- --></h3>
+<p>Returns the proxy to use for the given <code>scheme</code> and <code>host</code> as a URI.</p>
+</section>
+</section>
 <section id="http.request" class="level2">
 <h2>http.request</h2>
 <section id="http.request.new_from_uri" class="level3">
@@ -943,6 +992,10 @@ For server initiated streams, this will be the next free even numbered stream.</
 <h3><code>request.version</code> <!-- --></h3>
 <p>The HTTP version to use; leave as <code>nil</code> to auto-select.</p>
 </section>
+<section id="http.request.proxy" class="level3">
+<h3><code>request.proxy</code> <!-- --></h3>
+<p>Specifies the a proxy that the request will be made through. The value should be a uri or <code>false</code> to turn off proxying for the request.</p>
+</section>
 <section id="http.request.headers" class="level3">
 <h3><code>request.headers</code> <!-- --></h3>
 <p>A <a href="#http.headers"><em>http.headers</em></a> object of headers that will be sent in the request.</p>
@@ -972,11 +1025,6 @@ For server initiated streams, this will be the next free even numbered stream.</
 <p>Creates and returns a clone of the request.</p>
 <p>The clone has its own deep copies of the <a href="#http.request.headers"><code>.headers</code></a> and <a href="#http.request.h2_settings"><code>.h2_settings</code></a> fields.</p>
 <p>The <a href="#http.request.tls"><code>.tls</code></a> and <a href="#http.request.body"><code>.body</code></a> fields are shallow copied from the original request.</p>
-</section>
-<section id="http.request:use_proxy" class="level3">
-<h3><code>request:use_proxy(uri)</code> <!-- --></h3>
-<p>Edits a request to go through the given proxy. If <code>uri</code> is <code>nil</code>, removes the current proxy.</p>
-<p>Current supports http proxies.</p>
 </section>
 <section id="http.request:handle_redirect" class="level3">
 <h3><code>request:handle_redirect(headers)</code> <!-- --></h3>
@@ -1010,6 +1058,9 @@ For server initiated streams, this will be the next free even numbered stream.</
 <section id="http.server.connect" class="level3">
 <h3><code>listen(options)</code> <!-- --></h3>
 </section>
+<section id="http.server:onerror" class="level3">
+<h3><code>server:onerror(new_handler)</code> <!-- --></h3>
+</section>
 <section id="http.server:listen" class="level3">
 <h3><code>server:listen(timeout)</code> <!-- --></h3>
 </section>
@@ -1018,13 +1069,76 @@ For server initiated streams, this will be the next free even numbered stream.</
 </section>
 <section id="http.server:pause" class="level3">
 <h3><code>server:pause()</code> <!-- --></h3>
-<p>Cause <a href="#http.server:run"><code>server:run</code></a> to stop processing new clients and return.</p>
+<p>Cause the server loop to stop processing new clients until <a href="#http.server:resume"><code>:resume</code></a> is called.</p>
+</section>
+<section id="http.server:resume" class="level3">
+<h3><code>server:resume()</code> <!-- --></h3>
 </section>
 <section id="http.server:close" class="level3">
 <h3><code>server:close()</code> <!-- --></h3>
 </section>
-<section id="http.server:run" class="level3">
-<h3><code>server:run(on_stream, cq)</code> <!-- --></h3>
+<section id="http.server:pollfd" class="level3">
+<h3><code>server:pollfd()</code> <!-- --></h3>
+</section>
+<section id="http.server:events" class="level3">
+<h3><code>server:events()</code> <!-- --></h3>
+</section>
+<section id="http.server:timeout" class="level3">
+<h3><code>server:timeout()</code> <!-- --></h3>
+</section>
+<section id="http.server:empty" class="level3">
+<h3><code>server:empty()</code> <!-- --></h3>
+</section>
+<section id="http.server:step" class="level3">
+<h3><code>server:step()</code> <!-- --></h3>
+</section>
+<section id="http.server:loop" class="level3">
+<h3><code>server:loop()</code> <!-- --></h3>
+</section>
+<section id="http.server:add_socket" class="level3">
+<h3><code>server:add_socket(socket)</code> <!-- --></h3>
+</section>
+</section>
+<section id="http.socks" class="level2">
+<h2>http.socks</h2>
+<p>Implements a subset of the SOCKS proxy protocol.</p>
+<section id="http.socks.connect" class="level3">
+<h3><code>connect(uri)</code> <!-- --></h3>
+<ul>
+<li><code>uri</code> is a string with the address of the SOCKS server. A scheme of <code>&quot;socks5&quot;</code> will resolve hosts locally, a scheme of <code>&quot;socks5h&quot;</code> will resolve hosts on the SOCKS server. If the URI has a userinfo component it will be sent to the SOCKS server as a username and password.</li>
+</ul>
+<p>Returns a <em>http.socks</em> object.</p>
+</section>
+<section id="http.socks.fdopen" class="level3">
+<h3><code>fdopen(socket)</code> <!-- --></h3>
+<ul>
+<li><code>socket</code> should be a cqueues socket object</li>
+</ul>
+<p>Returns a <em>http.socks</em> object.</p>
+</section>
+<section id="http.socks.needs_resolve" class="level3">
+<h3><code>socks.needs_resolve</code> <!-- --></h3>
+<p>Specifies if the destination host should be resolved locally.</p>
+</section>
+<section id="http.socks:clone" class="level3">
+<h3><code>socks:clone()</code> <!-- --></h3>
+<p>Make a clone of a given socks object.</p>
+</section>
+<section id="http.socks:add_username_password_auth" class="level3">
+<h3><code>socks:add_username_password_auth(username, password)</code> <!-- --></h3>
+<p>Add username + password authorisation to the set of allowed authorisation methods with the given credentials.</p>
+</section>
+<section id="http.socks:negotiate" class="level3">
+<h3><code>socks:negotiate(host, port, timeout)</code> <!-- --></h3>
+<p>Complete the SOCKS connection.</p>
+<ul>
+<li><code>host</code> (required) a string to pass to the SOCKS server as the host to connect to. Will be resolved locally if <a href="#http.socks.needs_resolve"><code>.needs_resolve</code></a> is <code>true</code></li>
+<li><code>port</code> (required) a number to pass to the SOCKS server as the port to connect to</li>
+</ul>
+</section>
+<section id="http.socks:take_socket" class="level3">
+<h3><code>socks:take_socket()</code> <!-- --></h3>
+<p>Take possesion of the socket object managed by the http.socks object. Returns the socket (or <code>nil</code> if not available).</p>
 </section>
 </section>
 <section id="http.stream_common" class="level2">
@@ -1158,20 +1272,6 @@ For server initiated streams, this will be the next free even numbered stream.</
 <h3><code>to_authority(host, port, scheme)</code> <!-- --></h3>
 <p>Joins the <code>host</code> and <code>port</code> to create a valid authority component. Omits the port if it is the default for the <code>scheme</code>.</p>
 </section>
-<section id="http.util.read_proxy_vars" class="level3">
-<h3><code>read_proxy_vars(getenv)</code> <!-- --></h3>
-<p>Returns a 'proxies' object initialised as if <a href="#http.util.proxies:update"><code>proxies:update(getenv)</code></a> was called.</p>
-</section>
-<section id="http.util.proxies:update" class="level3">
-<h3><code>proxies:update(getenv)</code> <!-- --></h3>
-<p><code>getenv</code> defaults to <a href="http://www.lua.org/manual/5.3/manual.html#pdf-os.getenv"><code>os.getenv</code></a></p>
-<p>Re-read environmental variables (using the given function) that are used to control if requests go through a proxy.</p>
-</section>
-<section id="http.util.proxies:choose" class="level3">
-<h3><code>proxies:choose(scheme, host)</code> <!-- --></h3>
-<p>Returns the proxy to use for the given <code>scheme</code> and <code>host</code> as a URI.</p>
-<p>Useful for passing to <a href="#http.request:use_proxy"><code>request:use_proxy()</code></a>.</p>
-</section>
 <section id="http.util.imf_date" class="level3">
 <h3><code>imf_date(time)</code> <!-- --></h3>
 <p>Returns the time in HTTP preferred date format (See <a href="https://tools.ietf.org/html/rfc7231#section-7.1.1.1">RFC 7231 section 7.1.1.1</a>)</p>
@@ -1226,7 +1326,7 @@ For server initiated streams, this will be the next free even numbered stream.</
 <li><p><code>options</code> is a table containing:</p>
 <ul>
 <li><code>headers</code> (optional) a <a href="#http.headers">headers</a> object to use as a prototype for the response headers</li>
-<li><code>protocols</code> (optional) should be a lua table containing a sequence of protocols to to allow from the client</li>
+<li><code>protocols</code> (optional) should be a lua table containing a sequence of protocols to allow from the client</li>
 </ul></li>
 </ul>
 <p>Usually called after a successful <a href="#http.websocket.new_from_stream"><code>new_from_stream</code></a></p>
@@ -1352,7 +1452,7 @@ cq:wrap<span class="ot">(</span><span class="kw">function</span><span class="ot"
 </section>
 <section id="http.compat.socket" class="level2">
 <h2>http.compat.socket</h2>
-<p>Provides compatibility with <a href="w3.impa.br/~diego/software/luasocket/http.html">luasocket's http.request module</a>.</p>
+<p>Provides compatibility with <a href="http://w3.impa.br/~diego/software/luasocket/http.html">luasocket's http.request module</a>.</p>
 <p>Differences:</p>
 <ul>
 <li>Will automatically be non-blocking when run inside a cqueues managed coroutine</li>
