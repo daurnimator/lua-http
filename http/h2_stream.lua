@@ -466,9 +466,9 @@ function stream_methods:write_headers_frame(payload, end_stream, end_headers, pa
 	if ok == nil then return nil, err, errno end
 	self.stats_sent_headers = self.stats_sent_headers + 1
 	if end_stream then
-		if self.state == "reserved (local)" then
+		if self.state == "half closed (remote)" then
 			self:set_state("closed")
-		else -- self.state == "idle" or self.state == "open" then
+		else
 			self:set_state("half closed (local)")
 		end
 	else
