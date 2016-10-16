@@ -145,6 +145,50 @@ describe("http.server module", function()
 		assert.truthy(cq:empty())
 		assert.spy(onstream).was.called()
 	end)
+	it("an idle http2 stream doesn't block the server", function()
+		local s = server.listen {
+			host = "localhost";
+			port = 0;
+			onstream = function(_, stream)
+				if stream.id == 1 then
+					stream:get_next_chunk()
+				else -- id == 3
+					assert.same({nil, ce.EPIPE}, {stream:get_next_chunk()})
+					local headers = new_headers()
+					headers:append(":status", "200")
+					assert(stream:write_headers(headers, true))
+				end
+			end;
+		}
+		assert(s:listen())
+		local client_family, client_host, client_port = s:localname()
+		local conn = assert(client.connect({
+			family = client_family;
+			host = client_host;
+			port = client_port;
+			version = 2;
+		}))
+		local cq = cqueues.new()
+		cq:wrap(function()
+			assert_loop(s)
+		end)
+		cq:wrap(function()
+			local headers = new_headers()
+			headers:append(":authority", "myauthority")
+			headers:append(":method", "GET")
+			headers:append(":path", "/")
+			headers:append(":scheme", "http")
+			local stream1 = assert(conn:new_stream())
+			assert(stream1:write_headers(headers, false))
+			local stream2 = assert(conn:new_stream())
+			assert(stream2:write_headers(headers, true))
+			assert(stream2:get_headers())
+			conn:close()
+			s:close()
+		end)
+		assert_loop(cq, TEST_TIMEOUT)
+		assert.truthy(cq:empty())
+	end)
 	it("allows pausing+resuming the server", function()
 		local s = server.listen {
 			host = "localhost";

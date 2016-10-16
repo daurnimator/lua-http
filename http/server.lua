@@ -135,6 +135,8 @@ local function handle_socket(self, socket)
 			error_context = socket
 		end
 	else
+		local cond = cc.new()
+		local n_streams = 0
 		while true do
 			local stream
 			stream, err, errno = conn:get_next_incoming_stream()
@@ -148,16 +150,21 @@ local function handle_socket(self, socket)
 				end
 				break
 			end
-			local ok
-			ok, err = http_util.yieldable_pcall(self.onstream, self, stream)
-			if not ok then
-				error_operation = "onstream"
-				error_context = stream
+			n_streams = n_streams + 1
+			self.cq:wrap(function()
+				local ok, err2 = http_util.yieldable_pcall(self.onstream, self, stream)
 				stream:shutdown()
-				break
-			end
+				n_streams = n_streams - 1
+				cond:signal()
+				if not ok then
+					self:onerror()(self, stream, "onstream", err2)
+				end
+			end)
 		end
-		-- wait for streams to complete?
+		-- wait for streams to complete
+		while n_streams > 0 do
+			cond:wait()
+		end
 		conn:close()
 	end
 	self.n_connections = self.n_connections - 1
