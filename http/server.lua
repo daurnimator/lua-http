@@ -155,7 +155,9 @@ local function handle_socket(self, socket)
 				local ok, err2 = http_util.yieldable_pcall(self.onstream, self, stream)
 				stream:shutdown()
 				n_streams = n_streams - 1
-				cond:signal()
+				if n_streams == 0 then
+					cond:signal()
+				end
 				if not ok then
 					self:onerror()(self, stream, "onstream", err2)
 				end
