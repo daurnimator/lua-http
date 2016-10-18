@@ -141,7 +141,7 @@ local function handle_socket(self, socket)
 			local stream
 			stream, err, errno = conn:get_next_incoming_stream()
 			if stream == nil then
-				if (err ~= ce.EPIPE -- client closed connection
+				if (err ~= nil -- client closed connection
 					and errno ~= ce.ECONNRESET
 					and errno ~= ce.ENOTCONN)
 				  or (cs.type(conn.socket) == "socket" and conn.socket:pending() ~= 0) then
