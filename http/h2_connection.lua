@@ -286,7 +286,7 @@ end
 
 function connection_methods:step(timeout)
 	if self:empty() then
-		return handle_step_return(self, false, ce.EPIPE)
+		return handle_step_return(self, false, nil, nil)
 	else
 		return handle_step_return(self, self.cq:step(timeout))
 	end
@@ -294,7 +294,7 @@ end
 
 function connection_methods:loop(timeout)
 	if self:empty() then
-		return handle_step_return(self, false, ce.EPIPE)
+		return handle_step_return(self, false, nil, nil)
 	else
 		return handle_step_return(self, self.cq:loop(timeout))
 	end
@@ -386,7 +386,7 @@ function connection_methods:get_next_incoming_stream(timeout)
 			-- TODO? clarification required: can the sender of a GOAWAY subsequently start streams?
 			-- (with a lower stream id than they sent in the GOAWAY)
 			-- For now, assume not.
-			return nil, ce.EPIPE
+			return nil
 		end
 		local which = cqueues.poll(self, self.new_streams_cond, self.recv_goaway, timeout)
 		if which == self then
