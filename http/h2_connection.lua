@@ -406,15 +406,19 @@ end
 
 -- On success, returns type, flags, stream id and payload
 -- On timeout, returns nil, ETIMEDOUT -- safe to retry
--- If the socket has been shutdown for reading, and there is no data left unread, returns EPIPE
--- Will raise an error on other errors, or if the frame is invalid
+-- If the socket has been shutdown for reading, and there is no data left unread, returns nil
+-- Will return nil, err, errno on error
 function connection_methods:read_http2_frame(timeout)
 	local deadline = timeout and (monotime()+timeout)
 	local frame_header, err, errno = self.socket:xread(9, timeout)
 	if frame_header == nil then
 		if err == ce.ETIMEDOUT then
 			return nil, err
-		elseif err == nil --[[EPIPE]] and self.socket:eof("r") then
+		elseif err == nil then
+			if self.socket:pending() > 0 then
+				self.socket:seterror("r", ce.EPROTO)
+				return nil, onerror(self.socket, "read_http2_frame", ce.EPROTO)
+			end
 			return nil
 		else
 			return nil, err, errno
@@ -424,19 +428,28 @@ function connection_methods:read_http2_frame(timeout)
 	if size > self.acked_settings[0x5] then
 		return nil, h2_error.errors.FRAME_SIZE_ERROR:new_traceback("frame too large")
 	end
-	-- reserved bit MUST be ignored by receivers
-	streamid = band(streamid, 0x7fffffff)
 	local payload, err2, errno2 = self.socket:xread(size, deadline and (deadline-monotime()))
+	if payload and #payload < size then -- hit EOF
+		local ok, errno4 = self.socket:unget(payload)
+		if not ok then
+			return nil, onerror(self.socket, "unget", errno4, 2)
+		end
+		payload = nil
+	end
 	if payload == nil then
-		if err2 == ce.ETIMEDOUT then
-			-- put frame header back into socket so a retry will work
-			local ok, errno3 = self.socket:unget(frame_header)
-			if not ok then
-				return nil, onerror(self.socket, "unget", errno3, 2)
-			end
+		-- put frame header back into socket so a retry will work
+		local ok, errno3 = self.socket:unget(frame_header)
+		if not ok then
+			return nil, onerror(self.socket, "unget", errno3, 2)
+		end
+		if err2 == nil then
+			self.socket:seterror("r", ce.EPROTO)
+			return nil, onerror(self.socket, "read_http2_frame", ce.EPROTO)
 		end
 		return nil, err2, errno2
 	end
+	-- reserved bit MUST be ignored by receivers
+	streamid = band(streamid, 0x7fffffff)
 	return typ, flags, streamid, payload
 end
 
