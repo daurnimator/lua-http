@@ -214,7 +214,7 @@ function stream_methods:read_headers(timeout)
 		local method, path, httpversion =
 			self.connection:read_request_line(deadline and (deadline-monotime()))
 		if method == nil then
-			return nil, path, httpversion
+			return nil, path or ce.EPIPE, httpversion
 		end
 		self.req_method = method
 		self.peer_version = httpversion
@@ -241,7 +241,7 @@ function stream_methods:read_headers(timeout)
 		httpversion, status_code, reason_phrase =
 			self.connection:read_status_line(deadline and (deadline-monotime()))
 		if httpversion == nil then
-			return nil, status_code, reason_phrase
+			return nil, status_code or ce.EPIPE, reason_phrase
 		end
 		self.peer_version = httpversion
 		headers:append(":status", status_code)
@@ -251,7 +251,7 @@ function stream_methods:read_headers(timeout)
 	while true do
 		local k, v, errno = self.connection:read_header(deadline and (deadline-monotime()))
 		if k == nil then
-			if v ~= ce.EPIPE then
+			if v ~= nil then
 				return nil, v, errno
 			end
 			break -- Success: End of headers.
@@ -266,7 +266,7 @@ function stream_methods:read_headers(timeout)
 	do
 		local ok, err, errno = self.connection:read_headers_done(deadline and (deadline-monotime()))
 		if ok == nil then
-			return nil, err, errno
+			return nil, err or ce.EPIPE, errno
 		end
 	end
 
@@ -742,7 +742,7 @@ function stream_methods:get_next_chunk(timeout)
 			local trailers
 			trailers, err, errno = self:read_headers(deadline and (deadline-monotime()))
 			if not trailers then
-				return nil, err, errno
+				return nil, err or ce.EPIPE, errno
 			end
 			self.headers_fifo:push(trailers)
 			self.headers_cond:signal(1)
@@ -770,14 +770,14 @@ function stream_methods:get_next_chunk(timeout)
 	elseif self.body_read_type == "close" then
 		-- Use a big negative number instead of *a. see https://github.com/wahern/cqueues/issues/89
 		chunk, err, errno = self.connection:read_body_by_length(-0x80000000, timeout)
-		end_stream = (err == ce.EPIPE)
+		end_stream = (err == nil)
 	elseif self.body_read_type == nil then
 		-- Might get here if haven't read headers yet, or if only headers so far have been 1xx codes
 		local deadline = timeout and (monotime()+timeout)
 		local headers
 		headers, err, errno = self:read_headers(timeout)
 		if not headers then
-			return nil, err, errno
+			return nil, err or ce.EPIPE, errno
 		end
 		self.headers_fifo:push(headers)
 		self.headers_cond:signal(1)
@@ -798,7 +798,7 @@ function stream_methods:get_next_chunk(timeout)
 			self:set_state("half closed (remote)")
 		end
 	end
-	return chunk, err, errno
+	return chunk, err or ce.EPIPE, errno
 end
 
 function stream_methods:unget(str)
