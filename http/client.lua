@@ -23,9 +23,6 @@ end
 default_h2_ctx:setOptions(openssl_ctx.OP_NO_TLSv1 + openssl_ctx.OP_NO_TLSv1_1)
 
 local function onerror(socket, op, why, lvl) -- luacheck: ignore 212
-	if why == ce.ETIMEDOUT then
-		return why
-	end
 	return string.format("%s: %s", op, ce.strerror(why)), why
 end
 

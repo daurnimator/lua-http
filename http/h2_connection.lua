@@ -58,9 +58,6 @@ local connection_main_loop
 
 -- An 'onerror' that doesn't throw
 local function onerror(socket, op, why, lvl) -- luacheck: ignore 212
-	if why == ce.ETIMEDOUT then
-		return why
-	end
 	return string.format("%s: %s", op, ce.strerror(why)), why
 end
 
@@ -395,7 +392,7 @@ function connection_methods:get_next_incoming_stream(timeout)
 				return nil, err, errno
 			end
 		elseif which == timeout then
-			return nil, ce.ETIMEDOUT
+			return nil, onerror(self.socket, "get_next_incoming_stream", ce.ETIMEDOUT)
 		end
 		timeout = deadline and (deadline-monotime())
 	end
@@ -405,15 +402,14 @@ function connection_methods:get_next_incoming_stream(timeout)
 end
 
 -- On success, returns type, flags, stream id and payload
--- On timeout, returns nil, ETIMEDOUT -- safe to retry
 -- If the socket has been shutdown for reading, and there is no data left unread, returns nil
--- Will return nil, err, errno on error
+-- safe to retry on error
 function connection_methods:read_http2_frame(timeout)
 	local deadline = timeout and (monotime()+timeout)
 	local frame_header, err, errno = self.socket:xread(9, timeout)
 	if frame_header == nil then
-		if err == ce.ETIMEDOUT then
-			return nil, err
+		if errno == ce.ETIMEDOUT then
+			return nil, err, errno
 		elseif err == nil then
 			if self.socket:pending() > 0 then
 				self.socket:seterror("r", ce.EPROTO)
@@ -489,7 +485,7 @@ function connection_methods:ping(timeout)
 				return nil, err, errno
 			end
 		elseif which == timeout then
-			return nil, ce.ETIMEDOUT
+			return nil, onerror(self.socket, "ping", ce.ETIMEDOUT)
 		end
 	end
 	return true
@@ -539,7 +535,7 @@ function connection_methods:settings(tbl, timeout)
 			end
 		elseif which ~= self.send_settings_ack_cond then
 			self:write_goaway_frame(nil, h2_error.errors.SETTINGS_TIMEOUT.code, "timeout exceeded")
-			return nil, ce.ETIMEDOUT
+			return nil, onerror(self.socket, "settings", ce.ETIMEDOUT)
 		end
 	end
 	return true

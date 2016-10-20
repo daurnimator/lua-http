@@ -32,10 +32,12 @@ local function ltn12_pump_step(src, snk)
 end
 
 local function get_body_as_string(stream, deadline)
-	local body, err = stream:get_body_as_string(deadline and deadline-monotime())
+	local body, err, errno = stream:get_body_as_string(deadline and deadline-monotime())
 	if not body then
 		if err == ce.EPIPE then
 			return nil
+		elseif errno == ce.ETIMEDOUT then
+			return nil, "timeout"
 		else
 			return nil, err
 		end
@@ -105,10 +107,12 @@ function M.request(reqt, b)
 		if sink ~= nil then
 			get_body = function(stream, deadline) -- luacheck: ignore 431
 				local function res_body_source()
-					local chunk, err = stream:get_next_chunk(deadline and deadline-monotime())
+					local chunk, err, errno = stream:get_next_chunk(deadline and deadline-monotime())
 					if not chunk then
 						if err == ce.EPIPE then
 							return nil
+						elseif errno == ce.ETIMEDOUT then
+							return nil, "timeout"
 						else
 							return nil, err
 						end
@@ -142,11 +146,11 @@ function M.request(reqt, b)
 			end
 		end
 	end
-	local res_headers, stream = req:go(deadline and deadline-monotime())
+	local res_headers, stream, errno = req:go(deadline and deadline-monotime())
 	if not res_headers then
 		if stream == ce.EPIPE then
 			return nil, "closed"
-		elseif stream == ce.ETIMEDOUT then
+		elseif errno == ce.ETIMEDOUT then
 			return nil, "timeout"
 		else
 			return nil, stream
@@ -165,11 +169,7 @@ function M.request(reqt, b)
 	local body, err = get_body(stream, deadline)
 	stream:shutdown()
 	if not body then
-		if err == ce.ETIMEDOUT then
-			return nil, "timeout"
-		else
-			return nil, err
-		end
+		return nil, err
 	end
 	return body, code, headers, status
 end

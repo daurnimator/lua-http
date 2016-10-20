@@ -158,9 +158,7 @@ function stream_methods:shutdown()
 	if self.type == "server" and (self.state == "open" or self.state == "half closed (remote)") then
 		-- Make sure we're at the front of the pipeline
 		if self.connection.pipeline:peek() ~= self then
-			if not self.pipeline_cond:wait() then
-				return nil, ce.ETIMEDOUT
-			end
+			self.pipeline_cond:wait() -- wait without a timeout should never fail
 			assert(self.connection.pipeline:peek() == self)
 		end
 		if not self.body_write_type then
@@ -233,7 +231,7 @@ function stream_methods:read_headers(timeout)
 		-- Make sure we're at front of connection pipeline
 		if self.connection.pipeline:peek() ~= self then
 			if not self.pipeline_cond:wait(deadline and (deadline-monotime)) then
-				return nil, ce.ETIMEDOUT
+				return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 			end
 			assert(self.connection.pipeline:peek() == self)
 		end
@@ -379,7 +377,7 @@ function stream_methods:get_headers(timeout)
 				return nil, ce.EPIPE
 			end
 			if not self.headers_cond:wait(timeout) then
-				return nil, ce.ETIMEDOUT
+				return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 			end
 			timeout = deadline and deadline-monotime()
 		until self.headers_fifo:length() > 0
@@ -452,7 +450,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		-- Make sure we're at the front of the pipeline
 		if self.connection.pipeline:peek() ~= self then
 			if not self.pipeline_cond:wait(deadline and (deadline-monotime)) then
-				return nil, ce.ETIMEDOUT
+				return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 			end
 			assert(self.connection.pipeline:peek() == self)
 		end
@@ -482,7 +480,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 			if self.req_locked then
 				-- Wait until previous responses have been fully written
 				if not self.connection.req_cond:wait(deadline and (deadline-monotime())) then
-					return nil, ce.ETIMEDOUT
+					return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 				end
 				assert(self.req_locked == nil)
 			end

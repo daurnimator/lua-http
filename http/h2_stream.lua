@@ -982,7 +982,7 @@ function stream_methods:get_headers(timeout)
 				return nil, err, errno
 			end
 		elseif which == timeout then
-			return nil, ce.ETIMEDOUT
+			return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 		end
 		timeout = deadline and (deadline-monotime())
 	end
@@ -1006,7 +1006,7 @@ function stream_methods:get_next_chunk(timeout)
 				return nil, err, errno
 			end
 		elseif which == timeout then
-			return nil, ce.ETIMEDOUT
+			return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 		end
 		timeout = deadline and (deadline-monotime())
 	end
@@ -1113,7 +1113,7 @@ function stream_methods:write_chunk(payload, end_stream, timeout)
 					return nil, err, errno
 				end
 			elseif which == timeout then
-				return nil, ce.ETIMEDOUT
+				return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 			end
 			timeout = deadline and (deadline-monotime())
 		end
@@ -1125,7 +1125,7 @@ function stream_methods:write_chunk(payload, end_stream, timeout)
 					return nil, err, errno
 				end
 			elseif which == timeout then
-				return nil, ce.ETIMEDOUT
+				return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 			end
 			timeout = deadline and (deadline-monotime())
 		end

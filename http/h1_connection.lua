@@ -25,7 +25,6 @@ local function onerror(socket, op, why, lvl) -- luacheck: ignore 212
 		elseif op == "flush" then
 			socket:clearerr("w")
 		end
-		return why
 	end
 	return string.format("%s: %s", op, ce.strerror(why)), why
 end
@@ -145,7 +144,7 @@ function connection_methods:get_next_incoming_stream(timeout)
 		-- Wait until previous requests have been fully read
 		if self.req_locked then
 			if not self.req_cond:wait(deadline and deadline - monotime()) then
-				return nil, ce.ETIMEDOUT
+				return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 			end
 			assert(self.req_locked == nil)
 		end

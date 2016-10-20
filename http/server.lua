@@ -17,9 +17,6 @@ local altname = require "openssl.x509.altname"
 local hang_timeout = 0.03
 
 local function onerror(socket, op, why, lvl) -- luacheck: ignore 212
-	if why == ce.ETIMEDOUT then
-		return why
-	end
 	return string.format("%s: %s", op, ce.strerror(why)), why
 end
 
@@ -132,7 +129,7 @@ local function handle_socket(self, socket)
 	if not conn then
 		socket:close()
 		if err ~= ce.EPIPE -- client closed connection
-			and err ~= ce.ETIMEDOUT -- an operation timed out
+			and errno ~= ce.ETIMEDOUT -- an operation timed out
 			and errno ~= ce.ECONNRESET then
 			error_operation = "wrap"
 			error_context = socket
