@@ -344,7 +344,7 @@ function stream_methods:read_headers(timeout)
 		no_body = false
 		self.body_read_type = "close"
 	end
-	if has_zlib and self.type == "server" and self.state == "open" and headers:has("te") then
+	if has_zlib and self.type == "server" and self.state == "open" and not is_trailers and headers:has("te") then
 		local te = TE:match(headers:get_comma_separated("te"))
 		for _, v in ipairs(te) do
 			local tcoding = v[1]
