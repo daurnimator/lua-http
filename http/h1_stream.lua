@@ -20,7 +20,7 @@ local clean_shutdown_limit = 500*1024
 local EOF = lpeg.P(-1)
 local Connection = lpeg.Ct(http_patts.Connection) * EOF
 local Content_Encoding = lpeg.Ct(http_patts.Content_Encoding) * EOF
-local Transfer_Encoding = lpeg.Ct(http_patts.Transfer_Encoding + EOF) * EOF
+local Transfer_Encoding = lpeg.Ct(http_patts.Transfer_Encoding) * EOF
 local TE = lpeg.Ct(http_patts.TE) * EOF
 
 local function has(list, val)
