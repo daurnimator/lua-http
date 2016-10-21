@@ -348,7 +348,7 @@ function stream_methods:read_headers(timeout)
 		local te = TE:match(headers:get_comma_separated("te"))
 		for _, v in ipairs(te) do
 			local tcoding = v[1]
-			if (tcoding == "gzip" or tcoding == "x-gzip" or tcoding "deflate") and v.q ~= 0 then
+			if (tcoding == "gzip" or tcoding == "x-gzip" or tcoding == "deflate") and v.q ~= 0 then
 				v.q = nil
 				self.body_write_deflate_encoding = v
 				self.body_write_deflate = zlib.deflate()
