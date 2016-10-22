@@ -216,7 +216,7 @@ end
 -- create a new self signed cert
 local function new_ctx(host, version)
 	local ctx = http_tls.new_server_context()
-	if ctx.setAlpnSelect then
+	if http_tls.has_alpn then
 		if version == nil then
 			ctx:setAlpnSelect(alpn_select_either)
 		elseif version == 2 then
