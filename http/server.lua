@@ -9,6 +9,7 @@ local http_tls = require "http.tls"
 local http_util = require "http.util"
 local pkey = require "openssl.pkey"
 local openssl_ssl = require "openssl.ssl"
+local openssl_ctx = require "openssl.ssl.context"
 local x509 = require "openssl.x509"
 local name = require "openssl.x509.name"
 local altname = require "openssl.x509.altname"
@@ -223,6 +224,9 @@ local function new_ctx(host, version)
 		elseif version == 1.1 then
 			ctx:setAlpnSelect(alpn_select_h1)
 		end
+	end
+	if version == 2 then
+		ctx:setOptions(openssl_ctx.OP_NO_TLSv1 + openssl_ctx.OP_NO_TLSv1_1)
 	end
 	local crt = x509.new()
 	-- serial needs to be unique or browsers will show uninformative error messages
