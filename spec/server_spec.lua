@@ -1,6 +1,7 @@
 describe("http.server module", function()
 	local server = require "http.server"
 	local client = require "http.client"
+	local http_tls = require "http.tls"
 	local new_headers = require "http.headers".new
 	local cqueues = require "cqueues"
 	local ce = require "cqueues.errno"
@@ -106,7 +107,7 @@ describe("http.server module", function()
 	it("works with plain http 2.0 using IP", function()
 		simple_test(cs.AF_INET, false, 2.0)
 	end);
-	(require "http.tls".has_alpn and it or pending)("works with https 2.0 using IP", function()
+	(http_tls.has_alpn and it or pending)("works with https 2.0 using IP", function()
 		simple_test(cs.AF_INET, true, 2.0)
 	end)
 	--[[ TLS tests are pending for now as UNIX sockets don't automatically
@@ -129,6 +130,13 @@ describe("http.server module", function()
 		simple_test(cs.AF_INET, true, nil, 1.0)
 		simple_test(cs.AF_INET, true, nil, 1.1)
 		simple_test(cs.AF_INET, true, 2.0, 2.0)
+	end);
+	(http_tls.has_alpn and it or pending)("works to set server version when alpn proto is not a normal http one", function()
+		local ctx = http_tls.new_client_context()
+		ctx:setAlpnProtos { "foo" }
+		simple_test(cs.AF_INET, ctx, nil, nil)
+		simple_test(cs.AF_INET, ctx, nil, 1.1)
+		simple_test(cs.AF_INET, ctx, 2.0, 2.0)
 	end)
 	it("taking socket from underlying connection is handled well by server", function()
 		local cq = cqueues.new()
