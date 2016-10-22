@@ -693,7 +693,6 @@ local default_tls_options = openssl_ctx.OP_NO_COMPRESSION
 	+ openssl_ctx.OP_SINGLE_ECDH_USE
 	+ openssl_ctx.OP_NO_SSLv2
 	+ openssl_ctx.OP_NO_SSLv3
-	+ openssl_ctx.OP_NO_TLSv1
 
 local function new_client_context()
 	local ctx = openssl_ctx.new("TLS", false)
