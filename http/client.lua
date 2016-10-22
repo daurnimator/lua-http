@@ -4,7 +4,6 @@ local ce = require "cqueues.errno"
 local http_tls = require "http.tls"
 local new_h1_connection = require "http.h1_connection".new
 local new_h2_connection = require "http.h2_connection".new
-local h2_errors = require "http.h2_error".errors
 
 -- Create a shared 'default' TLS contexts
 local default_h1_ctx = http_tls.new_client_context()
@@ -62,12 +61,6 @@ local function negotiate(s, options, timeout)
 	if version < 2 then
 		return new_h1_connection(s, "client", version)
 	elseif version == 2 then
-		if tls then
-			local ssl = s:checktls()
-			if ssl:getAlpnSelected() ~= "h2" then
-				h2_errors.PROTOCOL_ERROR("ALPN is not h2")
-			end
-		end
 		return new_h2_connection(s, "client", options.h2_settings)
 	else
 		error("Unknown HTTP version: " .. tostring(version))
