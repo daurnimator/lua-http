@@ -45,9 +45,10 @@ end
 -- Wrap a bare cqueues socket in an HTTP connection of a suitable version
 -- Starts TLS if necessary
 -- this function *should never throw*
-local function wrap_socket(self, socket, version, deadline)
+local function wrap_socket(self, socket, deadline)
 	socket:setmode("b", "b")
 	socket:onerror(onerror)
+	local version = self.version
 	local use_tls = self.tls
 	if use_tls == nil then
 		local err, errno
