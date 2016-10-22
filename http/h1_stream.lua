@@ -770,7 +770,7 @@ function stream_methods:get_next_chunk(timeout)
 	elseif self.body_read_type == "close" then
 		-- Use a big negative number instead of *a. see https://github.com/wahern/cqueues/issues/89
 		chunk, err, errno = self.connection:read_body_by_length(-0x80000000, timeout)
-		end_stream = (err == nil)
+		end_stream = chunk == nil and err == nil
 	elseif self.body_read_type == nil then
 		-- Might get here if haven't read headers yet, or if only headers so far have been 1xx codes
 		local deadline = timeout and (monotime()+timeout)
