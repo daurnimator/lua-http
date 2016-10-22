@@ -6,14 +6,20 @@ local new_h1_connection = require "http.h1_connection".new
 local new_h2_connection = require "http.h2_connection".new
 
 -- Create a shared 'default' TLS contexts
-local default_h1_ctx = http_tls.new_client_context()
+local default_ctx = http_tls.new_client_context()
+local default_h1_ctx
 local default_h2_ctx
--- if ALPN is not supported; do not create h2 context
 if http_tls.has_alpn then
+	default_ctx:setAlpnProtos({"h2", "http/1.1"})
+
+	default_h1_ctx = http_tls.new_client_context()
 	default_h1_ctx:setAlpnProtos({"http/1.1"})
 
 	default_h2_ctx = http_tls.new_client_context()
-	default_h2_ctx:setAlpnProtos({"h2", "http/1.1"})
+	default_h2_ctx:setAlpnProtos({"h2"})
+else
+	default_h1_ctx = default_ctx
+	default_h2_ctx = default_ctx
 end
 
 local function onerror(socket, op, why, lvl) -- luacheck: ignore 212
@@ -30,14 +36,14 @@ local function negotiate(s, options, timeout)
 	local version = options.version
 	if tls then
 		if tls == true then
-			if version then
-				if version < 2 then
-					tls = default_h1_ctx
-				else
-					tls = assert(default_h2_ctx, "http2 TLS context unavailable")
-				end
+			if version == nil then
+				tls = default_ctx
+			elseif version < 2 then
+				tls = default_h1_ctx
+			elseif version == 2 then
+				tls = default_h2_ctx
 			else
-				tls = default_h2_ctx or default_h1_ctx
+				error("Unknown HTTP version: " .. tostring(version))
 			end
 		end
 		local ok, err, errno = s:starttls(tls, deadline and (deadline-monotime()))
