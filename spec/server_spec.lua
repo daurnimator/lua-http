@@ -75,7 +75,7 @@ describe("http.server module", function()
 				tls = tls;
 				version = client_version;
 			}
-			local conn = client.connect(client_options)
+			local conn = assert(client.connect(client_options))
 			local stream = conn:new_stream()
 			local headers = new_headers()
 			headers:append(":authority", "myauthority")
