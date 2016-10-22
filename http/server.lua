@@ -8,6 +8,7 @@ local h2_connection = require "http.h2_connection"
 local http_tls = require "http.tls"
 local http_util = require "http.util"
 local pkey = require "openssl.pkey"
+local openssl_ssl = require "openssl.ssl"
 local x509 = require "openssl.x509"
 local name = require "openssl.x509.name"
 local altname = require "openssl.x509.altname"
@@ -180,7 +181,13 @@ end
 -- Prefer whichever comes first
 local function alpn_select_either(ssl, protos) -- luacheck: ignore 212
 	for _, proto in ipairs(protos) do
-		if proto == "h2" or proto == "http/1.1" then
+		if proto == "h2" then
+			-- HTTP2 only allows >=TLSv1.2
+			if ssl:getVersion() >= openssl_ssl.TLS1_2_VERSION
+			  and not http_tls.banned_ciphers[ssl:getCipherInfo().name] then
+				return proto
+			end
+		elseif proto == "http/1.1" then
 			return proto
 		end
 	end
