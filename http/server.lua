@@ -178,7 +178,7 @@ local function handle_socket(self, socket)
 end
 
 -- Prefer whichever comes first
-local function alpn_select(ssl, protos) -- luacheck: ignore 212
+local function alpn_select_either(ssl, protos) -- luacheck: ignore 212
 	for _, proto in ipairs(protos) do
 		if proto == "h2" or proto == "http/1.1" then
 			return proto
@@ -187,11 +187,35 @@ local function alpn_select(ssl, protos) -- luacheck: ignore 212
 	return nil
 end
 
+local function alpn_select_h2(ssl, protos) -- luacheck: ignore 212
+	for _, proto in ipairs(protos) do
+		if proto == "h2" then
+			return proto
+		end
+	end
+	return nil
+end
+
+local function alpn_select_h1(ssl, protos) -- luacheck: ignore 212
+	for _, proto in ipairs(protos) do
+		if proto == "http/1.1" then
+			return proto
+		end
+	end
+	return nil
+end
+
 -- create a new self signed cert
-local function new_ctx(host)
+local function new_ctx(host, version)
 	local ctx = http_tls.new_server_context()
 	if ctx.setAlpnSelect then
-		ctx:setAlpnSelect(alpn_select)
+		if version == nil then
+			ctx:setAlpnSelect(alpn_select_either)
+		elseif version == 2 then
+			ctx:setAlpnSelect(alpn_select_h2)
+		elseif version == 1.1 then
+			ctx:setAlpnSelect(alpn_select_h1)
+		end
 	end
 	local crt = x509.new()
 	-- serial needs to be unique or browsers will show uninformative error messages
@@ -314,7 +338,7 @@ local function listen(tbl)
 	local ctx = tbl.ctx
 	if ctx == nil and tls ~= false then
 		if host then
-			ctx = new_ctx(host)
+			ctx = new_ctx(host, tbl.version)
 		else
 			error("Custom OpenSSL context required when using a UNIX domain socket")
 		end

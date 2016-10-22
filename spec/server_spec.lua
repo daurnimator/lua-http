@@ -30,11 +30,12 @@ describe("http.server module", function()
 		assert.same("function", type(onerror))
 		assert.same(onerror, s:onerror())
 	end)
-	local function simple_test(family, tls, version)
+	local function simple_test(family, tls, client_version, server_version)
 		local cq = cqueues.new()
 		local options = {
 			family = family;
 			tls = tls;
+			version = server_version;
 		}
 		if family == cs.AF_UNIX then
 			local socket_path = os.tmpname()
@@ -71,7 +72,7 @@ describe("http.server module", function()
 				port = client_port;
 				path = client_path;
 				tls = tls;
-				version = version;
+				version = client_version;
 			}
 			local conn = client.connect(client_options)
 			local stream = conn:new_stream()
@@ -82,6 +83,14 @@ describe("http.server module", function()
 			headers:append(":scheme", "http")
 			assert(stream:write_headers(headers, true))
 			stream:get_headers()
+			if server_version then
+				if conn.version == 1.1 then
+					-- 1.1 client might have 1.0 server
+					assert.same(server_version, stream.peer_version)
+				else
+					assert.same(server_version, conn.version)
+				end
+			end
 			conn:close()
 		end)
 		assert_loop(cq, TEST_TIMEOUT)
@@ -113,6 +122,13 @@ describe("http.server module", function()
 	end);
 	pending("works with https 2.0 using UNIX socket", function()
 		simple_test(cs.AF_UNIX, true, 2.0)
+	end)
+	it("works to set the server version", function()
+		simple_test(cs.AF_INET, false, nil, 1.0)
+		simple_test(cs.AF_INET, false, nil, 1.1)
+		simple_test(cs.AF_INET, true, nil, 1.0)
+		simple_test(cs.AF_INET, true, nil, 1.1)
+		simple_test(cs.AF_INET, true, 2.0, 2.0)
 	end)
 	it("taking socket from underlying connection is handled well by server", function()
 		local cq = cqueues.new()
