@@ -835,6 +835,7 @@ function stream_methods:write_chunk(chunk, end_stream, timeout)
 		end
 	elseif self.body_write_type == "length" then
 		if #chunk > 0 then
+			assert(self.body_write_left >= #chunk, "invalid content-length")
 			local ok, err, errno = self.connection:write_body_plain(chunk, timeout)
 			if not ok then
 				return nil, err, errno
