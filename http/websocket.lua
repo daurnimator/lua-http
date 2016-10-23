@@ -266,7 +266,9 @@ local function parse_close(data)
 end
 
 function websocket_methods:send_frame(frame, timeout)
-	if self.readyState < 1 or self.readyState > 2 then
+	if self.readyState < 1 then
+		return nil, ce.strerror(ce.ENOTCONN), ce.ENOTCONN
+	elseif self.readyState > 2 then
 		return nil, ce.strerror(ce.EPIPE), ce.EPIPE
 	end
 	local ok, err, errno = self.socket:xwrite(build_frame(frame), "bn", timeout)
