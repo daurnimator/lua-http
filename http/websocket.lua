@@ -181,6 +181,9 @@ local function read_frame(sock, deadline)
 		local first_2, err, errno = sock:xread(2, "b", deadline and (deadline-monotime()))
 		if not first_2 then
 			return nil, err, errno
+		elseif #first_2 ~= 2 then
+			sock:seterror("r", ce.EPROTO)
+			return nil, ce.strerror(ce.EPROTO), ce.EPROTO
 		end
 		local byte1, byte2 = first_2:byte(1, 2)
 		frame = {
@@ -199,13 +202,21 @@ local function read_frame(sock, deadline)
 
 	if frame.length == 126 then
 		local length, err, errno = sock:xread(2, "b", deadline and (deadline-monotime()))
-		if not length then
+		if not length or #length ~= 2 then
+			if err == nil then
+				sock:seterror("r", ce.EPROTO)
+				return nil, ce.strerror(ce.EPROTO), ce.EPROTO
+			end
 			return nil, err, errno
 		end
 		frame.length = sunpack(">I2", length)
 	elseif frame.length == 127 then
 		local length, err, errno = sock:xread(8, "b", deadline and (deadline-monotime()))
-		if not length then
+		if not length or #length ~= 8 then
+			if err == nil then
+				sock:seterror("r", ce.EPROTO)
+				return nil, ce.strerror(ce.EPROTO), ce.EPROTO
+			end
 			return nil, err, errno
 		end
 		frame.length = sunpack(">I8", length)
@@ -213,7 +224,11 @@ local function read_frame(sock, deadline)
 
 	if frame.MASK then
 		local key, err, errno = sock:xread(4, "b", deadline and (deadline-monotime()))
-		if not key then
+		if not key or #key ~= 4 then
+			if err == nil then
+				sock:seterror("r", ce.EPROTO)
+				return nil, ce.strerror(ce.EPROTO), ce.EPROTO
+			end
 			return nil, err, errno
 		end
 		frame.key = { key:byte(1, 4) }
@@ -221,7 +236,11 @@ local function read_frame(sock, deadline)
 
 	do
 		local data, err, errno = sock:xread(frame.length, "b", deadline and (deadline-monotime()))
-		if data == nil then
+		if data == nil or #data ~= frame.length then
+			if err == nil then
+				sock:seterror("r", ce.EPROTO)
+				return nil, ce.strerror(ce.EPROTO), ce.EPROTO
+			end
 			return nil, err, errno
 		end
 
