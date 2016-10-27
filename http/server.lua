@@ -108,7 +108,7 @@ local function server_loop(self)
 			if socket == nil then
 				if accept_errno == ce.ETIMEDOUT then
 					-- Yield this thread until a client arrives
-					cqueues.poll(self.socket)
+					cqueues.poll(self.socket, self.pause_cond)
 				elseif accept_errno == ce.EMFILE then
 					-- Wait for another request to finish
 					if cqueues.poll(self.connection_done, hang_timeout) == hang_timeout then
@@ -425,6 +425,7 @@ function server_methods:close()
 		self.socket = nil
 	end
 	self.pause_cond:signal()
+	self.connection_done:signal()
 	return true
 end
 
