@@ -1,4 +1,3 @@
-local monotime = require "cqueues".monotime
 local cs = require "cqueues.socket"
 local ce = require "cqueues.errno"
 local http_tls = require "http.tls"
@@ -30,7 +29,6 @@ local function onerror(socket, op, why, lvl) -- luacheck: ignore 212
 end
 
 local function negotiate(s, options, timeout)
-	local deadline = timeout and (monotime()+timeout)
 	s:onerror(onerror)
 	local tls = options.tls
 	local version = options.version
@@ -46,7 +44,7 @@ local function negotiate(s, options, timeout)
 				error("Unknown HTTP version: " .. tostring(version))
 			end
 		end
-		local ok, err, errno = s:starttls(tls, deadline and (deadline-monotime()))
+		local ok, err, errno = s:starttls(tls, timeout)
 		if not ok then
 			return nil, err, errno
 		end
