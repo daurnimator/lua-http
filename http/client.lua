@@ -8,16 +8,20 @@ local openssl_ctx = require "openssl.ssl.context"
 -- Create a shared 'default' TLS contexts
 local default_ctx = http_tls.new_client_context()
 local default_h1_ctx
+local default_h11_ctx
 local default_h2_ctx = http_tls.new_client_context()
 if http_tls.has_alpn then
 	default_ctx:setAlpnProtos({"h2", "http/1.1"})
 
 	default_h1_ctx = http_tls.new_client_context()
-	default_h1_ctx:setAlpnProtos({"http/1.1"})
+
+	default_h11_ctx = http_tls.new_client_context()
+	default_h11_ctx:setAlpnProtos({"http/1.1"})
 
 	default_h2_ctx:setAlpnProtos({"h2"})
 else
 	default_h1_ctx = default_ctx
+	default_h11_ctx = default_ctx
 end
 default_h2_ctx:setOptions(openssl_ctx.OP_NO_TLSv1 + openssl_ctx.OP_NO_TLSv1_1)
 
@@ -36,8 +40,10 @@ local function negotiate(s, options, timeout)
 		if tls == true then
 			if version == nil then
 				tls = default_ctx
-			elseif version < 2 then
+			elseif version == 1 then
 				tls = default_h1_ctx
+			elseif version == 1.1 then
+				tls = default_h11_ctx
 			elseif version == 2 then
 				tls = default_h2_ctx
 			else
