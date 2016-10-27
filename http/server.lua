@@ -424,6 +424,7 @@ function server_methods:close()
 		self.socket:close()
 		self.socket = nil
 	end
+	self.pause_cond:signal()
 	return true
 end
 
