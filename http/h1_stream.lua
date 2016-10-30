@@ -199,7 +199,7 @@ end
 function stream_methods:read_headers(timeout)
 	local deadline = timeout and (monotime()+timeout)
 	if self.state == "closed" or self.state == "half closed (remote)" then
-		return nil, ce.EPIPE
+		return nil
 	end
 	local headers = new_headers()
 	local status_code
@@ -207,12 +207,12 @@ function stream_methods:read_headers(timeout)
 	if is_trailers then -- luacheck: ignore 542
 	elseif self.type == "server" then
 		if self.state == "half closed (local)" then
-			return nil, ce.EPIPE
+			return nil
 		end
 		local method, path, httpversion =
 			self.connection:read_request_line(deadline and (deadline-monotime()))
 		if method == nil then
-			return nil, path or ce.EPIPE, httpversion
+			return nil, path, httpversion
 		end
 		self.req_method = method
 		self.peer_version = httpversion
@@ -225,9 +225,6 @@ function stream_methods:read_headers(timeout)
 		headers:append(":scheme", self:checktls() and "https" or "http")
 		self:set_state("open")
 	else -- client
-		if self.state == "idle" then
-			return nil, ce.EPIPE
-		end
 		-- Make sure we're at front of connection pipeline
 		if self.connection.pipeline:peek() ~= self then
 			if not self.pipeline_cond:wait(deadline and (deadline-monotime)) then
@@ -239,7 +236,10 @@ function stream_methods:read_headers(timeout)
 		httpversion, status_code, reason_phrase =
 			self.connection:read_status_line(deadline and (deadline-monotime()))
 		if httpversion == nil then
-			return nil, status_code or ce.EPIPE, reason_phrase
+			if status_code == nil then
+				return nil, ce.strerror(ce.EPIPE), ce.EPIPE
+			end
+			return nil, status_code, reason_phrase
 		end
 		self.peer_version = httpversion
 		headers:append(":status", status_code)
@@ -264,7 +264,10 @@ function stream_methods:read_headers(timeout)
 	do
 		local ok, err, errno = self.connection:read_headers_done(deadline and (deadline-monotime()))
 		if ok == nil then
-			return nil, err or ce.EPIPE, errno
+			if err == nil then
+				return nil, ce.strerror(ce.EPIPE), ce.EPIPE
+			end
+			return nil, err, errno
 		end
 	end
 
@@ -374,7 +377,7 @@ function stream_methods:get_headers(timeout)
 		local deadline = timeout and monotime() + timeout
 		repeat
 			if self.state == "closed" or self.state == "half closed (remote)" then
-				return nil, ce.EPIPE
+				return nil
 			end
 			if not self.headers_cond:wait(timeout) then
 				return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
@@ -432,7 +435,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 	end
 	assert(type(end_stream) == "boolean", "'end_stream' MUST be a boolean")
 	if self.state == "closed" or self.state == "half closed (local)" or self.connection.socket == nil then
-		return nil, ce.EPIPE
+		return nil, ce.strerror(ce.EPIPE), ce.EPIPE
 	end
 	local status_code, method
 	local is_trailers
@@ -728,7 +731,7 @@ function stream_methods:get_next_chunk(timeout)
 		return chunk
 	end
 	if self.state == "closed" or self.state == "half closed (remote)" then
-		return nil, ce.EPIPE
+		return nil
 	end
 	local end_stream
 	local err, errno
@@ -740,14 +743,17 @@ function stream_methods:get_next_chunk(timeout)
 			local trailers
 			trailers, err, errno = self:read_headers(deadline and (deadline-monotime()))
 			if not trailers then
-				return nil, err or ce.EPIPE, errno
+				return nil, err, errno
 			end
 			self.headers_fifo:push(trailers)
 			self.headers_cond:signal(1)
 			-- :read_headers has already closed connection; return immediately
-			return nil, ce.EPIPE
+			return nil
 		else
 			end_stream = false
+			if chunk == nil and err == nil then
+				return nil, ce.strerror(ce.EPIPE), ce.EPIPE
+			end
 		end
 	elseif self.body_read_type == "length" then
 		local length_n = self.body_read_left
@@ -775,7 +781,7 @@ function stream_methods:get_next_chunk(timeout)
 		local headers
 		headers, err, errno = self:read_headers(timeout)
 		if not headers then
-			return nil, err or ce.EPIPE, errno
+			return nil, err, errno
 		end
 		self.headers_fifo:push(headers)
 		self.headers_cond:signal(1)
@@ -796,7 +802,7 @@ function stream_methods:get_next_chunk(timeout)
 			self:set_state("half closed (remote)")
 		end
 	end
-	return chunk, err or ce.EPIPE, errno
+	return chunk, err, errno
 end
 
 function stream_methods:unget(str)
@@ -810,8 +816,10 @@ end
 
 local empty_headers = new_headers()
 function stream_methods:write_chunk(chunk, end_stream, timeout)
-	if self.state ~= "open" and self.state ~= "half closed (remote)" then
+	if self.state == "idle" then
 		error("cannot write chunk when stream is " .. self.state)
+	elseif self.state == "closed" or self.state == "half closed (local)" then
+		return nil, ce.strerror(ce.EPIPE), ce.EPIPE
 	end
 	if self.type == "client" then
 		assert(self.connection.req_locked == self)

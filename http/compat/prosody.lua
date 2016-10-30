@@ -13,24 +13,17 @@ This has a few key differences:
 
 local new_from_uri = require "http.request".new_from_uri
 local cqueues = require "cqueues"
-local ce = require "cqueues.errno"
 
 local function do_request(self, callback)
 	local headers, stream = self:go()
 	if headers == nil then
 		-- `stream` is error message
-		if stream == ce.EPIPE then
-			stream = ce.strerror(stream)
-		end
 		callback(stream, 0, self)
 		return
 	end
 	local response_body, err = stream:get_body_as_string()
 	stream:shutdown()
 	if response_body == nil then
-		if err == ce.EPIPE then
-			err = ce.strerror(err)
-		end
 		callback(err, 0, self)
 		return
 	end

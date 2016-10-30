@@ -71,7 +71,12 @@ local function socket_has_preface(socket, unget, timeout)
 		-- read *up to* number of bytes left in preface
 		local ok, err, errno = socket:xread(#bytes-#preface, deadline and (deadline-monotime()))
 		if ok == nil then
-			return nil, err or ce.EPIPE, errno
+			if err == nil then
+				is_h2 = false
+				break
+			else
+				return nil, err, errno
+			end
 		end
 		bytes = bytes .. ok
 		if bytes ~= preface:sub(1, #bytes) then

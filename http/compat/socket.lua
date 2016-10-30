@@ -34,7 +34,7 @@ end
 local function get_body_as_string(stream, deadline)
 	local body, err, errno = stream:get_body_as_string(deadline and deadline-monotime())
 	if not body then
-		if err == ce.EPIPE then
+		if err == nil then
 			return nil
 		elseif errno == ce.ETIMEDOUT then
 			return nil, "timeout"
@@ -109,7 +109,7 @@ function M.request(reqt, b)
 				local function res_body_source()
 					local chunk, err, errno = stream:get_next_chunk(deadline and deadline-monotime())
 					if not chunk then
-						if err == ce.EPIPE then
+						if err == nil then
 							return nil
 						elseif errno == ce.ETIMEDOUT then
 							return nil, "timeout"
@@ -148,7 +148,7 @@ function M.request(reqt, b)
 	end
 	local res_headers, stream, errno = req:go(deadline and deadline-monotime())
 	if not res_headers then
-		if stream == ce.EPIPE then
+		if errno == ce.EPIPE then
 			return nil, "closed"
 		elseif errno == ce.ETIMEDOUT then
 			return nil, "timeout"

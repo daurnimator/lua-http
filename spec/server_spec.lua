@@ -187,8 +187,9 @@ describe("http.server module", function()
 			onstream = function(_, stream)
 				if stream.id == 1 then
 					stream:get_next_chunk()
-				else -- id == 3
-					assert.same({nil, ce.EPIPE}, {stream:get_next_chunk()})
+				else
+					assert.same(3, stream.id)
+					assert.same({}, {stream:get_next_chunk()})
 					local headers = new_headers()
 					headers:append(":status", "200")
 					assert(stream:write_headers(headers, true))
