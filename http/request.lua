@@ -257,7 +257,7 @@ function request_methods:to_curl()
 			n = n + 2
 		elseif name == "referer" then
 			cmd[n+1] = "-e"
-			assert(not value:match("[^;]"), "cannot render referer")
+			assert(not value:match(";"), "cannot render referer")
 			if self.follow_redirects then
 				cmd[n+2] = value .. ";auto"
 			else
