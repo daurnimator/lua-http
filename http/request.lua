@@ -186,6 +186,22 @@ function request_methods:to_curl()
 		n = n + 1
 	end
 
+	if self.proxy then
+		if type(self.proxy) ~= "string" then
+			error("NYI")
+		end
+		cmd[n+1] = "--proxy"
+		cmd[n+2] = self.proxy
+		n = n + 2
+	elseif not self.proxies then
+		cmd[n+1] = "--noproxy"
+		cmd[n+2] = "*"
+		n = n + 2
+	elseif self.proxies ~= default_proxies then
+		assert(getmetatable(self.proxies) == http_proxies.mt, "proxies property should be a http.proxies object")
+		error("NYI")
+	end
+
 	if self.expect_100_timeout ~= 1 then
 		cmd[n+1] = "--expect100-timeout"
 		cmd[n+2] = string.format("%d", self.expect_100_timeout)
