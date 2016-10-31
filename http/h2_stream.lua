@@ -982,7 +982,7 @@ function stream_methods:get_headers(timeout)
 				return nil, err, errno
 			end
 		elseif which == timeout then
-			return nil, ce.ETIMEDOUT
+			return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 		end
 		timeout = deadline and (deadline-monotime())
 	end
@@ -994,10 +994,7 @@ function stream_methods:get_next_chunk(timeout)
 	local deadline = timeout and (monotime()+timeout)
 	while self.chunk_fifo:length() == 0 do
 		if self.state == "closed" or self.state == "half closed (remote)" then
-			if self.rst_stream_error then
-				self.rst_stream_error()
-			end
-			return nil
+			return nil, self.rst_stream_error
 		end
 		local which = cqueues.poll(self.connection, self.chunk_cond, timeout)
 		if which == self.connection then
@@ -1006,13 +1003,13 @@ function stream_methods:get_next_chunk(timeout)
 				return nil, err, errno
 			end
 		elseif which == timeout then
-			return nil, ce.ETIMEDOUT
+			return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 		end
 		timeout = deadline and (deadline-monotime())
 	end
 	local chunk = self.chunk_fifo:pop()
 	if chunk == nil then
-		return nil, ce.EPIPE
+		return nil
 	else
 		local data = chunk.data
 		chunk:ack(false)
@@ -1113,7 +1110,7 @@ function stream_methods:write_chunk(payload, end_stream, timeout)
 					return nil, err, errno
 				end
 			elseif which == timeout then
-				return nil, ce.ETIMEDOUT
+				return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 			end
 			timeout = deadline and (deadline-monotime())
 		end
@@ -1125,7 +1122,7 @@ function stream_methods:write_chunk(payload, end_stream, timeout)
 					return nil, err, errno
 				end
 			elseif which == timeout then
-				return nil, ce.ETIMEDOUT
+				return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 			end
 			timeout = deadline and (deadline-monotime())
 		end

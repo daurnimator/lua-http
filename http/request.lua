@@ -457,14 +457,14 @@ function request_methods:go(timeout)
 			if deadline then
 				local err, errno
 				headers, err, errno = stream:get_headers(math.min(self.expect_100_timeout, deadline-monotime()))
-				if headers == nil and (err ~= ce.ETIMEDOUT or monotime() > deadline) then
+				if headers == nil and (errno ~= ce.ETIMEDOUT or monotime() > deadline) then
 					stream:shutdown()
 					return nil, err, errno
 				end
 			else
 				local err, errno
 				headers, err, errno = stream:get_headers(self.expect_100_timeout)
-				if headers == nil and err ~= ce.ETIMEDOUT then
+				if headers == nil and errno ~= ce.ETIMEDOUT then
 					stream:shutdown()
 					return nil, err, errno
 				end

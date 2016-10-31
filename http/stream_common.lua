@@ -2,7 +2,6 @@
 
 local cqueues = require "cqueues"
 local monotime = cqueues.monotime
-local ce = require "cqueues.errno"
 local new_headers = require "http.headers".new
 
 local CHUNK_SIZE = 2^20 -- write in 1MB chunks
@@ -43,7 +42,7 @@ function stream_methods:get_body_as_string(timeout)
 	while true do
 		local chunk, err, errno = self:get_next_chunk(timeout)
 		if chunk == nil then
-			if err == ce.EPIPE then
+			if err == nil then
 				break
 			else
 				return nil, err, errno
@@ -62,7 +61,7 @@ function stream_methods:get_body_chars(n, timeout)
 	while len < n do
 		local chunk, err, errno = self:get_next_chunk(timeout)
 		if chunk == nil then
-			if err == ce.EPIPE then
+			if err == nil then
 				break
 			else
 				return nil, err, errno
@@ -74,7 +73,7 @@ function stream_methods:get_body_chars(n, timeout)
 		timeout = deadline and (deadline-monotime())
 	end
 	if i == 0 then
-		return nil, ce.EPIPE
+		return nil
 	end
 	local r = table.concat(body, "", 1, i)
 	if n < len then
@@ -90,7 +89,7 @@ function stream_methods:get_body_until(pattern, plain, include_pattern, timeout)
 	while true do
 		local chunk, err, errno = self:get_next_chunk(timeout)
 		if chunk == nil then
-			if err == ce.EPIPE then
+			if err == nil then
 				return body, err
 			else
 				return nil, err, errno
@@ -121,7 +120,7 @@ function stream_methods:save_body_to_file(file, timeout)
 	while true do
 		local chunk, err, errno = self:get_next_chunk(timeout)
 		if chunk == nil then
-			if err == ce.EPIPE then
+			if err == nil then
 				break
 			else
 				return nil, err, errno

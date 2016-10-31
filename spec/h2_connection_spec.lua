@@ -177,7 +177,7 @@ describe("http2 connection", function()
 			while true do
 				local chunk, err = stream:get_next_chunk()
 				if chunk == nil then
-					if err == ce.EPIPE then
+					if err == nil then
 						break
 					else
 						error(err)
