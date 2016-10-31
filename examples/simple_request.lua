@@ -1,9 +1,22 @@
+--[[
+Verbosely fetches an HTTP resource
+If a body is given, use a POST request
+
+Usage: lua examples/simple_request.lua <URI> [<body>]
+]]
+
 local uri = assert(arg[1], "URI needed")
+local req_body = arg[2]
 local req_timeout = 10
 
 local request = require "http.request"
 
 local req = request.new_from_uri(uri)
+if req_body then
+	req.headers:upsert(":method", "POST")
+	req:set_body(req_body)
+end
+
 print("# REQUEST")
 print("## HEADERS")
 for k, v in req.headers:each() do
@@ -19,7 +32,7 @@ end
 print("# RESPONSE")
 local headers, stream = req:go(req_timeout)
 if headers == nil then
-	io.stderr:write(stream, "\n")
+	io.stderr:write(tostring(stream), "\n")
 	os.exit(1)
 end
 print("## HEADERS")

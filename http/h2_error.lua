@@ -39,7 +39,7 @@ function http_error_methods:new(ob)
 	}, http_error_mt)
 end
 
-function http_error_methods:traceback(message, stream_error, lvl)
+function http_error_methods:new_traceback(message, stream_error, lvl)
 	if lvl == nil then
 		lvl = 2
 	elseif lvl ~= 0 then
@@ -59,7 +59,7 @@ function http_error_methods:traceback(message, stream_error, lvl)
 end
 
 function http_error_methods:error(...)
-	error(self:traceback(...), 0)
+	error(self:new_traceback(...), 0)
 end
 http_error_mt.__call = http_error_methods.error
 

@@ -2,6 +2,8 @@
 
 lua-http is an HTTP library for Lua, it supports: both client and server operations, both HTTP 1 and HTTP 2.
 
+HTTP over TLS (i.e. HTTPS) is fully supported.
+
 
 ## Conventions
 
@@ -72,6 +74,9 @@ Either `"client"` or `"server"`
 The HTTP version as a number
 
 
+### `connection:connect(timeout)` <!-- --> {#connection:connect}
+
+
 ### `connection:checktls()` <!-- --> {#connection:checktls}
 
 
@@ -81,10 +86,20 @@ The HTTP version as a number
 ### `connection:peername()` <!-- --> {#connection:peername}
 
 
+### `connection:shutdown()` <!-- --> {#connection:shutdown}
+
+
 ### `connection:close()` <!-- --> {#connection:close}
 
 
+### `connection:new_stream()` <!-- --> {#connection:new_stream}
+
+Create a new [stream](#stream) on the connection.
+
+
 ### `connection:get_next_incoming_stream(timeout)` <!-- --> {#connection:get_next_incoming_stream}
+
+Returns the next peer initiated [stream](#stream) on the connection.
 
 
 ## stream
@@ -99,17 +114,32 @@ The underlying [*connection*](#connection) object
 
 ### `stream:get_headers(timeout)` <!-- --> {#stream:get_headers}
 
+Retrieves the next complete headers object (i.e. a block of headers or trailers) from the stream.
+
 
 ### `stream:write_headers(headers, end_stream, timeout)` <!-- --> {#stream:write_headers}
+
+Write the given [`headers`](#http.headers) object to the stream.
+Takes a flag indicating if this is the last chunk in the stream, if `true` the stream will be closed.
 
 
 ### `stream:get_next_chunk(timeout)` <!-- --> {#stream:get_next_chunk}
 
 
+### `stream:unget(str)` <!-- --> {#stream:unget}
+
+Returns nothing
+
+
 ### `stream:write_chunk(chunk, end_stream, timeout)` <!-- --> {#stream:write_chunk}
+
+Write the string `chunk` to the stream body.
+Takes a flag indicating if this is the last chunk in the stream, if `true` the stream will be closed.
 
 
 ### `stream:shutdown()` <!-- --> {#stream:shutdown}
+
+Close the stream.
 
 
 # Modules
@@ -144,29 +174,11 @@ print(bit.band(1, 3)) --> 1
 Deals with obtaining a connection to an HTTP server.
 
 
-### `connect(options, timeout)` <!-- --> {#http.client.connect}
+### `negotiate(socket, options, timeout)` <!-- --> {#http.client.negotiate}
 
-Creates a new connection to an HTTP server.
-Can try to negotiate HTTP2 if possible, but 
+  - `socket` is a cqueues socket object
 
   - `options` is a table containing:
-
-	  - `family` (integer, optional): socket family to use.  
-		defaults to `AF_INET`  
-
-	  - `host` (string): host to connect to.  
-		may be either a hostname or an ip address  
-
-	  - `port` (string|integer): port to connect to in numeric form  
-		e.g. `"80"` or `80`  
-
-	  - `sendname` (string|boolean, optional): the [TLS SNI](https://en.wikipedia.org/wiki/Server_Name_Indication) host to send.  
-		defaults to `true`  
-		  - `true` indicates to copy the `host` field
-		  - `false` disables SNI
-
-	  - `v6only` (boolean, optional): if the `IPV6_V6ONLY` flag should be set on the underlying socket.  
-		defaults to `false`  
 
 	  - `tls` (boolean|userdata, optional): the `SSL_CTX*` to use, or a boolean to indicate the default TLS context.  
 		defaults to `true`.
@@ -184,14 +196,37 @@ Can try to negotiate HTTP2 if possible, but
 		See [*http.h2_connection*](#http.h2_connection) for details
 
 
+### `connect(options, timeout)` <!-- --> {#http.client.connect}
+
+Creates a new connection to an HTTP server.
+
+  - `options` is a table containing the options to [*http.client.negotiate*](#http.client.negotiate),plus the following:
+
+	  - `family` (integer, optional): socket family to use.  
+		defaults to `AF_INET`  
+
+	  - `host` (string): host to connect to.  
+		may be either a hostname or an ip address  
+
+	  - `port` (string|integer): port to connect to in numeric form  
+		e.g. `"80"` or `80`  
+
+	  - `path` (string): path to connect to (UNIX sockets)
+
+	  - `sendname` (string|boolean, optional): the [TLS SNI](https://en.wikipedia.org/wiki/Server_Name_Indication) host to send.  
+		defaults to `true`  
+		  - `true` indicates to copy the `host` field
+		  - `false` disables SNI
+
+	  - `v6only` (boolean, optional): if the `IPV6_V6ONLY` flag should be set on the underlying socket.
+
   - `timeout` (optional) is the maximum amount of time (in seconds) to allow for connection to be established.
 
 	This includes time for DNS lookup, connection, TLS negotiation (if tls enabled) and in the case of HTTP2: settings exchange.
 
+#### Example {#http.client.connect-example}
 
-### Example {#http.client-example}
-
-Connect to a local http server running on port 8000
+Connect to a local HTTP server running on port 8000
 
 ```lua
 local http_client = require "http.client"
@@ -206,6 +241,16 @@ local myconnection = http_client.connect {
 ## http.h1_connection
 
 ### `new(socket, conn_type, version)` <!-- --> {#http.h1_connection.new}
+
+
+### `h1_connection.version` <!-- --> {#http.h1_connection.version}
+
+Either `1.0` or `1.1`
+
+
+### `h1_connection:connect(timeout)` <!-- --> {#http.h1_connection:connect}
+
+See [`connection:connect(timeout)`](#connection:connect)
 
 
 ### `h1_connection:checktls()` <!-- --> {#http.h1_connection:checktls}
@@ -231,6 +276,8 @@ See [`connection:peername()`](#connection:peername)
 
 ### `h1_connection:shutdown(dir)` <!-- --> {#http.h1_connection:shutdown}
 
+See [`connection:shutdown()`](#connection:shutdown)
+
 
 ### `h1_connection:close()` <!-- --> {#http.h1_connection:close}
 
@@ -239,10 +286,15 @@ See [`connection:close()`](#connection:close)
 
 ### `h1_connection:new_stream()` <!-- --> {#http.h1_connection:new_stream}
 
+See [`connection:new_stream()`](#connection:new_stream)
+
 
 ### `h1_connection:get_next_incoming_stream(timeout)` <!-- --> {#http.h1_connection:get_next_incoming_stream}
 
 See [`connection:get_next_incoming_stream()`](#connection:get_next_incoming_stream)
+
+
+### `h1_connection:flush(...)` <!-- --> {#http.h1_connection:flush}
 
 
 ### `h1_connection:read_request_line(timeout)` <!-- --> {#http.h1_connection:read_request_line}
@@ -318,7 +370,12 @@ an `http.h1_stream` has the following methods:
 An HTTP 2 connection can have multiple streams active and transmitting data at once,
 hence an `http.h2_connection` acts much like a scheduler.
 
-### `new(socket, conn_type, settings, timeout)` <!-- --> {#http.h2_connection.new}
+### `new(socket, conn_type, settings)` <!-- --> {#http.h2_connection.new}
+
+
+### `h2_connection.version` <!-- --> {#http.h2_connection.version}
+
+`2`
 
 
 ### `h2_connection:pollfd()` <!-- --> {#http.h2_connection:pollfd}
@@ -339,6 +396,11 @@ hence an `http.h2_connection` acts much like a scheduler.
 ### `h2_connection:loop(timeout)` <!-- --> {#http.h2_connection:loop}
 
 
+### `h2_connection:connect(timeout)` <!-- --> {#http.h2_connection:connect}
+
+See [`connection:connect(timeout)`](#connection:connect)
+
+
 ### `h2_connection:checktls()` <!-- --> {#http.h2_connection:checktls}
 
 See [`connection:checktls()`](#connection:checktls)
@@ -356,6 +418,8 @@ See [`connection:peername()`](#connection:peername)
 
 ### `h2_connection:shutdown()` <!-- --> {#http.h2_connection:shutdown}
 
+See [`connection:shutdown()`](#connection:shutdown)
+
 
 ### `h2_connection:close()` <!-- --> {#http.h2_connection:close}
 
@@ -363,6 +427,11 @@ See [`connection:close()`](#connection:close)
 
 
 ### `h2_connection:new_stream(id)` <!-- --> {#http.h2_connection:new_stream}
+
+`id` (optional) is the stream id to assign the new stream.  For client initiated streams, this will be the next free odd numbered stream.  
+For server initiated streams, this will be the next free even numbered stream.
+
+See [`connection:new_stream()`](#connection:new_stream) for more information.
 
 
 ### `h2_connection:get_next_incoming_stream(timeout)` <!-- --> {#http.h2_connection:get_next_incoming_stream}
@@ -428,7 +497,7 @@ Fields `name`, `code` and `description` are inherited from the parent `h2_error`
 `stream_error` defaults to `false`.
 
 
-### `h2_error:traceback(message, stream_error, lvl)` <!-- --> {#http.h2_error:traceback}
+### `h2_error:new_traceback(message, stream_error, lvl)` <!-- --> {#http.h2_error:new_traceback}
 
 Creates a new error object, recording a traceback from the current thread.
 
@@ -465,10 +534,23 @@ an `http.h2_stream` has the following methods:
 ### `h2_stream:write_headers_frame(payload, end_stream, end_headers, padded, exclusive, stream_dep, weight, timeout)` <!-- --> {#http.h2_stream:write_headers_frame}
 
 
+### `h2_stream:write_priority_frame(exclusive, stream_dep, weight, timeout)` <!-- --> {#http.h2_stream:write_priority_frame}
+
+
 ### `h2_stream:write_rst_stream(err_code, timeout)` <!-- --> {#http.h2_stream:write_rst_stream}
 
 
 ### `h2_stream:write_settings_frame(ACK, settings, timeout)` <!-- --> {#http.h2_stream:write_settings_frame}
+
+
+### `h2_stream:write_push_promise_frame(promised_stream_id, payload, end_headers, padded, timeout)` <!-- --> {#http.h2_stream:write_push_promise_frame}
+
+
+### `h2_stream:push_promise(headers, timeout)` <!-- --> {#http.h2_stream:push_promise}
+
+Pushes a new promise to the client.
+
+Returns the new stream as a [h2_stream](#http.h2_stream).
 
 
 ### `h2_stream:write_ping_frame(ACK, payload, timeout)` <!-- --> {#http.h2_stream:write_ping_frame}
@@ -481,6 +563,14 @@ an `http.h2_stream` has the following methods:
 
 
 ### `h2_stream:write_window_update(inc)` <!-- --> {#http.h2_stream:write_window_update}
+
+
+### `h2_stream:read_continuation(timeout)` <!-- --> {#http.h2_stream:read_continuation}
+
+Reads a continuation frame from the underlying connection.
+If the next frame is not a continuation frame then returns an error.
+
+On success returns a boolean indicating if this was the last continuation frame and the frame payload.
 
 
 ### `h2_stream:write_continuation_frame(payload, end_headers, timeout)` <!-- --> {#http.h2_stream:write_continuation_frame}
@@ -528,9 +618,6 @@ Creates and returns a new headers object.
 ### `headers:get_comma_separated(name)` <!-- --> {#http.headers:get_comma_separated}
 
 
-### `headers:get_split_as_sequence(name)` <!-- --> {#http.headers:get_split_as_sequence}
-
-
 ### `headers:modifyi(i, value, never_index)` <!-- --> {#http.headers:modifyi}
 
 
@@ -538,6 +625,9 @@ Creates and returns a new headers object.
 
 
 ### `headers:sort()` <!-- --> {#http.headers:sort}
+
+
+### `headers:dump(file)` <!-- --> {#http.headers:dump}
 
 
 ## http.hpack
@@ -569,7 +659,7 @@ Creates and returns a new headers object.
 ### `hpack_context:resize_dynamic_table(new_size)` <!-- --> {#http.hpack:resize_dynamic_table}
 
 
-### `hpack_context:add_to_dynamic_table(name, value, k) -- luacheck: ignore 212` <!-- --> {#http.hpack:add_to_dynamic_table}
+### `hpack_context:add_to_dynamic_table(name, value, k)` <!-- --> {#http.hpack:add_to_dynamic_table}
 
 
 ### `hpack_context:dynamic_table_id_to_index(id)` <!-- --> {#http.hpack:dynamic_table_id_to_index}
@@ -594,6 +684,27 @@ Creates and returns a new headers object.
 
 
 ### `hpack_context:decode_headers(payload, header_list, pos)` <!-- --> {#http.hpack:decode_headers}
+
+
+## http.proxies
+
+### `new()` <!-- --> {#http.proxies.new}
+
+Returns an empty 'proxies' object
+
+
+### `proxies:update(getenv)` <!-- --> {#http.proxies:update}
+
+`getenv` defaults to [`os.getenv`](http://www.lua.org/manual/5.3/manual.html#pdf-os.getenv)
+
+Reads environmental variables that are used to control if requests go through a proxy.
+
+Returns `proxies`.
+
+
+### `proxies:choose(scheme, host)` <!-- --> {#http.proxies:choose}
+
+Returns the proxy to use for the given `scheme` and `host` as a URI.
 
 
 ## http.request
@@ -633,6 +744,12 @@ The TLS SNI host name used.
 The HTTP version to use; leave as `nil` to auto-select.
 
 
+### `request.proxy` <!-- --> {#http.request.proxy}
+
+Specifies the a proxy that the request will be made through.
+The value should be a uri or `false` to turn off proxying for the request.
+
+
 ### `request.headers` <!-- --> {#http.request.headers}
 
 A [*http.headers*](#http.headers) object of headers that will be sent in the request.
@@ -659,14 +776,39 @@ Set to `math.huge` to not give up.
 
 ### `request.post301` <!-- --> {#http.request.post301}
 
-Respect RFC 2616 Section 10.3.2 and **don't** convert POST requests into body-less GET requests when following a 301 redirect. The non-RFC behaviour is ubiquitous in web browsers and assumed by server. Modern HTTP endpoints send status code 308 to indicate that they don't want the method to be changed.
+Respect RFC 2616 Section 10.3.2 and **don't** convert POST requests into body-less GET requests when following a 301 redirect. The non-RFC behaviour is ubiquitous in web browsers and assumed by servers. Modern HTTP endpoints send status code 308 to indicate that they don't want the method to be changed.
 Defaults to `false`.
 
 
 ### `request.post302` <!-- --> {#http.request.post302}
 
-Respect RFC 2616 Section 10.3.3 and **don't** convert POST requests into body-less GET requests when following a 302 redirect. The non-RFC behaviour is ubiquitous in web browsers and assumed by server. Modern HTTP endpoints send status code 307 to indicate that they don't want the method to be changed.
+Respect RFC 2616 Section 10.3.3 and **don't** convert POST requests into body-less GET requests when following a 302 redirect. The non-RFC behaviour is ubiquitous in web browsers and assumed by servers. Modern HTTP endpoints send status code 307 to indicate that they don't want the method to be changed.
 Defaults to `false`.
+
+
+### `request:clone()` <!-- --> {#http.request:clone}
+
+Creates and returns a clone of the request.
+
+The clone has its own deep copies of the [`.headers`](#http.request.headers) and [`.h2_settings`](#http.request.h2_settings) fields.
+
+The [`.tls`](#http.request.tls) and [`.body`](#http.request.body) fields are shallow copied from the original request.
+
+
+### `request:handle_redirect(headers)` <!-- --> {#http.request:handle_redirect}
+
+Process a redirect.
+
+`headers` should be response headers for a redirect.
+
+Returns a new `request` object that will fetch from new location.
+
+
+### `request:to_uri(with_userinfo)` <!-- --> {#http.request:to_uri}
+
+Returns a URI for the request.
+
+If `with_userinfo` is `true` and the request has an `authorization` header (or `proxy-authorization` for a CONNECT request), the returned URI will contain a userinfo component.
 
 
 ### `request:set_body(body)` <!-- --> {#http.request:set_body}
@@ -674,7 +816,7 @@ Defaults to `false`.
 Allows setting a request body. `body` may be a string, function or lua file object.
 
   - If `body` is a string it will be sent as given.
-  - If `body` is a function, it will be called repeatedly with the current time remaining and should return chunks of the request body as a string or `nil` if done.
+  - If `body` is a function, it will be called repeatedly like an iterator. It should return chunks of the request body as a string or `nil` if done.
   - If `body` is a lua file object, it will be [`:seek`'d](http://www.lua.org/manual/5.3/manual.html#pdf-file:seek) to the start, then sent as a body. Any errors encountered during file operations **will be thrown**.
 
 
@@ -688,7 +830,96 @@ On success, returns the response [*headers*](#http.headers) and a [*stream*](#st
 
 ## http.server
 
-### `listen(options)` <!-- --> {#http.client.connect}
+This interface is **unstable**.
+
+### `listen(options)` <!-- --> {#http.server.connect}
+
+
+### `server:onerror(new_handler)` <!-- --> {#http.server:onerror}
+
+
+### `server:listen(timeout)` <!-- --> {#http.server:listen}
+
+
+### `server:localname()` <!-- --> {#http.server:localname}
+
+
+### `server:pause()` <!-- --> {#http.server:pause}
+
+Cause the server loop to stop processing new clients until [`:resume`](#http.server:resume) is called.
+
+
+### `server:resume()` <!-- --> {#http.server:resume}
+
+
+### `server:close()` <!-- --> {#http.server:close}
+
+
+### `server:pollfd()` <!-- --> {#http.server:pollfd}
+
+
+### `server:events()` <!-- --> {#http.server:events}
+
+
+### `server:timeout()` <!-- --> {#http.server:timeout}
+
+
+### `server:empty()` <!-- --> {#http.server:empty}
+
+
+### `server:step()` <!-- --> {#http.server:step}
+
+
+### `server:loop()` <!-- --> {#http.server:loop}
+
+
+### `server:add_socket(socket)` <!-- --> {#http.server:add_socket}
+
+
+## http.socks
+
+Implements a subset of the SOCKS proxy protocol.
+
+### `connect(uri)` <!-- --> {#http.socks.connect}
+
+  - `uri` is a string with the address of the SOCKS server. A scheme of `"socks5"` will resolve hosts locally, a scheme of `"socks5h"` will resolve hosts on the SOCKS server. If the URI has a userinfo component it will be sent to the SOCKS server as a username and password.
+
+Returns a *http.socks* object.
+
+
+### `fdopen(socket)` <!-- --> {#http.socks.fdopen}
+
+  - `socket` should be a cqueues socket object
+
+Returns a *http.socks* object.
+
+
+### `socks.needs_resolve` <!-- --> {#http.socks.needs_resolve}
+
+Specifies if the destination host should be resolved locally.
+
+
+### `socks:clone()` <!-- --> {#http.socks:clone}
+
+Make a clone of a given socks object.
+
+
+### `socks:add_username_password_auth(username, password)` <!-- --> {#http.socks:add_username_password_auth}
+
+Add username + password authorisation to the set of allowed authorisation methods with the given credentials.
+
+
+### `socks:negotiate(host, port, timeout)` <!-- --> {#http.socks:negotiate}
+
+Complete the SOCKS connection.
+
+  - `host` (required) a string to pass to the SOCKS server as the host to connect to. Will be resolved locally if [`.needs_resolve`](#http.socks.needs_resolve) is `true`
+  - `port` (required) a number to pass to the SOCKS server as the port to connect to
+
+
+### `socks:take_socket()` <!-- --> {#http.socks:take_socket}
+
+Take possesion of the socket object managed by the http.socks object. Returns the socket (or `nil` if not available).
 
 
 ## http.stream_common
@@ -721,6 +952,12 @@ Iterator over [`stream:get_next_chunk()`](#stream:get_next_chunk)
 
 
 ### `stream:get_body_as_string(timeout)` <!-- --> {#http.stream_common:get_body_as_string}
+
+
+### `stream:get_body_chars(n, timeout)` <!-- --> {#http.stream_common:get_body_chars}
+
+
+### `stream:get_body_until(pattern, plain, include_pattern, timeout)` <!-- --> {#http.stream_common:get_body_until}
 
 
 ### `stream:save_body_to_file(file, timeout)` <!-- --> {#http.stream_common:save_body_to_file}
@@ -838,18 +1075,136 @@ Joins the `host` and `port` to create a valid authority component.
 Omits the port if it is the default for the `scheme`.
 
 
-### `split_header(str)` <!-- --> {#http.util.split_header}
-
-Many HTTP headers are specified to be comma seperated elements with optional whitespace. This function returns a table with a sequence of these elements.
-
-The returned table has an `n` field containing the number of elements.
-
-
 ### `imf_date(time)` <!-- --> {#http.util.imf_date}
 
 Returns the time in HTTP preferred date format (See [RFC 7231 section 7.1.1.1](https://tools.ietf.org/html/rfc7231#section-7.1.1.1))
 
 `time` defaults to the current time
+
+
+### `maybe_quote(str)` <!-- --> {#http.util.maybe_quote}
+
+  - If `str` is a valid `token`, return it as-is.
+  - If `str` would be valid as a `quoted-string`, return the quoted version
+  - Otherwise, returns `nil`
+
+
+## http.version
+
+### `name` <!-- --> {#http.version.name}
+
+`"lua-http"`
+
+
+### `version` <!-- --> {#http.version.version}
+
+Current version of lua-http as a string.
+
+
+## http.websocket
+
+
+### `new_from_uri(uri, protocols)` <!-- --> {#http.websocket.new_from_uri}
+
+Creates a new `http.websocket` object of type `"client"` from the given URI.
+
+  - `protocols` (optional) should be a lua table containing a sequence of protocols to send to the server
+
+
+### `new_from_stream(stream, headers)` <!-- --> {#http.websocket.new_from_stream}
+
+Attempts to create a new `http.websocket` object of type `"server"` from the given request headers and stream.
+
+  - [`stream`](#http.h1_stream) should be a live HTTP 1 stream of the `"server"` type.
+  - [`headers`](#http.headers) should be headers of a suspected websocket upgrade request from an HTTP 1 client.
+
+This function does **not** have side effects, and is hence okay to use tentatively.
+
+
+### `websocket.close_timeout` <!-- --> {#http.websocket.close_timeout}
+
+Amount of time (in seconds) to wait between sending a close frame and actually closing the connection.
+Defaults to `3` seconds.
+
+
+### `websocket:accept(options, timeout)` <!-- --> {#http.websocket:accept}
+
+Completes negotiation with a websocket client.
+
+  - `options` is a table containing:
+
+	  - `headers` (optional) a [headers](#http.headers) object to use as a prototype for the response headers
+	  - `protocols` (optional) should be a lua table containing a sequence of protocols to allow from the client
+
+Usually called after a successful [`new_from_stream`](#http.websocket.new_from_stream)
+
+
+### `websocket:connect(timeout)` <!-- --> {#http.websocket:connect}
+
+Connect to a websocket server.
+
+Usually called after a successful [`new_from_uri`](#http.websocket.new_from_uri)
+
+
+### `websocket:receive(timeout)` <!-- --> {#http.websocket:receive}
+
+Reads and returns the next data frame plus its opcode.
+Any ping frames received while reading will be responded to.
+
+The opcode `0x1` will be returned as `"text"` and `0x2` will be returned as `"binary"`.
+
+
+### `websocket:each()` <!-- --> {#http.websocket:each}
+
+Iterator over [`websocket:receive()`](#http.websocket:receive).
+
+
+### `websocket:send_frame(frame, timeout)` <!-- --> {#http.websocket:send_frame}
+
+Low level function to send a raw frame.
+
+
+### `websocket:send(data, opcode, timeout)` <!-- --> {#http.websocket:send}
+
+Send the given `data` as a data frame.
+
+  - `data` should be a string
+  - `opcode` can be a numeric opcode, `"text"` or `"binary"`. If `nil`, defaults to a text frame
+
+
+### `websocket:send_ping(data, timeout)` <!-- --> {#http.websocket:send_ping}
+
+Sends a ping frame.
+
+  - `data` is optional
+
+
+### `websocket:send_pong(data, timeout)` <!-- --> {#http.websocket:send_pong}
+
+Sends a pong frame. Works as a unidirectional keepalive.
+
+  - `data` is optional
+
+
+### `websocket:close(code, reason, timeout)` <!-- --> {#http.websocket:close}
+
+Closes the websocket connection.
+
+  - `code` defaults to `1000`
+  - `reason` is an optional string
+
+
+### Example
+
+```lua
+local websocket = require "http.websocket"
+local ws = websocket.new_from_uri("wss://echo.websocket.org")
+assert(ws:connect())
+assert(ws:send("koo-eee!"))
+local data = assert(ws:receive())
+assert(data == "koo-eee!")
+assert(ws:close())
+```
 
 
 ## http.zlib
@@ -923,6 +1278,27 @@ cq:wrap(function()
 	end)
 end)
 assert(cq:loop())
+```
+
+
+## http.compat.socket
+
+Provides compatibility with [luasocket's http.request module](http://w3.impa.br/~diego/software/luasocket/http.html).
+
+Differences:
+
+  - Will automatically be non-blocking when run inside a cqueues managed coroutine
+  - lua-http features (such as HTTP2) will be used where possible
+
+
+### Example {#http.compat.socket-example}
+
+Using the 'simple' interface as part of a normal script:
+
+```lua
+local socket_http = require "http.compat.socket"
+local body, code = assert(socket_http.request("http://lua.org"))
+print(code, #body) --> 200, 2514
 ```
 
 

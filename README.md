@@ -2,7 +2,10 @@
 
 ## Features
 
-  - Optionally asynchronous (including DNS lookups and SSL)
+  - Optionally asynchronous (including DNS lookups and TLS)
+  - Supports HTTP(S) version 1.0, 1.1 and 2
+  - Functionality for both client and server
+  - Websockets
   - Compatible with Lua 5.1, 5.2, 5.3 and [LuaJIT](http://luajit.org/)
 
 
@@ -11,38 +14,33 @@
 Can be found at [https://daurnimator.github.io/lua-http/](https://daurnimator.github.io/lua-http/)
 
 
-# Status
-
-This project is a work in progress and not ready for production use.
+## Status
 
 [![Build Status](https://travis-ci.org/daurnimator/lua-http.svg)](https://travis-ci.org/daurnimator/lua-http)
 [![Coverage Status](https://coveralls.io/repos/daurnimator/lua-http/badge.svg?branch=master&service=github)](https://coveralls.io/github/daurnimator/lua-http?branch=master)
 
-## Todo
-
-  - [x] HTTP 1.1
-  - [x] [HTTP 2](https://http2.github.io/http2-spec/)
-	  - [x] [HPACK](https://http2.github.io/http2-spec/compression.html)
-  - [ ] Connection pooling
-  - [ ] [`socket.http`](http://w3.impa.br/~diego/software/luasocket/http.html) compatibility layer
-  - [x] Prosody [`net.http`](https://prosody.im/doc/developers/net/http) compatibility layer
-  - [x] Handle redirects
-  - [ ] Be able to use an HTTP proxy
-  - [x] Compression (e.g. gzip)
-  - [ ] Websockets
+  - First release impending!
+  - HTTP request API is mostly stable
+  - The HTTP server API is reaching stability
 
 
 # Installation
 
+It's recommended to install lua-http by using [luarocks](https://luarocks.org/).
+This will automatically install run-time lua dependencies for you.
+
+    $ luarocks install --server=http://luarocks.org/dev http
+
 ## Dependencies
 
-  - [cqueues](http://25thandclement.com/~william/projects/cqueues.html) >= 20150907
+  - [cqueues](http://25thandclement.com/~william/projects/cqueues.html) >= 20160808
   - [luaossl](http://25thandclement.com/~william/projects/luaossl.html) >= 20150727
   - [basexx](https://github.com/aiq/basexx/) >= 0.2.0
+  - [lpeg](http://www.inf.puc-rio.br/~roberto/lpeg/lpeg.html)
   - [lpeg_patterns](https://github.com/daurnimator/lpeg_patterns) >= 0.2
   - [fifo](https://github.com/daurnimator/fifo.lua)
 
-If you want to use gzip compression you will need **one** of:
+To use gzip compression you need **one** of:
 
   - [lzlib](https://github.com/LuaDist/lzlib) or [lua-zlib](https://github.com/brimworks/lua-zlib)
 
@@ -92,6 +90,7 @@ If using lua 5.1 you will need
     $ luarocks make http-scm-0.rockspec
     ```
 
+
 ## Generating documentation
 
 Documentation is written in markdown and intended to be consumed by [pandoc](http://pandoc.org/)
@@ -99,4 +98,9 @@ Documentation is written in markdown and intended to be consumed by [pandoc](htt
   - To generate self-contained HTML documentation:
     ```
     $ pandoc -t html5 --template=doc/template.html --section-divs --self-contained --toc -c doc/site.css doc/index.md doc/metadata.yaml
+    ```
+
+  - To generate a pdf manual:
+    ```
+    $ pandoc -s -t latex -V documentclass=article -V classoption=oneside -V links-as-notes -V geometry=a4paper,includeheadfoot,margin=2.54cm doc/index.md doc/metadata.yaml -o lua-http.pdf
     ```

@@ -1,58 +1,50 @@
-local monotime = require "cqueues".monotime
 local cs = require "cqueues.socket"
 local ce = require "cqueues.errno"
 local http_tls = require "http.tls"
 local new_h1_connection = require "http.h1_connection".new
 local new_h2_connection = require "http.h2_connection".new
-local h2_errors = require "http.h2_error".errors
+local openssl_ctx = require "openssl.ssl.context"
 
 -- Create a shared 'default' TLS contexts
-local default_h1_ctx = http_tls.new_client_context()
-local default_h2_ctx
--- if ALPN is not supported; do not create h2 context
+local default_ctx = http_tls.new_client_context()
+local default_h1_ctx
+local default_h11_ctx
+local default_h2_ctx = http_tls.new_client_context()
 if http_tls.has_alpn then
-	default_h1_ctx:setAlpnProtos({"http/1.1"})
+	default_ctx:setAlpnProtos({"h2", "http/1.1"})
 
-	default_h2_ctx = http_tls.new_client_context()
-	default_h2_ctx:setAlpnProtos({"h2", "http/1.1"})
+	default_h1_ctx = http_tls.new_client_context()
+
+	default_h11_ctx = http_tls.new_client_context()
+	default_h11_ctx:setAlpnProtos({"http/1.1"})
+
+	default_h2_ctx:setAlpnProtos({"h2"})
+else
+	default_h1_ctx = default_ctx
+	default_h11_ctx = default_ctx
 end
+default_h2_ctx:setOptions(openssl_ctx.OP_NO_TLSv1 + openssl_ctx.OP_NO_TLSv1_1)
 
 local function onerror(socket, op, why, lvl) -- luacheck: ignore 212
-	if why == ce.EPIPE or why == ce.ETIMEDOUT then
-		return why
-	end
 	return string.format("%s: %s", op, ce.strerror(why)), why
 end
 
-local function connect(options, timeout)
-	local deadline = timeout and (monotime()+timeout)
-	local s do
-		local errno
-		s, errno = cs.connect {
-			family = options.family;
-			host = options.host;
-			port = options.port;
-			sendname = options.sendname;
-			v6only = options.v6only;
-			nodelay = true;
-		}
-		if s == nil then
-			return nil, ce.strerror(errno), errno
-		end
-	end
+local function negotiate(s, options, timeout)
 	s:onerror(onerror)
 	local tls = options.tls
 	local version = options.version
 	if tls then
 		if tls == true then
-			if version then
-				if version < 2 then
-					tls = default_h1_ctx
-				else
-					tls = assert(default_h2_ctx, "http2 TLS context unavailable")
-				end
+			if version == nil then
+				tls = default_ctx
+			elseif version == 1 then
+				tls = default_h1_ctx
+			elseif version == 1.1 then
+				tls = default_h11_ctx
+			elseif version == 2 then
+				tls = default_h2_ctx
 			else
-				tls = default_h2_ctx or default_h1_ctx
+				error("Unknown HTTP version: " .. tostring(version))
 			end
 		end
 		local ok, err, errno = s:starttls(tls, timeout)
@@ -76,18 +68,30 @@ local function connect(options, timeout)
 	if version < 2 then
 		return new_h1_connection(s, "client", version)
 	elseif version == 2 then
-		if tls then
-			local ssl = s:checktls()
-			if ssl:getAlpnSelected() ~= "h2" then
-				h2_errors.PROTOCOL_ERROR("ALPN is not h2")
-			end
-		end
-		return new_h2_connection(s, "client", options.h2_settings, deadline and (deadline-monotime()))
+		return new_h2_connection(s, "client", options.h2_settings)
 	else
 		error("Unknown HTTP version: " .. tostring(version))
 	end
 end
 
+local function connect(options, timeout)
+	-- TODO: https://github.com/wahern/cqueues/issues/124
+	local s, errno = cs.connect {
+		family = options.family;
+		host = options.host;
+		port = options.port;
+		path = options.path;
+		sendname = options.sendname;
+		v6only = options.v6only;
+		nodelay = true;
+	}
+	if s == nil then
+		return nil, ce.strerror(errno), errno
+	end
+	return negotiate(s, options, timeout)
+end
+
 return {
+	negotiate = negotiate;
 	connect = connect;
 }

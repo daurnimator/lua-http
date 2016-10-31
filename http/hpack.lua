@@ -824,6 +824,11 @@ function methods:decode_headers(payload, header_list, pos)
 		elseif band(first_byte, 0x20) ~= 0 then -- Section 6.3
 			local size, newpos = decode_integer(payload, 5, pos)
 			if size == nil then break end
+			--[[ Section 4.2
+			This dynamic table size update MUST occur at the beginning of the
+			first header block following the change to the dynamic table size.
+			In HTTP/2, this follows a settings acknowledgment.]]
+			-- TODO!
 			pos = newpos
 			self:resize_dynamic_table(size)
 		else -- Section 6.2.2 and 6.2.3
