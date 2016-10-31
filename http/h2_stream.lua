@@ -926,8 +926,8 @@ frame_handlers[0x9] = function(stream, flags, payload) -- luacheck: ignore 212
 	return nil, h2_errors.PROTOCOL_ERROR:new_traceback("'CONTINUATION' frames MUST be preceded by a 'HEADERS', 'PUSH_PROMISE' or 'CONTINUATION' frame without the 'END_HEADERS' flag set")
 end
 
-function stream_methods:read_continuation()
-	local typ, flag, streamid, payload = self:read_http2_frame()
+function stream_methods:read_continuation(timeout)
+	local typ, flag, streamid, payload = self:read_http2_frame(timeout)
 	if typ == nil then
 		return nil, flag, streamid
 	elseif typ ~= 0x9 or self.id ~= streamid then
