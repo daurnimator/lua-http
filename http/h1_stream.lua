@@ -830,33 +830,29 @@ function stream_methods:write_chunk(chunk, end_stream, timeout)
 	if self.body_write_deflate then
 		chunk = self.body_write_deflate(chunk, end_stream)
 	end
-	if self.body_write_type == "chunked" then
-		if #chunk > 0 then
+	if #chunk > 0 then
+		if self.body_write_type == "chunked" then
 			local deadline = timeout and monotime()+timeout
 			local ok, err, errno = self.connection:write_body_chunk(chunk, nil, timeout)
 			if not ok then
 				return nil, err, errno
 			end
 			timeout = deadline and (deadline-monotime())
-		end
-	elseif self.body_write_type == "length" then
-		if #chunk > 0 then
+		elseif self.body_write_type == "length" then
 			assert(self.body_write_left >= #chunk, "invalid content-length")
 			local ok, err, errno = self.connection:write_body_plain(chunk, timeout)
 			if not ok then
 				return nil, err, errno
 			end
 			self.body_write_left = self.body_write_left - #chunk
-		end
-	elseif self.body_write_type == "close" then
-		if #chunk > 0 then
+		elseif self.body_write_type == "close" then
 			local ok, err, errno = self.connection:write_body_plain(chunk, timeout)
 			if not ok then
 				return nil, err, errno
 			end
+		elseif self.body_write_type ~= "missing" then
+			error("unknown body writing method")
 		end
-	elseif self.body_write_type ~= "missing" then
-		error("unknown body writing method")
 	end
 	self.stats_sent = self.stats_sent + orig_size
 	if end_stream then
