@@ -1020,6 +1020,7 @@ end
 function stream_methods:unget(str)
 	local chunk = new_chunk(self, 0, str) -- 0 means :ack does nothing
 	self.chunk_fifo:insert(1, chunk)
+	return true
 end
 
 local function write_headers(self, func, headers, timeout)
