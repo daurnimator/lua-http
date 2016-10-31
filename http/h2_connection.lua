@@ -457,9 +457,8 @@ end
 -- If this times out, it was the flushing; not the write itself
 -- hence it's not always total failure.
 -- It's up to the caller to take some action (e.g. closing) rather than doing it here
--- TODO: distinguish between nothing sent and partially sent?
 function connection_methods:write_http2_frame(typ, flags, streamid, payload, timeout)
-	local deadline = timeout and (monotime()+timeout)
+	local deadline = timeout and monotime()+timeout
 	if #payload > self.peer_settings[0x5] then
 		return nil, h2_error.errors.FRAME_SIZE_ERROR:new_traceback("frame too large")
 	end
