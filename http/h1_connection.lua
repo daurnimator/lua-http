@@ -266,19 +266,17 @@ function connection_methods:read_headers_done(timeout)
 	local crlf, err, errno = self.socket:xread(2, timeout)
 	if crlf == "\r\n" then
 		return true
-	elseif crlf == nil then
-		if err == nil and self.socket:pending() > 0 then
-			self.socket:seterror("r", ce.EPROTO)
-			return nil, onerror(self.socket, "read_headers_done", ce.EPROTO)
-		end
-		return nil, err, errno
-	else
+	elseif crlf ~= nil or (err == nil and self.socket:pending() > 0) then
 		self.socket:seterror("r", ce.EPROTO)
-		local ok, errno2 = self.socket:unget(crlf)
-		if not ok then
-			return nil, onerror(self.socket, "unget", errno2)
+		if crlf then
+			local ok, errno2 = self.socket:unget(crlf)
+			if not ok then
+				return nil, onerror(self.socket, "unget", errno2)
+			end
 		end
 		return nil, onerror(self.socket, "read_headers_done", ce.EPROTO)
+	else
+		return nil, err, errno
 	end
 end
 
