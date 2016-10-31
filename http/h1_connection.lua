@@ -170,26 +170,40 @@ end
 
 function connection_methods:read_request_line(timeout)
 	local deadline = timeout and (monotime()+timeout)
+	local preline
 	local line, err, errno = self.socket:xread("*L", timeout)
 	if line == "\r\n" then
 		-- RFC 7230 3.5: a server that is expecting to receive and parse a request-line
 		-- SHOULD ignore at least one empty line (CRLF) received prior to the request-line.
+		preline = line
 		line, err, errno = self.socket:xread("*L", deadline and (deadline-monotime()))
 	end
 	if line == nil then
 		if err == nil and self.socket:pending() > 0 then
 			self.socket:seterror("r", ce.EPROTO)
+			if preline then
+				local ok, errno2 = self.socket:unget(preline)
+				if not ok then
+					return nil, onerror(self.socket, "unget", errno2)
+				end
+			end
 			return nil, onerror(self.socket, "read_request_line", ce.EPROTO)
 		end
 		return nil, err, errno
 	end
 	local method, path, httpversion = line:match("^(%w+) (%S+) HTTP/(1%.[01])\r\n$")
 	if not method then
+		self.socket:seterror("r", ce.EPROTO)
 		local ok, errno2 = self.socket:unget(line)
 		if not ok then
 			return nil, onerror(self.socket, "unget", errno2)
 		end
-		self.socket:seterror("r", ce.EPROTO)
+		if preline then
+			ok, errno2 = self.socket:unget(preline)
+			if not ok then
+				return nil, onerror(self.socket, "unget", errno2)
+			end
+		end
 		return nil, onerror(self.socket, "read_request_line", ce.EPROTO)
 	end
 	httpversion = httpversion == "1.0" and 1.0 or 1.1 -- Avoid tonumber() due to locale issues
@@ -207,11 +221,11 @@ function connection_methods:read_status_line(timeout)
 	end
 	local httpversion, status_code, reason_phrase = line:match("^HTTP/(1%.[01]) (%d%d%d) (.*)\r\n$")
 	if not httpversion then
+		self.socket:seterror("r", ce.EPROTO)
 		local ok, errno2 = self.socket:unget(line)
 		if not ok then
 			return nil, onerror(self.socket, "unget", errno2)
 		end
-		self.socket:seterror("r", ce.EPROTO)
 		return nil, onerror(self.socket, "read_status_line", ce.EPROTO)
 	end
 	httpversion = httpversion == "1.0" and 1.0 or 1.1 -- Avoid tonumber() due to locale issues
@@ -259,11 +273,11 @@ function connection_methods:read_headers_done(timeout)
 		end
 		return nil, err, errno
 	else
+		self.socket:seterror("r", ce.EPROTO)
 		local ok, errno2 = self.socket:unget(crlf)
 		if not ok then
 			return nil, onerror(self.socket, "unget", errno2)
 		end
-		self.socket:seterror("r", ce.EPROTO)
 		return nil, onerror(self.socket, "read_headers_done", ce.EPROTO)
 	end
 end
@@ -290,11 +304,11 @@ function connection_methods:read_body_chunk(timeout)
 	end
 	local chunk_size, chunk_ext = chunk_header:match("^(%x+) *(.-)\r\n")
 	if chunk_size == nil then
+		self.socket:seterror("r", ce.EPROTO)
 		local unget_ok1, unget_errno1 = self.socket:unget(chunk_header)
 		if not unget_ok1 then
 			return nil, onerror(self.socket, "unget", unget_errno1)
 		end
-		self.socket:seterror("r", ce.EPROTO)
 		return nil, onerror(self.socket, "read_body_chunk", ce.EPROTO)
 	elseif #chunk_size > 8 then
 		self.socket:seterror("r", ce.E2BIG)
@@ -320,6 +334,7 @@ function connection_methods:read_body_chunk(timeout)
 		local chunk_data = assert(self.socket:xread(chunk_size, "b", 0))
 		local crlf = assert(self.socket:xread(2, "b", 0))
 		if crlf ~= "\r\n" then
+			self.socket:seterror("r", ce.EPROTO)
 			local unget_ok3, unget_errno3 = self.socket:unget(crlf)
 			if not unget_ok3 then
 				return nil, onerror(self.socket, "unget", unget_errno3)
@@ -332,7 +347,6 @@ function connection_methods:read_body_chunk(timeout)
 			if not unget_ok1 then
 				return nil, onerror(self.socket, "unget", unget_errno1)
 			end
-			self.socket:seterror("r", ce.EPROTO)
 			return nil, onerror(self.socket, "read_body_chunk", ce.EPROTO)
 		end
 		-- Success!
