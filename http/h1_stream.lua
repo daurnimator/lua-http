@@ -818,7 +818,7 @@ local empty_headers = new_headers()
 function stream_methods:write_chunk(chunk, end_stream, timeout)
 	if self.state == "idle" then
 		error("cannot write chunk when stream is " .. self.state)
-	elseif self.state == "closed" or self.state == "half closed (local)" then
+	elseif self.state == "closed" or self.state == "half closed (local)" or self.connection.socket == nil then
 		return nil, ce.strerror(ce.EPIPE), ce.EPIPE
 	end
 	if self.type == "client" then
