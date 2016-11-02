@@ -1,8 +1,10 @@
 local lpeg = require "lpeg"
+local http_patts = require "lpeg_patterns.http"
 local uri_patts = require "lpeg_patterns.uri"
 local basexx = require "basexx"
 local client = require "http.client"
 local new_headers = require "http.headers".new
+local http_hsts = require "http.hsts"
 local http_socks = require "http.socks"
 local http_proxies = require "http.proxies"
 local http_util = require "http.util"
@@ -11,9 +13,11 @@ local monotime = require "cqueues".monotime
 local ce = require "cqueues.errno"
 
 local default_user_agent = string.format("%s/%s", http_version.name, http_version.version)
+local default_hsts_store = http_hsts.new_store()
 local default_proxies = http_proxies.new():update()
 
 local request_methods = {
+	hsts = default_hsts_store;
 	proxies = default_proxies;
 	expect_100_timeout = 1;
 	follow_redirects = true;
@@ -28,6 +32,7 @@ local request_mt = {
 }
 
 local EOF = lpeg.P(-1)
+local sts_patt = lpeg.Cf(lpeg.Ct(true) * http_patts.Strict_Transport_Security, rawset) * EOF
 local uri_patt = uri_patts.uri * EOF
 local uri_ref = uri_patts.uri_reference * EOF
 
@@ -106,6 +111,7 @@ function request_methods:clone()
 		headers = self.headers:clone();
 		body = self.body;
 
+		hsts = rawget(self, "hsts");
 		proxies = rawget(self, "proxies");
 		expect_100_timeout = rawget(self, "expect_100_timeout");
 		follow_redirects = rawget(self, "follow_redirects");
@@ -321,10 +327,33 @@ end
 function request_methods:go(timeout)
 	local deadline = timeout and (monotime()+timeout)
 
+	local cloned_headers = false -- only clone headers when we need to
 	local request_headers = self.headers
 	local host = self.host
 	local port = self.port
 	local tls = self.tls
+
+	-- RFC 6797 Section 8.3
+	if not tls and self.hsts and self.hsts:check(host) then
+		tls = true
+
+		if request_headers:get(":scheme") == "http" then
+			-- The UA MUST replace the URI scheme with "https"
+			if not cloned_headers then
+				request_headers = request_headers:clone()
+				cloned_headers = true
+			end
+			request_headers:upsert(":scheme", "https")
+		end
+
+		-- if the URI contains an explicit port component of "80", then
+		-- the UA MUST convert the port component to be "443", or
+		-- if the URI contains an explicit port component that is not
+		-- equal to "80", the port component value MUST be preserved
+		if port == 80 then
+			port = 443
+		end
+	end
 
 	local connection
 
@@ -390,7 +419,10 @@ function request_methods:go(timeout)
 				host = assert(proxy.host, "proxy is missing host")
 				port = proxy.port or http_util.scheme_to_port[proxy.scheme]
 				-- proxy requests get a uri that includes host as their path
-				request_headers = request_headers:clone()
+				if not cloned_headers then
+					request_headers = request_headers:clone()
+					cloned_headers = true -- luacheck: ignore 311
+				end
 				request_headers:upsert(":path", old_url)
 				if proxy.userinfo then
 					request_headers:upsert("proxy-authorization", "basic " .. basexx.to_base64(proxy.userinfo), true)
@@ -513,6 +545,19 @@ function request_methods:go(timeout)
 				return nil, err, errno
 			end
 		until headers:get(":status") ~= "100"
+	end
+
+	-- RFC 6797 Section 8.1
+	if tls and self.hsts and headers:has("strict-transport-security") then
+		-- If a UA receives more than one STS header field in an HTTP
+		-- response message over secure transport, then the UA MUST process
+		-- only the first such header field.
+		local sts = headers:get("strict-transport-security")
+		sts = sts_patt:match(sts)
+		-- The UA MUST ignore any STS header fields not conforming to the grammar specified.
+		if sts then
+			self.hsts:store(self.host, sts)
+		end
 	end
 
 	if self.follow_redirects and headers:get(":status"):sub(1,1) == "3" then

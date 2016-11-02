@@ -804,5 +804,84 @@ describe("http.request module", function()
 			assert.truthy(cq:empty())
 			socks_server:close()
 		end)
+		it("pays attention to HSTS", function()
+			local cq = cqueues.new()
+			local n = 0
+			local s = server.listen {
+				host = "localhost";
+				port = 0;
+				onstream = function(s, stream)
+					assert(stream:get_headers())
+					n = n + 1
+					local resp_headers = new_headers()
+					resp_headers:append(":status", "200")
+					resp_headers:append("connection", "close")
+					if n < 3 then
+						resp_headers:append("strict-transport-security", "max-age=10")
+					else
+						resp_headers:append("strict-transport-security", "max-age=0")
+						assert.truthy(stream:checktls())
+					end
+					assert(stream:write_headers(resp_headers, false))
+					assert(stream:write_chunk("hello world", true))
+					if n == 3 then
+						s:close()
+					end
+				end;
+			}
+			assert(s:listen())
+			local _, _, port = s:localname()
+			cq:wrap(function()
+				assert_loop(s)
+			end)
+			cq:wrap(function()
+				-- new store so we don't test with the default one (which will outlive tests)
+				local hsts_store = require "http.hsts".new_store()
+				do -- first a http request that *shouldn't* fill in the store
+					local req = request.new_from_uri {
+						scheme = "http";
+						host = "localhost";
+						port = port;
+					}
+					req.hsts = hsts_store
+					local headers, stream = assert(req:go())
+					assert.same("200", headers:get(":status"))
+					assert.same("max-age=10", headers:get("strict-transport-security"))
+					assert.same("hello world", assert(stream:get_body_as_string()))
+					assert.falsy(hsts_store:check("localhost"))
+					stream:shutdown()
+				end
+				do -- now  a https request that *will* fill in the store
+					local req = request.new_from_uri {
+						scheme = "https";
+						host = "localhost";
+						port = port;
+					}
+					req.hsts = hsts_store
+					local headers, stream = assert(req:go())
+					assert.same("200", headers:get(":status"))
+					assert.same("max-age=10", headers:get("strict-transport-security"))
+					assert.same("hello world", assert(stream:get_body_as_string()))
+					assert.truthy(hsts_store:check("localhost"))
+					stream:shutdown()
+				end
+				do -- http request will be converted to https. max-age=0 should remove from store.
+					local req = request.new_from_uri {
+						scheme = "http";
+						host = "localhost";
+						port = port;
+					}
+					req.hsts = hsts_store
+					local headers, stream = assert(req:go())
+					assert.same("200", headers:get(":status"))
+					assert.same("max-age=0", headers:get("strict-transport-security"))
+					assert.same("hello world", assert(stream:get_body_as_string()))
+					assert.falsy(hsts_store:check("localhost"))
+					stream:shutdown()
+				end
+			end)
+			assert_loop(cq, TEST_TIMEOUT)
+			assert.truthy(cq:empty())
+		end)
 	end)
 end)
