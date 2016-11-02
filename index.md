@@ -565,6 +565,14 @@ Returns the new stream as a [h2_stream](#http.h2_stream).
 ### `h2_stream:write_window_update(inc)` <!-- --> {#http.h2_stream:write_window_update}
 
 
+### `h2_stream:read_continuation(timeout)` <!-- --> {#http.h2_stream:read_continuation}
+
+Reads a continuation frame from the underlying connection.
+If the next frame is not a continuation frame then returns an error.
+
+On success returns a boolean indicating if this was the last continuation frame and the frame payload.
+
+
 ### `h2_stream:write_continuation_frame(payload, end_headers, timeout)` <!-- --> {#http.h2_stream:write_continuation_frame}
 
 
@@ -582,44 +590,117 @@ Creates and returns a new headers object.
 
 ### `headers:len()` <!-- --> {#http.headers:len}
 
+Returns the number of headers.
+
+Also available as `#headers` in Lua 5.2+.
+
 
 ### `headers:clone()` <!-- --> {#http.headers:clone}
+
+Creates and returns a clone of the headers object.
 
 
 ### `headers:append(name, value, never_index)` <!-- --> {#http.headers:append}
 
+Append a header.
+
+  - `name` is the header field name. Lower case is the convention. It will not be validated at this time.
+  - `value` is the header field value. It will not be validated at this time.
+  - `never_index` is an optional boolean that indicates if the `value` should be considered secret. Defaults to true for header fields: authorization, proxy-authorization, cookie and set-cookie.
+
 
 ### `headers:each()` <!-- --> {#http.headers:each}
+
+An iterator over all headers that emits `name, value, never_index`.
+
+#### Example
+
+```lua
+local http_headers = require "http.headers"
+local myheaders = http_headers.new()
+myheaders:append(":status", "200")
+myheaders:append("set-cookie", "foo=bar")
+myheaders:append("connection", "close")
+myheaders:append("set-cookie", "baz=qux")
+for name, value, never_index in myheaders:each() do
+	print(name, value, never_index)
+end
+--[[ prints:
+":status", "200", false
+"set-cookie", "foo=bar", true
+"connection", "close", false
+"set-cookie", "baz=qux", true
+]]
+```
 
 
 ### `headers:has(name)` <!-- --> {#http.headers:has}
 
+Returns a boolean indicating if the headers object has a field with the given `name`.
+
 
 ### `headers:delete(name)` <!-- --> {#http.headers:delete}
+
+Removes all occurrences of a field name from the headers object.
 
 
 ### `headers:geti(i)` <!-- --> {#http.headers:geti}
 
+Return the `i`-th header as `name, value, never_index`
+
 
 ### `headers:get_as_sequence(name)` <!-- --> {#http.headers:get_as_sequence}
+
+Returns all headers with the given name in a table. The table will contain a field `.n` with the number of elements.
+
+#### Example
+
+```lua
+local http_headers = require "http.headers"
+local myheaders = http_headers.new()
+myheaders:append(":status", "200")
+myheaders:append("set-cookie", "foo=bar")
+myheaders:append("connection", "close")
+myheaders:append("set-cookie", "baz=qux")
+local mysequence = myheaders:get_as_sequence("set-cookie")
+--[[ mysequence will be:
+{n = 2; "foo=bar"; "baz=qux"}
+]]
+```
 
 
 ### `headers:get(name)` <!-- --> {#http.headers:get}
 
+Returns all headers with the given name as multiple return values.
+
 
 ### `headers:get_comma_separated(name)` <!-- --> {#http.headers:get_comma_separated}
+
+Returns all headers with the given name as items in a comma separated string.
 
 
 ### `headers:modifyi(i, value, never_index)` <!-- --> {#http.headers:modifyi}
 
+Change the `i`-th's header to a new `value` and `never_index`.
+
 
 ### `headers:upsert(name, value, never_index)` <!-- --> {#http.headers:upsert}
+
+If a header with the given `name` already exists, replace it. If not, [`append`](#http.headers:append) it to the list of headers.
+
+Cannot be used when a header `name` already has multiple values.
 
 
 ### `headers:sort()` <!-- --> {#http.headers:sort}
 
+Sort the list of headers by their field name, ordering those starting with `:` first. If `name`s are equal then sort by `value`, then by `never_index`.
 
-### `headers:dump(file)` <!-- --> {#http.headers:dump}
+
+### `headers:dump(file, prefix)` <!-- --> {#http.headers:dump}
+
+Print the headers list to the given file, one per line.
+If `file` is not given, then print to `stderr`.
+`prefix` is prefixed to each line.
 
 
 ## http.hpack
@@ -676,6 +757,30 @@ Creates and returns a new headers object.
 
 
 ### `hpack_context:decode_headers(payload, header_list, pos)` <!-- --> {#http.hpack:decode_headers}
+
+
+## http.hsts
+
+Data structures useful for HSTS (HTTP Strict Transport Security)
+
+### `new_store()` <!-- --> {#http.hsts.new_store}
+
+Creates and returns a new HSTS store.
+
+
+### `hsts_store:store(host, directives)` <!-- --> {#http.hsts:store}
+
+Add new directives to the store about the given `host`. `directives` should be a table of directives, which *must* include the key `"max-age"`.
+
+
+### `hsts_store:check(host)` <!-- --> {#http.hsts:check}
+
+Returns a boolean indicating if the given `host` is a known HSTS host.
+
+
+### `hsts_store:clean()` <!-- --> {#http.hsts:clean}
+
+Removes expired entries from the store.
 
 
 ## http.proxies

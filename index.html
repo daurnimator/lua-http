@@ -185,6 +185,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.h2_stream:write_goaway_frame"><code>h2_stream:write_goaway_frame(last_streamid, err_code, debug_msg, timeout)</code> <!-- --></a></li>
 <li><a href="#http.h2_stream:write_window_update_frame"><code>h2_stream:write_window_update_frame(inc, timeout)</code> <!-- --></a></li>
 <li><a href="#http.h2_stream:write_window_update"><code>h2_stream:write_window_update(inc)</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:read_continuation"><code>h2_stream:read_continuation(timeout)</code> <!-- --></a></li>
 <li><a href="#http.h2_stream:write_continuation_frame"><code>h2_stream:write_continuation_frame(payload, end_headers, timeout)</code> <!-- --></a></li>
 </ul></li>
 <li><a href="#http.headers">http.headers</a><ul>
@@ -202,7 +203,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.headers:modifyi"><code>headers:modifyi(i, value, never_index)</code> <!-- --></a></li>
 <li><a href="#http.headers:upsert"><code>headers:upsert(name, value, never_index)</code> <!-- --></a></li>
 <li><a href="#http.headers:sort"><code>headers:sort()</code> <!-- --></a></li>
-<li><a href="#http.headers:dump"><code>headers:dump(file)</code> <!-- --></a></li>
+<li><a href="#http.headers:dump"><code>headers:dump(file, prefix)</code> <!-- --></a></li>
 </ul></li>
 <li><a href="#http.hpack">http.hpack</a><ul>
 <li><a href="#http.hpack.new"><code>new(SETTINGS_HEADER_TABLE_SIZE)</code> <!-- --></a></li>
@@ -223,6 +224,12 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.hpack:add_header_never_indexed"><code>hpack_context:add_header_never_indexed(name, value, huffman)</code> <!-- --></a></li>
 <li><a href="#http.hpack:encode_headers"><code>hpack_context:encode_headers(headers)</code> <!-- --></a></li>
 <li><a href="#http.hpack:decode_headers"><code>hpack_context:decode_headers(payload, header_list, pos)</code> <!-- --></a></li>
+</ul></li>
+<li><a href="#http.hsts">http.hsts</a><ul>
+<li><a href="#http.hsts.new_store"><code>new_store()</code> <!-- --></a></li>
+<li><a href="#http.hsts:store"><code>hsts_store:store(host, directives)</code> <!-- --></a></li>
+<li><a href="#http.hsts:check"><code>hsts_store:check(host)</code> <!-- --></a></li>
+<li><a href="#http.hsts:clean"><code>hsts_store:clean()</code> <!-- --></a></li>
 </ul></li>
 <li><a href="#http.proxies">http.proxies</a><ul>
 <li><a href="#http.proxies.new"><code>new()</code> <!-- --></a></li>
@@ -328,7 +335,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.websocket:send_ping"><code>websocket:send_ping(data, timeout)</code> <!-- --></a></li>
 <li><a href="#http.websocket:send_pong"><code>websocket:send_pong(data, timeout)</code> <!-- --></a></li>
 <li><a href="#http.websocket:close"><code>websocket:close(code, reason, timeout)</code> <!-- --></a></li>
-<li><a href="#example-3">Example</a></li>
+<li><a href="#example-5">Example</a></li>
 </ul></li>
 <li><a href="#http.zlib">http.zlib</a><ul>
 <li><a href="#http.zlib.engine"><code>engine</code> <!-- --></a></li>
@@ -480,7 +487,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <section id="http.bit-example" class="level3">
 <h3>Example</h3>
 <div class="sourceCode"><pre class="sourceCode lua"><code class="sourceCode lua"><span class="kw">local</span> bit <span class="ot">=</span> <span class="fu">require</span> <span class="st">&quot;http.bit&quot;</span>
-<span class="fu">print</span><span class="ot">(</span>bit<span class="ot">.</span>band<span class="ot">(</span><span class="dv">1</span><span class="ot">,</span> <span class="dv">3</span><span class="ot">))</span> <span class="co">--&gt; 1</span></code></pre></div>
+<span class="fu">print</span><span class="ot">(</span>bit<span class="ot">.</span>band<span class="ot">(</span><span class="dv">1</span><span class="ot">,</span> <span class="dv">3</span><span class="ot">))</span> <span class="do">--&gt; 1</span></code></pre></div>
 </section>
 </section>
 <section id="http.client" class="level2">
@@ -646,8 +653,8 @@ defaults to <code>true</code>
 <section id="http.h1_reason_phrases-example" class="level3">
 <h3>Example</h3>
 <div class="sourceCode"><pre class="sourceCode lua"><code class="sourceCode lua"><span class="kw">local</span> reason_phrases <span class="ot">=</span> <span class="fu">require</span> <span class="st">&quot;http.h1_reason_phrases&quot;</span>
-<span class="fu">print</span><span class="ot">(</span>reason_phrases<span class="ot">[</span><span class="st">&quot;200&quot;</span><span class="ot">])</span> <span class="co">--&gt; &quot;OK&quot;</span>
-<span class="fu">print</span><span class="ot">(</span>reason_phrases<span class="ot">[</span><span class="st">&quot;342&quot;</span><span class="ot">])</span> <span class="co">--&gt; &quot;Unassigned&quot;</span></code></pre></div>
+<span class="fu">print</span><span class="ot">(</span>reason_phrases<span class="ot">[</span><span class="st">&quot;200&quot;</span><span class="ot">])</span> <span class="do">--&gt; &quot;OK&quot;</span>
+<span class="fu">print</span><span class="ot">(</span>reason_phrases<span class="ot">[</span><span class="st">&quot;342&quot;</span><span class="ot">])</span> <span class="do">--&gt; &quot;Unassigned&quot;</span></code></pre></div>
 </section>
 </section>
 <section id="http.h1_stream" class="level2">
@@ -833,6 +840,11 @@ For server initiated streams, this will be the next free even numbered stream.</
 <section id="http.h2_stream:write_window_update" class="level3">
 <h3><code>h2_stream:write_window_update(inc)</code> <!-- --></h3>
 </section>
+<section id="http.h2_stream:read_continuation" class="level3">
+<h3><code>h2_stream:read_continuation(timeout)</code> <!-- --></h3>
+<p>Reads a continuation frame from the underlying connection. If the next frame is not a continuation frame then returns an error.</p>
+<p>On success returns a boolean indicating if this was the last continuation frame and the frame payload.</p>
+</section>
 <section id="http.h2_stream:write_continuation_frame" class="level3">
 <h3><code>h2_stream:write_continuation_frame(payload, end_headers, timeout)</code> <!-- --></h3>
 </section>
@@ -847,45 +859,97 @@ For server initiated streams, this will be the next free even numbered stream.</
 </section>
 <section id="http.headers:len" class="level3">
 <h3><code>headers:len()</code> <!-- --></h3>
+<p>Returns the number of headers.</p>
+<p>Also available as <code>#headers</code> in Lua 5.2+.</p>
 </section>
 <section id="http.headers:clone" class="level3">
 <h3><code>headers:clone()</code> <!-- --></h3>
+<p>Creates and returns a clone of the headers object.</p>
 </section>
 <section id="http.headers:append" class="level3">
 <h3><code>headers:append(name, value, never_index)</code> <!-- --></h3>
+<p>Append a header.</p>
+<ul>
+<li><code>name</code> is the header field name. Lower case is the convention. It will not be validated at this time.</li>
+<li><code>value</code> is the header field value. It will not be validated at this time.</li>
+<li><code>never_index</code> is an optional boolean that indicates if the <code>value</code> should be considered secret. Defaults to true for header fields: authorization, proxy-authorization, cookie and set-cookie.</li>
+</ul>
 </section>
 <section id="http.headers:each" class="level3">
 <h3><code>headers:each()</code> <!-- --></h3>
+<p>An iterator over all headers that emits <code>name, value, never_index</code>.</p>
+<section id="example" class="level4">
+<h4>Example</h4>
+<div class="sourceCode"><pre class="sourceCode lua"><code class="sourceCode lua"><span class="kw">local</span> http_headers <span class="ot">=</span> <span class="fu">require</span> <span class="st">&quot;http.headers&quot;</span>
+<span class="kw">local</span> myheaders <span class="ot">=</span> http_headers<span class="ot">.</span>new<span class="ot">()</span>
+myheaders:append<span class="ot">(</span><span class="st">&quot;:status&quot;</span><span class="ot">,</span> <span class="st">&quot;200&quot;</span><span class="ot">)</span>
+myheaders:append<span class="ot">(</span><span class="st">&quot;set-cookie&quot;</span><span class="ot">,</span> <span class="st">&quot;foo=bar&quot;</span><span class="ot">)</span>
+myheaders:append<span class="ot">(</span><span class="st">&quot;connection&quot;</span><span class="ot">,</span> <span class="st">&quot;close&quot;</span><span class="ot">)</span>
+myheaders:append<span class="ot">(</span><span class="st">&quot;set-cookie&quot;</span><span class="ot">,</span> <span class="st">&quot;baz=qux&quot;</span><span class="ot">)</span>
+<span class="kw">for</span> name<span class="ot">,</span> value<span class="ot">,</span> never_index <span class="kw">in</span> myheaders:each<span class="ot">()</span> <span class="kw">do</span>
+    <span class="fu">print</span><span class="ot">(</span>name<span class="ot">,</span> value<span class="ot">,</span> never_index<span class="ot">)</span>
+<span class="kw">end</span>
+<span class="do">--[[ prints:</span>
+<span class="do">&quot;:status&quot;, &quot;200&quot;, false</span>
+<span class="do">&quot;set-cookie&quot;, &quot;foo=bar&quot;, true</span>
+<span class="do">&quot;connection&quot;, &quot;close&quot;, false</span>
+<span class="do">&quot;set-cookie&quot;, &quot;baz=qux&quot;, true</span>
+<span class="do">]]</span></code></pre></div>
+</section>
 </section>
 <section id="http.headers:has" class="level3">
 <h3><code>headers:has(name)</code> <!-- --></h3>
+<p>Returns a boolean indicating if the headers object has a field with the given <code>name</code>.</p>
 </section>
 <section id="http.headers:delete" class="level3">
 <h3><code>headers:delete(name)</code> <!-- --></h3>
+<p>Removes all occurrences of a field name from the headers object.</p>
 </section>
 <section id="http.headers:geti" class="level3">
 <h3><code>headers:geti(i)</code> <!-- --></h3>
+<p>Return the <code>i</code>-th header as <code>name, value, never_index</code></p>
 </section>
 <section id="http.headers:get_as_sequence" class="level3">
 <h3><code>headers:get_as_sequence(name)</code> <!-- --></h3>
+<p>Returns all headers with the given name in a table. The table will contain a field <code>.n</code> with the number of elements.</p>
+<section id="example-1" class="level4">
+<h4>Example</h4>
+<div class="sourceCode"><pre class="sourceCode lua"><code class="sourceCode lua"><span class="kw">local</span> http_headers <span class="ot">=</span> <span class="fu">require</span> <span class="st">&quot;http.headers&quot;</span>
+<span class="kw">local</span> myheaders <span class="ot">=</span> http_headers<span class="ot">.</span>new<span class="ot">()</span>
+myheaders:append<span class="ot">(</span><span class="st">&quot;:status&quot;</span><span class="ot">,</span> <span class="st">&quot;200&quot;</span><span class="ot">)</span>
+myheaders:append<span class="ot">(</span><span class="st">&quot;set-cookie&quot;</span><span class="ot">,</span> <span class="st">&quot;foo=bar&quot;</span><span class="ot">)</span>
+myheaders:append<span class="ot">(</span><span class="st">&quot;connection&quot;</span><span class="ot">,</span> <span class="st">&quot;close&quot;</span><span class="ot">)</span>
+myheaders:append<span class="ot">(</span><span class="st">&quot;set-cookie&quot;</span><span class="ot">,</span> <span class="st">&quot;baz=qux&quot;</span><span class="ot">)</span>
+<span class="kw">local</span> mysequence <span class="ot">=</span> myheaders:get_as_sequence<span class="ot">(</span><span class="st">&quot;set-cookie&quot;</span><span class="ot">)</span>
+<span class="do">--[[ mysequence will be:</span>
+<span class="do">{n = 2; &quot;foo=bar&quot;; &quot;baz=qux&quot;}</span>
+<span class="do">]]</span></code></pre></div>
+</section>
 </section>
 <section id="http.headers:get" class="level3">
 <h3><code>headers:get(name)</code> <!-- --></h3>
+<p>Returns all headers with the given name as multiple return values.</p>
 </section>
 <section id="http.headers:get_comma_separated" class="level3">
 <h3><code>headers:get_comma_separated(name)</code> <!-- --></h3>
+<p>Returns all headers with the given name as items in a comma separated string.</p>
 </section>
 <section id="http.headers:modifyi" class="level3">
 <h3><code>headers:modifyi(i, value, never_index)</code> <!-- --></h3>
+<p>Change the <code>i</code>-th's header to a new <code>value</code> and <code>never_index</code>.</p>
 </section>
 <section id="http.headers:upsert" class="level3">
 <h3><code>headers:upsert(name, value, never_index)</code> <!-- --></h3>
+<p>If a header with the given <code>name</code> already exists, replace it. If not, <a href="#http.headers:append"><code>append</code></a> it to the list of headers.</p>
+<p>Cannot be used when a header <code>name</code> already has multiple values.</p>
 </section>
 <section id="http.headers:sort" class="level3">
 <h3><code>headers:sort()</code> <!-- --></h3>
+<p>Sort the list of headers by their field name, ordering those starting with <code>:</code> first. If <code>name</code>s are equal then sort by <code>value</code>, then by <code>never_index</code>.</p>
 </section>
 <section id="http.headers:dump" class="level3">
-<h3><code>headers:dump(file)</code> <!-- --></h3>
+<h3><code>headers:dump(file, prefix)</code> <!-- --></h3>
+<p>Print the headers list to the given file, one per line. If <code>file</code> is not given, then print to <code>stderr</code>. <code>prefix</code> is prefixed to each line.</p>
 </section>
 </section>
 <section id="http.hpack" class="level2">
@@ -943,6 +1007,26 @@ For server initiated streams, this will be the next free even numbered stream.</
 </section>
 <section id="http.hpack:decode_headers" class="level3">
 <h3><code>hpack_context:decode_headers(payload, header_list, pos)</code> <!-- --></h3>
+</section>
+</section>
+<section id="http.hsts" class="level2">
+<h2>http.hsts</h2>
+<p>Data structures useful for HSTS (HTTP Strict Transport Security)</p>
+<section id="http.hsts.new_store" class="level3">
+<h3><code>new_store()</code> <!-- --></h3>
+<p>Creates and returns a new HSTS store.</p>
+</section>
+<section id="http.hsts:store" class="level3">
+<h3><code>hsts_store:store(host, directives)</code> <!-- --></h3>
+<p>Add new directives to the store about the given <code>host</code>. <code>directives</code> should be a table of directives, which <em>must</em> include the key <code>&quot;max-age&quot;</code>.</p>
+</section>
+<section id="http.hsts:check" class="level3">
+<h3><code>hsts_store:check(host)</code> <!-- --></h3>
+<p>Returns a boolean indicating if the given <code>host</code> is a known HSTS host.</p>
+</section>
+<section id="http.hsts:clean" class="level3">
+<h3><code>hsts_store:clean()</code> <!-- --></h3>
+<p>Removes expired entries from the store.</p>
 </section>
 </section>
 <section id="http.proxies" class="level2">
@@ -1230,25 +1314,25 @@ For server initiated streams, this will be the next free even numbered stream.</
 <section id="http.util.query_args" class="level3">
 <h3><code>query_args(str)</code> <!-- --></h3>
 <p>Returns an iterator over the pairs in <code>str</code></p>
-<section id="example" class="level4">
+<section id="example-2" class="level4">
 <h4>Example</h4>
 <div class="sourceCode"><pre class="sourceCode lua"><code class="sourceCode lua"><span class="kw">local</span> http_util <span class="ot">=</span> <span class="fu">require</span> <span class="st">&quot;http.util&quot;</span>
 <span class="kw">for</span> name<span class="ot">,</span> value <span class="kw">in</span> http_util<span class="ot">.</span>query_args<span class="ot">(</span><span class="st">&quot;foo=bar&amp;baz=qux&quot;</span><span class="ot">)</span> <span class="kw">do</span>
     <span class="fu">print</span><span class="ot">(</span>name<span class="ot">,</span> value<span class="ot">)</span>
 <span class="kw">end</span>
-<span class="co">--[[ prints:</span>
-<span class="co">&quot;foo&quot;, &quot;bar&quot;</span>
-<span class="co">&quot;baz&quot;, &quot;qux&quot;</span>
-<span class="co">]]</span></code></pre></div>
+<span class="do">--[[ prints:</span>
+<span class="do">&quot;foo&quot;, &quot;bar&quot;</span>
+<span class="do">&quot;baz&quot;, &quot;qux&quot;</span>
+<span class="do">]]</span></code></pre></div>
 </section>
 </section>
 <section id="http.util.dict_to_query" class="level3">
 <h3><code>dict_to_query(dict)</code> <!-- --></h3>
 <p>Converts a dictionary (table with string keys) with string values to an encoded query string.</p>
-<section id="example-1" class="level4">
+<section id="example-3" class="level4">
 <h4>Example</h4>
 <div class="sourceCode"><pre class="sourceCode lua"><code class="sourceCode lua"><span class="kw">local</span> http_util <span class="ot">=</span> <span class="fu">require</span> <span class="st">&quot;http.util&quot;</span>
-<span class="fu">print</span><span class="ot">(</span>http_util<span class="ot">.</span>dict_to_query<span class="ot">({</span>foo <span class="ot">=</span> <span class="st">&quot;bar&quot;</span><span class="ot">;</span> baz <span class="ot">=</span> <span class="st">&quot;qux&quot;</span><span class="ot">}))</span> <span class="co">--&gt; &quot;baz=qux&amp;foo=bar&quot;</span></code></pre></div>
+<span class="fu">print</span><span class="ot">(</span>http_util<span class="ot">.</span>dict_to_query<span class="ot">({</span>foo <span class="ot">=</span> <span class="st">&quot;bar&quot;</span><span class="ot">;</span> baz <span class="ot">=</span> <span class="st">&quot;qux&quot;</span><span class="ot">}))</span> <span class="do">--&gt; &quot;baz=qux&amp;foo=bar&quot;</span></code></pre></div>
 </section>
 </section>
 <section id="http.util.resolve_relative_path" class="level3">
@@ -1261,11 +1345,11 @@ For server initiated streams, this will be the next free even numbered stream.</
 <section id="http.util.split_authority" class="level3">
 <h3><code>split_authority(authority, scheme)</code> <!-- --></h3>
 <p>Splits an <code>authority</code> into host and port components. If the authority has no port component, will attempt to use the default for the <code>scheme</code>.</p>
-<section id="example-2" class="level4">
+<section id="example-4" class="level4">
 <h4>Example</h4>
 <div class="sourceCode"><pre class="sourceCode lua"><code class="sourceCode lua"><span class="kw">local</span> http_util <span class="ot">=</span> <span class="fu">require</span> <span class="st">&quot;http.util&quot;</span>
-<span class="fu">print</span><span class="ot">(</span>http_util<span class="ot">.</span>split_authority<span class="ot">(</span><span class="st">&quot;localhost:8000&quot;</span><span class="ot">,</span> <span class="st">&quot;http&quot;</span><span class="ot">))</span> <span class="co">--&gt; &quot;localhost&quot;, 8000</span>
-<span class="fu">print</span><span class="ot">(</span>http_util<span class="ot">.</span>split_authority<span class="ot">(</span><span class="st">&quot;example.com&quot;</span><span class="ot">,</span> <span class="st">&quot;https&quot;</span><span class="ot">))</span> <span class="co">--&gt; &quot;localhost&quot;, 443</span></code></pre></div>
+<span class="fu">print</span><span class="ot">(</span>http_util<span class="ot">.</span>split_authority<span class="ot">(</span><span class="st">&quot;localhost:8000&quot;</span><span class="ot">,</span> <span class="st">&quot;http&quot;</span><span class="ot">))</span> <span class="do">--&gt; &quot;localhost&quot;, 8000</span>
+<span class="fu">print</span><span class="ot">(</span>http_util<span class="ot">.</span>split_authority<span class="ot">(</span><span class="st">&quot;example.com&quot;</span><span class="ot">,</span> <span class="st">&quot;https&quot;</span><span class="ot">))</span> <span class="do">--&gt; &quot;localhost&quot;, 443</span></code></pre></div>
 </section>
 </section>
 <section id="http.util.to_authority" class="level3">
@@ -1379,7 +1463,7 @@ For server initiated streams, this will be the next free even numbered stream.</
 <li><code>reason</code> is an optional string</li>
 </ul>
 </section>
-<section id="example-3" class="level3">
+<section id="example-5" class="level3">
 <h3>Example</h3>
 <div class="sourceCode"><pre class="sourceCode lua"><code class="sourceCode lua"><span class="kw">local</span> websocket <span class="ot">=</span> <span class="fu">require</span> <span class="st">&quot;http.websocket&quot;</span>
 <span class="kw">local</span> ws <span class="ot">=</span> websocket<span class="ot">.</span>new_from_uri<span class="ot">(</span><span class="st">&quot;wss://echo.websocket.org&quot;</span><span class="ot">)</span>
@@ -1413,7 +1497,7 @@ For server initiated streams, this will be the next free even numbered stream.</
 <span class="kw">local</span> original <span class="ot">=</span> <span class="st">&quot;the racecar raced around the racecar track&quot;</span>
 <span class="kw">local</span> deflater <span class="ot">=</span> zlib<span class="ot">.</span>deflate<span class="ot">()</span>
 <span class="kw">local</span> compressed <span class="ot">=</span> deflater<span class="ot">(</span>original<span class="ot">,</span> <span class="kw">true</span><span class="ot">)</span>
-<span class="fu">print</span><span class="ot">(#</span>original<span class="ot">,</span> <span class="ot">#</span>compressed<span class="ot">)</span> <span class="co">-- compressed should be smaller</span>
+<span class="fu">print</span><span class="ot">(#</span>original<span class="ot">,</span> <span class="ot">#</span>compressed<span class="ot">)</span> <span class="do">-- compressed should be smaller</span>
 <span class="kw">local</span> inflater <span class="ot">=</span> zlib<span class="ot">.</span>inflate<span class="ot">()</span>
 <span class="kw">local</span> uncompressed <span class="ot">=</span> inflater<span class="ot">(</span>compressed<span class="ot">,</span> <span class="kw">true</span><span class="ot">)</span>
 <span class="fu">assert</span><span class="ot">(</span>original <span class="ot">==</span> uncompressed<span class="ot">)</span></code></pre></div>
@@ -1443,8 +1527,8 @@ For server initiated streams, this will be the next free even numbered stream.</
 <span class="kw">local</span> cq <span class="ot">=</span> cqueues<span class="ot">.</span>new<span class="ot">()</span>
 cq:wrap<span class="ot">(</span><span class="kw">function</span><span class="ot">()</span>
     prosody_http<span class="ot">.</span>request<span class="ot">(</span><span class="st">&quot;http://httpbin.org/ip&quot;</span><span class="ot">,</span> <span class="ot">{},</span> <span class="kw">function</span><span class="ot">(</span>b<span class="ot">,</span> c<span class="ot">,</span> r<span class="ot">)</span>
-        <span class="fu">print</span><span class="ot">(</span>c<span class="ot">)</span> <span class="co">--&gt; 200</span>
-        <span class="fu">print</span><span class="ot">(</span>b<span class="ot">)</span> <span class="co">--&gt; {&quot;origin&quot;: &quot;123.123.123.123&quot;}</span>
+        <span class="fu">print</span><span class="ot">(</span>c<span class="ot">)</span> <span class="do">--&gt; 200</span>
+        <span class="fu">print</span><span class="ot">(</span>b<span class="ot">)</span> <span class="do">--&gt; {&quot;origin&quot;: &quot;123.123.123.123&quot;}</span>
     <span class="kw">end</span><span class="ot">)</span>
 <span class="kw">end</span><span class="ot">)</span>
 <span class="fu">assert</span><span class="ot">(</span>cq:loop<span class="ot">())</span></code></pre></div>
@@ -1463,7 +1547,7 @@ cq:wrap<span class="ot">(</span><span class="kw">function</span><span class="ot"
 <p>Using the 'simple' interface as part of a normal script:</p>
 <div class="sourceCode"><pre class="sourceCode lua"><code class="sourceCode lua"><span class="kw">local</span> socket_http <span class="ot">=</span> <span class="fu">require</span> <span class="st">&quot;http.compat.socket&quot;</span>
 <span class="kw">local</span> body<span class="ot">,</span> code <span class="ot">=</span> <span class="fu">assert</span><span class="ot">(</span>socket_http<span class="ot">.</span>request<span class="ot">(</span><span class="st">&quot;http://lua.org&quot;</span><span class="ot">))</span>
-<span class="fu">print</span><span class="ot">(</span>code<span class="ot">,</span> <span class="ot">#</span>body<span class="ot">)</span> <span class="co">--&gt; 200, 2514</span></code></pre></div>
+<span class="fu">print</span><span class="ot">(</span>code<span class="ot">,</span> <span class="ot">#</span>body<span class="ot">)</span> <span class="do">--&gt; 200, 2514</span></code></pre></div>
 </section>
 </section>
 </section>
