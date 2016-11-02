@@ -376,8 +376,12 @@ local function listen(tbl)
 	}
 end
 
--- dummy function
 function server_methods:onerror_(context, op, err, errno) -- luacheck: ignore 212
+	local msg = op
+	if err then
+		msg = msg .. ": " .. tostring(err)
+	end
+	error(msg, 2)
 end
 
 function server_methods:onerror(...)
