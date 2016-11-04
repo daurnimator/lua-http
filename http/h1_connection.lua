@@ -60,7 +60,11 @@ function connection_methods:connect(timeout)
 	if self.socket == nil then
 		return nil
 	end
-	return self.socket:connect(timeout)
+	local ok, err, errno = self.socket:connect(timeout)
+	if not ok then
+		return nil, err, errno
+	end
+	return true
 end
 
 function connection_methods:checktls()

@@ -302,8 +302,12 @@ function connection_methods:loop(timeout)
 	end
 end
 
-function connection_methods:connect(...)
-	return self.socket:connect(...)
+function connection_methods:connect(timeout)
+	local ok, err, errno = self.socket:connect(timeout)
+	if not ok then
+		return nil, err, errno
+	end
+	return true
 end
 
 function connection_methods:checktls()
