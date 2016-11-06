@@ -812,6 +812,7 @@ function stream_methods:unget(str)
 	else
 		self.body_buffer = str
 	end
+	return true
 end
 
 local empty_headers = new_headers()
