@@ -57,7 +57,6 @@ function store_methods:store(host, directives)
 	else
 		-- add to store
 		self.domains[host] = setmetatable({
-			host = host;
 			includeSubdomains = directives.includeSubdomains;
 			expires = now + max_age;
 		}, store_item_mt)
@@ -76,7 +75,7 @@ function store_methods:check(host)
 		if item then
 			if item.expires < now then
 				self:clean()
-			elseif host == item.host or item.includeSubdomains then
+			elseif host == h or item.includeSubdomains then
 				return true
 			end
 		end
