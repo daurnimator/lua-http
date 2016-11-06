@@ -32,7 +32,6 @@ end
 
 local function new_store()
 	return setmetatable({
-		n_domains = 0;
 		domains = {};
 		time = default_time_source;
 	}, store_mt)
