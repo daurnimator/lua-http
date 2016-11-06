@@ -38,6 +38,15 @@ local function new_store()
 	}, store_mt)
 end
 
+function store_methods:clone()
+	local r = new_store()
+	for host, item in pairs(self.domains) do
+		r.domains[host] = item
+	end
+	r.time = self.time
+	return r
+end
+
 function store_methods:store(host, directives)
 	local now = self.time()
 	local max_age = directives["max-age"]
