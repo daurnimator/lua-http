@@ -51,7 +51,7 @@ function store_methods:store(host, directives)
 	local max_age = directives["max-age"]
 	if max_age == nil then
 		return nil, "max-age directive is required"
-	elseif max_age:match("[^0-9]") then
+	elseif type(max_age) ~= "string" or max_age:match("[^0-9]") then
 		return nil, "max-age directive does not match grammar"
 	else
 		max_age = tonumber(max_age, 10)
