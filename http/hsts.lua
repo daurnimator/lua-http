@@ -8,9 +8,10 @@ local IPv4address = require "lpeg_patterns.IPv4".IPv4address
 local IPv6address = require "lpeg_patterns.IPv6".IPv6address
 local IPaddress = (IPv4address + IPv6address) * EOF
 
-local default_time_source = os.time
+local store_methods = {
+	time = function() return os.time() end;
+}
 
-local store_methods = {}
 local store_mt = {
 	__name = "http.hsts.store";
 	__index = store_methods;
@@ -33,16 +34,15 @@ end
 local function new_store()
 	return setmetatable({
 		domains = {};
-		time = default_time_source;
 	}, store_mt)
 end
 
 function store_methods:clone()
 	local r = new_store()
+	r.time = rawget(self, "time")
 	for host, item in pairs(self.domains) do
 		r.domains[host] = item
 	end
-	r.time = self.time
 	return r
 end
 
