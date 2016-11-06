@@ -768,6 +768,11 @@ Data structures useful for HSTS (HTTP Strict Transport Security)
 Creates and returns a new HSTS store.
 
 
+### `hsts_store:clone()` <!-- --> {#http.hsts:clone}
+
+Creates and returns a copy of a store.
+
+
 ### `hsts_store:store(host, directives)` <!-- --> {#http.hsts:store}
 
 Add new directives to the store about the given `host`. `directives` should be a table of directives, which *must* include the key `"max-age"`.
