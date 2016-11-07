@@ -351,7 +351,7 @@ local function listen(tbl)
 			error("Custom OpenSSL context required when using a UNIX domain socket")
 		end
 	end
-	local s = assert(cs.listen{
+	local s, errno = cs.listen {
 		family = tbl.family;
 		host = host;
 		port = port;
@@ -362,7 +362,10 @@ local function listen(tbl)
 		reuseaddr = tbl.reuseaddr;
 		reuseport = tbl.reuseport;
 		v6only = tbl.v6only;
-	})
+	}
+	if not s then
+		return nil, ce.strerror(errno), errno
+	end
 	return new_server {
 		cq = tbl.cq;
 		socket = s;
