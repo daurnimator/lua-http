@@ -6,6 +6,9 @@ describe("http.server module", function()
 	local cqueues = require "cqueues"
 	local ce = require "cqueues.errno"
 	local cs = require "cqueues.socket"
+	local openssl_ctx = require "openssl.ssl.context"
+	local non_verifying_tls_context = http_tls.new_client_context()
+	non_verifying_tls_context:setVerify(openssl_ctx.VERIFY_NONE)
 	it("rejects invalid 'cq' field", function()
 		assert.has.errors(function()
 			server.new {
@@ -73,6 +76,7 @@ describe("http.server module", function()
 				port = client_port;
 				path = client_path;
 				tls = tls;
+				ctx = non_verifying_tls_context;
 				version = client_version;
 			}
 			local conn = assert(client.connect(client_options))

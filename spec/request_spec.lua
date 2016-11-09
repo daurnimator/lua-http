@@ -450,6 +450,10 @@ describe("http.request module", function()
 		local cqueues = require "cqueues"
 		local server = require "http.server"
 		local new_headers = require "http.headers".new
+		local http_tls = require "http.tls"
+		local openssl_ctx = require "openssl.ssl.context"
+		local non_verifying_tls_context = http_tls.new_client_context()
+		non_verifying_tls_context:setVerify(openssl_ctx.VERIFY_NONE)
 		local function test(server_cb, client_cb)
 			local cq = cqueues.new()
 			local s = server.listen {
@@ -475,6 +479,7 @@ describe("http.request module", function()
 					host = host;
 					port = port;
 				}
+				req.ctx = non_verifying_tls_context;
 				client_cb(req)
 			end)
 			assert_loop(cq, TEST_TIMEOUT)
@@ -778,6 +783,7 @@ describe("http.request module", function()
 					host = host;
 					port = port;
 				}
+				req.ctx = non_verifying_tls_context;
 				req.proxy = {
 					scheme = "socks5h";
 					host = socks_host;
@@ -843,6 +849,7 @@ describe("http.request module", function()
 						host = "localhost";
 						port = port;
 					}
+					req.ctx = non_verifying_tls_context;
 					req.hsts = hsts_store
 					local headers, stream = assert(req:go())
 					assert.same("200", headers:get(":status"))
@@ -857,6 +864,7 @@ describe("http.request module", function()
 						host = "localhost";
 						port = port;
 					}
+					req.ctx = non_verifying_tls_context;
 					req.hsts = hsts_store
 					local headers, stream = assert(req:go())
 					assert.same("200", headers:get(":status"))
@@ -871,6 +879,7 @@ describe("http.request module", function()
 						host = "localhost";
 						port = port;
 					}
+					req.ctx = non_verifying_tls_context;
 					req.hsts = hsts_store
 					local headers, stream = assert(req:go())
 					assert.same("200", headers:get(":status"))
