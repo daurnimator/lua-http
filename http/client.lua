@@ -34,27 +34,28 @@ local function negotiate(s, options, timeout)
 	local tls = options.tls
 	local version = options.version
 	if tls then
-		if tls == true then
+		local ctx = options.ctx
+		if ctx == nil then
 			if version == nil then
-				tls = default_ctx
+				ctx = default_ctx
 			elseif version == 1 then
-				tls = default_h1_ctx
+				ctx = default_h1_ctx
 			elseif version == 1.1 then
-				tls = default_h11_ctx
+				ctx = default_h11_ctx
 			elseif version == 2 then
-				tls = default_h2_ctx
+				ctx = default_h2_ctx
 			else
 				error("Unknown HTTP version: " .. tostring(version))
 			end
 		end
-		local ok, err, errno = s:starttls(tls, timeout)
+		local ok, err, errno = s:starttls(ctx, timeout)
 		if not ok then
 			return nil, err, errno
 		end
 	end
 	if version == nil then
-		if tls then
-			local ssl = s:checktls()
+		local ssl = s:checktls()
+		if ssl then
 			if http_tls.has_alpn and ssl:getAlpnSelected() == "h2" then
 				version = 2
 			else

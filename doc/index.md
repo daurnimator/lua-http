@@ -180,11 +180,10 @@ Deals with obtaining a connection to an HTTP server.
 
   - `options` is a table containing:
 
-	  - `tls` (boolean|userdata, optional): the `SSL_CTX*` to use, or a boolean to indicate the default TLS context.  
-		defaults to `true`.
+	  - `tls` (boolean, optional): boolean indicating if a TLS negotiation should be started.
 
-		  - `true` indicates to use the default TLS settings, see [*http.tls*](#http.tls) for information.
-		  - `false` means do not negotiate TLS
+	  - `ctx` (userdata, optional): the `SSL_CTX*` to use.
+		If not specified, uses the default TLS settings (see [*http.tls*](#http.tls) for information).
 
 	  - `version` (nil|1.0|1.1|2): HTTP version to use.
 		  - `nil`: attempts HTTP 2 and falls back to HTTP 1.1
@@ -833,7 +832,13 @@ The port this request should be sent to.
 
 ### `request.tls` <!-- --> {#http.request.tls}
 
-A boolean indicating if TLS should be used, or an `SSL_CTX*` to use.
+A boolean indicating if TLS should be used.
+
+
+### `request.ctx` <!-- --> {#http.request.ctx}
+
+An alternative `SSL_CTX*` to use.
+If not specified, uses the default TLS settings (see [*http.tls*](#http.tls) for information).
 
 
 ### `request.sendname` <!-- --> {#http.request.sendname}

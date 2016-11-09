@@ -104,6 +104,7 @@ function request_methods:clone()
 		host = self.host;
 		port = self.port;
 		tls = self.tls;
+		ctx = self.ctx;
 		sendname = self.sendname;
 		version = self.version;
 		proxy = self.proxy;
@@ -196,7 +197,7 @@ function request_methods:handle_redirect(orig_headers)
 			new_req.headers:upsert(":scheme", new_scheme)
 		end
 		if new_scheme == "https" or new_scheme == "wss" then
-			new_req.tls = self.tls or true
+			new_req.tls = true
 		else
 			new_req.tls = false
 		end
@@ -401,6 +402,7 @@ function request_methods:go(timeout)
 				local err, errno2
 				connection, err, errno2 = client.negotiate(sock, {
 					tls = tls;
+					ctx = self.ctx;
 					version = self.version;
 				}, deadline and deadline-monotime())
 				if connection == nil then
@@ -439,6 +441,7 @@ function request_methods:go(timeout)
 			local sock = socks:take_socket()
 			connection, err, errno = client.negotiate(sock, {
 				tls = tls;
+				ctx = self.ctx;
 				version = self.version;
 			}, deadline and deadline-monotime())
 			if connection == nil then
@@ -456,6 +459,7 @@ function request_methods:go(timeout)
 			host = host;
 			port = port;
 			tls = tls;
+			ctx = self.ctx;
 			sendname = self.sendname;
 			version = self.version;
 		}, deadline and deadline-monotime())
