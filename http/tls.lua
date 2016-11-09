@@ -701,7 +701,7 @@ local function new_client_context()
 	ctx:setOptions(default_tls_options)
 	ctx:setEphemeralKey(openssl_pkey.new{ type = "EC", curve = "prime256v1" })
 	local store = openssl_store.new()
-	store:add("/etc/ssl/cert.pem") -- reasonable default until https://github.com/wahern/luaossl/issues/67 is fixed
+	store:add("/etc/ssl/certs/") -- reasonable default until https://github.com/wahern/luaossl/issues/67 is fixed
 	ctx:setStore(store)
 	ctx:setVerify(openssl_ctx.VERIFY_PEER)
 	return ctx
