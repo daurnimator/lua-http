@@ -9,10 +9,19 @@ describe("http.server module", function()
 	local openssl_ctx = require "openssl.ssl.context"
 	local non_verifying_tls_context = http_tls.new_client_context()
 	non_verifying_tls_context:setVerify(openssl_ctx.VERIFY_NONE)
+	it("rejects missing 'ctx' field", function()
+		assert.has.errors(function()
+			server.new {
+				socket = (cs.pair());
+				onstream = error;
+			}
+		end)
+	end)
 	it("rejects invalid 'cq' field", function()
 		assert.has.errors(function()
 			server.new {
 				socket = (cs.pair());
+				tls = false;
 				onstream = error;
 				cq = 5;
 			}
@@ -21,6 +30,7 @@ describe("http.server module", function()
 	it("__tostring works", function()
 		local s = server.new {
 			socket = (cs.pair());
+			tls = false;
 			onstream = error;
 		}
 		assert.same("http.server{", tostring(s):match("^.-%{"))
@@ -28,6 +38,7 @@ describe("http.server module", function()
 	it(":onerror with no arguments doesn't clear", function()
 		local s = server.new {
 			socket = (cs.pair());
+			tls = false;
 			onstream = error;
 		}
 		local onerror = s:onerror()

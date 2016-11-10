@@ -289,6 +289,10 @@ local function new_server(tbl)
 	local socket = assert(tbl.socket, "missing 'socket'")
 	local onstream = assert(tbl.onstream, "missing 'onstream'")
 
+	if tbl.ctx == nil and tbl.tls ~= false then
+		error("OpenSSL context required if .tls isn't false")
+	end
+
 	-- Return errors rather than throwing
 	socket:onerror(function(s, op, why, lvl) -- luacheck: ignore 431 212
 		return why
