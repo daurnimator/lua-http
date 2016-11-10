@@ -261,8 +261,22 @@ function connection_methods:read_header(timeout)
 		return nil, err, errno
 	end
 	-- header fields can have optional surrounding whitespace
+	--[[ RFC 7230 3.2.4: No whitespace is allowed between the header field-name
+	and colon. In the past, differences in the handling of such whitespace have
+	led to security vulnerabilities in request routing and response handling.
+	A server MUST reject any received request message that contains whitespace
+	between a header field-name and colon with a response code of
+	400 (Bad Request). A proxy MUST remove any such whitespace from a response
+	message before forwarding the message downstream.]]
 	local key, val = line:match("^([^%s:]+):[ \t]*(.-)[ \t]*$")
-	-- don't need to validate, the *h read mode ensures a valid header
+	if not key then
+		self.socket:seterror("r", ce.EPROTO)
+		local ok, errno2 = self.socket:unget(line)
+		if not ok then
+			return nil, onerror(self.socket, "unget", errno2)
+		end
+		return nil, onerror(self.socket, "read_header", ce.EPROTO)
+	end
 	return key, val
 end
 
