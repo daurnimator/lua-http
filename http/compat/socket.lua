@@ -138,7 +138,7 @@ function M.request(reqt, b)
 			if name == "host" then
 				req.headers:upsert(":authority", field)
 			else
-				req.headers:append(name:lower(), field)
+				req.headers:append(name:lower(), tostring(field))
 			end
 		end
 	end
