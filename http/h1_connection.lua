@@ -2,6 +2,7 @@
 
 local cqueues = require "cqueues"
 local monotime = cqueues.monotime
+local ca = require "cqueues.auxlib"
 local cc = require "cqueues.condition"
 local ce = require "cqueues.errno"
 local h1_stream = require "http.h1_stream"
@@ -78,14 +79,14 @@ function connection_methods:localname()
 	if self.socket == nil then
 		return nil
 	end
-	return self.socket:localname()
+	return ca.fileresult(self.socket:localname())
 end
 
 function connection_methods:peername()
 	if self.socket == nil then
 		return nil
 	end
-	return self.socket:peername()
+	return ca.fileresult(self.socket:peername())
 end
 
 function connection_methods:clearerr(...)

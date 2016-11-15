@@ -1,5 +1,6 @@
 local cqueues = require "cqueues"
 local monotime = cqueues.monotime
+local ca = require "cqueues.auxlib"
 local cc = require "cqueues.condition"
 local ce = require "cqueues.errno"
 local rand = require "openssl.rand"
@@ -315,11 +316,11 @@ function connection_methods:checktls()
 end
 
 function connection_methods:localname()
-	return self.socket:localname()
+	return ca.fileresult(self.socket:localname())
 end
 
 function connection_methods:peername()
-	return self.socket:peername()
+	return ca.fileresult(self.socket:peername())
 end
 
 function connection_methods:shutdown()
