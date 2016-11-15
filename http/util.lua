@@ -1,3 +1,6 @@
+local lpeg = require "lpeg"
+local http_patts = require "lpeg_patterns.http"
+
 -- Encodes a character as a percent encoded string
 local function char_to_pchar(c)
 	return string.format("%%%02X", c:byte(1,1))
@@ -139,7 +142,7 @@ local function split_authority(authority, scheme)
 	else -- when port missing from host header, it defaults to the default for that scheme
 		port = scheme_to_port[scheme]
 		if port == nil then
-			error("unknown scheme")
+			return nil, "unknown scheme"
 		end
 	end
 	local ipv6 = authority:match("%[([:%x]+)%]")
@@ -168,29 +171,46 @@ local function to_authority(host, port, scheme)
 	return authority
 end
 
--- Many HTTP headers contain comma seperated values
--- This function returns an iterator over header components
-local function each_header_component(str)
-	return str:gmatch(" *([^ ,][^,]-) *%f[,%z]")
-end
-
-local function split_header(str)
-	if str == nil then
-		return { n = 0 }
-	end
-	local r, n = { n = nil }, 0
-	for elem in each_header_component(str) do
-		n = n + 1
-		r[n] = elem
-	end
-	r.n = n
-	return r
-end
-
 -- HTTP prefered date format
 -- See RFC 7231 section 7.1.1.1
 local function imf_date(time)
 	return os.date("!%a, %d %b %Y %H:%M:%S GMT", time)
+end
+
+-- This pattern checks if it's argument is a valid token, if so, it returns it as is.
+-- Otherwise, it returns it as a quoted string (with any special characters escaped)
+local maybe_quote do
+	local EOF = lpeg.P(-1)
+	local patt = http_patts.token * EOF
+		+ lpeg.Cs(lpeg.Cc'"' * ((lpeg.S"\\\"") / "\\%0" + http_patts.qdtext)^0 * lpeg.Cc'"') * EOF
+	maybe_quote = function (s)
+		return patt:match(s)
+	end
+end
+
+-- A pcall relative that can be yielded over in PUC 5.1
+local yieldable_pcall
+-- See if pcall can be yielded over
+if coroutine.wrap(function() return pcall(coroutine.yield, true) end)() then
+	yieldable_pcall = pcall
+else
+	local function handle_resume(co, ok, ...)
+		if not ok then
+			return false, ...
+		elseif coroutine.status(co) == "dead" then
+			return true, ...
+		end
+		return handle_resume(co, coroutine.resume(co, coroutine.yield(...)))
+	end
+	yieldable_pcall = function(func, ...)
+		if type(func) ~= "function" or debug.getinfo(func, "S").what == "C" then
+			local C_func = func
+			-- Can't give C functions to coroutine.create
+			func = function(...) return C_func(...) end
+		end
+		local co = coroutine.create(func)
+		return handle_resume(co, coroutine.resume(co, ...))
+	end
 end
 
 return {
@@ -204,6 +224,7 @@ return {
 	scheme_to_port = scheme_to_port;
 	split_authority = split_authority;
 	to_authority = to_authority;
-	split_header = split_header;
 	imf_date = imf_date;
+	maybe_quote = maybe_quote;
+	yieldable_pcall = yieldable_pcall;
 }

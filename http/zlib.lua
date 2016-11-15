@@ -27,7 +27,7 @@ if zlib._VERSION:match "^lua%-zlib" then
 	function _M.deflate()
 		local stream = zlib.deflate()
 		return function(chunk, end_stream)
-			local deflated = stream(chunk, end_stream and "finish" or nil)
+			local deflated = stream(chunk, end_stream and "finish" or "sync")
 			return deflated
 		end
 	end
@@ -36,13 +36,15 @@ elseif zlib._VERSION:match "^lzlib" then
 
 	function _M.inflate()
 		-- the function may get called multiple times
-		local _chunk
+		local tmp
 		local stream = zlib.inflate(function()
-			return _chunk
+			local chunk = tmp
+			tmp = nil
+			return chunk
 		end)
 		return function(chunk, end_stream)
 			-- lzlib doesn't report end of string
-			_chunk = chunk
+			tmp = chunk
 			local data = assert(stream:read("*a"))
 			if end_stream then
 				stream:close()
@@ -59,6 +61,7 @@ elseif zlib._VERSION:match "^lzlib" then
 		end)
 		return function(chunk, end_stream)
 			stream:write(chunk)
+			stream:flush()
 			if end_stream then
 				-- close performs a "finish" flush
 				stream:close()

@@ -26,16 +26,22 @@ local basexx = require "basexx"
 local spack = string.pack or require "compat53.string".pack
 local sunpack = string.unpack or require "compat53.string".unpack
 local unpack = table.unpack or unpack -- luacheck: ignore 113
-local utf8_len = (utf8 or require "compat53.utf8").len -- luacheck: ignore 113
+local utf8 = utf8 or require "compat53.utf8" -- luacheck: ignore 113
 local cqueues = require "cqueues"
 local monotime = cqueues.monotime
 local ce = require "cqueues.errno"
-local uri_patts = require "lpeg_patterns.uri"
+local lpeg = require "lpeg"
+local http_patts = require "lpeg_patterns.http"
 local rand = require "openssl.rand"
 local digest = require "openssl.digest"
 local bit = require "http.bit"
 local new_headers = require "http.headers".new
 local http_request = require "http.request"
+
+local EOF = lpeg.P(-1)
+local Connection = lpeg.Ct(http_patts.Connection) * EOF
+local Sec_WebSocket_Protocol_Client = lpeg.Ct(http_patts.Sec_WebSocket_Protocol_Client) * EOF
+local Sec_WebSocket_Extensions = lpeg.Ct(http_patts.Sec_WebSocket_Extensions) * EOF
 
 local websocket_methods = {
 	-- Max seconds to wait after sending close frame until closing connection
@@ -75,6 +81,20 @@ local function validate_protocol(p)
 	return p:match("^[\33\35-\39\42\43\45\46\48-\57\65-\90\94-\122\124\126\127]+$")
 end
 
+local function validate_utf8(s)
+	local ok, pos = utf8.len(s)
+	if not ok then
+		return nil, pos
+	end
+	-- UTF-16 surrogates not allowed
+	for p, c in utf8.codes(s) do
+		if c >= 0xD800 and c <= 0xDFFF then
+			return nil, p
+		end
+	end
+	return true
+end
+
 -- XORs the string `str` with a 32bit key
 local function apply_mask(str, key)
 	assert(#key == 4)
@@ -83,7 +103,7 @@ local function apply_mask(str, key)
 		local key_index = (i-1)%4 + 1
 		data[i] = string.char(bit.bxor(key[key_index], str:byte(i)))
 	end
-	return table.concat(data)
+	return table.concat(data, "", 1, #str)
 end
 
 local function build_frame(desc)
@@ -138,10 +158,15 @@ local function build_frame(desc)
 end
 
 local function build_close(code, message, mask)
-	local data = spack(">I2", code)
-	if message then
-		assert(#message<=123, "Close reason must be <=123 bytes")
-		data = data .. message
+	local data
+	if code then
+		data = spack(">I2", code)
+		if message then
+			assert(#message<=123, "Close reason must be <=123 bytes")
+			data = data .. message
+		end
+	else
+		data = ""
 	end
 	return {
 		opcode = 0x8;
@@ -156,6 +181,9 @@ local function read_frame(sock, deadline)
 		local first_2, err, errno = sock:xread(2, "b", deadline and (deadline-monotime()))
 		if not first_2 then
 			return nil, err, errno
+		elseif #first_2 ~= 2 then
+			sock:seterror("r", ce.EPROTO)
+			return nil, ce.strerror(ce.EPROTO), ce.EPROTO
 		end
 		local byte1, byte2 = first_2:byte(1, 2)
 		frame = {
@@ -174,13 +202,21 @@ local function read_frame(sock, deadline)
 
 	if frame.length == 126 then
 		local length, err, errno = sock:xread(2, "b", deadline and (deadline-monotime()))
-		if not length then
+		if not length or #length ~= 2 then
+			if err == nil then
+				sock:seterror("r", ce.EPROTO)
+				return nil, ce.strerror(ce.EPROTO), ce.EPROTO
+			end
 			return nil, err, errno
 		end
 		frame.length = sunpack(">I2", length)
 	elseif frame.length == 127 then
 		local length, err, errno = sock:xread(8, "b", deadline and (deadline-monotime()))
-		if not length then
+		if not length or #length ~= 8 then
+			if err == nil then
+				sock:seterror("r", ce.EPROTO)
+				return nil, ce.strerror(ce.EPROTO), ce.EPROTO
+			end
 			return nil, err, errno
 		end
 		frame.length = sunpack(">I8", length)
@@ -188,7 +224,11 @@ local function read_frame(sock, deadline)
 
 	if frame.MASK then
 		local key, err, errno = sock:xread(4, "b", deadline and (deadline-monotime()))
-		if not key then
+		if not key or #key ~= 4 then
+			if err == nil then
+				sock:seterror("r", ce.EPROTO)
+				return nil, ce.strerror(ce.EPROTO), ce.EPROTO
+			end
 			return nil, err, errno
 		end
 		frame.key = { key:byte(1, 4) }
@@ -196,7 +236,11 @@ local function read_frame(sock, deadline)
 
 	do
 		local data, err, errno = sock:xread(frame.length, "b", deadline and (deadline-monotime()))
-		if data == nil then
+		if data == nil or #data ~= frame.length then
+			if err == nil then
+				sock:seterror("r", ce.EPROTO)
+				return nil, ce.strerror(ce.EPROTO), ce.EPROTO
+			end
 			return nil, err, errno
 		end
 
@@ -222,7 +266,9 @@ local function parse_close(data)
 end
 
 function websocket_methods:send_frame(frame, timeout)
-	if self.readyState < 1 or self.readyState > 2 then
+	if self.readyState < 1 then
+		return nil, ce.strerror(ce.ENOTCONN), ce.ENOTCONN
+	elseif self.readyState > 2 then
 		return nil, ce.strerror(ce.EPIPE), ce.EPIPE
 	end
 	local ok, err, errno = self.socket:xwrite(build_frame(frame), "bn", timeout)
@@ -237,9 +283,6 @@ end
 
 function websocket_methods:send(data, opcode, timeout)
 	assert(type(data) == "string")
-	if self.readyState >= 2 then
-		return nil, "WebSocket closed, unable to send data", ce.EPIPE
-	end
 	if opcode == "text" or opcode == nil then
 		opcode = 0x1
 	elseif opcode == "binary" then
@@ -257,7 +300,13 @@ function websocket_methods:send(data, opcode, timeout)
 end
 
 local function close_helper(self, code, reason, deadline)
-	if self.readyState == 3 then
+	if self.readyState < 1 then
+		self.request = nil
+		self.stream = nil
+		self.readyState = 3
+		-- return value doesn't matter; this branch cannot be called from anywhere that uses it
+		return nil, ce.strerror(ce.ENOTCONN), ce.ENOTCONN
+	elseif self.readyState == 3 then
 		return nil, ce.strerror(ce.EPIPE), ce.EPIPE
 	end
 
@@ -265,23 +314,24 @@ local function close_helper(self, code, reason, deadline)
 		local close_frame = build_close(code, reason, self.type == "client")
 		-- ignore failure
 		self:send_frame(close_frame, deadline and deadline-monotime())
-		self.readyState = 2
 	end
 
-	-- Do not close socket straight away, wait for acknowledgement from server
-	local read_deadline = monotime() + self.close_timeout
-	if deadline then
-		read_deadline = math.min(read_deadline, deadline)
-	end
-	while not self.got_close_code do
-		if not self:receive(read_deadline-monotime()) then
-			break
+	if code ~= 1002 and not self.got_close_code and self.readyState == 2 then
+		-- Do not close socket straight away, wait for acknowledgement from server
+		local read_deadline = monotime() + self.close_timeout
+		if deadline then
+			read_deadline = math.min(read_deadline, deadline)
 		end
+		repeat
+			if not self:receive(read_deadline-monotime()) then
+				break
+			end
+		until self.got_close_code
 	end
 
 	if self.readyState < 3 then
-		self.readyState = 3
 		self.socket:shutdown()
+		self.readyState = 3
 		cqueues.poll()
 		cqueues.poll()
 		self.socket:close()
@@ -298,7 +348,9 @@ function websocket_methods:close(code, reason, timeout)
 end
 
 function websocket_methods:receive(timeout)
-	if self.readyState < 1 or self.readyState > 2 then
+	if self.readyState < 1 then
+		return nil, ce.strerror(ce.ENOTCONN), ce.ENOTCONN
+	elseif self.readyState > 2 then
 		return nil, ce.strerror(ce.EPIPE), ce.EPIPE
 	end
 	local deadline = timeout and (monotime()+timeout)
@@ -337,9 +389,9 @@ function websocket_methods:receive(timeout)
 					When an endpoint is to interpret a byte stream as UTF-8 but finds
 					that the byte stream is not, in fact, a valid UTF-8 stream, that
 					endpoint MUST _Fail the WebSocket Connection_.]]
-					local valid_utf8, err_pos = utf8_len(databuffer)
+					local valid_utf8, err_pos = validate_utf8(databuffer)
 					if not valid_utf8 then
-						return close_helper(self, 1002, string.format("invalid utf-8 at position %d", err_pos))
+						return close_helper(self, 1007, string.format("invalid utf-8 at position %d", err_pos))
 					end
 				elseif databuffer_type == 0x2 then
 					databuffer_type = "binary"
@@ -364,14 +416,24 @@ function websocket_methods:receive(timeout)
 					Close control frame by an endpoint.  It is designated for use in
 					applications expecting a status code to indicate that no status
 					code was actually present.]]
-					status_code = 1005
+					self.got_close_code = 1005
+					status_code = 1000
 				elseif status_code < 1000 then
+					self.got_close_code = true
 					return close_helper(self, 1002, "Closed with invalid status code", deadline)
 				elseif ((status_code > 1003 and status_code < 1007) or status_code > 1011) and status_code < 3000 then
+					self.got_close_code = true
 					return close_helper(self, 1002, "Closed with reserved status code", deadline)
+				else
+					self.got_close_code = status_code
+					if message then
+						local valid_utf8, err_pos = validate_utf8(message)
+						if not valid_utf8 then
+							return close_helper(self, 1007, string.format("invalid utf-8 at position %d", err_pos))
+						end
+						self.got_close_message = message
+					end
 				end
-				self.got_close_code = status_code
-				self.got_close_message = message
 				--[[ RFC 6455 5.5.1
 				When sending a Close frame in response, the endpoint typically
 				echos the status code it received.]]
@@ -438,17 +500,19 @@ local function new(type)
 		protocols = nil;
 		-- only used by client:
 		request = nil;
+		headers = nil;
 		-- only used by server:
 		stream = nil;
 	}, websocket_mt)
 	return self
 end
 
-local function new_from_uri_t(uri_t, protocols)
-	local scheme = assert(type(uri_t) == "table" and uri_t.scheme, "URI missing scheme")
+local function new_from_uri(uri, protocols)
+	local request = http_request.new_from_uri(uri)
+	local scheme = request.headers:get(":scheme")
 	assert(scheme == "ws" or scheme == "wss", "scheme not websocket")
 	local self = new("client")
-	self.request = http_request.new_from_uri_t(uri_t)
+	self.request = request
 	self.request.version = 1.1
 	self.request.headers:append("upgrade", "websocket")
 	self.request.headers:append("connection", "upgrade")
@@ -479,11 +543,6 @@ local function new_from_uri_t(uri_t, protocols)
 		self.request.headers:append("sec-websocket-protocol", table.concat(protocols_copy, ",", 1, n_protocols))
 	end
 	return self
-end
-
-local function new_from_uri(uri, ...)
-	local uri_t = assert(uri_patts.uri:match(uri), "invalid URI")
-	return new_from_uri_t(uri_t, ...)
 end
 
 --[[ Takes a response to a websocket upgrade request,
@@ -518,16 +577,22 @@ local function handle_websocket_response(self, headers, stream)
 	Connection header field doesn't contain a token that is an
 	ASCII case-insensitive match for the value "Upgrade", the client
 	MUST Fail the WebSocket Connection]]
-	local has_connection_upgrade = false
-	local connection_header = headers:get_split_as_sequence("connection")
-	for i=1, connection_header.n do
-		if connection_header[i]:lower() == "upgrade" then
-			has_connection_upgrade = true
-			break
+	do
+		local has_connection_upgrade = false
+		local h = headers:get_comma_separated("connection")
+		if not h then
+			return nil, "invalid connection header", ce.EINVAL
 		end
-	end
-	if not has_connection_upgrade then
-		return nil, "connection header doesn't contain upgrade", ce.EINVAL
+		local connection_header = Connection:match(h)
+		for i=1, #connection_header do
+			if connection_header[i] == "upgrade" then
+				has_connection_upgrade = true
+				break
+			end
+		end
+		if not has_connection_upgrade then
+			return nil, "connection header doesn't contain upgrade", ce.EINVAL
+		end
 	end
 
 	--[[ If the response lacks a Sec-WebSocket-Accept header field or
@@ -547,9 +612,15 @@ local function handle_websocket_response(self, headers, stream)
 	this header field indicates the use of an extension that was not present
 	in the client's handshake (the server has indicated an extension not
 	requested by the client), the client MUST Fail the WebSocket Connection]]
-	-- For now, we don't support any extensions
-	if headers:has("sec-websocket-extensions") then
-		return nil, "extensions not supported", ce.EINVAL
+	do -- For now, we don't support any extensions
+		local h = headers:get_comma_separated("sec-websocket-extensions")
+		if h then
+			local extensions = Sec_WebSocket_Extensions:match(h)
+			if not extensions then
+				return nil, "invalid sec-websocket-extensions header", ce.EINVAL
+			end
+			return nil, "extensions not supported", ce.EINVAL
+		end
 	end
 
 	--[[ If the response includes a Sec-WebSocket-Protocol header field and
@@ -568,6 +639,7 @@ local function handle_websocket_response(self, headers, stream)
 	assert(self.socket == nil, "websocket:connect called twice")
 	self.socket = assert(stream.connection:take_socket())
 	self.request = nil
+	self.headers = headers
 	self.readyState = 1
 	self.protocol = protocol
 
@@ -584,7 +656,7 @@ function websocket_methods:connect(timeout)
 end
 
 -- Given an incoming HTTP1 request, attempts to upgrade it to a websocket connection
-local function new_from_stream(headers, stream)
+local function new_from_stream(stream, headers)
 	assert(stream.connection.type == "server")
 
 	if stream.connection.version < 1 or stream.connection.version >= 2 then
@@ -596,16 +668,22 @@ local function new_from_stream(headers, stream)
 		return nil, "upgrade header not websocket", ce.EINVAL
 	end
 
-	local has_connection_upgrade = false
-	local connection_header = headers:get_split_as_sequence("connection")
-	for i=1, connection_header.n do
-		if connection_header[i]:lower() == "upgrade" then
-			has_connection_upgrade = true
-			break
+	do
+		local has_connection_upgrade = false
+		local h = headers:get_comma_separated("connection")
+		if not h then
+			return nil, "invalid connection header", ce.EINVAL
 		end
-	end
-	if not has_connection_upgrade then
-		return nil, "connection header doesn't contain upgrade", ce.EINVAL
+		local connection_header = Connection:match(h)
+		for i=1, #connection_header do
+			if connection_header[i] == "upgrade" then
+				has_connection_upgrade = true
+				break
+			end
+		end
+		if not has_connection_upgrade then
+			return nil, "connection header doesn't contain upgrade", ce.EINVAL
+		end
 	end
 
 	local key = trim(headers:get("sec-websocket-key"))
@@ -619,7 +697,11 @@ local function new_from_stream(headers, stream)
 
 	local protocols_available
 	if headers:has("sec-websocket-protocol") then
-		local client_protocols = headers:get_split_as_sequence("sec-websocket-protocol")
+		local h = headers:get_comma_separated("sec-websocket-protocol")
+		local client_protocols = Sec_WebSocket_Protocol_Client:match(h)
+		if not client_protocols then
+			return nil, "invalid sec-websocket-protocol header", ce.EINVAL
+		end
 		--[[ The request MAY include a header field with the name
 		Sec-WebSocket-Protocol. If present, this value indicates one
 		or more comma-separated subprotocol the client wishes to speak,
@@ -648,10 +730,16 @@ local function new_from_stream(headers, stream)
 	return self
 end
 
-function websocket_methods:accept(protocols, timeout)
+function websocket_methods:accept(options, timeout)
 	assert(self.type == "server" and self.readyState == 0)
+	options = options or {}
 
-	local response_headers = new_headers()
+	local response_headers
+	if options.headers then
+		response_headers = options.headers:clone()
+	else
+		response_headers = new_headers()
+	end
 	response_headers:upsert(":status", "101")
 	response_headers:upsert("upgrade", "websocket")
 	response_headers:upsert("connection", "upgrade")
@@ -659,8 +747,8 @@ function websocket_methods:accept(protocols, timeout)
 
 	local chosen_protocol
 	if self.protocols then
-		if protocols then
-			for _, protocol in ipairs(protocols) do
+		if options.protocols then
+			for _, protocol in ipairs(options.protocols) do
 				if self.protocols[protocol] then
 					chosen_protocol = protocol
 					break
@@ -688,7 +776,6 @@ function websocket_methods:accept(protocols, timeout)
 end
 
 return {
-	new_from_uri_t = new_from_uri_t;
 	new_from_uri = new_from_uri;
 	new_from_stream = new_from_stream;
 	methods = websocket_methods;

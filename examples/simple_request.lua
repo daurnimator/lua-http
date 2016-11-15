@@ -32,7 +32,7 @@ end
 print("# RESPONSE")
 local headers, stream = req:go(req_timeout)
 if headers == nil then
-	io.stderr:write(stream, "\n")
+	io.stderr:write(tostring(stream), "\n")
 	os.exit(1)
 end
 print("## HEADERS")

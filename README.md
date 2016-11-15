@@ -19,8 +19,9 @@ Can be found at [https://daurnimator.github.io/lua-http/](https://daurnimator.gi
 [![Build Status](https://travis-ci.org/daurnimator/lua-http.svg)](https://travis-ci.org/daurnimator/lua-http)
 [![Coverage Status](https://coveralls.io/repos/daurnimator/lua-http/badge.svg?branch=master&service=github)](https://coveralls.io/github/daurnimator/lua-http?branch=master)
 
-  - HTTP client API is reaching stability
-  - The HTTP server API is still changing
+  - First release impending!
+  - HTTP request API is mostly stable
+  - The HTTP server API is reaching stability
 
 
 # Installation
@@ -32,9 +33,10 @@ This will automatically install run-time lua dependencies for you.
 
 ## Dependencies
 
-  - [cqueues](http://25thandclement.com/~william/projects/cqueues.html) >= 20150907
+  - [cqueues](http://25thandclement.com/~william/projects/cqueues.html) >= 20160808
   - [luaossl](http://25thandclement.com/~william/projects/luaossl.html) >= 20150727
   - [basexx](https://github.com/aiq/basexx/) >= 0.2.0
+  - [lpeg](http://www.inf.puc-rio.br/~roberto/lpeg/lpeg.html)
   - [lpeg_patterns](https://github.com/daurnimator/lpeg_patterns) >= 0.2
   - [fifo](https://github.com/daurnimator/fifo.lua)
 

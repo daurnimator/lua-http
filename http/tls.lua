@@ -1,5 +1,6 @@
 local openssl_ctx = require "openssl.ssl.context"
 local openssl_pkey = require "openssl.pkey"
+local openssl_store = require "openssl.x509.store"
 
 -- Detect if openssl was compiled with ALPN enabled
 local has_alpn = openssl_ctx.new().setAlpnSelect ~= nil
@@ -15,62 +16,42 @@ end
 
 -- "Modern" cipher list
 local modern_cipher_list = cipher_list {
-	"ECDHE-RSA-AES128-GCM-SHA256";
-	"ECDHE-ECDSA-AES128-GCM-SHA256";
-	"ECDHE-RSA-AES256-GCM-SHA384";
 	"ECDHE-ECDSA-AES256-GCM-SHA384";
-	"DHE-RSA-AES128-GCM-SHA256";
-	"DHE-DSS-AES128-GCM-SHA256";
-	"kEDH+AESGCM";
-	"ECDHE-RSA-AES128-SHA256";
-	"ECDHE-ECDSA-AES128-SHA256";
-	"ECDHE-RSA-AES128-SHA";
-	"ECDHE-ECDSA-AES128-SHA";
-	"ECDHE-RSA-AES256-SHA384";
+	"ECDHE-RSA-AES256-GCM-SHA384";
+	"ECDHE-ECDSA-CHACHA20-POLY1305";
+	"ECDHE-RSA-CHACHA20-POLY1305";
+	"ECDHE-ECDSA-AES128-GCM-SHA256";
+	"ECDHE-RSA-AES128-GCM-SHA256";
 	"ECDHE-ECDSA-AES256-SHA384";
-	"ECDHE-RSA-AES256-SHA";
-	"ECDHE-ECDSA-AES256-SHA";
-	"DHE-RSA-AES128-SHA256";
-	"DHE-RSA-AES128-SHA";
-	"DHE-DSS-AES128-SHA256";
-	"DHE-RSA-AES256-SHA256";
-	"DHE-DSS-AES256-SHA";
-	"DHE-RSA-AES256-SHA";
-	"!aNULL";
-	"!eNULL";
-	"!EXPORT";
-	"!DES";
-	"!RC4";
-	"!3DES";
-	"!MD5";
-	"!PSK";
+	"ECDHE-RSA-AES256-SHA384";
+	"ECDHE-ECDSA-AES128-SHA256";
+	"ECDHE-RSA-AES128-SHA256";
 }
 
 -- "Intermediate" cipher list
 local intermediate_cipher_list = cipher_list {
-	"ECDHE-RSA-AES128-GCM-SHA256";
+	"ECDHE-ECDSA-CHACHA20-POLY1305";
+	"ECDHE-RSA-CHACHA20-POLY1305";
 	"ECDHE-ECDSA-AES128-GCM-SHA256";
-	"ECDHE-RSA-AES256-GCM-SHA384";
+	"ECDHE-RSA-AES128-GCM-SHA256";
 	"ECDHE-ECDSA-AES256-GCM-SHA384";
+	"ECDHE-RSA-AES256-GCM-SHA384";
 	"DHE-RSA-AES128-GCM-SHA256";
-	"DHE-DSS-AES128-GCM-SHA256";
-	"kEDH+AESGCM";
-	"ECDHE-RSA-AES128-SHA256";
+	"DHE-RSA-AES256-GCM-SHA384";
 	"ECDHE-ECDSA-AES128-SHA256";
-	"ECDHE-RSA-AES128-SHA";
+	"ECDHE-RSA-AES128-SHA256";
 	"ECDHE-ECDSA-AES128-SHA";
 	"ECDHE-RSA-AES256-SHA384";
+	"ECDHE-RSA-AES128-SHA";
 	"ECDHE-ECDSA-AES256-SHA384";
-	"ECDHE-RSA-AES256-SHA";
 	"ECDHE-ECDSA-AES256-SHA";
+	"ECDHE-RSA-AES256-SHA";
 	"DHE-RSA-AES128-SHA256";
 	"DHE-RSA-AES128-SHA";
-	"DHE-DSS-AES128-SHA256";
 	"DHE-RSA-AES256-SHA256";
-	"DHE-DSS-AES256-SHA";
 	"DHE-RSA-AES256-SHA";
-	"ECDHE-RSA-DES-CBC3-SHA";
 	"ECDHE-ECDSA-DES-CBC3-SHA";
+	"ECDHE-RSA-DES-CBC3-SHA";
 	"EDH-RSA-DES-CBC3-SHA";
 	"AES128-GCM-SHA256";
 	"AES256-GCM-SHA384";
@@ -78,19 +59,8 @@ local intermediate_cipher_list = cipher_list {
 	"AES256-SHA256";
 	"AES128-SHA";
 	"AES256-SHA";
-	"AES";
-	"CAMELLIA";
 	"DES-CBC3-SHA";
-	"!aNULL";
-	"!eNULL";
-	"!EXPORT";
-	"!DES";
-	"!RC4";
-	"!MD5";
-	"!PSK";
-	"!aECDH";
-	"!EDH-DSS-DES-CBC3-SHA";
-	"!KRB5-DES-CBC3-SHA";
+	"!DSS";
 }
 
 -- A map from the cipher identifiers used in specifications to
@@ -428,6 +398,10 @@ local spec_to_openssl = {
 	TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256   = "ECDHE-RSA-CHACHA20-POLY1305";
 	TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256 = "ECDHE-ECDSA-CHACHA20-POLY1305";
 	TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256     = "DHE-RSA-CHACHA20-POLY1305";
+	TLS_PSK_WITH_CHACHA20_POLY1305_SHA256         = "PSK-CHACHA20-POLY1305";
+	TLS_ECDHE_PSK_WITH_CHACHA20_POLY1305_SHA256   = "ECDHE-PSK-CHACHA20-POLY1305";
+	TLS_DHE_PSK_WITH_CHACHA20_POLY1305_SHA256     = "DHE-PSK-CHACHA20-POLY1305";
+	TLS_RSA_PSK_WITH_CHACHA20_POLY1305_SHA256     = "RSA-PSK-CHACHA20-POLY1305";
 }
 
 -- Banned ciphers from https://http2.github.io/http2-spec/#BadCipherSuites
@@ -716,18 +690,27 @@ for _, v in ipairs {
 	end
 end
 
+local default_tls_options = openssl_ctx.OP_NO_COMPRESSION
+	+ openssl_ctx.OP_SINGLE_ECDH_USE
+	+ openssl_ctx.OP_NO_SSLv2
+	+ openssl_ctx.OP_NO_SSLv3
+
 local function new_client_context()
-	local ctx = openssl_ctx.new("TLSv1_2", false)
-	ctx:setCipherList(modern_cipher_list)
-	ctx:setOptions(openssl_ctx.OP_NO_COMPRESSION+openssl_ctx.OP_SINGLE_ECDH_USE)
+	local ctx = openssl_ctx.new("TLS", false)
+	ctx:setCipherList(intermediate_cipher_list)
+	ctx:setOptions(default_tls_options)
 	ctx:setEphemeralKey(openssl_pkey.new{ type = "EC", curve = "prime256v1" })
+	local store = openssl_store.new()
+	store:add("/etc/ssl/certs/") -- reasonable default until https://github.com/wahern/luaossl/issues/67 is fixed
+	ctx:setStore(store)
+	ctx:setVerify(openssl_ctx.VERIFY_PEER)
 	return ctx
 end
 
 local function new_server_context()
-	local ctx = openssl_ctx.new("TLSv1_2", true)
-	ctx:setCipherList(modern_cipher_list)
-	ctx:setOptions(openssl_ctx.OP_NO_COMPRESSION+openssl_ctx.OP_SINGLE_ECDH_USE)
+	local ctx = openssl_ctx.new("TLS", true)
+	ctx:setCipherList(intermediate_cipher_list)
+	ctx:setOptions(default_tls_options)
 	ctx:setEphemeralKey(openssl_pkey.new{ type = "EC", curve = "prime256v1" })
 	return ctx
 end

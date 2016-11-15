@@ -59,9 +59,7 @@ describe("http.util module", function()
 	it("split_authority works", function()
 		assert.same({"example.com", 80}, {util.split_authority("example.com", "http")})
 		assert.same({"example.com", 8000}, {util.split_authority("example.com:8000", "http")})
-		assert.has.errors(function()
-			util.split_authority("example.com", "madeupscheme")
-		end)
+		assert.falsy(util.split_authority("example.com", "madeupscheme"))
 		-- IPv6
 		assert.same({"::1", 443}, {util.split_authority("[::1]", "https")})
 		assert.same({"::1", 8000}, {util.split_authority("[::1]:8000", "https")})
@@ -73,35 +71,73 @@ describe("http.util module", function()
 		assert.same("[::1]", util.to_authority("::1", 443, "https"))
 		assert.same("[::1]:8000", util.to_authority("::1", 8000, "https"))
 	end)
-	it("split_header works correctly", function()
-		-- nil
-		assert.same({n=0}, util.split_header(nil))
-		-- empty string
-		assert.same({n=0}, util.split_header(""))
-		assert.same({n=1,"foo"}, util.split_header("foo"))
-		-- whitespace before and/or after
-		assert.same({n=1,"foo"}, util.split_header("foo  "))
-		assert.same({n=1,"foo"}, util.split_header("  foo"))
-		assert.same({n=1,"foo"}, util.split_header("  foo  "))
-		-- trailing comma
-		assert.same({n=1,"foo"}, util.split_header("foo,"))
-		assert.same({n=1,"foo"}, util.split_header("foo  ,"))
-		-- leading comma
-		assert.same({n=1,"foo"}, util.split_header(",foo"))
-		assert.same({n=1,"foo"}, util.split_header(",foo  "))
-		assert.same({n=1,"foo"}, util.split_header("  ,foo"))
-		assert.same({n=1,"foo"}, util.split_header("  ,  foo"))
-		-- two items
-		assert.same({n=2,"foo", "bar"}, util.split_header("foo,bar"))
-		assert.same({n=2,"foo", "bar"}, util.split_header("foo, bar"))
-		assert.same({n=2,"foo", "bar"}, util.split_header("foo,  bar"))
-		assert.same({n=2,"foo", "bar"}, util.split_header("foo,  bar"))
-		-- more items
-		assert.same({n=3,"foo", "bar", "qux"}, util.split_header("foo,  bar,qux"))
-		assert.same({n=5,"foo", "bar", "qux", "more q=123","thing"},
-			util.split_header(",foo,  bar,qux , more q=123,thing  "))
-	end)
 	it("generates correct looking Date header format", function()
 		assert.same("Fri, 13 Feb 2009 23:31:30 GMT", util.imf_date(1234567890))
+	end)
+	describe("maybe_quote", function()
+		it("makes acceptable tokens or quoted-string", function()
+			assert.same([[foo]], util.maybe_quote([[foo]]))
+			assert.same([["with \" quote"]], util.maybe_quote([[with " quote]]))
+		end)
+		it("escapes all bytes correctly", function()
+			local http_patts = require "lpeg_patterns.http"
+			local s do -- Make a string containing every byte allowed in a quoted string
+				local t = {"\t"} -- tab
+				for i=32, 126 do
+					t[#t+1] = string.char(i)
+				end
+				for i=128, 255 do
+					t[#t+1] = string.char(i)
+				end
+				s = table.concat(t)
+			end
+			assert.same(s, http_patts.quoted_string:match(util.maybe_quote(s)))
+		end)
+		it("returns nil on invalid input", function()
+			local function check(s)
+				assert.same(nil, util.maybe_quote(s))
+			end
+			for i=0, 8 do
+				check(string.char(i))
+			end
+			-- skip tab
+			for i=10, 31 do
+				check(string.char(i))
+			end
+			check("\127")
+		end)
+	end)
+	describe("yieldable_pcall", function()
+		it("returns multiple return values", function()
+			assert.same({true, 1, 2, 3, 4, nil, nil, nil, nil, nil, nil, "foo"},
+				{util.yieldable_pcall(function() return 1, 2, 3, 4, nil, nil, nil, nil, nil, nil, "foo" end)})
+		end)
+		it("protects from errors", function()
+			assert.falsy(util.yieldable_pcall(error))
+		end)
+		it("returns error objects", function()
+			local err = {"myerror"}
+			local ok, err2 = util.yieldable_pcall(error, err)
+			assert.falsy(ok)
+			assert.equal(err, err2)
+		end)
+		it("works on all levels", function()
+			local f = coroutine.wrap(function()
+				return util.yieldable_pcall(coroutine.yield, true)
+			end)
+			assert.truthy(f()) -- 'true' that was yielded
+			assert.truthy(f()) -- 'true' from the pcall
+			assert.has.errors(f) -- cannot resume dead coroutine
+		end)
+		it("works with __call objects", function()
+			local done = false
+			local o = setmetatable({}, {
+				__call=function()
+					done = true
+				end;
+			})
+			util.yieldable_pcall(o)
+			assert.truthy(done)
+		end)
 	end)
 end)
