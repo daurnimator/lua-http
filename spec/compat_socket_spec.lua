@@ -203,4 +203,39 @@ describe("http.compat.socket module", function()
 		assert_loop(cq, TEST_TIMEOUT)
 		assert.truthy(cq:empty())
 	end)
+	it("coerces numeric header values to strings", function()
+		local cq = cqueues.new()
+		local s = server.listen {
+			host = "localhost";
+			port = 0;
+			onstream = function(s, stream)
+				local request_headers = assert(stream:get_headers())
+				assert.truthy(request_headers:has("myheader"))
+				local headers = new_headers()
+				headers:append(":status", "200")
+				headers:append("connection", "close")
+				assert(stream:write_headers(headers, true))
+				s:close()
+			end;
+		}
+		assert(s:listen())
+		cq:wrap(function()
+			assert_loop(s)
+		end)
+		cq:wrap(function()
+			local _, host, port = s:localname()
+			local r, e = assert(http.request {
+				url = "http://anything/";
+				host = host;
+				port = port;
+				headers = {
+					myheader = 2;
+				};
+			})
+			assert.same(1, r)
+			assert.same(200, e)
+		end)
+		assert_loop(cq, TEST_TIMEOUT)
+		assert.truthy(cq:empty())
+	end)
 end)
