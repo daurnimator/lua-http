@@ -32,14 +32,17 @@ local myserver = http_server.listen {
 <html>
 <head>
 	<title>EventSource demo</title>
-	<script type="text/javascript">
-		var events = new EventSource("/event-stream");
-		events.onmessage = function(e) {
-			document.body.innerHTML = e.data;
-		}
-	</script>
 </head>
 <body>
+	<p>This page uses <a href="https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events">server-sent_events</a> to show the live server time:</p>
+	<div id="time"></div>
+	<script type="text/javascript">
+		var events = new EventSource("/event-stream");
+		var el = document.getElementById("time");
+		events.onmessage = function(e) {
+			el.innerHTML = e.data;
+		}
+	</script>
 </body>
 </html>
 ]], true))
