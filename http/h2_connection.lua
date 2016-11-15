@@ -58,9 +58,6 @@ local connection_main_loop
 
 -- An 'onerror' that doesn't throw
 local function onerror(socket, op, why, lvl) -- luacheck: ignore 212
-	if why == ce.ETIMEDOUT then
-		return why
-	end
 	return string.format("%s: %s", op, ce.strerror(why)), why
 end
 
@@ -74,7 +71,12 @@ local function socket_has_preface(socket, unget, timeout)
 		-- read *up to* number of bytes left in preface
 		local ok, err, errno = socket:xread(#bytes-#preface, deadline and (deadline-monotime()))
 		if ok == nil then
-			return nil, err or ce.EPIPE, errno
+			if err == nil then
+				is_h2 = false
+				break
+			else
+				return nil, err, errno
+			end
 		end
 		bytes = bytes .. ok
 		if bytes ~= preface:sub(1, #bytes) then
@@ -286,7 +288,7 @@ end
 
 function connection_methods:step(timeout)
 	if self:empty() then
-		return handle_step_return(self, false, ce.EPIPE)
+		return handle_step_return(self, false, nil, nil)
 	else
 		return handle_step_return(self, self.cq:step(timeout))
 	end
@@ -294,14 +296,18 @@ end
 
 function connection_methods:loop(timeout)
 	if self:empty() then
-		return handle_step_return(self, false, ce.EPIPE)
+		return handle_step_return(self, false, nil, nil)
 	else
 		return handle_step_return(self, self.cq:loop(timeout))
 	end
 end
 
-function connection_methods:connect(...)
-	return self.socket:connect(...)
+function connection_methods:connect(timeout)
+	local ok, err, errno = self.socket:connect(timeout)
+	if not ok then
+		return nil, err, errno
+	end
+	return true
 end
 
 function connection_methods:checktls()
@@ -386,7 +392,7 @@ function connection_methods:get_next_incoming_stream(timeout)
 			-- TODO? clarification required: can the sender of a GOAWAY subsequently start streams?
 			-- (with a lower stream id than they sent in the GOAWAY)
 			-- For now, assume not.
-			return nil, ce.EPIPE
+			return nil
 		end
 		local which = cqueues.poll(self, self.new_streams_cond, self.recv_goaway, timeout)
 		if which == self then
@@ -395,7 +401,7 @@ function connection_methods:get_next_incoming_stream(timeout)
 				return nil, err, errno
 			end
 		elseif which == timeout then
-			return nil, ce.ETIMEDOUT
+			return nil, onerror(self.socket, "get_next_incoming_stream", ce.ETIMEDOUT)
 		end
 		timeout = deadline and (deadline-monotime())
 	end
@@ -405,16 +411,19 @@ function connection_methods:get_next_incoming_stream(timeout)
 end
 
 -- On success, returns type, flags, stream id and payload
--- On timeout, returns nil, ETIMEDOUT -- safe to retry
--- If the socket has been shutdown for reading, and there is no data left unread, returns EPIPE
--- Will raise an error on other errors, or if the frame is invalid
+-- If the socket has been shutdown for reading, and there is no data left unread, returns nil
+-- safe to retry on error
 function connection_methods:read_http2_frame(timeout)
 	local deadline = timeout and (monotime()+timeout)
 	local frame_header, err, errno = self.socket:xread(9, timeout)
 	if frame_header == nil then
-		if err == ce.ETIMEDOUT then
-			return nil, err
-		elseif err == nil --[[EPIPE]] and self.socket:eof("r") then
+		if errno == ce.ETIMEDOUT then
+			return nil, err, errno
+		elseif err == nil then
+			if self.socket:pending() > 0 then
+				self.socket:seterror("r", ce.EPROTO)
+				return nil, onerror(self.socket, "read_http2_frame", ce.EPROTO)
+			end
 			return nil
 		else
 			return nil, err, errno
@@ -424,28 +433,36 @@ function connection_methods:read_http2_frame(timeout)
 	if size > self.acked_settings[0x5] then
 		return nil, h2_error.errors.FRAME_SIZE_ERROR:new_traceback("frame too large")
 	end
-	-- reserved bit MUST be ignored by receivers
-	streamid = band(streamid, 0x7fffffff)
 	local payload, err2, errno2 = self.socket:xread(size, deadline and (deadline-monotime()))
+	if payload and #payload < size then -- hit EOF
+		local ok, errno4 = self.socket:unget(payload)
+		if not ok then
+			return nil, onerror(self.socket, "unget", errno4, 2)
+		end
+		payload = nil
+	end
 	if payload == nil then
-		if err2 == ce.ETIMEDOUT then
-			-- put frame header back into socket so a retry will work
-			local ok, errno3 = self.socket:unget(frame_header)
-			if not ok then
-				return nil, onerror(self.socket, "unget", errno3, 2)
-			end
+		-- put frame header back into socket so a retry will work
+		local ok, errno3 = self.socket:unget(frame_header)
+		if not ok then
+			return nil, onerror(self.socket, "unget", errno3, 2)
+		end
+		if err2 == nil then
+			self.socket:seterror("r", ce.EPROTO)
+			return nil, onerror(self.socket, "read_http2_frame", ce.EPROTO)
 		end
 		return nil, err2, errno2
 	end
+	-- reserved bit MUST be ignored by receivers
+	streamid = band(streamid, 0x7fffffff)
 	return typ, flags, streamid, payload
 end
 
 -- If this times out, it was the flushing; not the write itself
 -- hence it's not always total failure.
 -- It's up to the caller to take some action (e.g. closing) rather than doing it here
--- TODO: distinguish between nothing sent and partially sent?
 function connection_methods:write_http2_frame(typ, flags, streamid, payload, timeout)
-	local deadline = timeout and (monotime()+timeout)
+	local deadline = timeout and monotime()+timeout
 	if #payload > self.peer_settings[0x5] then
 		return nil, h2_error.errors.FRAME_SIZE_ERROR:new_traceback("frame too large")
 	end
@@ -476,7 +493,7 @@ function connection_methods:ping(timeout)
 				return nil, err, errno
 			end
 		elseif which == timeout then
-			return nil, ce.ETIMEDOUT
+			return nil, onerror(self.socket, "ping", ce.ETIMEDOUT)
 		end
 	end
 	return true
@@ -526,7 +543,7 @@ function connection_methods:settings(tbl, timeout)
 			end
 		elseif which ~= self.send_settings_ack_cond then
 			self:write_goaway_frame(nil, h2_error.errors.SETTINGS_TIMEOUT.code, "timeout exceeded")
-			return nil, ce.ETIMEDOUT
+			return nil, onerror(self.socket, "settings", ce.ETIMEDOUT)
 		end
 	end
 	return true

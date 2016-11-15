@@ -8,6 +8,8 @@ local h2_connection = require "http.h2_connection"
 local http_tls = require "http.tls"
 local http_util = require "http.util"
 local pkey = require "openssl.pkey"
+local openssl_ssl = require "openssl.ssl"
+local openssl_ctx = require "openssl.ssl.context"
 local x509 = require "openssl.x509"
 local name = require "openssl.x509.name"
 local altname = require "openssl.x509.altname"
@@ -15,9 +17,6 @@ local altname = require "openssl.x509.altname"
 local hang_timeout = 0.03
 
 local function onerror(socket, op, why, lvl) -- luacheck: ignore 212
-	if why == ce.ETIMEDOUT then
-		return why
-	end
 	return string.format("%s: %s", op, ce.strerror(why)), why
 end
 
@@ -45,9 +44,10 @@ end
 -- Wrap a bare cqueues socket in an HTTP connection of a suitable version
 -- Starts TLS if necessary
 -- this function *should never throw*
-local function wrap_socket(self, socket, version, deadline)
+local function wrap_socket(self, socket, deadline)
 	socket:setmode("b", "b")
 	socket:onerror(onerror)
+	local version = self.version
 	local use_tls = self.tls
 	if use_tls == nil then
 		local err, errno
@@ -105,7 +105,7 @@ local function server_loop(self)
 			if socket == nil then
 				if accept_errno == ce.ETIMEDOUT then
 					-- Yield this thread until a client arrives
-					cqueues.poll(self.socket)
+					cqueues.poll(self.socket, self.pause_cond)
 				elseif accept_errno == ce.EMFILE then
 					-- Wait for another request to finish
 					if cqueues.poll(self.connection_done, hang_timeout) == hang_timeout then
@@ -129,7 +129,7 @@ local function handle_socket(self, socket)
 	if not conn then
 		socket:close()
 		if err ~= ce.EPIPE -- client closed connection
-			and err ~= ce.ETIMEDOUT -- an operation timed out
+			and errno ~= ce.ETIMEDOUT -- an operation timed out
 			and errno ~= ce.ECONNRESET then
 			error_operation = "wrap"
 			error_context = socket
@@ -141,7 +141,7 @@ local function handle_socket(self, socket)
 			local stream
 			stream, err, errno = conn:get_next_incoming_stream()
 			if stream == nil then
-				if (err ~= ce.EPIPE -- client closed connection
+				if (err ~= nil -- client closed connection
 					and errno ~= ce.ECONNRESET
 					and errno ~= ce.ENOTCONN)
 				  or (cs.type(conn.socket) == "socket" and conn.socket:pending() ~= 0) then
@@ -155,7 +155,9 @@ local function handle_socket(self, socket)
 				local ok, err2 = http_util.yieldable_pcall(self.onstream, self, stream)
 				stream:shutdown()
 				n_streams = n_streams - 1
-				cond:signal()
+				if n_streams == 0 then
+					cond:signal()
+				end
 				if not ok then
 					self:onerror()(self, stream, "onstream", err2)
 				end
@@ -175,9 +177,33 @@ local function handle_socket(self, socket)
 end
 
 -- Prefer whichever comes first
-local function alpn_select(ssl, protos) -- luacheck: ignore 212
+local function alpn_select_either(ssl, protos) -- luacheck: ignore 212
 	for _, proto in ipairs(protos) do
-		if proto == "h2" or proto == "http/1.1" then
+		if proto == "h2" then
+			-- HTTP2 only allows >=TLSv1.2
+			if ssl:getVersion() >= openssl_ssl.TLS1_2_VERSION
+			  and not http_tls.banned_ciphers[ssl:getCipherInfo().name] then
+				return proto
+			end
+		elseif proto == "http/1.1" then
+			return proto
+		end
+	end
+	return nil
+end
+
+local function alpn_select_h2(ssl, protos) -- luacheck: ignore 212
+	for _, proto in ipairs(protos) do
+		if proto == "h2" then
+			return proto
+		end
+	end
+	return nil
+end
+
+local function alpn_select_h1(ssl, protos) -- luacheck: ignore 212
+	for _, proto in ipairs(protos) do
+		if proto == "http/1.1" then
 			return proto
 		end
 	end
@@ -185,10 +211,19 @@ local function alpn_select(ssl, protos) -- luacheck: ignore 212
 end
 
 -- create a new self signed cert
-local function new_ctx(host)
+local function new_ctx(host, version)
 	local ctx = http_tls.new_server_context()
-	if ctx.setAlpnSelect then
-		ctx:setAlpnSelect(alpn_select)
+	if http_tls.has_alpn then
+		if version == nil then
+			ctx:setAlpnSelect(alpn_select_either)
+		elseif version == 2 then
+			ctx:setAlpnSelect(alpn_select_h2)
+		elseif version == 1.1 then
+			ctx:setAlpnSelect(alpn_select_h1)
+		end
+	end
+	if version == 2 then
+		ctx:setOptions(openssl_ctx.OP_NO_TLSv1 + openssl_ctx.OP_NO_TLSv1_1)
 	end
 	local crt = x509.new()
 	-- serial needs to be unique or browsers will show uninformative error messages
@@ -254,6 +289,10 @@ local function new_server(tbl)
 	local socket = assert(tbl.socket, "missing 'socket'")
 	local onstream = assert(tbl.onstream, "missing 'onstream'")
 
+	if tbl.ctx == nil and tbl.tls ~= false then
+		error("OpenSSL context required if .tls isn't false")
+	end
+
 	-- Return errors rather than throwing
 	socket:onerror(function(s, op, why, lvl) -- luacheck: ignore 431 212
 		return why
@@ -311,12 +350,12 @@ local function listen(tbl)
 	local ctx = tbl.ctx
 	if ctx == nil and tls ~= false then
 		if host then
-			ctx = new_ctx(host)
+			ctx = new_ctx(host, tbl.version)
 		else
 			error("Custom OpenSSL context required when using a UNIX domain socket")
 		end
 	end
-	local s = assert(cs.listen{
+	local s, errno = cs.listen {
 		family = tbl.family;
 		host = host;
 		port = port;
@@ -327,7 +366,10 @@ local function listen(tbl)
 		reuseaddr = tbl.reuseaddr;
 		reuseport = tbl.reuseport;
 		v6only = tbl.v6only;
-	})
+	}
+	if not s then
+		return nil, ce.strerror(errno), errno
+	end
 	return new_server {
 		cq = tbl.cq;
 		socket = s;
@@ -341,8 +383,12 @@ local function listen(tbl)
 	}
 end
 
--- dummy function
 function server_methods:onerror_(context, op, err, errno) -- luacheck: ignore 212
+	local msg = op
+	if err then
+		msg = msg .. ": " .. tostring(err)
+	end
+	error(msg, 2)
 end
 
 function server_methods:onerror(...)
@@ -386,6 +432,8 @@ function server_methods:close()
 		self.socket:close()
 		self.socket = nil
 	end
+	self.pause_cond:signal()
+	self.connection_done:signal()
 	return true
 end
 

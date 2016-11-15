@@ -142,7 +142,7 @@ local function split_authority(authority, scheme)
 	else -- when port missing from host header, it defaults to the default for that scheme
 		port = scheme_to_port[scheme]
 		if port == nil then
-			error("unknown scheme")
+			return nil, "unknown scheme"
 		end
 	end
 	local ipv6 = authority:match("%[([:%x]+)%]")

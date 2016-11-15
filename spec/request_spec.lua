@@ -450,6 +450,10 @@ describe("http.request module", function()
 		local cqueues = require "cqueues"
 		local server = require "http.server"
 		local new_headers = require "http.headers".new
+		local http_tls = require "http.tls"
+		local openssl_ctx = require "openssl.ssl.context"
+		local non_verifying_tls_context = http_tls.new_client_context()
+		non_verifying_tls_context:setVerify(openssl_ctx.VERIFY_NONE)
 		local function test(server_cb, client_cb)
 			local cq = cqueues.new()
 			local s = server.listen {
@@ -475,6 +479,7 @@ describe("http.request module", function()
 					host = host;
 					port = port;
 				}
+				req.ctx = non_verifying_tls_context;
 				client_cb(req)
 			end)
 			assert_loop(cq, TEST_TIMEOUT)
@@ -778,6 +783,7 @@ describe("http.request module", function()
 					host = host;
 					port = port;
 				}
+				req.ctx = non_verifying_tls_context;
 				req.proxy = {
 					scheme = "socks5h";
 					host = socks_host;
@@ -803,6 +809,152 @@ describe("http.request module", function()
 			assert_loop(cq, TEST_TIMEOUT)
 			assert.truthy(cq:empty())
 			socks_server:close()
+		end)
+		it("pays attention to HSTS", function()
+			local cq = cqueues.new()
+			local n = 0
+			local s = server.listen {
+				host = "localhost";
+				port = 0;
+				onstream = function(s, stream)
+					assert(stream:get_headers())
+					n = n + 1
+					local resp_headers = new_headers()
+					resp_headers:append(":status", "200")
+					resp_headers:append("connection", "close")
+					if n < 3 then
+						resp_headers:append("strict-transport-security", "max-age=10")
+					else
+						resp_headers:append("strict-transport-security", "max-age=0")
+						assert.truthy(stream:checktls())
+					end
+					assert(stream:write_headers(resp_headers, false))
+					assert(stream:write_chunk("hello world", true))
+					if n == 3 then
+						s:close()
+					end
+				end;
+			}
+			assert(s:listen())
+			local _, _, port = s:localname()
+			cq:wrap(function()
+				assert_loop(s)
+			end)
+			cq:wrap(function()
+				-- new store so we don't test with the default one (which will outlive tests)
+				local hsts_store = require "http.hsts".new_store()
+				do -- first a http request that *shouldn't* fill in the store
+					local req = request.new_from_uri {
+						scheme = "http";
+						host = "localhost";
+						port = port;
+					}
+					req.ctx = non_verifying_tls_context;
+					req.hsts = hsts_store
+					local headers, stream = assert(req:go())
+					assert.same("200", headers:get(":status"))
+					assert.same("max-age=10", headers:get("strict-transport-security"))
+					assert.same("hello world", assert(stream:get_body_as_string()))
+					assert.falsy(hsts_store:check("localhost"))
+					stream:shutdown()
+				end
+				do -- now a https request that *will* fill in the store
+					local req = request.new_from_uri {
+						scheme = "https";
+						host = "localhost";
+						port = port;
+					}
+					req.ctx = non_verifying_tls_context;
+					req.hsts = hsts_store
+					local headers, stream = assert(req:go())
+					assert.same("200", headers:get(":status"))
+					assert.same("max-age=10", headers:get("strict-transport-security"))
+					assert.same("hello world", assert(stream:get_body_as_string()))
+					assert.truthy(hsts_store:check("localhost"))
+					stream:shutdown()
+				end
+				do -- http request will be converted to https. max-age=0 should remove from store.
+					local req = request.new_from_uri {
+						scheme = "http";
+						host = "localhost";
+						port = port;
+					}
+					req.ctx = non_verifying_tls_context;
+					req.hsts = hsts_store
+					local headers, stream = assert(req:go())
+					assert.same("200", headers:get(":status"))
+					assert.same("max-age=0", headers:get("strict-transport-security"))
+					assert.same("hello world", assert(stream:get_body_as_string()))
+					assert.falsy(hsts_store:check("localhost"))
+					stream:shutdown()
+				end
+			end)
+			assert_loop(cq, TEST_TIMEOUT)
+			assert.truthy(cq:empty())
+		end)
+		it("handles HSTS corner case: max-age missing value", function()
+			test(function(stream)
+				assert(stream:get_headers())
+				local resp_headers = new_headers()
+				resp_headers:append(":status", "200")
+				resp_headers:append("connection", "close")
+				resp_headers:append("strict-transport-security", "max-age")
+				assert(stream:write_headers(resp_headers, false))
+				assert(stream:write_chunk("hello world", true))
+			end, function(req)
+				-- new store so we don't test with the default one (which will outlive tests)
+				local hsts_store = require "http.hsts".new_store()
+				req.host = "localhost"
+				req.tls = true
+				req.hsts = hsts_store
+				local headers, stream = assert(req:go())
+				assert.same("200", headers:get(":status"))
+				assert.same("max-age", headers:get("strict-transport-security"))
+				assert.falsy(hsts_store:check("localhost"))
+				stream:shutdown()
+			end)
+			test(function(stream)
+				assert(stream:get_headers())
+				local resp_headers = new_headers()
+				resp_headers:append(":status", "200")
+				resp_headers:append("connection", "close")
+				resp_headers:append("strict-transport-security", "max-age=")
+				assert(stream:write_headers(resp_headers, false))
+				assert(stream:write_chunk("hello world", true))
+			end, function(req)
+				-- new store so we don't test with the default one (which will outlive tests)
+				local hsts_store = require "http.hsts".new_store()
+				req.host = "localhost"
+				req.tls = true
+				req.hsts = hsts_store
+				local headers, stream = assert(req:go())
+				assert.same("200", headers:get(":status"))
+				assert.same("max-age=", headers:get("strict-transport-security"))
+				assert.falsy(hsts_store:check("localhost"))
+				stream:shutdown()
+			end)
+		end)
+		it("handles HSTS corner case: 'preload' parameter", function()
+			test(function(stream)
+				assert(stream:get_headers())
+				local resp_headers = new_headers()
+				resp_headers:append(":status", "200")
+				resp_headers:append("connection", "close")
+				resp_headers:append("strict-transport-security", "max-age=10; preload")
+				assert(stream:write_headers(resp_headers, false))
+				assert(stream:write_chunk("hello world", true))
+			end, function(req)
+				-- new store so we don't test with the default one (which will outlive tests)
+				local hsts_store = require "http.hsts".new_store()
+				req.host = "localhost"
+				req.tls = true
+				req.hsts = hsts_store
+				local headers, stream = assert(req:go())
+				assert.same("200", headers:get(":status"))
+				assert.same("max-age=10; preload", headers:get("strict-transport-security"))
+				assert.truthy(hsts_store:check("localhost"))
+				stream:shutdown()
+			end)
 		end)
 	end)
 end)

@@ -1,5 +1,6 @@
 local openssl_ctx = require "openssl.ssl.context"
 local openssl_pkey = require "openssl.pkey"
+local openssl_store = require "openssl.x509.store"
 
 -- Detect if openssl was compiled with ALPN enabled
 local has_alpn = openssl_ctx.new().setAlpnSelect ~= nil
@@ -693,13 +694,16 @@ local default_tls_options = openssl_ctx.OP_NO_COMPRESSION
 	+ openssl_ctx.OP_SINGLE_ECDH_USE
 	+ openssl_ctx.OP_NO_SSLv2
 	+ openssl_ctx.OP_NO_SSLv3
-	+ openssl_ctx.OP_NO_TLSv1
 
 local function new_client_context()
 	local ctx = openssl_ctx.new("TLS", false)
 	ctx:setCipherList(intermediate_cipher_list)
 	ctx:setOptions(default_tls_options)
 	ctx:setEphemeralKey(openssl_pkey.new{ type = "EC", curve = "prime256v1" })
+	local store = openssl_store.new()
+	store:add("/etc/ssl/certs/") -- reasonable default until https://github.com/wahern/luaossl/issues/67 is fixed
+	ctx:setStore(store)
+	ctx:setVerify(openssl_ctx.VERIFY_PEER)
 	return ctx
 end
 

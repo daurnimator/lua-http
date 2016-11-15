@@ -63,7 +63,6 @@ local myserver = http_server.listen {
 		end
 	end;
 	onerror = function(myserver, context, op, err, errno) -- luacheck: ignore 212
-		if op == "onstream" and err == 32 then return end
 		local msg = op .. " on " .. tostring(context) .. " failed"
 		if err then
 			msg = msg .. ": " .. tostring(err)

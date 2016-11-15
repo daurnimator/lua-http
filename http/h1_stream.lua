@@ -20,7 +20,7 @@ local clean_shutdown_limit = 500*1024
 local EOF = lpeg.P(-1)
 local Connection = lpeg.Ct(http_patts.Connection) * EOF
 local Content_Encoding = lpeg.Ct(http_patts.Content_Encoding) * EOF
-local Transfer_Encoding = lpeg.Ct(http_patts.Transfer_Encoding + EOF) * EOF
+local Transfer_Encoding = lpeg.Ct(http_patts.Transfer_Encoding) * EOF
 local TE = lpeg.Ct(http_patts.TE) * EOF
 
 local function has(list, val)
@@ -158,9 +158,7 @@ function stream_methods:shutdown()
 	if self.type == "server" and (self.state == "open" or self.state == "half closed (remote)") then
 		-- Make sure we're at the front of the pipeline
 		if self.connection.pipeline:peek() ~= self then
-			if not self.pipeline_cond:wait() then
-				return nil, ce.ETIMEDOUT
-			end
+			self.pipeline_cond:wait() -- wait without a timeout should never fail
 			assert(self.connection.pipeline:peek() == self)
 		end
 		if not self.body_write_type then
@@ -201,7 +199,7 @@ end
 function stream_methods:read_headers(timeout)
 	local deadline = timeout and (monotime()+timeout)
 	if self.state == "closed" or self.state == "half closed (remote)" then
-		return nil, ce.EPIPE
+		return nil
 	end
 	local headers = new_headers()
 	local status_code
@@ -209,7 +207,7 @@ function stream_methods:read_headers(timeout)
 	if is_trailers then -- luacheck: ignore 542
 	elseif self.type == "server" then
 		if self.state == "half closed (local)" then
-			return nil, ce.EPIPE
+			return nil
 		end
 		local method, path, httpversion =
 			self.connection:read_request_line(deadline and (deadline-monotime()))
@@ -227,13 +225,10 @@ function stream_methods:read_headers(timeout)
 		headers:append(":scheme", self:checktls() and "https" or "http")
 		self:set_state("open")
 	else -- client
-		if self.state == "idle" then
-			return nil, ce.EPIPE
-		end
 		-- Make sure we're at front of connection pipeline
 		if self.connection.pipeline:peek() ~= self then
 			if not self.pipeline_cond:wait(deadline and (deadline-monotime)) then
-				return nil, ce.ETIMEDOUT
+				return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 			end
 			assert(self.connection.pipeline:peek() == self)
 		end
@@ -241,6 +236,9 @@ function stream_methods:read_headers(timeout)
 		httpversion, status_code, reason_phrase =
 			self.connection:read_status_line(deadline and (deadline-monotime()))
 		if httpversion == nil then
+			if status_code == nil then
+				return nil, ce.strerror(ce.EPIPE), ce.EPIPE
+			end
 			return nil, status_code, reason_phrase
 		end
 		self.peer_version = httpversion
@@ -251,7 +249,7 @@ function stream_methods:read_headers(timeout)
 	while true do
 		local k, v, errno = self.connection:read_header(deadline and (deadline-monotime()))
 		if k == nil then
-			if v ~= ce.EPIPE then
+			if v ~= nil then
 				return nil, v, errno
 			end
 			break -- Success: End of headers.
@@ -266,6 +264,9 @@ function stream_methods:read_headers(timeout)
 	do
 		local ok, err, errno = self.connection:read_headers_done(deadline and (deadline-monotime()))
 		if ok == nil then
+			if err == nil then
+				return nil, ce.strerror(ce.EPIPE), ce.EPIPE
+			end
 			return nil, err, errno
 		end
 	end
@@ -344,11 +345,11 @@ function stream_methods:read_headers(timeout)
 		no_body = false
 		self.body_read_type = "close"
 	end
-	if has_zlib and self.type == "server" and self.state == "open" and headers:has("te") then
+	if has_zlib and self.type == "server" and self.state == "open" and not is_trailers and headers:has("te") then
 		local te = TE:match(headers:get_comma_separated("te"))
 		for _, v in ipairs(te) do
 			local tcoding = v[1]
-			if (tcoding == "gzip" or tcoding == "x-gzip" or tcoding "deflate") and v.q ~= 0 then
+			if (tcoding == "gzip" or tcoding == "x-gzip" or tcoding == "deflate") and v.q ~= 0 then
 				v.q = nil
 				self.body_write_deflate_encoding = v
 				self.body_write_deflate = zlib.deflate()
@@ -376,10 +377,10 @@ function stream_methods:get_headers(timeout)
 		local deadline = timeout and monotime() + timeout
 		repeat
 			if self.state == "closed" or self.state == "half closed (remote)" then
-				return nil, ce.EPIPE
+				return nil
 			end
 			if not self.headers_cond:wait(timeout) then
-				return nil, ce.ETIMEDOUT
+				return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 			end
 			timeout = deadline and deadline-monotime()
 		until self.headers_fifo:length() > 0
@@ -434,7 +435,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 	end
 	assert(type(end_stream) == "boolean", "'end_stream' MUST be a boolean")
 	if self.state == "closed" or self.state == "half closed (local)" or self.connection.socket == nil then
-		return nil, ce.EPIPE
+		return nil, ce.strerror(ce.EPIPE), ce.EPIPE
 	end
 	local status_code, method
 	local is_trailers
@@ -449,14 +450,19 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		if self.state == "idle" then
 			error("cannot write headers when stream is idle")
 		end
+		status_code = headers:get(":status")
+		-- RFC 2616 Section 8.2.3:
+		-- An origin server ... MUST NOT send a 100 (Continue) response if such a request comes from an HTTP/1.0 (or earlier) client
+		if status_code == "100" and self.peer_version < 1.1 then
+			return error("Status code 100 (continue) MUST NOT be sent in reply to a request from a HTTP/1.0 client")
+		end
 		-- Make sure we're at the front of the pipeline
 		if self.connection.pipeline:peek() ~= self then
 			if not self.pipeline_cond:wait(deadline and (deadline-monotime)) then
-				return nil, ce.ETIMEDOUT
+				return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 			end
 			assert(self.connection.pipeline:peek() == self)
 		end
-		status_code = headers:get(":status")
 		if status_code then
 			-- Should send status line
 			local reason_phrase = reason_phrases[status_code]
@@ -482,7 +488,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 			if self.req_locked then
 				-- Wait until previous responses have been fully written
 				if not self.connection.req_cond:wait(deadline and (deadline-monotime())) then
-					return nil, ce.ETIMEDOUT
+					return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 				end
 				assert(self.req_locked == nil)
 			end
@@ -730,7 +736,7 @@ function stream_methods:get_next_chunk(timeout)
 		return chunk
 	end
 	if self.state == "closed" or self.state == "half closed (remote)" then
-		return nil, ce.EPIPE
+		return nil
 	end
 	local end_stream
 	local err, errno
@@ -747,9 +753,12 @@ function stream_methods:get_next_chunk(timeout)
 			self.headers_fifo:push(trailers)
 			self.headers_cond:signal(1)
 			-- :read_headers has already closed connection; return immediately
-			return nil, ce.EPIPE
+			return nil
 		else
 			end_stream = false
+			if chunk == nil and err == nil then
+				return nil, ce.strerror(ce.EPIPE), ce.EPIPE
+			end
 		end
 	elseif self.body_read_type == "length" then
 		local length_n = self.body_read_left
@@ -770,7 +779,7 @@ function stream_methods:get_next_chunk(timeout)
 	elseif self.body_read_type == "close" then
 		-- Use a big negative number instead of *a. see https://github.com/wahern/cqueues/issues/89
 		chunk, err, errno = self.connection:read_body_by_length(-0x80000000, timeout)
-		end_stream = (err == ce.EPIPE)
+		end_stream = chunk == nil and err == nil
 	elseif self.body_read_type == nil then
 		-- Might get here if haven't read headers yet, or if only headers so far have been 1xx codes
 		local deadline = timeout and (monotime()+timeout)
@@ -808,12 +817,15 @@ function stream_methods:unget(str)
 	else
 		self.body_buffer = str
 	end
+	return true
 end
 
 local empty_headers = new_headers()
 function stream_methods:write_chunk(chunk, end_stream, timeout)
-	if self.state ~= "open" and self.state ~= "half closed (remote)" then
+	if self.state == "idle" then
 		error("cannot write chunk when stream is " .. self.state)
+	elseif self.state == "closed" or self.state == "half closed (local)" or self.connection.socket == nil then
+		return nil, ce.strerror(ce.EPIPE), ce.EPIPE
 	end
 	if self.type == "client" then
 		assert(self.connection.req_locked == self)
@@ -824,32 +836,29 @@ function stream_methods:write_chunk(chunk, end_stream, timeout)
 	if self.body_write_deflate then
 		chunk = self.body_write_deflate(chunk, end_stream)
 	end
-	if self.body_write_type == "chunked" then
-		if #chunk > 0 then
+	if #chunk > 0 then
+		if self.body_write_type == "chunked" then
 			local deadline = timeout and monotime()+timeout
 			local ok, err, errno = self.connection:write_body_chunk(chunk, nil, timeout)
 			if not ok then
 				return nil, err, errno
 			end
 			timeout = deadline and (deadline-monotime())
-		end
-	elseif self.body_write_type == "length" then
-		if #chunk > 0 then
+		elseif self.body_write_type == "length" then
+			assert(self.body_write_left >= #chunk, "invalid content-length")
 			local ok, err, errno = self.connection:write_body_plain(chunk, timeout)
 			if not ok then
 				return nil, err, errno
 			end
 			self.body_write_left = self.body_write_left - #chunk
-		end
-	elseif self.body_write_type == "close" then
-		if #chunk > 0 then
+		elseif self.body_write_type == "close" then
 			local ok, err, errno = self.connection:write_body_plain(chunk, timeout)
 			if not ok then
 				return nil, err, errno
 			end
+		elseif self.body_write_type ~= "missing" then
+			error("unknown body writing method")
 		end
-	elseif self.body_write_type ~= "missing" then
-		error("unknown body writing method")
 	end
 	self.stats_sent = self.stats_sent + orig_size
 	if end_stream then

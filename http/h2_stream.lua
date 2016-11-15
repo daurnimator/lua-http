@@ -926,8 +926,8 @@ frame_handlers[0x9] = function(stream, flags, payload) -- luacheck: ignore 212
 	return nil, h2_errors.PROTOCOL_ERROR:new_traceback("'CONTINUATION' frames MUST be preceded by a 'HEADERS', 'PUSH_PROMISE' or 'CONTINUATION' frame without the 'END_HEADERS' flag set")
 end
 
-function stream_methods:read_continuation()
-	local typ, flag, streamid, payload = self:read_http2_frame()
+function stream_methods:read_continuation(timeout)
+	local typ, flag, streamid, payload = self:read_http2_frame(timeout)
 	if typ == nil then
 		return nil, flag, streamid
 	elseif typ ~= 0x9 or self.id ~= streamid then
@@ -982,7 +982,7 @@ function stream_methods:get_headers(timeout)
 				return nil, err, errno
 			end
 		elseif which == timeout then
-			return nil, ce.ETIMEDOUT
+			return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 		end
 		timeout = deadline and (deadline-monotime())
 	end
@@ -994,10 +994,7 @@ function stream_methods:get_next_chunk(timeout)
 	local deadline = timeout and (monotime()+timeout)
 	while self.chunk_fifo:length() == 0 do
 		if self.state == "closed" or self.state == "half closed (remote)" then
-			if self.rst_stream_error then
-				self.rst_stream_error()
-			end
-			return nil
+			return nil, self.rst_stream_error
 		end
 		local which = cqueues.poll(self.connection, self.chunk_cond, timeout)
 		if which == self.connection then
@@ -1006,13 +1003,13 @@ function stream_methods:get_next_chunk(timeout)
 				return nil, err, errno
 			end
 		elseif which == timeout then
-			return nil, ce.ETIMEDOUT
+			return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 		end
 		timeout = deadline and (deadline-monotime())
 	end
 	local chunk = self.chunk_fifo:pop()
 	if chunk == nil then
-		return nil, ce.EPIPE
+		return nil
 	else
 		local data = chunk.data
 		chunk:ack(false)
@@ -1023,6 +1020,7 @@ end
 function stream_methods:unget(str)
 	local chunk = new_chunk(self, 0, str) -- 0 means :ack does nothing
 	self.chunk_fifo:insert(1, chunk)
+	return true
 end
 
 local function write_headers(self, func, headers, timeout)
@@ -1113,7 +1111,7 @@ function stream_methods:write_chunk(payload, end_stream, timeout)
 					return nil, err, errno
 				end
 			elseif which == timeout then
-				return nil, ce.ETIMEDOUT
+				return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 			end
 			timeout = deadline and (deadline-monotime())
 		end
@@ -1125,7 +1123,7 @@ function stream_methods:write_chunk(payload, end_stream, timeout)
 					return nil, err, errno
 				end
 			elseif which == timeout then
-				return nil, ce.ETIMEDOUT
+				return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 			end
 			timeout = deadline and (deadline-monotime())
 		end

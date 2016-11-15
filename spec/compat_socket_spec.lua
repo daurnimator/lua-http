@@ -137,4 +137,105 @@ describe("http.compat.socket module", function()
 		assert_loop(cq, TEST_TIMEOUT)
 		assert.truthy(cq:empty())
 	end)
+	it("returns nil, 'timeout' on timeout", function()
+		local cq = cqueues.new()
+		local authority
+		local s = server.listen {
+			host = "localhost";
+			port = 0;
+			onstream = function(s, stream)
+				assert(stream:get_headers())
+				cqueues.sleep(0.2)
+				stream:shutdown()
+				s:close()
+			end;
+		}
+		assert(s:listen())
+		local _, host, port = s:localname()
+		authority = util.to_authority(host, port, "http")
+		cq:wrap(function()
+			assert_loop(s)
+		end)
+		cq:wrap(function()
+			local old_TIMEOUT = http.TIMEOUT
+			http.TIMEOUT = 0.01
+			local r, e = http.request("http://"..authority.."/")
+			http.TIMEOUT = old_TIMEOUT
+			assert.same(nil, r)
+			assert.same("timeout", e)
+		end)
+		assert_loop(cq, TEST_TIMEOUT)
+		assert.truthy(cq:empty())
+	end)
+	it("handles timeouts in complex form", function()
+		local cq = cqueues.new()
+		local s = server.listen {
+			host = "localhost";
+			port = 0;
+			onstream = function(s, stream)
+				local a, b = stream:get_headers()
+				local request_headers = assert(a,b)
+				assert.same("http", request_headers:get ":scheme")
+				assert.same("GET", request_headers:get ":method")
+				assert.same("/path?query", request_headers:get ":path")
+				assert.same("example.com", request_headers:get ":authority")
+				cqueues.sleep(0.2)
+				s:close()
+			end;
+		}
+		assert(s:listen())
+		cq:wrap(function()
+			assert_loop(s)
+		end)
+		cq:wrap(function()
+			local _, host, port = s:localname()
+			local old_TIMEOUT = http.TIMEOUT
+			http.TIMEOUT = 0.01
+			local r, e = http.request {
+				url = "http://example.com/path?query";
+				host = host;
+				port = port;
+			}
+			http.TIMEOUT = old_TIMEOUT
+			assert.same(nil, r)
+			assert.same("timeout", e)
+		end)
+		assert_loop(cq, TEST_TIMEOUT)
+		assert.truthy(cq:empty())
+	end)
+	it("coerces numeric header values to strings", function()
+		local cq = cqueues.new()
+		local s = server.listen {
+			host = "localhost";
+			port = 0;
+			onstream = function(s, stream)
+				local request_headers = assert(stream:get_headers())
+				assert.truthy(request_headers:has("myheader"))
+				local headers = new_headers()
+				headers:append(":status", "200")
+				headers:append("connection", "close")
+				assert(stream:write_headers(headers, true))
+				s:close()
+			end;
+		}
+		assert(s:listen())
+		cq:wrap(function()
+			assert_loop(s)
+		end)
+		cq:wrap(function()
+			local _, host, port = s:localname()
+			local r, e = assert(http.request {
+				url = "http://anything/";
+				host = host;
+				port = port;
+				headers = {
+					myheader = 2;
+				};
+			})
+			assert.same(1, r)
+			assert.same(200, e)
+		end)
+		assert_loop(cq, TEST_TIMEOUT)
+		assert.truthy(cq:empty())
+	end)
 end)
