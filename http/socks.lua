@@ -9,7 +9,8 @@ URI format is taken from curl:
   - socks5h:// is SOCKS5, but let the proxy resolve the hostname
 ]]
 
-local monotime = require "cqueues".monotime
+local cqueues = require "cqueues"
+local monotime = cqueues.monotime
 local ce = require "cqueues.errno"
 local cs = require "cqueues.socket"
 local spack = string.pack or require "compat53.string".pack
@@ -353,6 +354,12 @@ function socks_methods:negotiate(host, port, timeout)
 	self.dst_host = dst_host
 	self.dst_port = dst_port
 	return true
+end
+
+function socks_methods:close()
+	if self.socket then
+		self.socket:close()
+	end
 end
 
 function socks_methods:take_socket()

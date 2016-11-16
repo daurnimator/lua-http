@@ -1024,6 +1024,9 @@ Complete the SOCKS connection.
   - `port` (required) a number to pass to the SOCKS server as the port to connect to
 
 
+### `socks:close()` <!-- --> {#http.socks:close}
+
+
 ### `socks:take_socket()` <!-- --> {#http.socks:take_socket}
 
 Take possesion of the socket object managed by the http.socks object. Returns the socket (or `nil` if not available).
