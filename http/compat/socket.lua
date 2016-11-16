@@ -139,11 +139,12 @@ function M.request(reqt, b)
 	req.proxy = proxy or false
 	if user_headers then
 		for name, field in pairs(user_headers) do
+			name = name:lower()
 			field = "" .. field .. "" -- force coercion in same style as luasocket
 			if name == "host" then
 				req.headers:upsert(":authority", field)
 			else
-				req.headers:append(name:lower(), field)
+				req.headers:append(name, field)
 			end
 		end
 	end
