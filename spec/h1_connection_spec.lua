@@ -4,12 +4,6 @@ describe("low level http 1 connection operations", function()
 	local ca = require "cqueues.auxlib"
 	local cs = require "cqueues.socket"
 	local ce = require "cqueues.errno"
-	local socket_mt do
-		local s, c = ca.assert(cs.pair())
-		socket_mt = debug.getmetatable(c)
-		s:close()
-		c:close()
-	end
 	it("cannot construct with invalid type", function()
 		local s, c = ca.assert(cs.pair())
 		assert.has.errors(function() h1_connection.new(s, nil, 1.1) end)
@@ -31,7 +25,7 @@ describe("low level http 1 connection operations", function()
 	it(":take_socket works", function()
 		local s, c = new_pair(1.1)
 		local sock = s:take_socket()
-		assert.same(socket_mt, debug.getmetatable(sock))
+		assert.same("socket", cs.type(sock))
 		-- 2nd time it should return nil
 		assert.same(nil, s:take_socket())
 		sock:close()
