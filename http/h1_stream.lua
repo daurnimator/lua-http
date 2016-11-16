@@ -103,9 +103,6 @@ function stream_methods:set_state(new)
 		-- If we have just finished reading the request
 		if (old == "idle" or old == "open" or old == "half closed (local)")
 			and (new == "half closed (remote)" or new == "closed") then
-			if self.close_when_done then
-				self.connection:shutdown("r")
-			end
 			-- remove our read lock
 			assert(self.connection.req_locked == self)
 			self.connection.req_locked = nil
@@ -116,21 +113,24 @@ function stream_methods:set_state(new)
 			and (new == "half closed (local)" or new == "closed") then
 			-- remove ourselves from the write pipeline
 			assert(self.connection.pipeline:pop() == self)
-			if self.close_when_done then
-				self.connection:shutdown()
-			end
 			local next_stream = self.connection.pipeline:peek()
 			if next_stream then
 				next_stream.pipeline_cond:signal()
+			end
+		end
+		if self.close_when_done then
+			if new == "half closed (remote)" then
+				self.connection:shutdown("r")
+			elseif new == "half closed (local)" then
+				self.connection:shutdown("w")
+			elseif new == "closed" then
+				self.connection:shutdown()
 			end
 		end
 	else -- client
 		-- If we have just finished writing the request
 		if (old == "open" or old == "half closed (remote)")
 			and (new == "half closed (local)" or new == "closed") then
-			-- NOTE: You cannot shutdown("w") the socket here.
-			-- many servers will close the connection if the client closes their write stream
-
 			-- remove our write lock
 			assert(self.connection.req_locked == self)
 			self.connection.req_locked = nil
@@ -141,13 +141,20 @@ function stream_methods:set_state(new)
 			and (new == "half closed (remote)" or new == "closed") then
 			-- remove ourselves from the read pipeline
 			assert(self.connection.pipeline:pop() == self)
-			if self.close_when_done then
-				self.connection:shutdown()
-			end
 			local next_stream = self.connection.pipeline:peek()
 			if next_stream then
 				next_stream.pipeline_cond:signal()
 			end
+		end
+		if self.close_when_done then
+			if new == "half closed (remote)" then
+				self.connection:shutdown("r")
+			elseif new == "closed" then
+				self.connection:shutdown()
+			end
+			-- NOTE: Do not shutdown("w") the socket when going to
+			-- "half closed (local)", many servers will close a connection
+			-- immediately if a client closes their write stream
 		end
 	end
 end
