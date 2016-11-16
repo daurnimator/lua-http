@@ -32,12 +32,13 @@ end
 
 -- assumes ownership of the socket
 local function new_connection(socket, conn_type, version)
+	assert(socket, "must provide a socket")
 	if conn_type ~= "client" and conn_type ~= "server" then
 		error('invalid connection type. must be "client" or "server"')
 	end
 	assert(version == 1 or version == 1.1, "unsupported version")
 	local self = setmetatable({
-		socket = assert(socket);
+		socket = socket;
 		type = conn_type;
 		version = version;
 

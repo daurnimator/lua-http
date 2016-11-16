@@ -1,11 +1,12 @@
 describe("http.tls module", function()
 	local tls = require "http.tls"
 	local cqueues = require "cqueues"
+	local ca = require "cqueues.auxlib"
 	local cs = require "cqueues.socket"
 	local openssl_ctx = require "openssl.ssl.context"
 	local openssl_pkey = require "openssl.pkey"
 	it("banned ciphers list denies a negotiated banned cipher", function()
-		local c, s = cs.pair()
+		local s, c = ca.assert(cs.pair())
 		local cq = cqueues.new()
 		cq:wrap(function()
 			local ctx = openssl_ctx.new("TLSv1", false)
@@ -26,6 +27,8 @@ describe("http.tls module", function()
 		end)
 		assert_loop(cq, TEST_TIMEOUT)
 		assert.truthy(cq:empty())
+		s:close()
+		c:close()
 	end)
 	it("can create a new client context", function()
 		tls.new_client_context()

@@ -83,16 +83,17 @@ describe("http.websocket module two sided tests", function()
 	local server = require "http.server"
 	local util = require "http.util"
 	local websocket = require "http.websocket"
-	local cs = require "cqueues.socket"
 	local cqueues = require "cqueues"
+	local ca = require "cqueues.auxlib"
+	local cs = require "cqueues.socket"
 	local function new_pair()
-		local c, s = cs.pair()
-		local ws_client = websocket.new("client")
-		ws_client.socket = c
-		ws_client.readyState = 1
+		local s, c = ca.assert(cs.pair())
 		local ws_server = websocket.new("server")
 		ws_server.socket = s
 		ws_server.readyState = 1
+		local ws_client = websocket.new("client")
+		ws_client.socket = c
+		ws_client.readyState = 1
 		return ws_client, ws_server
 	end
 	it("works with a socketpair", function()

@@ -4,46 +4,59 @@ describe("http.server module", function()
 	local http_tls = require "http.tls"
 	local new_headers = require "http.headers".new
 	local cqueues = require "cqueues"
+	local ca = require "cqueues.auxlib"
 	local ce = require "cqueues.errno"
 	local cs = require "cqueues.socket"
 	local openssl_ctx = require "openssl.ssl.context"
 	local non_verifying_tls_context = http_tls.new_client_context()
 	non_verifying_tls_context:setVerify(openssl_ctx.VERIFY_NONE)
 	it("rejects missing 'ctx' field", function()
+		local s, c = ca.assert(cs.pair())
 		assert.has.errors(function()
 			server.new {
-				socket = (cs.pair());
+				socket = s;
 				onstream = error;
 			}
 		end)
+		s:close()
+		c:close()
 	end)
 	it("rejects invalid 'cq' field", function()
+		local s, c = ca.assert(cs.pair())
 		assert.has.errors(function()
 			server.new {
-				socket = (cs.pair());
+				socket = s;
 				tls = false;
 				onstream = error;
 				cq = 5;
 			}
 		end)
+		s:close()
+		c:close()
 	end)
 	it("__tostring works", function()
-		local s = server.new {
-			socket = (cs.pair());
+		local s, c = ca.assert(cs.pair())
+		s = server.new {
+			socket = s;
 			tls = false;
 			onstream = error;
 		}
 		assert.same("http.server{", tostring(s):match("^.-%{"))
+		s:close()
+		c:close()
 	end)
 	it(":onerror with no arguments doesn't clear", function()
-		local s = server.new {
-			socket = (cs.pair());
+		local s, c = ca.assert(cs.pair())
+		s = server.new {
+			socket = s;
 			tls = false;
 			onstream = error;
 		}
 		local onerror = s:onerror()
 		assert.same("function", type(onerror))
 		assert.same(onerror, s:onerror())
+		s:close()
+		c:close()
 	end)
 	local function simple_test(family, tls, client_version, server_version)
 		local cq = cqueues.new()
@@ -69,7 +82,7 @@ describe("http.server module", function()
 			s:close()
 		end)
 		options.onstream = onstream
-		local s = server.listen(options)
+		local s = assert(server.listen(options))
 		assert(s:listen())
 		cq:wrap(function()
 			assert_loop(s)
@@ -172,11 +185,11 @@ describe("http.server module", function()
 			assert.same("test", sock:read("*a"))
 			sock:close()
 		end);
-		local s = server.listen {
+		local s = assert(server.listen {
 			host = "localhost";
 			port = 0;
 			onstream = onstream;
-		}
+		})
 		assert(s:listen())
 		local _, host, port = s:localname()
 		cq:wrap(function()
@@ -196,7 +209,7 @@ describe("http.server module", function()
 		assert.spy(onstream).was.called()
 	end)
 	it("an idle http2 stream doesn't block the server", function()
-		local s = server.listen {
+		local s = assert(server.listen {
 			host = "localhost";
 			port = 0;
 			onstream = function(_, stream)
@@ -210,7 +223,7 @@ describe("http.server module", function()
 					assert(stream:write_headers(headers, true))
 				end
 			end;
-		}
+		})
 		assert(s:listen())
 		local client_family, client_host, client_port = s:localname()
 		local conn = assert(client.connect({
@@ -241,7 +254,7 @@ describe("http.server module", function()
 		assert.truthy(cq:empty())
 	end)
 	it("allows pausing+resuming the server", function()
-		local s = server.listen {
+		local s = assert(server.listen {
 			host = "localhost";
 			port = 0;
 			onstream = function(_, stream)
@@ -250,7 +263,7 @@ describe("http.server module", function()
 				headers:append(":status", "200")
 				assert(stream:write_headers(headers, true))
 			end;
-		}
+		})
 		assert(s:listen())
 		local client_family, client_host, client_port = s:localname()
 		local client_options = {

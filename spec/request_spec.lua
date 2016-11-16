@@ -456,7 +456,7 @@ describe("http.request module", function()
 		non_verifying_tls_context:setVerify(openssl_ctx.VERIFY_NONE)
 		local function test(server_cb, client_cb)
 			local cq = cqueues.new()
-			local s = server.listen {
+			local s = assert(server.listen {
 				host = "localhost";
 				port = 0;
 				onstream = function(s, stream)
@@ -467,7 +467,7 @@ describe("http.request module", function()
 						s:close()
 					end
 				end;
-			}
+			})
 			assert(s:listen())
 			local _, host, port = s:localname()
 			cq:wrap(function()
@@ -553,7 +553,7 @@ describe("http.request module", function()
 			end)
 		end)
 		it("works with file body", function()
-			local file = io.tmpfile()
+			local file = assert(io.tmpfile())
 			assert(file:write("hello world"))
 			test(function(stream)
 				assert(stream:get_headers())
@@ -747,16 +747,17 @@ describe("http.request module", function()
 			end)
 		end)
 		it("can make request via SOCKS proxy", function()
+			local ca = require "cqueues.auxlib"
 			local cs = require "cqueues.socket"
-			local socks_server = cs.listen {
+			local socks_server = ca.assert(cs.listen {
 				family = cs.AF_INET;
 				host = "localhost";
 				port = 0;
-			}
+			})
 			assert(socks_server:listen())
 			local _, socks_host, socks_port = socks_server:localname()
 
-			local s = server.listen {
+			local s = assert(server.listen {
 				host = "localhost";
 				port = 0;
 				onstream = function(s, stream)
@@ -769,7 +770,7 @@ describe("http.request module", function()
 					stream.connection:shutdown()
 					s:close()
 				end;
-			}
+			})
 			assert(s:listen())
 			local _, host, port = s:localname()
 
@@ -813,7 +814,7 @@ describe("http.request module", function()
 		it("pays attention to HSTS", function()
 			local cq = cqueues.new()
 			local n = 0
-			local s = server.listen {
+			local s = assert(server.listen {
 				host = "localhost";
 				port = 0;
 				onstream = function(s, stream)
@@ -834,7 +835,7 @@ describe("http.request module", function()
 						s:close()
 					end
 				end;
-			}
+			})
 			assert(s:listen())
 			local _, _, port = s:localname()
 			cq:wrap(function()
