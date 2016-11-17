@@ -12,7 +12,7 @@ lua-http was written to fill a gap in the Lua ecosystem by providing an HTTP and
 
   - Asynchronous and performant
   - Can be used without forcing the developer to follow a specific pattern. Conversely, the library can be adapted to many common patterns.
-  - Can be used at a very high level without need to understand the transportation of HTTP data (other than the connection addresses).
+  - Can be used at a very high level without need to understand the transportation of HTTP data (other than connection addresses).
   - Provides a rich low level API, if desired, for creating powerful HTTP based tools at the protocol level.
 
 As a result of these design goals, the library is simple and un-obtrusive and can accommodate tens of thousands of connections on commodity hardware. 
@@ -77,7 +77,7 @@ cqueues can be used in conjunction with lua-http to integrate other features int
 
 The following is a list of API conventions and general reference: 
 
-###HTTP 
+### HTTP
 
   - HTTP 1 request and status line fields are passed around inside of _[headers](#http.headers)_ objects under keys `":authority"`, `":method"`, `":path"`, `":scheme"` and `":status"` as defined in HTTP 2. As such, they are all kept in string form (important to remember for the `:status` field).
 
@@ -186,7 +186,7 @@ Write the given [*headers*](#http.headers) object to the stream. The function ta
 
 ### `stream:get_next_chunk(timeout)` <!-- --> {#stream:get_next_chunk}
 
-Returns the next chunk of the http body from the socket, otherwise it yields while waiting for input. This function will yield indefinetly, or until `timeout` is exceeded. If the message is compressed, runs inflate to decompress the data. On error, returns `nil`, an error message and an error number.
+Returns the next chunk of the http body from the socket, otherwise it yields while waiting for input. This function will yield indefinitely, or until `timeout` is exceeded. If the message is compressed, runs inflate to decompress the data. On error, returns `nil`, an error message and an error number.
 
 
 ### `stream:unget(str)` <!-- --> {#stream:unget}
@@ -196,7 +196,7 @@ Places `str` back on the incoming data buffer, allowing it to be returned again 
 
 ### `stream:write_chunk(chunk, end_stream, timeout)` <!-- --> {#stream:write_chunk}
 
-Writes the string `chunk` to the stream. If `end_stream` is true, the body will be finalized and the stream will be closed. `write_chunk` yields indefinitely, or until `timeout` is exceded.
+Writes the string `chunk` to the stream. If `end_stream` is true, the body will be finalized and the stream will be closed. `write_chunk` yields indefinitely, or until `timeout` is exceeded.
 
 
 ### `stream:shutdown()` <!-- --> {#stream:shutdown}
@@ -312,7 +312,7 @@ The h1_connection module adheres to the [*connection*](#connection) interface an
 
 ### `new(socket, conn_type, version)` <!-- --> {#connection.new}
 
-Constructor for a new connection. Takes a socket instance, a connection type string and a numeric HTTP version number. Valid values for the connection type are `"client"` and `"server"`. Valid values for the version number are `1` and `1.1`. On success returns the newly initialized connection object in a non-connected state. On failure returns `nil`, an error message and an error number. 
+Constructor for a new connection. Takes a socket instance, a connection type string and a numeric HTTP version number. Valid values for the connection type are `"client"` and `"server"`. Valid values for the version number are `1` and `1.1`. On success returns the newly initialized connection object in a non-connected state. On failure returns `nil`, an error message and an error number.
 
 
 ### `h1_connection.version` <!-- --> {#http.h1_connection.version}
@@ -382,7 +382,7 @@ Writes the opening HTTP 1.x request line for a new request to the socket buffer.
 
 ### `h1_connection:write_status_line(httpversion, status_code, reason_phrase, timeout)` <!-- --> {#http.h1_connection:write_status_line}
 
-Writes an HTTP status line to the socket buffer. Yields until success or `timeout`. If the write fails, the funtion returns `nil`, an error message and an error number. 
+Writes an HTTP status line to the socket buffer. Yields until success or `timeout`. If the write fails, the function returns `nil`, an error message and an error number. 
 
 *Note the status line will not be flushed to the remote server until* [`write_headers_done`](#http.h1_connection:write_headers_done) *is called.*
 
