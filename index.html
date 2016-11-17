@@ -58,7 +58,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <ul>
 <li><a href="#introduction">Introduction</a><ul>
 <li><a href="#common-use-cases">Common use cases</a><ul>
-<li><a href="#retrieving-a-document">Retrieving A Document</a></li>
+<li><a href="#retrieving-a-document">Retrieving a Document</a></li>
 <li><a href="#http.websocket-example">WebSocket Communications</a></li>
 </ul></li>
 <li><a href="#asynchronous-operation">Asynchronous Operation</a></li>
@@ -354,7 +354,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <main>
 <section id="introduction" class="level1">
 <h1>Introduction</h1>
-<p>lua-http is an performant, capable Hyper Text Transfer Protocol (HTTP) and WebSocket (WS) library for Lua 5.1, 5.2, 5.3 and LuaJIT. The software supports x86, x64 and Arm based systems, as well as GNU/Linux, OSX, FreeBSD and others [1]. lua-http can be utilized as a server or client and includes the following features:</p>
+<p>lua-http is an performant, capable Hyper Text Transfer Protocol (HTTP) and WebSocket (WS) library for Lua 5.1, 5.2, 5.3 and LuaJIT. The software supports x86, x64 and Arm based systems, as well as GNU/Linux, OSX, FreeBSD and others<a href="#fn1" class="footnoteRef" id="fnref1"><sup>1</sup></a>. lua-http can be utilized as a server or client and includes the following features:</p>
 <ul>
 <li>HTTP 1 and HTTP 2 as specified by <a href="https://tools.ietf.org/html/rfc7230">RFC 7230</a> and <a href="https://tools.ietf.org/html/rfc7540">RFC 7540</a></li>
 <li>WebSockets as specified by <a href="https://tools.ietf.org/html/rfc6455">RFC 6455</a> including ping/pong, binary data transfer and TLS encryption</li>
@@ -371,12 +371,11 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 </ul>
 <p>As a result of these design goals, the library is simple and un-obtrusive and can accommodate tens of thousands of connections on commodity hardware.</p>
 <p>lua-http is a flexible HTTP and WebSocket library that allows developers to concentrate on line-of-business features when building Internet enabled applications. If you are looking for a way to streamline development of an internet enabled application, enable HTTP networking in your game, create a new Internet Of Things (IoT) system, or write a performant custom web server for a specific use case, lua-http has the tools you need.</p>
-<p>[1] _lua-http is pure lua code and will therefore support any platform that Lua 5.1 or greater supports. Where lua-http can run is mainly limited by where cqueues works (which at the time of writing is BSDs, Linux, OSX, Solaris): if you can port cqueues to it, lua-http should automatically work._</p>
 <section id="common-use-cases" class="level2">
 <h2>Common use cases</h2>
 <p>The following are two simple demonstrations of how the lua-http library can be used:</p>
 <section id="retrieving-a-document" class="level3">
-<h3>Retrieving A Document</h3>
+<h3>Retrieving a Document</h3>
 <p>The highest level interface for clients is <a href="#http.request"><em>http.request</em></a>. By constructing a <a href="#http.request"><em>request</em></a> object from a URI using <a href="#http.request.new_from_uri"><code>new_from_uri</code></a> and immediately evaluating it, you can easily fetch an HTTP resource.</p>
 <div class="sourceCode"><pre class="sourceCode lua"><code class="sourceCode lua"><span class="kw">local</span> http_request <span class="ot">=</span> <span class="fu">require</span> <span class="st">&quot;http.request&quot;</span>
 <span class="kw">local</span> headers<span class="ot">,</span> stream <span class="ot">=</span> <span class="fu">assert</span><span class="ot">(</span>http_request<span class="ot">.</span>new_from_uri<span class="ot">(</span><span class="st">&quot;http://example.com&quot;</span><span class="ot">)</span>:go<span class="ot">())</span>
@@ -1611,6 +1610,12 @@ cq:wrap<span class="ot">(</span><span class="kw">function</span><span class="ot"
 <li><a href="https://github.com/daurnimator/lua-http">Github</a></li>
 <li><a href="https://github.com/daurnimator/lua-http/issues">Issue tracker</a></li>
 </ul>
+</section>
+<section class="footnotes">
+<hr />
+<ol>
+<li id="fn1"><p>lua-http is pure lua code and will therefore support any platform that Lua 5.1 or greater supports. Where lua-http can run is mainly limited by where cqueues works (which at the time of writing is BSDs, Linux, OSX, Solaris): if you can port cqueues to it, lua-http should automatically work.<a href="#fnref1">↩</a></p></li>
+</ol>
 </section>
 </main>
 </body>
