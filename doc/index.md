@@ -104,8 +104,6 @@ _[Connection](#connection)_ - An abstraction over an underlying TCP/IP socket. l
 
 _[Stream](#stream)_ - A request/response on a connection object. lua-http has two stream types: one for [*HTTP 1 streams*](#http.h1_stream), and one for [*HTTP 2 streams*](#http.h2_stream). They common interfaces are described in [*stream*](#stream) and [*http.stream_common*](#http.stream_common).
 
-_Newline_ - A single carriage return and line feed `"\r\n"`, indicating a blank line
-
 
 # Interfaces
 
@@ -355,7 +353,7 @@ Reads a line of input from the socket. If the input is a valid status line, the 
 
 ### `h1_connection:read_header(timeout)` <!-- --> {#http.h1_connection:read_header}
 
-Reads a newline terminated HTTP header from the socket and returns the header key and value. This function will yield until a MIME compliant header item is received or until `timeout` is exceeded. If the header could not be read, the function returns `nil` an error and an error message.
+Reads a CRLF terminated HTTP header from the socket and returns the header key and value. This function will yield until a MIME compliant header item is received or until `timeout` is exceeded. If the header could not be read, the function returns `nil` an error and an error message.
 
 
 ### `h1_connection:read_headers_done(timeout)` <!-- --> {#http.h1_connection:read_headers_done}
