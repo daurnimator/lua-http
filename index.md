@@ -41,21 +41,18 @@ print(body)
 ```
 
 
-### WebSocket Communications
+### WebSocket Communications {#http.websocket-example}
 
 To request information from a WebSocket server, use the `websocket` module to create a new WebSocket client.
 
 ```lua
-do
-	local websocket = require "http.websocket"
-	local ws = websocket.new_from_uri("ws://echo.websocket.org")
-	assert(ws:connect())
-
-	print(ws:send("Hello from Timbuktu."))
-
-	local out = assert(ws:receive())
-	print(out)
-end
+local websocket = require "http.websocket"
+local ws = websocket.new_from_uri("wss://echo.websocket.org")
+assert(ws:connect())
+assert(ws:send("koo-eee!"))
+local data = assert(ws:receive())
+assert(data == "koo-eee!")
+assert(ws:close())
 ```
 
 
@@ -1400,19 +1397,6 @@ Closes the websocket connection.
 
   - `code` defaults to `1000`
   - `reason` is an optional string
-
-
-### Example
-
-```lua
-local websocket = require "http.websocket"
-local ws = websocket.new_from_uri("wss://echo.websocket.org")
-assert(ws:connect())
-assert(ws:send("koo-eee!"))
-local data = assert(ws:receive())
-assert(data == "koo-eee!")
-assert(ws:close())
-```
 
 
 ## http.zlib
