@@ -198,8 +198,10 @@ function request_methods:handle_redirect(orig_headers)
 		end
 		if new_scheme == "https" or new_scheme == "wss" then
 			new_req.tls = true
-		else
+		elseif new_scheme == "http" or new_scheme == "ws" then
 			new_req.tls = false
+		else
+			return nil, "unknown scheme", ce.EINVAL
 		end
 	else
 		if not is_connect then
