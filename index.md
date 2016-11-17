@@ -1,6 +1,6 @@
 # Introduction
 
-lua-http is an performant, capable Hyper Text Transfer Protocol (HTTP) and WebSocket (WS) library for Lua 5.1, 5.2, 5.3 and LuaJIT. The software supports x86, x64 and Arm based systems, as well as GNU/Linux, OSX, FreeBSD and others [1]. lua-http can be utilized as a server or client and includes the following features: 
+lua-http is an performant, capable Hyper Text Transfer Protocol (HTTP) and WebSocket (WS) library for Lua 5.1, 5.2, 5.3 and LuaJIT. The software supports x86, x64 and Arm based systems, as well as GNU/Linux, OSX, FreeBSD and others[^1]. lua-http can be utilized as a server or client and includes the following features:
 
   - HTTP 1 and HTTP 2 as specified by [RFC 7230](https://tools.ietf.org/html/rfc7230) and [RFC 7540](https://tools.ietf.org/html/rfc7540)
   - WebSockets as specified by [RFC 6455](https://tools.ietf.org/html/rfc6455) including ping/pong, binary data transfer and TLS encryption
@@ -19,14 +19,14 @@ As a result of these design goals, the library is simple and un-obtrusive and ca
 
 lua-http is a flexible HTTP and WebSocket library that allows developers to concentrate on line-of-business features when building Internet enabled applications. If you are looking for a way to streamline development of an internet enabled application, enable HTTP networking in your game, create a new Internet Of Things (IoT) system, or write a performant custom web server for a specific use case, lua-http has the tools you need.
 
-[1] _lua-http is pure lua code and will therefore support any platform that Lua 5.1 or greater supports. Where lua-http can run is mainly limited by where cqueues works (which at the time of writing is BSDs, Linux, OSX, Solaris): if you can port cqueues to it, lua-http should automatically work._
+[^1]: lua-http is pure lua code and will therefore support any platform that Lua 5.1 or greater supports. Where lua-http can run is mainly limited by where cqueues works (which at the time of writing is BSDs, Linux, OSX, Solaris): if you can port cqueues to it, lua-http should automatically work.
 
 
 ## Common use cases
 
 The following are two simple demonstrations of how the lua-http library can be used: 
 
-### Retrieving A Document
+### Retrieving a Document
 
 The highest level interface for clients is [*http.request*](#http.request). By constructing a [*request*](#http.request) object from a URI using [`new_from_uri`](#http.request.new_from_uri) and immediately evaluating it, you can easily fetch an HTTP resource.
 
