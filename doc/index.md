@@ -1,44 +1,34 @@
 # Introduction
 
-lua-http is an HTTP library for Lua, it supports: both client and server operations, both HTTP 1 and HTTP 2.
+lua-http is an performant, capable Hyper Text Transfer Protocol (HTTP) and WebSocket (WS) library for Lua 5.1, 5.2, 5.3 and LuaJIT. The software supports x86, x64 and Arm based systems, as well as GNU/Linux, OSX, FreeBSD and others [1]. lua-http can be utilized as a server or client and includes the following features: 
 
-HTTP over TLS (i.e. HTTPS) is fully supported.
+-  HTTP 1 and HTTP 2 as specified by [RFC 7230](https://tools.ietf.org/html/rfc7230) and [RFC 7540](https://tools.ietf.org/html/rfc7540)
+-  WebSockets as specified by [RFC 6455](https://tools.ietf.org/html/rfc6455) including ping/pong, binary data transfer and TLS encryption
+-  Transport Layer Security (TLS) - lua-http supports HTTPS and WSS via [luaossl](https://github.com/wahern/luaossl).  
+-  Fully asynchronous API that does not block the current thread when executing operations that typically block
+-  Easy integration into other event-loop based application models
 
+lua-http was written to fill a gap in the Lua ecosystem by providing an HTTP and WebSocket library with the following traits:
 
-## Conventions
+- Asynchronous and performant
+- Can be used without forcing the developer to follow a specific pattern. Conversely, the library can be adapted to many common patterns. 
+- Can be used at a very high level without need to understand the transportation of HTTP data (other than the connection addresses). 
+- Provides a rich low level API, if desired, for creating powerful HTTP based tools at the protocol level.
 
-Operations that may block the current coroutine take an optional timeout.
+As a result of these design goals, the library is simple and un-obtrusive and can accommodate tens of thousands of connections on commodity hardware. 
 
-HTTP 1 request and status line fields are passed around inside of [headers](#http.headers) objects under keys `":authority"`, `":method"`, `":path"`, `":scheme"` and `":status"` as defined in HTTP 2. As such, they are all kept in string form (important to remember for the `:status` field).
+lua-http is a flexible HTTP and WebSocket library that allows developers to concentrate on line-of-business features when building Internet enabled applications. If you are looking for a way to streamline development of an internet enabled application, enable HTTP networking in your game, create a new Internet Of Things (IoT) system, or write a performant custom web server for a specific use case, lua-http has the tools you need.
 
-Header fields should always be used with lower case keys.
-
-### Errors
-
-Invalid function parameters will throw a lua error (if validated).
-
-Errors are returned as `nil, error, errno` unless noted otherwise.
-
-Some HTTP 2 operations return/throw special [http 2 error objects](#http.h2_error).
-
-
-## Terminology
-
-Much lua-http terminology is borrowed from HTTP 2.
-
-A ["connection"](#connection) is an abstraction over the underlying socket.
-lua-http has two connection types: one for HTTP 1, one for HTTP 2.
-
-A ["stream"](#stream) is a request/response on a connection.
-lua-http has two stream types: one for [HTTP 1 streams](#http.h1_stream), and one for [HTTP 2 streams](#http.h2_stream).
-They share a lowest common denominator interface, see [*stream*](#stream) and [*http.stream_common*](#http.stream_common).
+[1] _lua-http is pure lua code and will therefore support any platform that Lua 5.1 or greater supports. Where lua-http can run is mainly limited by where cqueues works (which at the time of writing is BSDs, Linux, OSX, Solaris): if you can port cqueues to it, lua-http should automatically work._
 
 
 ## Common use cases
 
-### Retrieving a document
+The following are two simple demonstrations of how the lua-http library can be used: 
 
-The highest level interface for clients is [*http.request*](#http.request). By constructing a [*request*](#http.request) object from a uri using [`new_from_uri`](#http.request.new_from_uri) and immediately evaluating it, you can easily fetch an HTTP resource.
+### Retrieving A Document
+
+The highest level interface for clients is [*http.request*](#http.request). By constructing a [*request*](#http.request) object from a URI using [`new_from_uri`](#http.request.new_from_uri) and immediately evaluating it, you can easily fetch an HTTP resource.
 
 ```lua
 local http_request = require "http.request"
@@ -50,66 +40,141 @@ end
 print(body)
 ```
 
+### WebSocket Communications
+
+To request information from a WebSocket server, use the `websocket` module to create a new WebSocket client.
+
+```lua
+do
+	local websocket = require "http.websocket"
+	local ws = websocket.new_from_uri("ws://echo.websocket.org")
+	assert(ws:connect())
+
+	print(ws:send("Hello from Timbuktu."))
+
+	local out = assert(ws:receive())
+	print(out)
+end
+```
 
 ## Asynchronous Operation
 
-All lua-http operations including DNS lookup, socket connection, TLS negotiation and read/write operations are all asynchronous when run inside of a cqueue.
-[Cqueues](http://25thandclement.com/~william/projects/cqueues.html) is a lua library that allows for composable event loops.
-Cqueues can be integrated with almost any main loop or event library you may encounter (see [here](https://github.com/wahern/cqueues/wiki/Integrations-with-other-main-loops) for more information + samples), and hence lua-http can be asynchronous in any place you write lua!
+lua-http has been written to perform asynchronously so that it can be used in your application, server or game without blocking your main loop. Asynchronous operations are achieved by utilizing cqueues, a Lua/C library that incorporates Lua yielding and kernel level APIs to reduce CPU usage. All lua-http operations including DNS lookup, TLS negotiation and read/write operations will not block the main application thread when run from inside a cqueue or cqueue enabled "container". While sometimes it is necessary to block a routine (yield) and wait for external data, any blocking API calls take an optional timeout to ensure good behavior of networked applications and avoid unresponsive or "dead" routines.
+
+Asynchronous operations are one of the most powerful features of lua-http and require no effort on the developers part. For instance, an HTTP server can be instantiated within any Lua main loop and run alongside application code without adversely affecting the main application process. If other cqueue enabled components are integrated within a cqueue loop, the application is entirely event driven through kernel level polling APIs. 
+
+cqueues can be used in conjunction with lua-http to integrate other features into your lua application and create powerful, performant, web enabled applications. Some of the examples in this guide will use cqueues for simple demonstrations. For more resources about cqueues, please see:
+
+- [The cqueues website](http://25thandclement.com/~william/projects/cqueues.html) for more information about the cqueues library. 
+
+- cqueues examples can be found with the cqueues source code available through [git or archives](http://www.25thandclement.com/~william/projects/cqueues.html#download) or accessed online [here](https://github.com/wahern/cqueues/tree/master/examples). 
+
+- For more information on integrating cqueues with other event loop libraries please see [integration with other event loops](https://github.com/wahern/cqueues/wiki/Integrations-with-other-main-loops).
+
+- For other libraries that use cqueues such as asynchronous APIs for Redis and PostgreSQL, please see [the cqueues wiki entry here](https://github.com/wahern/cqueues/wiki/Libraries-that-use-cqueues).
+
+
+## Conventions
+
+The following is a list of API conventions and general reference: 
+
+###HTTP 
+
+- HTTP 1 request and status line fields are passed around inside of _[headers](#http.headers)_ objects under keys `":authority"`, `":method"`, `":path"`, `":scheme"` and `":status"` as defined in HTTP 2. As such, they are all kept in string form (important to remember for the `:status` field).
+
+- Header fields should always be used with lower case keys.
+
+
+### Errors
+
+- Invalid function parameters will throw a lua error (if validated).
+
+- Errors are returned as `nil`, error, errno unless noted otherwise.
+
+- Some HTTP 2 operations return/throw special [http 2 error objects](#http.h2_error).
+
+
+## Terminology
+
+Much lua-http terminology is borrowed from HTTP 2. 
+
+_[Connection](#connection)_ - An abstraction over an underlying TCP/IP socket. lua-http currently has two connection types: one for HTTP 1, one for HTTP 2.
+
+_[Stream](#stream)_ - A request/response on a connection object. lua-http has two stream types: one for [*HTTP 1 streams*](#http.h1_stream), and one for [*HTTP 2 streams*](#http.h2_stream). They common interfaces are described in [*stream*](#stream) and [*http.stream_common*](#http.stream_common).
+
+_Newline_ - A single carriage return and line feed `"\r\n"`, indicating a blank line
 
 
 # Interfaces
 
 ## connection
 
-All connection types expose the fields:
+lua-http has separate libraries for both HTTP 1 and HTTP 2 type communications. Future protocols will also be supported and exposed as new modules. As HTTP 1 and 2 share common concepts at the connection and stream level, the _[connection](#connection)_ and _[stream](#stream)_ modules have been written to contain common interfaces wherever possible. All _[connection](#connection)_ types expose the following fields:
+
 
 ### `connection.type` <!-- --> {#connection.type}
 
-Either `"client"` or `"server"`
+The mode of use for the connection object. Valid values are:
+
+- `"client"` - Connects to a remote URI
+- `"server"` - Listens for connection on a local URI
 
 
 ### `connection.version` <!-- --> {#connection.version}
 
-The HTTP version as a number
+The HTTP version number of the connection as a number. 
 
 
 ### `connection:connect(timeout)` <!-- --> {#connection:connect}
 
+Completes the connection to the remote server using the address specified, HTTP version and any options specified in the `connection.new` constructor. The `connect` function will yield until the connection attempt finishes (success or failure) or until `timeout` is exceeded. Connecting may include DNS lookups, TLS negotiation and HTTP2 settings exchange. Returns `true` on success. On failure returns `nil` and an error message.
+
 
 ### `connection:checktls()` <!-- --> {#connection:checktls}
+
+Checks the socket for a valid Transport Layer Security connection. Returns the luaossl ssl object if the connection is secured. Returns `nil` and an error message if there is no active TLS session. Please see the [luaossl website](http://25thandclement.com/~william/projects/luaossl.html) for more information about the ssl object.
 
 
 ### `connection:localname()` <!-- --> {#connection:localname}
 
+Returns the connection information for the local socket. Returns address family, IP address and port for an external socket. For Unix domain sockets, the function returns `AF_UNIX` and the path. If the connection object is not connected, returns `AF_UNSPEC` (0). On error, returns `nil` an error message and an error number.
+
 
 ### `connection:peername()` <!-- --> {#connection:peername}
+
+Returns the connection information for the socket *peer* (as in, the next hop). Returns address family, IP address and port for an external socket. For unix sockets, the function returns `AF_UNIX` and the path. If the connection object is not connected, returns `AF_UNSPEC` (0). On error, returns `nil` an error message and an error number.
+
+*Note: If the client is using a proxy, the :peername() will be the proxy, not the remote server connection.* 
 
 
 ### `connection:shutdown()` <!-- --> {#connection:shutdown}
 
+Performs an orderly shutdown of the connection by closing all streams and calls `:shutdown()` on the socket. The connection cannot be re-opened. 
+
 
 ### `connection:close()` <!-- --> {#connection:close}
+
+Closes a connection and releases operating systems resources. Note that close performs a `connection:shutdown()` prior to releasing resources.
 
 
 ### `connection:new_stream()` <!-- --> {#connection:new_stream}
 
-Create a new [stream](#stream) on the connection.
+Creates a new [*stream*](#stream) on the connection. Use `:new_stream()` to initiate a new http request. In HTTP 1, a new stream can be used for request/response exchanges. In HTTP 2 a new stream can be used for request/response exchanges, organising stream priorities or to initiate a push promise.
 
 
 ### `connection:get_next_incoming_stream(timeout)` <!-- --> {#connection:get_next_incoming_stream}
 
-Returns the next peer initiated [stream](#stream) on the connection.
+Returns the next peer initiated [*stream*](#stream) on the connection. This function can be used to yield and "listen" for incoming HTTP streams. 
 
 
 ## stream
 
 All stream types expose the following fields and functions.
-These are extended via the functions in [http.stream_common](#http.stream_common).
+The stream modules also share common functionality available via the [*http.stream_common*](#http.stream_common) module.
 
 ### `stream.connection` <!-- --> {#stream.connection}
 
-The underlying [*connection*](#connection) object
+The underlying [*connection*](#connection) object.
 
 
 ### `stream:get_headers(timeout)` <!-- --> {#stream:get_headers}
@@ -119,27 +184,27 @@ Retrieves the next complete headers object (i.e. a block of headers or trailers)
 
 ### `stream:write_headers(headers, end_stream, timeout)` <!-- --> {#stream:write_headers}
 
-Write the given [`headers`](#http.headers) object to the stream.
-Takes a flag indicating if this is the last chunk in the stream, if `true` the stream will be closed.
+Write the given [*headers*](#http.headers) object to the stream. The function takes a flag indicating if this is the last chunk in the stream, if `true` the stream will be closed. If `timeout` is specified, the stream will wait for the send to complete until `timeout` is exceeded.
 
 
 ### `stream:get_next_chunk(timeout)` <!-- --> {#stream:get_next_chunk}
 
+Returns the next chunk of the http body from the socket, otherwise it yields while waiting for input. This function will yield indefinetly, or until `timeout` is exceeded. If the message is compressed, runs inflate to decompress the data. On error, returns `nil`, an error message and an error number.
+
 
 ### `stream:unget(str)` <!-- --> {#stream:unget}
 
-Returns nothing
+Places `str` back on the incoming data buffer, allowing it to be returned again on a subsequent command ("un-gets" the data). Returns `true` on success. On failure returns `nil`, error message and an error number.
 
 
 ### `stream:write_chunk(chunk, end_stream, timeout)` <!-- --> {#stream:write_chunk}
 
-Write the string `chunk` to the stream body.
-Takes a flag indicating if this is the last chunk in the stream, if `true` the stream will be closed.
+Writes the string `chunk` to the stream. If `end_stream` is true, the body will be finalized and the stream will be closed. `write_chunk` yields indefinitely, or until `timeout` is exceded.
 
 
 ### `stream:shutdown()` <!-- --> {#stream:shutdown}
 
-Close the stream.
+Closes the stream. The resources are released and the stream can no longer be used.
 
 
 # Modules
@@ -153,12 +218,15 @@ Results are only consistent between underlying implementations when parameters a
 
 ### `band(a, b)` <!-- --> {#http.bit.band}
 
+Bitwise And operation.
 
 ### `bor(a, b)` <!-- --> {#http.bit.bor}
 
+Bitwise Or operation. 
 
 ### `bxor(a, b)` <!-- --> {#http.bit.bxor}
 
+Bitwise XOr operation.
 
 
 ### Example {#http.bit-example}
@@ -174,32 +242,11 @@ print(bit.band(1, 3)) --> 1
 Deals with obtaining a connection to an HTTP server.
 
 
-### `negotiate(socket, options, timeout)` <!-- --> {#http.client.negotiate}
-
-  - `socket` is a cqueues socket object
-
-  - `options` is a table containing:
-
-	  - `tls` (boolean, optional): boolean indicating if a TLS negotiation should be started.
-
-	  - `ctx` (userdata, optional): the `SSL_CTX*` to use.
-		If not specified, uses the default TLS settings (see [*http.tls*](#http.tls) for information).
-
-	  - `version` (nil|1.0|1.1|2): HTTP version to use.
-		  - `nil`: attempts HTTP 2 and falls back to HTTP 1.1
-		  - `1.0`
-		  - `1.1`
-		  - `2`
-
-	  - `h2_settings` (table, optional): HTTP 2 settings to use.  
-		See [*http.h2_connection*](#http.h2_connection) for details
-
-
 ### `connect(options, timeout)` <!-- --> {#http.client.connect}
 
-Creates a new connection to an HTTP server.
+This function returns a new connection to an HTTP server. Once a connection has been opened, a stream can be created to start a request/response exchange. Please see [`h1_stream.new_stream`](h1_stream.new_stream) and [`h2_stream.new_stream`](h2_stream.new_stream) for more information about creating requests.
 
-  - `options` is a table containing the options to [*http.client.negotiate*](#http.client.negotiate),plus the following:
+  - `options` is a table containing the options to [`http.client.negotiate`](#http.client.negotiate), plus the following:
 
 	  - `family` (integer, optional): socket family to use.  
 		defaults to `AF_INET`  
@@ -221,7 +268,7 @@ Creates a new connection to an HTTP server.
 
   - `timeout` (optional) is the maximum amount of time (in seconds) to allow for connection to be established.
 
-	This includes time for DNS lookup, connection, TLS negotiation (if tls enabled) and in the case of HTTP2: settings exchange.
+	This includes time for DNS lookup, connection, TLS negotiation (if TLS enabled) and in the case of HTTP 2: settings exchange.
 
 #### Example {#http.client.connect-example}
 
@@ -237,112 +284,142 @@ local myconnection = http_client.connect {
 ```
 
 
+### `negotiate(socket, options, timeout)` <!-- --> {#http.client.negotiate}
+
+Negotiates the HTTP settings with the remote server. If TLS has been specified, this function instantiates the encryption tunnel. Parameters are as follows:
+  
+  - `socket` is a cqueues socket object
+
+  - `options` is a table containing:
+
+	  - `tls` (boolean|userdata, optional): the `SSL_CTX*` to use, or a boolean to indicate the default TLS context.  
+		defaults to `true`.
+
+		  - `true` indicates to use the default TLS settings, see [*http.tls*](#http.tls) for information.
+		  - `false` means do not negotiate TLS
+
+	  - `version` (`nil`|1.0|1.1|2): HTTP version to use.
+		  - `nil`: attempts HTTP 2 and falls back to HTTP 1.1
+		  - `1.0`
+		  - `1.1`
+		  - `2`
+
+	  - `h2_settings` (table, optional): HTTP 2 settings to use. See [*http.h2_connection*](#http.h2_connection) for details
+
+
 ## http.h1_connection
 
-### `new(socket, conn_type, version)` <!-- --> {#http.h1_connection.new}
+The h1_connection module adheres to the [*connection*](#connection) interface and provides HTTP 1 and 1.1 specific operations.  
+
+### `new(socket, conn_type, version)` <!-- --> {#connection.new}
+
+Constructor for a new connection. Takes a socket instance, a connection type string and a numeric HTTP version number. Valid values for the connection type are `"client"` and `"server"`. Valid values for the version number are `1` and `1.1`. On success returns the newly initialized connection object in a non-connected state. On failure returns `nil`, an error message and an error number. 
 
 
 ### `h1_connection.version` <!-- --> {#http.h1_connection.version}
 
-Either `1.0` or `1.1`
-
-
-### `h1_connection:connect(timeout)` <!-- --> {#http.h1_connection:connect}
-
-See [`connection:connect(timeout)`](#connection:connect)
-
-
-### `h1_connection:checktls()` <!-- --> {#http.h1_connection:checktls}
-
-See [`connection:checktls()`](#connection:checktls)
-
-
-### `h1_connection:localname()` <!-- --> {#http.h1_connection:localname}
-
-See [`connection:localname()`](#connection:localname)
-
-
-### `h1_connection:peername()` <!-- --> {#http.h1_connection:peername}
-
-See [`connection:peername()`](#connection:peername)
+Specifies the HTTP version used for the connection handshake. Valid values are:
+- `1.0` 
+- `1.1`
 
 
 ### `h1_connection:clearerr(...)` <!-- --> {#http.h1_connection:clearerr}
 
+Clears errors to allow for further read or write operations on the connection. Returns the error number of existing errors. This function is used to recover from known errors.
+
 
 ### `h1_connection:take_socket()` <!-- --> {#http.h1_connection:take_socket}
 
-
-### `h1_connection:shutdown(dir)` <!-- --> {#http.h1_connection:shutdown}
-
-See [`connection:shutdown()`](#connection:shutdown)
-
-
-### `h1_connection:close()` <!-- --> {#http.h1_connection:close}
-
-See [`connection:close()`](#connection:close)
-
-
-### `h1_connection:new_stream()` <!-- --> {#http.h1_connection:new_stream}
-
-See [`connection:new_stream()`](#connection:new_stream)
-
-
-### `h1_connection:get_next_incoming_stream(timeout)` <!-- --> {#http.h1_connection:get_next_incoming_stream}
-
-See [`connection:get_next_incoming_stream()`](#connection:get_next_incoming_stream)
+Used to hand the reference of the connection socket to another object. Resets the socket to defaults and returns the single existing reference of the socket to the calling routine. This function can be used for connection upgrades such as upgrading from HTTP 1 to a WebSocket.
 
 
 ### `h1_connection:flush(...)` <!-- --> {#http.h1_connection:flush}
 
+Flushes all buffered outgoing data on the socket. Returns `true` on success. Returns `false` and the error if the socket fails to flush.
+
 
 ### `h1_connection:read_request_line(timeout)` <!-- --> {#http.h1_connection:read_request_line}
+
+Reads a request line from the socket. Returns the request method, requested path and HTTP version for an incoming request. `:read_request_line()` yields until a `"\r\n"` terminated chunk is received, or `timeout` is exceeded. If the incoming chunk is not a valid HTTP request line, `nil` is returned. On error, returns `nil`, an error message and an error number.
 
 
 ### `h1_connection:read_status_line(timeout)` <!-- --> {#http.h1_connection:read_status_line}
 
+Reads a line of input from the socket. If the input is a valid status line, the HTTP version (1 or 1.1), status code and reason description (if applicable) is returned. `:read_status_line()` yields until a "\r\n" terminated chunk is received, or `timeout` is exceeded. If the socket could not be read, returns `nil`, an error message and an error number.
+
 
 ### `h1_connection:read_header(timeout)` <!-- --> {#http.h1_connection:read_header}
+
+Reads a newline terminated HTTP header from the socket and returns the header key and value. This function will yield until a MIME compliant header item is received or until `timeout` is exceeded. If the header could not be read, the function returns `nil` an error and an error message.
 
 
 ### `h1_connection:read_headers_done(timeout)` <!-- --> {#http.h1_connection:read_headers_done}
 
+Checks for an empty line, which indicates the end of the HTTP headers. Returns `true` if an empty line is received. Any other value is pushed back on the socket receive buffer (unget) and the function returns `false`. This function will yield waiting for input from the socket or until `timeout` is exceeded. Returns `nil`, an error and an error message if the socket cannot be read.
+
 
 ### `h1_connection:read_body_by_length(len, timeout)` <!-- --> {#http.h1_connection:read_body_by_length}
+
+Get `len` number of bytes from the socket. Use a negative number for *up to* that number of bytes. This function will yield and wait on the socket if length of the buffered body is less than `len`. Asserts if len is not a number.
 
 
 ### `h1_connection:read_body_till_close(timeout)` <!-- --> {#http.h1_connection:read_body_till_close}
 
+Reads the entire request body. This function will yield until the body is complete or `timeout` is expired. If the read fails the function returns `nil`, an error message and an error number. 
+
 
 ### `h1_connection:read_body_chunk(timeout)` <!-- --> {#http.h1_connection:read_body_chunk}
+
+Reads the next available line of data from the request and returns the chunk and any chunk extensions. This function will yield until chunk size is received or `timeout` is exceeded. If the chunk size is indicated as `0` then `false` and any chunk extensions are returned. Returns `nil`, an error message and an error number if there was an error reading reading the chunk header or the socket.
 
 
 ### `h1_connection:write_request_line(method, path, httpversion, timeout)` <!-- --> {#http.h1_connection:write_request_line}
 
+Writes the opening HTTP 1.x request line for a new request to the socket buffer. Yields until success or `timeout`. If the write fails, returns `nil`, an error message and an error number. 
+
+*Note the request line will not be flushed to the remote server until* [`write_headers_done`](#http.h1_connection:write_headers_done) *is called.*
+
 
 ### `h1_connection:write_status_line(httpversion, status_code, reason_phrase, timeout)` <!-- --> {#http.h1_connection:write_status_line}
+
+Writes an HTTP status line to the socket buffer. Yields until success or `timeout`. If the write fails, the funtion returns `nil`, an error message and an error number. 
+
+*Note the status line will not be flushed to the remote server until* [`write_headers_done`](#http.h1_connection:write_headers_done) *is called.*
 
 
 ### `h1_connection:write_header(k, v, timeout)` <!-- --> {#http.h1_connection:write_header}
 
+Writes a header item to the socket buffer as a `key:value` string. Yields until success or `timeout`. Returns `nil`, an error message and an error if the write fails. 
+
+*Note the header item will not be flushed to the remote server until* [`write_headers_done`](#http.h1_connection:write_headers_done) *is called.*
+
 
 ### `h1_connection:write_headers_done(timeout)` <!-- --> {#http.h1_connection:write_headers_done}
 
+Terminates a header block by writing a blank line (`"\r\n"`) to the socket. This function will flush all outstanding data in the socket output buffer. Yields until success or `timeout`. Returns `nil`, an error message and an error if the write fails.
+
 
 ### `h1_connection:write_body_chunk(chunk, chunk_ext, timeout)` <!-- --> {#http.h1_connection:write_body_chunk}
+ 
+Writes a chunk of data to the socket. `chunk_ext` must be `nil` as chunk extensions are not supported. Will yield until complete or `timeout` is exceeded. Returns true on success. Returns `nil`, an error message and an error number if the write fails. 
+
+*Note that `chunk` will not be flushed to the remote server until* [`write_body_last_chunk`](#http.h1_connection:write_body_last_chunk) *is called.*
 
 
 ### `h1_connection:write_body_last_chunk(chunk_ext, timeout)` <!-- --> {#http.h1_connection:write_body_last_chunk}
 
+Writes the chunked body terminator `"0\r\n"` to the socket and flushes the socket output buffer. `chunk_ext` must be `nil` as chunk extensions are not supported. Will yield until complete or `timeout` is exceeded. Returns `nil`, an error message and an error number if the write fails.
+
 
 ### `h1_connection:write_body_plain(body, timeout)` <!-- --> {#http.h1_connection:write_body_plain}
+
+Writes the contents of `body` to the socket and flushes the socket output buffer immediately. Yields until success or `timeout` is exceeded. Returns `nil`, an error message and an error number if the write fails.
 
 
 ## http.h1_reason_phrases
 
-A table mapping from status codes (as strings) to reason phrases for HTTP 1.
+A table mapping from status codes (as strings) to reason phrases for HTTP 1. Any unknown status codes return `"Unassigned"`
 
-Unknown status codes return `"Unassigned"`
 
 ### Example {#http.h1_reason_phrases-example}
 
@@ -355,26 +432,42 @@ print(reason_phrases["342"]) --> "Unassigned"
 
 ## http.h1_stream
 
-In addition to following the [*stream*](#stream) interface and the methods from [http.stream_common](#http.stream_common),
-an `http.h1_stream` has the following methods:
+An h1_stream represents an HTTP 1.0 or 1.1 request/response. The module follows the [*stream*](#stream) interface and the methods from [*http.stream_common*](#http.stream_common), as well as the following HTTP 1 specific functions:
 
 ### `h1_stream:set_state(new)` <!-- --> {#http.h1_stream:set_state}
+
+Sets h1_stream.state if `new` is one of the following valid states:
+
+```lua
+valid_states = {
+	["idle"] = 1; -- initial
+	["open"] = 2; -- have sent or received headers; haven't sent body yet
+	["half closed (local)"] = 3; -- have sent whole body
+	["half closed (remote)"] = 3; -- have received whole body
+	["closed"] = 4; -- complete
+}
+  ```
+  
+Asserts if `new` is not a valid value.
 
 
 ### `h1_stream:read_headers(timeout)` <!-- --> {#http.h1_stream:read_headers}
 
+Returns a table containing the request line and all HTTP headers as key value pairs. 
+
 
 ## http.h2_connection
 
-An HTTP 2 connection can have multiple streams active and transmitting data at once,
-hence an `http.h2_connection` acts much like a scheduler.
+An HTTP 2 connection can have multiple streams actively transmitting data at once,
+hence an *http.h2_connection* acts much like a scheduler.
+
 
 ### `new(socket, conn_type, settings)` <!-- --> {#http.h2_connection.new}
 
 
 ### `h2_connection.version` <!-- --> {#http.h2_connection.version}
 
-`2`
+Contains the value of the HTTP 2 version number for the connection. Currently will hold the value of `2`
 
 
 ### `h2_connection:pollfd()` <!-- --> {#http.h2_connection:pollfd}
@@ -810,6 +903,8 @@ Returns the proxy to use for the given `scheme` and `host` as a URI.
 
 ## http.request
 
+The http.request module encapsulates all the functionality required to retrieve an HTTP document from a server. 
+
 ### `new_from_uri(uri)` <!-- --> {#http.request.new_from_uri}
 
 Creates a new `http.request` object from the given URI.
@@ -854,7 +949,7 @@ The HTTP version to use; leave as `nil` to auto-select.
 ### `request.proxy` <!-- --> {#http.request.proxy}
 
 Specifies the a proxy that the request will be made through.
-The value should be a uri or `false` to turn off proxying for the request.
+The value should be a URI or `false` to turn off proxying for the request.
 
 
 ### `request.headers` <!-- --> {#http.request.headers}
