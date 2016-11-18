@@ -1,14 +1,28 @@
 # Introduction
 
-lua-http is an performant, capable Hyper Text Transfer Protocol (HTTP) and WebSocket (WS) library for Lua 5.1, 5.2, 5.3 and LuaJIT. The software supports x86, x64 and Arm based systems, as well as GNU/Linux, OSX, FreeBSD and others[^1]. lua-http can be utilized as a server or client and includes the following features:
+lua-http is an performant, capable HTTP and WebSocket library for Lua 5.1, 5.2, 5.3 and LuaJIT. Some of the features of the library include: 
 
-  - HTTP 1 and HTTP 2 as specified by [RFC 7230](https://tools.ietf.org/html/rfc7230) and [RFC 7540](https://tools.ietf.org/html/rfc7540)
-  - WebSockets as specified by [RFC 6455](https://tools.ietf.org/html/rfc6455) including ping/pong, binary data transfer and TLS encryption
-  - Transport Layer Security (TLS) - lua-http supports HTTPS and WSS via [luaossl](https://github.com/wahern/luaossl).
+  - Support for HTTP versions 1, 1.1 and 2 as specified by [RFC 7230](https://tools.ietf.org/html/rfc7230) and [RFC 7540](https://tools.ietf.org/html/rfc7540)
+  - Provides both client and server APIs 
   - Fully asynchronous API that does not block the current thread when executing operations that typically block
+  - Support for WebSockets as specified by [RFC 6455](https://tools.ietf.org/html/rfc6455) including ping/pong, binary data transfer and TLS encryption
+  - Transport Layer Security (TLS) - lua-http supports HTTPS and WSS via [luaossl](https://github.com/wahern/luaossl).
   - Easy integration into other event-loop based application models
 
-lua-http was written to fill a gap in the Lua ecosystem by providing an HTTP and WebSocket library with the following traits:
+### Portability
+
+lua-http is pure Lua code with dependencies on the following external libraries: 
+
+  - [cqueues](http://25thandclement.com/~william/projects/cqueues.html) - Posix API library for Lua
+  - [luaossl](http://25thandclement.com/~william/projects/luaossl.html) - Lua bindings for TLS/SSL
+  - [lua-zlib](https://github.com/brimworks/lua-zlib) - Optional Lua bindings for zlib
+
+lua-http can run on any operating system supported by cqueues and openssl, which at the time of writing is GNU/Linux, FreeBSD, NetBSD, OpenBSD, OSX and Solaris.
+
+
+### Why lua-http?
+
+The lua-http library was written to fill a gap in the Lua ecosystem by providing an HTTP and WebSocket library with the following traits:
 
   - Asynchronous and performant
   - Can be used without forcing the developer to follow a specific pattern. Conversely, the library can be adapted to many common patterns.
@@ -19,10 +33,8 @@ As a result of these design goals, the library is simple and un-obtrusive and ca
 
 lua-http is a flexible HTTP and WebSocket library that allows developers to concentrate on line-of-business features when building Internet enabled applications. If you are looking for a way to streamline development of an internet enabled application, enable HTTP networking in your game, create a new Internet Of Things (IoT) system, or write a performant custom web server for a specific use case, lua-http has the tools you need.
 
-[^1]: lua-http is pure lua code and will therefore support any platform that Lua 5.1 or greater supports. Where lua-http can run is mainly limited by where cqueues works (which at the time of writing is BSDs, Linux, OSX, Solaris): if you can port cqueues to it, lua-http should automatically work.
 
-
-## Common use cases
+## Common Use Cases
 
 The following are two simple demonstrations of how the lua-http library can be used: 
 
@@ -103,6 +115,8 @@ _[Stream](#stream)_ - A request/response on a connection object. lua-http has tw
 
 
 # Interfaces
+
+The following sections outline the interfaces exposed by the lua-http library. 
 
 ## connection
 
@@ -980,6 +994,8 @@ Each field has a *name*, a *value* and a *never_index* flag that indicates if th
 
 Each headers object has an index by field name to efficiently retrieve values by key. Keep in mind that there can be multiple values for a given field name. (e.g. an HTTP server may send two `Set-Cookie` headers).
 
+As noted in the [Conventions](#Conventions) section, HTTP 1 request and status line fields are passed around inside of headers objects under keys `":authority"`, `":method"`, `":path"`, `":scheme"` and `":status"` as defined in HTTP 2. As such, they are all kept in string form (important to remember for the :status field).
+
 ### `new()` <!-- --> {#http.headers.new}
 
 Creates and returns a new headers object.
@@ -1337,50 +1353,109 @@ On success, returns the response [*headers*](#http.headers) and a [*stream*](#st
 
 ## http.server
 
-This interface is **unstable**.
+The http.server object is used to listen on sockets and respond to all types of HTTP requests. Each client request is threaded and independent of the other client requests. An `http.server` is instantiated by passing a number of options including an `onstream` response handler that processes the HTTP requests and provides a stream mechanism for response. `onstream` can also be used for testing and upgrading a request, with HTTP 1.1 to WebSockets being the notible example. The server can be made non-blocking when used in conjunction with cqueues. 
 
-### `listen(options)` <!-- --> {#http.server.connect}
+For examples of how to use the server library, please see the example directory in the source tree.
+
+
+### `listen(options)` <!-- --> {#http.server.listen}
+
+Create a new instance of an HTTP Server by passing in table `options`. The following is a list of the most commonly used options:
+
+  - `.client_timeout` (*number*): Timeout (in seconds) to wait for client to send first bytes and/or complete TLS handshake. Default is 10 seconds.
+  - `.host` (*string*): Local IP address in dotted decimal or IPV6 notation. This value is required if `.path` is not specified.
+  - `.port` (*number*): IP port for the local socket. Specify 0 for automatic port selection. Ports 1-1024 require the application has root privilege to run. Maximum value is 65535. If `.tls == nil` then this value is required. Othewise, the defaults are:
+    - `80` if `.tls == false`
+    - `443` if `.tls == true`
+  - `.path` (*string*): Path to UNIX a socket. This value is required if `.host` is not specified.
+  - `.onerror` (*function*): Function that will be called when an error occurs (default: do nothing). See [server:onerror()](#http.server:onerror)
+  - `.onstream` (*function*): Callback function for handling a new client request. The function requires parameters for [*server*](#http.server) and [*stream*](#stream) and if your function throws an error it will be reported from [*step*](#http.server:step) or [*loop*](#http.server:loop)
+  - `.tls` (*boolean*): Specifies if the system should use Transport Layer Security. Values are:
+    - `nil`: Allow both tls and non-tls connections
+    - `true`: Allows tls connections only
+    - `false`: Allows non-tls connections only
+  - `.ctx` (*context object*): An `openssl.ssl.context` object to use for tls connections. If `nil` is passed, a self-signed context will be generated.
+  - `.version` (*number*): The http version to allow to connect (default: any)
+  - `.family` (*string*): Protocol family. Default is `"AP_INET"`
+  - `.v6only` (*boolean*): Specifiy `true` to limit all connections to ipv6 only (no ipv4-mapped-ipv6). Default is `false`.
+  - `.cq` (*cqueue*): A cqueues controller to use as a main loop. The default is a new controller for the server.
+  - `.max_concurrent` (*number*): Maximum number of connections to allow live at a time. Default is infinity.
+  - `.mode` (*string*): `fchmod` or `chmod` socket after creating UNIX domain socket.
+  - `.mask` (*boolean*): Set and restore umask when binding UNIX domain socket.
+  - `.unlink` (*boolean*): `true` means unlink socket path before binding.
+  - `.reuseaddr` (*boolean*): Turn on `SO_REUSEADDR` flag.
+  - `.reuseport` (*boolean*): Turn on `SO_REUSEPORT` flag.
 
 
 ### `server:onerror(new_handler)` <!-- --> {#http.server:onerror}
 
+If called with parameters, the function replaces the current error handler function with `new_handler`  and returns a reference to the old function. Calling the function with no parameters returns the current error handler. The default handler throws an error. The `onerror` function for the server can be set during instantiation through the `options` table passed to the [*server.listen(options)*](#server.listen) function.
+
 
 ### `server:listen(timeout)` <!-- --> {#http.server:listen}
+
+Initializes the server socket and if required, resolves DNS. *server:listen* is required if [*localname*](#http.server:localname) is called before [*step*](#http.server:step) or [*loop*](#http.server:loop). On error, returns `nil`, an error message and an error number.
 
 
 ### `server:localname()` <!-- --> {#http.server:localname}
 
+Returns the connection information for the local socket. Returns address family, IP address and port for an external socket. For Unix domain sockets, the function returns AF_UNIX and the path. If the connection object is not connected, returns AF_UNSPEC (0). On error, returns `nil` an error message and an error number.
+
 
 ### `server:pause()` <!-- --> {#http.server:pause}
 
-Cause the server loop to stop processing new clients until [`:resume`](#http.server:resume) is called.
+Cause the server loop to stop processing new clients until [*resume*](#http.server:resume) is called. Existing client connections will run until closed. 
 
 
 ### `server:resume()` <!-- --> {#http.server:resume}
 
+Resumes a [*paused*](#http.server:pause) `server` and processes new client requests. 
+
 
 ### `server:close()` <!-- --> {#http.server:close}
+
+Shutdown the server and close the socket. A closed server cannot be reused.
 
 
 ### `server:pollfd()` <!-- --> {#http.server:pollfd}
 
+Returns a file descriptor (as an integer) or `nil`. The file descriptor can be passed to a system API like select or kqueue to wait on anything this server object wants to do. [*pollfd*] is used for integrating with other main loops, and should be used in combination with [*events*](#http.server:events) and [*timeout*](#http.server:timeout). 
+
 
 ### `server:events()` <!-- --> {#http.server:events}
+
+Returns a string representing the poll-mask that should be used to poll the object. If the object polls on `POLLIN`, *events* will return `"r"`. If the object polls on `POLLOUT` *events* returns `"w"`
+
+Note that the system may  also return `POLLIN|POLLOUT` as `"rw"` and a telent service may use `'rp'` for `POLLIN|POLLPRI`. These features are not commonly implemented in TCP communications. 
 
 
 ### `server:timeout()` <!-- --> {#http.server:timeout}
 
+Returns a number or `nil` that represents a timeout in seconds.
+
 
 ### `server:empty()` <!-- --> {#http.server:empty}
+
+Returns `true` if the master socket and all client connection have been closed, `false` otherwise.
 
 
 ### `server:step()` <!-- --> {#http.server:step}
 
+Initiates a single response/request. This function can be used for fine control over the response processing. However, [*server:loop()*](#http.server:loop) is the recommended way to run the server for most applications. Returns `nil`, an error and an error message on failure. 
+
 
 ### `server:loop()` <!-- --> {#http.server:loop}
 
+Run the server as a blocking loop. The server will continue to listen and accept client requests until either [*pause*](#http.server:pause) or [*close*](#http.server:close) is called, or an error is experienced. If this function takes advantange of cqueues stacking and when called from within a cqueue, the server will not block the main Lua application thread. 
+
 
 ### `server:add_socket(socket)` <!-- --> {#http.server:add_socket}
+
+Add a new connection socket to the server for processing. The server will use the current `onstream` request handler and all `options` currently specified through the [*server.listen(options)*](#http.server.listen) constructor. `add_socket` can be used to process connection sockets obtained from an external source such as:
+
+  - Another cqueues thread with some other master socket.
+  - From inetd for start on demand daemons.
+  - A Unix socket with `SCM_RIGHTS`.
 
 
 ## http.socks
@@ -1389,16 +1464,14 @@ Implements a subset of the SOCKS proxy protocol.
 
 ### `connect(uri)` <!-- --> {#http.socks.connect}
 
-  - `uri` is a string with the address of the SOCKS server. A scheme of `"socks5"` will resolve hosts locally, a scheme of `"socks5h"` will resolve hosts on the SOCKS server. If the URI has a userinfo component it will be sent to the SOCKS server as a username and password.
+`uri` is a string with the address of the SOCKS server. A scheme of `"socks5"` will resolve hosts locally, a scheme of `"socks5h"` will resolve hosts on the SOCKS server. If the URI has a userinfo component it will be sent to the SOCKS server as a username and password.
 
 Returns a *http.socks* object.
 
 
 ### `fdopen(socket)` <!-- --> {#http.socks.fdopen}
 
-  - `socket` should be a cqueues socket object
-
-Returns a *http.socks* object.
+This function takes an existing cqueues.socket as a parameter and returns a *http.socks* object with `socket` as it's base.
 
 
 ### `socks.needs_resolve` <!-- --> {#http.socks.needs_resolve}
@@ -1420,8 +1493,7 @@ Add username + password authorisation to the set of allowed authorisation method
 
 Complete the SOCKS connection.
 
-  - `host` (required) a string to pass to the SOCKS server as the host to connect to. Will be resolved locally if [`.needs_resolve`](#http.socks.needs_resolve) is `true`
-  - `port` (required) a number to pass to the SOCKS server as the port to connect to
+Negotiates a socks connection. `host` is a required string passed to the SOCKS server as the host address. The address will be resolved locally if [`.needs_resolve`](#http.socks.needs_resolve) is `true`. `port` is a required number to pass to the SOCKS server as the connection port.
 
 On error, returns `nil` an error message and an error number.
 
@@ -1668,19 +1740,16 @@ Currently either [`"lua-zlib"`](https://github.com/brimworks/lua-zlib) or [`"lzl
 
 ### `inflate()` <!-- --> {#http.zlib.inflate}
 
-Returns a function that inflates (uncompresses) a zlib stream.
+Returns a closure that inflates (uncompresses) a zlib stream.
 
-The function takes a string of compressed data and an end of stream flag,
-it returns the uncompressed data as a string.
-It will throw an error if the stream is invalid
+The closure takes a string of compressed data and an end of stream flag (`boolean`) as parameters and returns the inflated output as a string. To improve performance across multiple calls, maintain the reference to the function and send `end_of_stream=false`. The function will throw an error if the input is invalid. See the zlib example a the end of this chapter.
 
 
 ### `deflate()` <!-- --> {#http.zlib.deflate}
 
-Returns a function that deflates (compresses) a zlib stream.
+Returns a closure that deflates (compresses) a zlib stream. 
 
-The function takes a string of uncompressed data and an end of stream flag,
-it returns the compressed data as a string.
+The closure takes a string of uncompressed data and an end of stream flag (`boolean`) as parameters and returns the deflated output as a string. To improve performance across multiple calls, maintain the reference to the function and send `end_of_stream=false`. The function will throw an error if the input is invalid. See the zlib example a the end of this chapter.
 
 
 ### Example {#http.zlib-example}
