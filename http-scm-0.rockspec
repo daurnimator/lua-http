@@ -4,7 +4,7 @@ version = "scm-0"
 description = {
 	summary = "HTTP library for Lua";
 	homepage = "https://github.com/daurnimator/lua-http";
-	license = "MIT/X11";
+	license = "MIT";
 }
 
 source = {
