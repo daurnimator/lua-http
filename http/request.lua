@@ -327,6 +327,11 @@ function request_methods:set_body(body)
 	return true
 end
 
+local non_final_status = {
+	["100"] = true;
+	["102"] = true;
+}
+
 function request_methods:go(timeout)
 	local deadline = timeout and (monotime()+timeout)
 
@@ -542,7 +547,7 @@ function request_methods:go(timeout)
 			end
 		end
 	end
-	if not headers or headers:get(":status") == "100" then
+	if not headers or non_final_status[headers:get(":status")] then
 		repeat -- Skip through 100-continue headers
 			local err, errno
 			headers, err, errno = stream:get_headers(deadline and (deadline-monotime()))
@@ -550,7 +555,7 @@ function request_methods:go(timeout)
 				stream:shutdown()
 				return nil, err, errno
 			end
-		until headers:get(":status") ~= "100"
+		until not non_final_status[headers:get(":status")]
 	end
 
 	-- RFC 6797 Section 8.1
