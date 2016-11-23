@@ -698,7 +698,7 @@ local function new_from_stream(stream, headers)
 	key = trim(key)
 
 	if headers:get("sec-websocket-version") ~= "13" then
-		return nil, "unsupported sec-websocket-version"
+		return nil, "unsupported sec-websocket-version", ce.EINVAL
 	end
 
 	local protocols_available
