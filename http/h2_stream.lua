@@ -552,7 +552,9 @@ function stream_methods:write_rst_stream(err_code, timeout)
 	local payload = spack(">I4", err_code)
 	local ok, err, errno = self:write_http2_frame(0x3, flags, payload, timeout)
 	if not ok then return nil, err, errno end
-	self:set_state("closed")
+	if self.state ~= "closed" then
+		self:set_state("closed")
+	end
 	self:shutdown()
 	return ok
 end
