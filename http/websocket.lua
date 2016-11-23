@@ -663,6 +663,11 @@ local function new_from_stream(stream, headers)
 		return nil, "websockets only supported with HTTP 1.x", ce.EINVAL
 	end
 
+	--[[ RFC 7230: A server MUST ignore an Upgrade header field that is
+	received in an HTTP/1.0 request]]
+	if stream.peer_version == 1.0 then
+		return nil, "upgrade headers MUST be ignored in HTTP 1.0", ce.EINVAL
+	end
 	local upgrade = headers:get("upgrade")
 	if not upgrade or upgrade:lower() ~= "websocket" then
 		return nil, "upgrade header not websocket", ce.EINVAL
