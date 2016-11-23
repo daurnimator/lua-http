@@ -691,10 +691,11 @@ local function new_from_stream(stream, headers)
 		end
 	end
 
-	local key = trim(headers:get("sec-websocket-key"))
+	local key = headers:get("sec-websocket-key")
 	if not key then
 		return nil, "missing sec-websocket-key", ce.EINVAL
 	end
+	key = trim(key)
 
 	if headers:get("sec-websocket-version") ~= "13" then
 		return nil, "unsupported sec-websocket-version"
