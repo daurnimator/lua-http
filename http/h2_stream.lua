@@ -975,7 +975,7 @@ function stream_methods:get_headers(timeout)
 		if self.state == "closed" then
 			return nil, self.rst_stream_error
 		end
-		local which = cqueues.poll(self.connection, self.recv_headers_cond, timeout)
+		local which = cqueues.poll(self.recv_headers_cond, self.connection, timeout)
 		if which == self.connection then
 			local ok, err, errno = self.connection:step(0)
 			if not ok then
@@ -996,7 +996,7 @@ function stream_methods:get_next_chunk(timeout)
 		if self.state == "closed" or self.state == "half closed (remote)" then
 			return nil, self.rst_stream_error
 		end
-		local which = cqueues.poll(self.connection, self.chunk_cond, timeout)
+		local which = cqueues.poll(self.chunk_cond, self.connection, timeout)
 		if which == self.connection then
 			local ok, err, errno = self.connection:step(0)
 			if not ok then
@@ -1104,7 +1104,7 @@ function stream_methods:write_chunk(payload, end_stream, timeout)
 	local sent = 0
 	while true do
 		while self.peer_flow_credits == 0 do
-			local which = cqueues.poll(self.connection, self.peer_flow_credits_increase, timeout)
+			local which = cqueues.poll(self.peer_flow_credits_increase, self.connection, timeout)
 			if which == self.connection then
 				local ok, err, errno = self.connection:step(0)
 				if not ok then
@@ -1116,7 +1116,7 @@ function stream_methods:write_chunk(payload, end_stream, timeout)
 			timeout = deadline and (deadline-monotime())
 		end
 		while self.connection.peer_flow_credits == 0 do
-			local which = cqueues.poll(self.connection, self.connection.peer_flow_credits_increase, timeout)
+			local which = cqueues.poll(self.connection.peer_flow_credits_increase, self.connection, timeout)
 			if which == self.connection then
 				local ok, err, errno = self.connection:step(0)
 				if not ok then
