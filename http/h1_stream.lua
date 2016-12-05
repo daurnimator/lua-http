@@ -44,7 +44,9 @@ local function has_any(list, val, ...)
 	end
 end
 
-local stream_methods = {}
+local stream_methods = {
+	use_zlib = has_zlib;
+}
 for k,v in pairs(stream_common.methods) do
 	stream_methods[k] = v
 end
@@ -352,7 +354,7 @@ function stream_methods:read_headers(timeout)
 		no_body = false
 		self.body_read_type = "close"
 	end
-	if has_zlib and self.type == "server" and self.state == "open" and not is_trailers and headers:has("te") then
+	if self.use_zlib and self.type == "server" and self.state == "open" and not is_trailers and headers:has("te") then
 		local te = TE:match(headers:get_comma_separated("te"))
 		for _, v in ipairs(te) do
 			local tcoding = v[1]
@@ -614,7 +616,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		if self.close_when_done and not has(connection_header, "close") then
 			table.insert(connection_header, "close")
 		end
-		if has_zlib then
+		if self.use_zlib then
 			if self.type == "client" then
 				-- If we support zlib; add a "te" header indicating we support the gzip transfer-encoding
 				add_te_gzip = true
