@@ -161,6 +161,8 @@ function stream_methods:set_state(new)
 	end
 end
 
+local bad_request_headers = new_headers()
+bad_request_headers:append(":status", "400")
 local server_error_headers = new_headers()
 server_error_headers:append(":status", "503")
 function stream_methods:shutdown()
@@ -171,8 +173,14 @@ function stream_methods:shutdown()
 			assert(self.connection.pipeline:peek() == self)
 		end
 		if not self.body_write_type then
-			-- Can send server error response
-			self:write_headers(server_error_headers, true)
+			-- Can send an automatic error response
+			local error_headers
+			if self.connection.socket and self.connection.socket:error("r") == ce.EPROTO then
+				error_headers = bad_request_headers
+			else
+				error_headers = server_error_headers
+			end
+			self:write_headers(error_headers, true)
 		end
 	elseif self.state == "half closed (local)" then
 		-- we'd like to finishing reading any remaining response so that we get out of the way
