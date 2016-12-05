@@ -453,7 +453,9 @@ Asserts if `new` is not a valid value.
 
 ### `h1_stream:read_headers(timeout)` <!-- --> {#http.h1_stream:read_headers}
 
-Returns a table containing the request line and all HTTP headers as key value pairs. 
+Reads and returns a table containing the request line and all HTTP headers as key value pairs.
+
+This function should rarely be used, you're probably looking for [`:get_headers()`](#stream:get_headers).
 
 
 ## http.h2_connection
