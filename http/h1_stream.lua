@@ -835,6 +835,8 @@ function stream_methods:write_chunk(chunk, end_stream, timeout)
 		error("cannot write chunk when stream is " .. self.state)
 	elseif self.state == "closed" or self.state == "half closed (local)" or self.connection.socket == nil then
 		return nil, ce.strerror(ce.EPIPE), ce.EPIPE
+	elseif self.body_write_type == nil then
+		error("cannot write body before headers")
 	end
 	if self.type == "client" then
 		assert(self.connection.req_locked == self)
