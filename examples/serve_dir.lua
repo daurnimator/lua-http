@@ -204,7 +204,7 @@ local function reply(myserver, stream) -- luacheck: ignore 212
 	end
 end
 
-local myserver = http_server.listen {
+local myserver = assert(http_server.listen {
 	host = "localhost";
 	port = port;
 	max_concurrent = 100;
@@ -216,7 +216,7 @@ local myserver = http_server.listen {
 		end
 		assert(io.stderr:write(msg, "\n"))
 	end;
-}
+})
 
 -- Manually call :listen() so that we are bound before calling :localname()
 assert(myserver:listen())

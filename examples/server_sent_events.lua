@@ -11,7 +11,7 @@ local cqueues = require "cqueues"
 local http_server = require "http.server"
 local http_headers = require "http.headers"
 
-local myserver = http_server.listen {
+local myserver = assert(http_server.listen {
 	host = "localhost";
 	port = port;
 	onstream = function(myserver, stream) -- luacheck: ignore 212
@@ -72,7 +72,7 @@ local myserver = http_server.listen {
 		end
 		assert(io.stderr:write(msg, "\n"))
 	end;
-}
+})
 
 -- Manually call :listen() so that we are bound before calling :localname()
 assert(myserver:listen())
