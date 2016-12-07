@@ -182,7 +182,8 @@ function stream_methods:shutdown()
 			end
 			self:write_headers(error_headers, true)
 		end
-	elseif self.state == "half closed (local)" then
+	end
+	if self.state == "half closed (local)" then
 		-- we'd like to finishing reading any remaining response so that we get out of the way
 		local start = self.stats_recv
 		repeat
