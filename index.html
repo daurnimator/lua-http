@@ -715,7 +715,8 @@ defaults to <code>true</code>.</p>
 </section>
 <section id="http.h1_stream:read_headers" class="level3">
 <h3><code>h1_stream:read_headers(timeout)</code> <!-- --></h3>
-<p>Returns a table containing the request line and all HTTP headers as key value pairs.</p>
+<p>Reads and returns a table containing the request line and all HTTP headers as key value pairs.</p>
+<p>This function should rarely be used, you're probably looking for <a href="#stream:get_headers"><code>:get_headers()</code></a>.</p>
 </section>
 </section>
 <section id="http.h2_connection" class="level2">
@@ -1618,5 +1619,38 @@ cq:wrap<span class="ot">(</span><span class="kw">function</span><span class="ot"
 </ol>
 </section>
 </main>
+<style type="text/css">
+li.collapsible {
+  color: #212121;
+  cursor: pointer;
+  list-style-type: none;
+}
+li.collapsible:before {
+  margin-left: -1rem; /* undo ul's padding-left */
+  width: 1rem;
+  display: inline-block;
+  content: '- ';
+}
+li.collapsible[state="collapsed"]:before {
+  content: '+ ';
+}
+li.collapsible[state="collapsed"] > ul {
+  display: none;
+}
+</style>
+<script type="text/javascript">
+  document.querySelectorAll('nav > ul > li > ul > li').forEach(function(element) {
+    element.className = 'collapsible';
+    element.setAttribute('state', 'collapsed');
+    element.onclick = function(event) {
+      if (event.toElement != this) return;
+      if (this.getAttribute('state') == 'collapsed') {
+        this.setAttribute('state', void 0);
+      } else {
+        this.setAttribute('state', 'collapsed');
+      }
+    }
+  });
+</script>
 </body>
 </html>
