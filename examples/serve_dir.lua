@@ -79,7 +79,7 @@ local function reply(myserver, stream) -- luacheck: ignore 212
 	-- Log request to stdout
 	assert(io.stdout:write(string.format('[%s] "%s %s HTTP/%g"  "%s" "%s"\n',
 		os.date("%d/%b/%Y:%H:%M:%S %z"),
-		req_headers:get(":method") or "",
+		req_method or "",
 		req_headers:get(":path") or "",
 		stream.connection.version,
 		req_headers:get("referer") or "-",
