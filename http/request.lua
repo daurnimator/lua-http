@@ -327,10 +327,9 @@ function request_methods:set_body(body)
 	return true
 end
 
-local non_final_status = {
-	["100"] = true;
-	["102"] = true;
-}
+local function non_final_status(status)
+	return status:sub(1, 1) == "1" and status ~= "101"
+end
 
 function request_methods:go(timeout)
 	local deadline = timeout and (monotime()+timeout)
@@ -547,15 +546,17 @@ function request_methods:go(timeout)
 			end
 		end
 	end
-	if not headers or non_final_status[headers:get(":status")] then
-		repeat -- Skip through 100-continue headers
+	if not headers or non_final_status(headers:get(":status")) then
+		-- Skip through 1xx informational headers.
+		-- From RFC 7231 Section 6.2: "A user agent MAY ignore unexpected 1xx responses"
+		repeat
 			local err, errno
 			headers, err, errno = stream:get_headers(deadline and (deadline-monotime()))
 			if headers == nil then
 				stream:shutdown()
 				return nil, err, errno
 			end
-		until not non_final_status[headers:get(":status")]
+		until not non_final_status(headers:get(":status"))
 	end
 
 	-- RFC 6797 Section 8.1
