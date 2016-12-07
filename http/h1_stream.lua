@@ -468,10 +468,10 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 			error("cannot write headers when stream is idle")
 		end
 		status_code = headers:get(":status")
-		-- RFC 2616 Section 8.2.3:
-		-- An origin server ... MUST NOT send a 100 (Continue) response if such a request comes from an HTTP/1.0 (or earlier) client
-		if status_code == "100" and self.peer_version < 1.1 then
-			return error("Status code 100 (continue) MUST NOT be sent in reply to a request from a HTTP/1.0 client")
+		-- RFC 7231 Section 6.2:
+		-- Since HTTP/1.0 did not define any 1xx status codes, a server MUST NOT send a 1xx response to an HTTP/1.0 client.
+		if status_code and status_code:sub(1,1) == "1" and self.peer_version < 1.1 then
+			error("a server MUST NOT send a 1xx response to an HTTP/1.0 client")
 		end
 		-- Make sure we're at the front of the pipeline
 		if self.connection.pipeline:peek() ~= self then
