@@ -270,6 +270,7 @@ end
 Takes a table of options:
   - `.cq` (optional): A cqueues controller to use
   - `.socket`: A cqueues socket object
+  - `.onstream`: function to call back for each stream read
   - `.onerror`: function that will be called when an error occurs (default: do nothing)
   - `.tls`: `nil`: allow both tls and non-tls connections
   -         `true`: allows tls connections only
