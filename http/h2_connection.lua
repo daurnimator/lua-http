@@ -233,7 +233,7 @@ function connection_main_loop(self)
 			-- flag might be `nil` on EOF
 			ok, connection_error = nil, flag
 		elseif typ ~= 0x4 then -- XXX: Should this be more strict? e.g. what if it's an ACK?
-			ok, connection_error = false, h2_error.errors.PROTOCOL_ERROR:new_traceback("A SETTINGS frame MUST be the first frame sent in a HTTP/2 connection")
+			ok, connection_error = false, h2_error.errors.PROTOCOL_ERROR:new_traceback("A SETTINGS frame MUST be the first frame sent in an HTTP/2 connection")
 		else
 			ok, connection_error = handle_frame(self, typ, flag, streamid, payload)
 		end

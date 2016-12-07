@@ -366,7 +366,7 @@ function request_methods:go(timeout)
 
 	local proxy = self.proxy
 	if proxy == nil and self.proxies then
-		assert(getmetatable(self.proxies) == http_proxies.mt, "proxies property should be a http.proxies object")
+		assert(getmetatable(self.proxies) == http_proxies.mt, "proxies property should be an http.proxies object")
 		local scheme = tls and "https" or "http" -- rather than :scheme
 		proxy = self.proxies:choose(scheme, host)
 	end
@@ -420,7 +420,7 @@ function request_methods:go(timeout)
 					error("cannot use HTTP Proxy with CONNECT method")
 				end
 				if proxy.path ~= nil and proxy.path ~= "" then
-					error("a HTTP proxy cannot have a path component")
+					error("an HTTP proxy cannot have a path component")
 				end
 				-- TODO: Check if :path already has authority?
 				local old_url = self:to_uri(false)

@@ -852,7 +852,7 @@ describe("http.request module", function()
 			cq:wrap(function()
 				-- new store so we don't test with the default one (which will outlive tests)
 				local hsts_store = require "http.hsts".new_store()
-				do -- first a http request that *shouldn't* fill in the store
+				do -- first an http request that *shouldn't* fill in the store
 					local req = request.new_from_uri {
 						scheme = "http";
 						host = "localhost";
@@ -867,7 +867,7 @@ describe("http.request module", function()
 					assert.falsy(hsts_store:check("localhost"))
 					stream:shutdown()
 				end
-				do -- now a https request that *will* fill in the store
+				do -- now an https request that *will* fill in the store
 					local req = request.new_from_uri {
 						scheme = "https";
 						host = "localhost";
