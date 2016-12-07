@@ -86,7 +86,8 @@ describe("http.client module", function()
 			return http_h1_connection.new(s, "server", 1.1)
 		end)
 	end)
-	it("works with an https/2 server", function()
+	-- pending as older openssl (used by e.g. travis-ci) doesn't have any non-disallowed ciphers
+	pending("works with an https/2 server", function()
 		local client_ctx = http_tls.new_client_context()
 		client_ctx:setVerify(openssl_ctx.VERIFY_NONE)
 		test_pair({
