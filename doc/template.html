@@ -67,37 +67,38 @@ $body$
 $for(include-after)$
 $include-after$
 $endfor$
+<style type="text/css">
+li.collapsible {
+  color: #212121;
+  cursor: pointer;
+  list-style-type: none;
+}
+li.collapsible:before {
+  margin-left: -1rem; /* undo ul's padding-left */
+  width: 1rem;
+  display: inline-block;
+  content: '- ';
+}
+li.collapsible[state="collapsed"]:before {
+  content: '+ ';
+}
+li.collapsible[state="collapsed"] > ul {
+  display: none;
+}
+</style>
 <script type="text/javascript">
-  (function() {
-    // write out a basic 'dropdown_link' reference element
-    var dropdown_link = document.createElement('a');
-    dropdown_link.className = 'dropdown_link';
-    dropdown_link.innerHTML = '<b>+</b>&nbsp;';
-    dropdown_link.style.color = "#212121";
-    dropdown_link.style.cursor = 'pointer';
-    document.querySelectorAll('nav ul li > ul > li').forEach(
-			function(element) {
-      var dropdown_link_copy = dropdown_link.cloneNode(true);
-      var list = element.querySelector('ul');
-      if (!list)
-        return;
-      // add a clone of the node so the correct element is toggled
-      list.style.display = 'none';
-      element.setAttribute('state', 'up');
-      dropdown_link_copy.onclick = function() {
-        if (element.getAttribute('state') == 'down') {
-          element.setAttribute('state', 'up');
-          list.style.display = 'none';
-          dropdown_link_copy.querySelector('b').innerHTML = '+';
-        } else {
-          element.setAttribute('state', 'down');
-          list.style.display = 'block';
-          dropdown_link_copy.querySelector('b').innerHTML = '-';
-        }
+  document.querySelectorAll('nav > ul > li > ul > li').forEach(function(element) {
+    element.className = 'collapsible';
+    element.setAttribute('state', 'collapsed');
+    element.onclick = function(event) {
+      if (event.toElement != this) return;
+      if (this.getAttribute('state') == 'collapsed') {
+        this.setAttribute('state', void 0);
+      } else {
+        this.setAttribute('state', 'collapsed');
       }
-      element.insertBefore(dropdown_link_copy, element.querySelector('a'));
-    });
-  })();
+    }
+  });
 </script>
 </body>
 </html>
