@@ -403,7 +403,7 @@ end
 -- Actually wait for and *do* the binding
 -- Don't *need* to call this, as if not it will be done lazily
 function server_methods:listen(timeout)
-	return self.socket:listen(timeout)
+	return ca.fileresult(self.socket:listen(timeout))
 end
 
 function server_methods:localname()
