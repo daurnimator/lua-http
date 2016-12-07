@@ -97,6 +97,13 @@ function connection_methods:clearerr(...)
 	return self.socket:clearerr(...)
 end
 
+function connection_methods:error(...)
+	if self.socket == nil then
+		return nil
+	end
+	return self.socket:error(...)
+end
+
 function connection_methods:take_socket()
 	local s = self.socket
 	if s == nil then

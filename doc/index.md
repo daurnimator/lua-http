@@ -328,6 +328,11 @@ Specifies the HTTP version used for the connection handshake. Valid values are:
 Clears errors to allow for further read or write operations on the connection. Returns the error number of existing errors. This function is used to recover from known errors.
 
 
+### `h1_connection:error(...)` <!-- --> {#http.h1_connection:error}
+
+Returns the error number of existing errors.
+
+
 ### `h1_connection:take_socket()` <!-- --> {#http.h1_connection:take_socket}
 
 Used to hand the reference of the connection socket to another object. Resets the socket to defaults and returns the single existing reference of the socket to the calling routine. This function can be used for connection upgrades such as upgrading from HTTP 1 to a WebSocket.
