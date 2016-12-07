@@ -1,5 +1,6 @@
-local cs = require "cqueues.socket"
+local ca = require "cqueues.auxlib"
 local ce = require "cqueues.errno"
+local cs = require "cqueues.socket"
 local http_tls = require "http.tls"
 local new_h1_connection = require "http.h1_connection".new
 local new_h2_connection = require "http.h2_connection".new
@@ -76,8 +77,7 @@ local function negotiate(s, options, timeout)
 end
 
 local function connect(options, timeout)
-	-- TODO: https://github.com/wahern/cqueues/issues/124
-	local s, errno = cs.connect {
+	local s, err, errno = ca.fileresult(cs.connect {
 		family = options.family;
 		host = options.host;
 		port = options.port;
@@ -85,9 +85,9 @@ local function connect(options, timeout)
 		sendname = options.sendname;
 		v6only = options.v6only;
 		nodelay = true;
-	}
+	})
 	if s == nil then
-		return nil, ce.strerror(errno), errno
+		return nil, err, errno
 	end
 	return negotiate(s, options, timeout)
 end

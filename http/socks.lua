@@ -11,6 +11,7 @@ URI format is taken from curl:
 
 local cqueues = require "cqueues"
 local monotime = cqueues.monotime
+local ca = require "cqueues.auxlib"
 local ce = require "cqueues.errno"
 local cs = require "cqueues.socket"
 local spack = string.pack or require "compat53.string".pack
@@ -154,16 +155,15 @@ function socks_methods:negotiate(host, port, timeout)
 
 	if self.socket == nil then
 		assert(self.host)
-		-- TODO: https://github.com/wahern/cqueues/issues/124
-		local socket, errno = cs.connect {
+		local socket, err, errno = ca.fileresult(cs.connect {
 			family = self.family;
 			host = self.host;
 			port = self.port;
 			sendname = host; -- Want to specify later; see https://github.com/wahern/cqueues/issues/137
 			nodelay = true;
-		}
+		})
 		if socket == nil then
-			return nil, ce.strerror(errno), errno
+			return nil, err, errno
 		end
 		socket:onerror(onerror)
 		self.socket = socket

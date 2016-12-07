@@ -1,8 +1,9 @@
 local cqueues = require "cqueues"
 local monotime = cqueues.monotime
-local cs = require "cqueues.socket"
+local ca = require "cqueues.auxlib"
 local cc = require "cqueues.condition"
 local ce = require "cqueues.errno"
+local cs = require "cqueues.socket"
 local h1_connection = require "http.h1_connection"
 local h2_connection = require "http.h2_connection"
 local http_tls = require "http.tls"
@@ -355,7 +356,7 @@ local function listen(tbl)
 			error("Custom OpenSSL context required when using a UNIX domain socket")
 		end
 	end
-	local s, errno = cs.listen {
+	local s, err, errno = ca.fileresult(cs.listen {
 		family = tbl.family;
 		host = host;
 		port = port;
@@ -366,9 +367,9 @@ local function listen(tbl)
 		reuseaddr = tbl.reuseaddr;
 		reuseport = tbl.reuseport;
 		v6only = tbl.v6only;
-	}
+	})
 	if not s then
-		return nil, ce.strerror(errno), errno
+		return nil, err, errno
 	end
 	return new_server {
 		cq = tbl.cq;
