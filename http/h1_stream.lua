@@ -100,21 +100,22 @@ function stream_methods:set_state(new)
 	if new_order <= valid_states[old] then
 		error("invalid state progression ('"..old.."' to '"..new.."')")
 	end
-	local have_lock, want_no_lock, notify_pipeline
+	local have_lock, want_no_lock
+	local blocking_pipeline, notify_pipeline
 	if self.type == "server" then
 		-- If we have just finished reading the request then remove our read lock
 		have_lock = old == "idle" or old == "open" or old == "half closed (local)"
 		want_no_lock = new == "half closed (remote)" or new == "closed"
 		-- If we have just finished writing the response
-		notify_pipeline = (old == "idle" or old == "open" or old == "half closed (remote)")
-			and (new == "half closed (local)" or new == "closed")
+		blocking_pipeline = old == "idle" or old == "open" or old == "half closed (remote)"
+		notify_pipeline = blocking_pipeline and (new == "half closed (local)" or new == "closed")
 	else -- client
 		-- If we have just finished writing the request then remove our write lock
 		have_lock = old == "open" or old == "half closed (remote)"
 		want_no_lock = new == "half closed (local)" or new == "closed"
 		-- If we have just finished reading the response;
-		notify_pipeline = (old == "idle" or old == "open" or old == "half closed (local)")
-			and (new == "half closed (remote)" or new == "closed")
+		blocking_pipeline = old == "idle" or old == "open" or old == "half closed (local)"
+		notify_pipeline = blocking_pipeline and (new == "half closed (remote)" or new == "closed")
 	end
 	self.state = new
 	if have_lock then
@@ -124,12 +125,18 @@ function stream_methods:set_state(new)
 			self.connection.req_cond:signal(1)
 		end
 	end
+	local pipeline_empty
 	if notify_pipeline then
 		assert(self.connection.pipeline:pop() == self)
 		local next_stream = self.connection.pipeline:peek()
 		if next_stream then
+			pipeline_empty = false
 			next_stream.pipeline_cond:signal()
+		else
+			pipeline_empty = true
 		end
+	else
+		pipeline_empty = not blocking_pipeline
 	end
 	if self.close_when_done then
 		if new == "half closed (remote)" then
@@ -142,6 +149,9 @@ function stream_methods:set_state(new)
 		elseif new == "closed" then
 			self.connection:shutdown()
 		end
+	end
+	if want_no_lock and pipeline_empty then
+		self.connection:onidle()(self.connection)
 	end
 end
 

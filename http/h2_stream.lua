@@ -88,6 +88,15 @@ function stream_methods:set_state(new)
 		error("invalid state progression ('"..old.."' to '"..new.."')")
 	end
 	self.state = new
+	if old == "idle" and new ~= "closed" then
+		self.connection.n_active_streams = self.connection.n_active_streams + 1
+	elseif old ~= "idle" and new == "closed" then
+		local n_active_streams = self.connection.n_active_streams - 1
+		self.connection.n_active_streams = n_active_streams
+		if n_active_streams == 0 then
+			self.connection:onidle()(self.connection)
+		end
+	end
 end
 
 function stream_methods:write_http2_frame(typ, flags, payload, timeout)

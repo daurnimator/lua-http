@@ -126,6 +126,8 @@ local function new_connection(socket, conn_type, settings)
 		version = 2; -- for compat with h1_connection
 
 		streams = setmetatable({}, {__mode="kv"});
+		n_active_streams = 0;
+		onidle_ = nil;
 		stream0 = nil; -- store separately with a strong reference
 		need_continuation = nil; -- stream
 		cq = cq;
@@ -162,6 +164,17 @@ local function new_connection(socket, conn_type, settings)
 	-- note that the buffer is *not* flushed right now
 
 	return self
+end
+
+function connection_methods:onidle_() -- luacheck: ignore 212
+end
+
+function connection_methods:onidle(...)
+	local old_handler = self.onidle_
+	if select("#", ...) > 0 then
+		self.onidle_ = ...
+	end
+	return old_handler
 end
 
 function connection_methods:pollfd()

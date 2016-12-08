@@ -52,10 +52,24 @@ local function new_connection(socket, conn_type, version)
 		req_locked = nil;
 		-- signaled when unlocked
 		req_cond = cc.new();
+
+		-- A function that will be called if the connection becomes idle
+		onidle_ = nil;
 	}, connection_mt)
 	socket:setmode("b", "bf")
 	socket:onerror(onerror)
 	return self
+end
+
+function connection_methods:onidle_() -- luacheck: ignore 212
+end
+
+function connection_methods:onidle(...)
+	local old_handler = self.onidle_
+	if select("#", ...) > 0 then
+		self.onidle_ = ...
+	end
+	return old_handler
 end
 
 function connection_methods:connect(timeout)
