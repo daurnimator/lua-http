@@ -8,7 +8,9 @@ local h1_connection = require "http.h1_connection"
 local h2_connection = require "http.h2_connection"
 local http_tls = require "http.tls"
 local http_util = require "http.util"
+local openssl_bignum = require "openssl.bignum"
 local pkey = require "openssl.pkey"
+local openssl_rand = require "openssl.rand"
 local openssl_ssl = require "openssl.ssl"
 local openssl_ctx = require "openssl.ssl.context"
 local x509 = require "openssl.x509"
@@ -228,7 +230,7 @@ local function new_ctx(host, version)
 	end
 	local crt = x509.new()
 	-- serial needs to be unique or browsers will show uninformative error messages
-	crt:setSerial(os.time())
+	crt:setSerial(openssl_bignum.fromBinary(openssl_rand.bytes(16)))
 	-- use the host we're listening on as canonical name
 	local dn = name.new()
 	dn:add("CN", host)
