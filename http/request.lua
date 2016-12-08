@@ -501,6 +501,9 @@ function request_methods:go(timeout)
 				headers, err, errno = stream:get_headers(math.min(self.expect_100_timeout, deadline-monotime()))
 				if headers == nil and (errno ~= ce.ETIMEDOUT or monotime() > deadline) then
 					stream:shutdown()
+					if err == nil then
+						return nil, ce.strerror(ce.EPIPE), ce.EPIPE
+					end
 					return nil, err, errno
 				end
 			else
@@ -508,6 +511,9 @@ function request_methods:go(timeout)
 				headers, err, errno = stream:get_headers(self.expect_100_timeout)
 				if headers == nil and errno ~= ce.ETIMEDOUT then
 					stream:shutdown()
+					if err == nil then
+						return nil, ce.strerror(ce.EPIPE), ce.EPIPE
+					end
 					return nil, err, errno
 				end
 			end
@@ -554,6 +560,9 @@ function request_methods:go(timeout)
 			headers, err, errno = stream:get_headers(deadline and (deadline-monotime()))
 			if headers == nil then
 				stream:shutdown()
+				if err == nil then
+					return nil, ce.strerror(ce.EPIPE), ce.EPIPE
+				end
 				return nil, err, errno
 			end
 		until not non_final_status(headers:get(":status"))
