@@ -131,6 +131,7 @@ local function new_connection(socket, conn_type, settings)
 		stream0 = nil; -- store separately with a strong reference
 		need_continuation = nil; -- stream
 		cq = cq;
+		close_me = false; -- to indicate that :close() should be called after exiting the current :step()
 		highest_odd_stream = -1;
 		highest_even_stream = -2;
 		send_goaway_lowest = nil;
@@ -275,9 +276,12 @@ function connection_main_loop(self)
 end
 
 local function handle_step_return(self, step_ok, last_err, errno)
+	if self.close_me then
+		self:close()
+	end
 	if step_ok then
 		return true
-	else
+	elseif not self.close_me then
 		if not self.socket:eof("w") then
 			local code, message
 			if step_ok then
@@ -356,9 +360,14 @@ end
 
 function connection_methods:close()
 	local ok, err = self:shutdown()
-	cqueues.poll()
-	cqueues.poll()
-	self.socket:close()
+	if cqueues.running() == self.cq then
+		self.close_me = true
+		cqueues.poll()
+	else
+		cqueues.poll()
+		cqueues.poll()
+		self.socket:close()
+	end
 	return ok, err
 end
 
