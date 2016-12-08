@@ -5,48 +5,32 @@ local connection_common = require "http.connection_common"
 local onerror = connection_common.onerror
 local new_h1_connection = require "http.h1_connection".new
 local new_h2_connection = require "http.h2_connection".new
+local openssl_ssl = require "openssl.ssl"
 local openssl_ctx = require "openssl.ssl.context"
 
--- Create a shared 'default' TLS contexts
+-- Create a shared 'default' TLS context
 local default_ctx = http_tls.new_client_context()
-local default_h1_ctx
-local default_h11_ctx
-local default_h2_ctx = http_tls.new_client_context()
-if http_tls.has_alpn then
-	default_ctx:setAlpnProtos({"h2", "http/1.1"})
-
-	default_h1_ctx = http_tls.new_client_context()
-
-	default_h11_ctx = http_tls.new_client_context()
-	default_h11_ctx:setAlpnProtos({"http/1.1"})
-
-	default_h2_ctx:setAlpnProtos({"h2"})
-else
-	default_h1_ctx = default_ctx
-	default_h11_ctx = default_ctx
-end
-default_h2_ctx:setOptions(openssl_ctx.OP_NO_TLSv1 + openssl_ctx.OP_NO_TLSv1_1)
 
 local function negotiate(s, options, timeout)
 	s:onerror(onerror)
 	local tls = options.tls
 	local version = options.version
 	if tls then
-		local ctx = options.ctx
-		if ctx == nil then
+		local ctx = options.ctx or default_ctx
+		local ssl = openssl_ssl.new(ctx)
+		if http_tls.has_alpn then
 			if version == nil then
-				ctx = default_ctx
-			elseif version == 1 then
-				ctx = default_h1_ctx
+				ssl:setAlpnProtos({"h2", "http/1.1"})
 			elseif version == 1.1 then
-				ctx = default_h11_ctx
+				ssl:setAlpnProtos({"http/1.1"})
 			elseif version == 2 then
-				ctx = default_h2_ctx
-			else
-				error("Unknown HTTP version: " .. tostring(version))
+				ssl:setAlpnProtos({"h2"})
 			end
 		end
-		local ok, err, errno = s:starttls(ctx, timeout)
+		if version == 2 then
+			ssl:setOptions(openssl_ctx.OP_NO_TLSv1 + openssl_ctx.OP_NO_TLSv1_1)
+		end
+		local ok, err, errno = s:starttls(ssl, timeout)
 		if not ok then
 			return nil, err, errno
 		end
