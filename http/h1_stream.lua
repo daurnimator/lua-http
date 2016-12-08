@@ -100,63 +100,45 @@ function stream_methods:set_state(new)
 	if new_order <= valid_states[old] then
 		error("invalid state progression ('"..old.."' to '"..new.."')")
 	end
-	self.state = new
+	local remove_lock, notify_pipeline
 	if self.type == "server" then
-		-- If we have just finished reading the request
-		if (old == "idle" or old == "open" or old == "half closed (local)")
-			and (new == "half closed (remote)" or new == "closed") then
-			-- remove our read lock
-			assert(self.connection.req_locked == self)
-			self.connection.req_locked = nil
-			self.connection.req_cond:signal(1)
-		end
+		-- If we have just finished reading the request then remove our read lock
+		remove_lock = (old == "idle" or old == "open" or old == "half closed (local)")
+			and (new == "half closed (remote)" or new == "closed")
 		-- If we have just finished writing the response
-		if (old == "idle" or old == "open" or old == "half closed (remote)")
-			and (new == "half closed (local)" or new == "closed") then
-			-- remove ourselves from the write pipeline
-			assert(self.connection.pipeline:pop() == self)
-			local next_stream = self.connection.pipeline:peek()
-			if next_stream then
-				next_stream.pipeline_cond:signal()
-			end
-		end
-		if self.close_when_done then
-			if new == "half closed (remote)" then
-				self.connection:shutdown("r")
-			elseif new == "half closed (local)" then
-				self.connection:shutdown("w")
-			elseif new == "closed" then
-				self.connection:shutdown()
-			end
-		end
+		notify_pipeline = (old == "idle" or old == "open" or old == "half closed (remote)")
+			and (new == "half closed (local)" or new == "closed")
 	else -- client
-		-- If we have just finished writing the request
-		if (old == "open" or old == "half closed (remote)")
-			and (new == "half closed (local)" or new == "closed") then
-			-- remove our write lock
-			assert(self.connection.req_locked == self)
-			self.connection.req_locked = nil
-			self.connection.req_cond:signal(1)
-		end
+		-- If we have just finished writing the request then remove our write lock
+		remove_lock = (old == "open" or old == "half closed (remote)")
+			and (new == "half closed (local)" or new == "closed")
 		-- If we have just finished reading the response;
-		if (old == "idle" or old == "open" or old == "half closed (local)")
-			and (new == "half closed (remote)" or new == "closed") then
-			-- remove ourselves from the read pipeline
-			assert(self.connection.pipeline:pop() == self)
-			local next_stream = self.connection.pipeline:peek()
-			if next_stream then
-				next_stream.pipeline_cond:signal()
-			end
+		notify_pipeline = (old == "idle" or old == "open" or old == "half closed (local)")
+			and (new == "half closed (remote)" or new == "closed")
+	end
+	self.state = new
+	if remove_lock then
+		assert(self.connection.req_locked == self)
+		self.connection.req_locked = nil
+		self.connection.req_cond:signal(1)
+	end
+	if notify_pipeline then
+		assert(self.connection.pipeline:pop() == self)
+		local next_stream = self.connection.pipeline:peek()
+		if next_stream then
+			next_stream.pipeline_cond:signal()
 		end
-		if self.close_when_done then
-			if new == "half closed (remote)" then
-				self.connection:shutdown("r")
-			elseif new == "closed" then
-				self.connection:shutdown()
-			end
-			-- NOTE: Do not shutdown("w") the socket when going to
+	end
+	if self.close_when_done then
+		if new == "half closed (remote)" then
+			self.connection:shutdown("r")
+		elseif new == "half closed (local)" and self.type == "server" then
+			-- NOTE: Do not shutdown("w") the socket when a client moves to
 			-- "half closed (local)", many servers will close a connection
 			-- immediately if a client closes their write stream
+			self.connection:shutdown("w")
+		elseif new == "closed" then
+			self.connection:shutdown()
 		end
 	end
 end
