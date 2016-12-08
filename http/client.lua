@@ -7,6 +7,7 @@ local new_h1_connection = require "http.h1_connection".new
 local new_h2_connection = require "http.h2_connection".new
 local openssl_ssl = require "openssl.ssl"
 local openssl_ctx = require "openssl.ssl.context"
+local openssl_verify_param = require "openssl.x509.verify_param"
 
 local EOF = require "lpeg".P(-1)
 local IPv4address = require "lpeg_patterns.IPv4".IPv4address
@@ -23,11 +24,12 @@ local function negotiate(s, options, timeout)
 	if tls then
 		local ctx = options.ctx or default_ctx
 		local ssl = openssl_ssl.new(ctx)
+		local ip = options.host and IPaddress:match(options.host)
 		if options.sendname ~= nil then
 			if options.sendname then -- false indicates no sendname wanted
 				ssl:setHostName(options.sendname)
 			end
-		elseif options.host and not IPaddress:match(options.host) then
+		elseif options.host and not ip then
 			ssl:setHostName(options.host)
 		end
 		if http_tls.has_alpn then
@@ -41,6 +43,18 @@ local function negotiate(s, options, timeout)
 		end
 		if version == 2 then
 			ssl:setOptions(openssl_ctx.OP_NO_TLSv1 + openssl_ctx.OP_NO_TLSv1_1)
+		end
+		if options.host then
+			local params = openssl_verify_param.new()
+			if ip then
+				params:setIP(options.host)
+			else
+				params:setHost(options.host)
+			end
+			-- Allow user defined params to override
+			local old = ssl:getParam()
+			old:inherit(params)
+			ssl:setParam(old)
 		end
 		local ok, err, errno = s:starttls(ssl, timeout)
 		if not ok then
