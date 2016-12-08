@@ -100,27 +100,29 @@ function stream_methods:set_state(new)
 	if new_order <= valid_states[old] then
 		error("invalid state progression ('"..old.."' to '"..new.."')")
 	end
-	local remove_lock, notify_pipeline
+	local have_lock, want_no_lock, notify_pipeline
 	if self.type == "server" then
 		-- If we have just finished reading the request then remove our read lock
-		remove_lock = (old == "idle" or old == "open" or old == "half closed (local)")
-			and (new == "half closed (remote)" or new == "closed")
+		have_lock = old == "idle" or old == "open" or old == "half closed (local)"
+		want_no_lock = new == "half closed (remote)" or new == "closed"
 		-- If we have just finished writing the response
 		notify_pipeline = (old == "idle" or old == "open" or old == "half closed (remote)")
 			and (new == "half closed (local)" or new == "closed")
 	else -- client
 		-- If we have just finished writing the request then remove our write lock
-		remove_lock = (old == "open" or old == "half closed (remote)")
-			and (new == "half closed (local)" or new == "closed")
+		have_lock = old == "open" or old == "half closed (remote)"
+		want_no_lock = new == "half closed (local)" or new == "closed"
 		-- If we have just finished reading the response;
 		notify_pipeline = (old == "idle" or old == "open" or old == "half closed (local)")
 			and (new == "half closed (remote)" or new == "closed")
 	end
 	self.state = new
-	if remove_lock then
+	if have_lock then
 		assert(self.connection.req_locked == self)
-		self.connection.req_locked = nil
-		self.connection.req_cond:signal(1)
+		if want_no_lock then
+			self.connection.req_locked = nil
+			self.connection.req_cond:signal(1)
+		end
 	end
 	if notify_pipeline then
 		assert(self.connection.pipeline:pop() == self)
