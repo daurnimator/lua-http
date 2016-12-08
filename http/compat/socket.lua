@@ -172,8 +172,6 @@ function M.request(reqt, b)
 	end
 	local body, err = get_body(stream, deadline)
 	stream:shutdown()
-	-- XXX: Temporary fix for issue #55
-	stream.connection:close()
 	if not body then
 		return nil, err
 	end

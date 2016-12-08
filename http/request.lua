@@ -472,6 +472,8 @@ function request_methods:go(timeout)
 		if connection == nil then
 			return nil, err, errno
 		end
+		-- Close the connection (and free resources) when done
+		connection:onidle(connection.close)
 	end
 
 	local stream do
