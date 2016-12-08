@@ -158,7 +158,7 @@ end
 
 function chunk_methods:ack(no_window_update)
 	if self.acked then
-		error("already acked")
+		return
 	end
 	self.acked = true
 	local len = self.original_length
@@ -967,8 +967,8 @@ function stream_methods:shutdown()
 		end
 	end
 	local len = 0
-	while self.chunk_fifo:length() > 0 do
-		local chunk = self.chunk_fifo:pop()
+	for i=1, self.chunk_fifo:length() do
+		local chunk = self.chunk_fifo:peek(i)
 		if chunk ~= nil then
 			chunk:ack(true)
 			len = len + #chunk.data
