@@ -20,7 +20,17 @@ local altname = require "openssl.x509.altname"
 local hang_timeout = 0.03
 
 local function onerror(socket, op, why, lvl) -- luacheck: ignore 212
-	return string.format("%s: %s", op, ce.strerror(why)), why
+	local err = string.format("%s: %s", op, ce.strerror(why))
+	if op == "starttls" then
+		local ssl = socket:checktls()
+		if ssl and ssl.getVerifyResult then
+			local code, msg = ssl:getVerifyResult()
+			if code ~= 0 then
+				err = err .. ":" .. msg
+			end
+		end
+	end
+	return err, why
 end
 
 -- Sense for TLS or SSL client hello
