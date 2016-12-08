@@ -111,6 +111,8 @@ function M.request(reqt, b)
 					if not chunk then
 						if err == nil then
 							return nil
+						elseif errno == ce.EPIPE then
+							return nil, "closed"
 						elseif errno == ce.ETIMEDOUT then
 							return nil, "timeout"
 						else
@@ -150,7 +152,7 @@ function M.request(reqt, b)
 	end
 	local res_headers, stream, errno = req:go(deadline and deadline-monotime())
 	if not res_headers then
-		if errno == ce.EPIPE then
+		if errno == ce.EPIPE or stream == nil then
 			return nil, "closed"
 		elseif errno == ce.ETIMEDOUT then
 			return nil, "timeout"
