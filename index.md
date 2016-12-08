@@ -1130,6 +1130,8 @@ Complete the SOCKS connection.
   - `host` (required) a string to pass to the SOCKS server as the host to connect to. Will be resolved locally if [`.needs_resolve`](#http.socks.needs_resolve) is `true`
   - `port` (required) a number to pass to the SOCKS server as the port to connect to
 
+On error, returns `nil` an error message and an error number.
+
 
 ### `socks:close()` <!-- --> {#http.socks:close}
 
