@@ -1,6 +1,5 @@
 local openssl_ctx = require "openssl.ssl.context"
 local openssl_pkey = require "openssl.pkey"
-local openssl_store = require "openssl.x509.store"
 
 -- Detect if openssl was compiled with ALPN enabled
 local has_alpn = openssl_ctx.new().setAlpnSelect ~= nil
@@ -700,14 +699,8 @@ local function new_client_context()
 	ctx:setCipherList(intermediate_cipher_list)
 	ctx:setOptions(default_tls_options)
 	ctx:setEphemeralKey(openssl_pkey.new{ type = "EC", curve = "prime256v1" })
-	if ctx.getStore then
-		local store = ctx:getStore()
-		store:addDefaults()
-	else -- for luaossl < 20161124
-		local store = openssl_store.new()
-		store:add("/etc/ssl/certs/") -- take a guess at default location. will throw an error if it doesn't exist
-		ctx:setStore(store)
-	end
+	local store = ctx:getStore()
+	store:addDefaults()
 	ctx:setVerify(openssl_ctx.VERIFY_PEER)
 	return ctx
 end
