@@ -164,6 +164,11 @@ Creates a new [*stream*](#stream) on the connection. Use `:new_stream()` to init
 Returns the next peer initiated [*stream*](#stream) on the connection. This function can be used to yield and "listen" for incoming HTTP streams. 
 
 
+### `connection:onidle(new_handler)` <!-- --> {#http.connection:onidle}
+
+Provide a callback to get called when the connection becomes idle i.e. when there is no request in progress and no pipelined streams waiting. When called it will receive the `connection` as the first argument. Returns the previous handler.
+
+
 ## stream
 
 All stream types expose the following fields and functions.
