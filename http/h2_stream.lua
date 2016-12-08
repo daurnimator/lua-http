@@ -193,14 +193,6 @@ frame_handlers[0x0] = function(stream, flags, payload)
 		payload = payload:sub(2, -pad_len-1)
 	end
 
-	if end_stream then
-		if stream.state == "half closed (local)" then
-			stream:set_state("closed")
-		else
-			stream:set_state("half closed (remote)")
-		end
-	end
-
 	local chunk = new_chunk(stream, original_length, payload)
 	stream.chunk_fifo:push(chunk)
 	stream.stats_recv = stream.stats_recv + #payload
@@ -208,6 +200,14 @@ frame_handlers[0x0] = function(stream, flags, payload)
 		stream.chunk_fifo:push(nil)
 	end
 	stream.chunk_cond:signal()
+
+	if end_stream then
+		if stream.state == "half closed (local)" then
+			stream:set_state("closed")
+		else
+			stream:set_state("half closed (remote)")
+		end
+	end
 
 	return true
 end
@@ -421,27 +421,26 @@ frame_handlers[0x1] = function(stream, flags, payload)
 	end
 
 	stream.stats_recv_headers = stream.stats_recv_headers + 1
+	local validate_ok, validate_err = validate_headers(headers, stream.type ~= "client", stream.stats_recv_headers, stream.state == "half closed (remote)" or stream.state == "closed")
+	if not validate_ok then
+		return nil, validate_err
+	end
+	stream.recv_headers_fifo:push(headers)
+	stream.recv_headers_cond:signal()
 
 	if end_stream then
+		stream.chunk_fifo:push(nil)
+		stream.chunk_cond:signal()
 		if stream.state == "half closed (local)" then
 			stream:set_state("closed")
 		else
 			stream:set_state("half closed (remote)")
 		end
-		stream.chunk_fifo:push(nil)
-		stream.chunk_cond:signal()
 	else
 		if stream.state == "idle" then
 			stream:set_state("open")
 		end
 	end
-
-	local ok, err = validate_headers(headers, stream.type ~= "client", stream.stats_recv_headers, stream.state == "half closed (remote)" or stream.state == "closed")
-	if not ok then return nil, err end
-
-	stream.recv_headers_fifo:push(headers)
-	stream.recv_headers_cond:signal()
-
 	return true
 end
 
