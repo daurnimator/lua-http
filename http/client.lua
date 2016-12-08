@@ -8,6 +8,11 @@ local new_h2_connection = require "http.h2_connection".new
 local openssl_ssl = require "openssl.ssl"
 local openssl_ctx = require "openssl.ssl.context"
 
+local EOF = require "lpeg".P(-1)
+local IPv4address = require "lpeg_patterns.IPv4".IPv4address
+local IPv6addrz = require "lpeg_patterns.IPv6".IPv6addrz
+local IPaddress = (IPv4address + IPv6addrz) * EOF
+
 -- Create a shared 'default' TLS context
 local default_ctx = http_tls.new_client_context()
 
@@ -18,6 +23,13 @@ local function negotiate(s, options, timeout)
 	if tls then
 		local ctx = options.ctx or default_ctx
 		local ssl = openssl_ssl.new(ctx)
+		if options.sendname ~= nil then
+			if options.sendname then -- false indicates no sendname wanted
+				ssl:setHostName(options.sendname)
+			end
+		elseif options.host and not IPaddress:match(options.host) then
+			ssl:setHostName(options.host)
+		end
 		if http_tls.has_alpn then
 			if version == nil then
 				ssl:setAlpnProtos({"h2", "http/1.1"})
@@ -63,7 +75,7 @@ local function connect(options, timeout)
 		host = options.host;
 		port = options.port;
 		path = options.path;
-		sendname = options.sendname;
+		sendname = false;
 		v6only = options.v6only;
 		nodelay = true;
 	})

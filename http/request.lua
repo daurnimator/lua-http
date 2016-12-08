@@ -386,9 +386,6 @@ function request_methods:go(timeout)
 				if tls then
 					if connect_request.tls then
 						error("NYI: TLS over TLS")
-					else
-						-- Hack until https://github.com/wahern/cqueues/issues/137 is fixed
-						connect_request.sendname = self.sendname
 					end
 				end
 				-- Perform CONNECT request
@@ -409,6 +406,7 @@ function request_methods:go(timeout)
 				connection, err, errno2 = client.negotiate(sock, {
 					tls = tls;
 					ctx = self.ctx;
+					sendname = self.sendname ~= nil and self.sendname or host;
 					version = self.version;
 				}, deadline and deadline-monotime())
 				if connection == nil then
@@ -437,8 +435,6 @@ function request_methods:go(timeout)
 				end
 			end
 		elseif proxy.scheme:match "^socks" then
-			-- https://github.com/wahern/cqueues/issues/137
-			assert(self.sendname == nil or self.sendname == host, "NYI: custom SNI over SOCKS")
 			local socks = http_socks.connect(proxy)
 			local ok, err, errno = socks:negotiate(host, port, deadline and deadline-monotime())
 			if not ok then
@@ -448,6 +444,7 @@ function request_methods:go(timeout)
 			connection, err, errno = client.negotiate(sock, {
 				tls = tls;
 				ctx = self.ctx;
+				sendname = self.sendname ~= nil and self.sendname or host;
 				version = self.version;
 			}, deadline and deadline-monotime())
 			if connection == nil then

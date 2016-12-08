@@ -35,6 +35,10 @@ describe("http.client module", function()
 		cq:wrap(function()
 			s = server_func(s)
 			if not s then return end
+			if client_options.tls then
+				local ssl = s:checktls()
+				assert.same(client_options.sendname, ssl:getHostName())
+			end
 			local stream = assert(s:get_next_incoming_stream())
 			assert(stream:get_headers())
 			local res_headers = http_headers.new()
@@ -81,6 +85,7 @@ describe("http.client module", function()
 		test_pair({
 			tls = true;
 			ctx = client_ctx;
+			sendname = "mysendname";
 		}, function(s)
 			assert(s:starttls(new_server_ctx()))
 			return http_h1_connection.new(s, "server", 1.1)
@@ -93,6 +98,7 @@ describe("http.client module", function()
 		test_pair({
 			tls = true;
 			ctx = client_ctx;
+			sendname = "mysendname";
 			version = 2;
 		}, function(s)
 			assert(s:starttls(new_server_ctx()))
