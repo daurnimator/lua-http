@@ -57,8 +57,14 @@ end
 
 local connection_main_loop
 
--- An 'onerror' that doesn't throw
 local function onerror(socket, op, why, lvl) -- luacheck: ignore 212
+	if why == ce.ETIMEDOUT then
+		if op == "fill" or op == "read" then
+			socket:clearerr("r")
+		elseif op == "flush" then
+			socket:clearerr("w")
+		end
+	end
 	return string.format("%s: %s", op, ce.strerror(why)), why
 end
 
