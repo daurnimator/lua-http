@@ -881,11 +881,13 @@ frame_handlers[0x8] = function(stream, flags, payload) -- luacheck: ignore 212
 		return nil, h2_errors.FRAME_SIZE_ERROR:new_traceback("'WINDOW_UPDATE' frames must be 4 bytes")
 	end
 	if stream.id ~= 0 and stream.state == "idle" then
-		return nil, h2_errors.PROTOCOL_ERROR([['WINDOW_UPDATE' frames not allowed in "idle" state]], true)
+		return nil, h2_errors.PROTOCOL_ERROR:new_traceback([['WINDOW_UPDATE' frames not allowed in "idle" state]], true)
 	end
 
 	local tmp = sunpack(">I4", payload)
-	assert(band(tmp, 0x80000000) == 0, "'WINDOW_UPDATE' reserved bit set")
+	if band(tmp, 0x80000000) ~= 0 then
+		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("'WINDOW_UPDATE' reserved bit set")
+	end
 	local increment = band(tmp, 0x7fffffff)
 	if increment == 0 then
 		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("'WINDOW_UPDATE' MUST not have an increment of 0", stream.id ~= 0)
