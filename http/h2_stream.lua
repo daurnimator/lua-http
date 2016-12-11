@@ -740,9 +740,9 @@ frame_handlers[0x5] = function(stream, flags, payload)
 		local recv_headers_buffer_items = 1
 		local recv_headers_buffer_length = #payload - pos + 1
 		repeat
-			local end_continuations, header_fragment = stream:read_continuation()
+			local end_continuations, header_fragment, errno = stream:read_continuation()
 			if not end_continuations then
-				return nil, header_fragment
+				return nil, header_fragment, errno
 			end
 			recv_headers_buffer_items = recv_headers_buffer_items + 1
 			recv_headers_buffer[recv_headers_buffer_items] = header_fragment
