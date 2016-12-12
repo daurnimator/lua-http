@@ -1,11 +1,12 @@
 local cqueues = require "cqueues"
 local monotime = cqueues.monotime
-local ca = require "cqueues.auxlib"
 local cc = require "cqueues.condition"
 local ce = require "cqueues.errno"
 local rand = require "openssl.rand"
 local new_fifo = require "fifo"
 local band = require "http.bit".band
+local connection_common = require "http.connection_common"
+local onerror = connection_common.onerror
 local h2_error = require "http.h2_error"
 local h2_stream = require "http.h2_stream"
 local hpack = require "http.hpack"
@@ -45,6 +46,9 @@ local function merge_settings(new, old)
 end
 
 local connection_methods = {}
+for k,v in pairs(connection_common.methods) do
+	connection_methods[k] = v
+end
 local connection_mt = {
 	__name = "http.h2_connection";
 	__index = connection_methods;
@@ -56,17 +60,6 @@ function connection_mt:__tostring()
 end
 
 local connection_main_loop
-
-local function onerror(socket, op, why, lvl) -- luacheck: ignore 212
-	if why == ce.ETIMEDOUT then
-		if op == "fill" or op == "read" then
-			socket:clearerr("r")
-		elseif op == "flush" then
-			socket:clearerr("w")
-		end
-	end
-	return string.format("%s: %s", op, ce.strerror(why)), why
-end
 
 -- Read bytes from the given socket looking for the http2 connection preface
 -- optionally ungets the bytes in case of failure
@@ -171,17 +164,6 @@ local function new_connection(socket, conn_type, settings)
 	-- note that the buffer is *not* flushed right now
 
 	return self
-end
-
-function connection_methods:onidle_() -- luacheck: ignore 212
-end
-
-function connection_methods:onidle(...)
-	local old_handler = self.onidle_
-	if select("#", ...) > 0 then
-		self.onidle_ = ...
-	end
-	return old_handler
 end
 
 function connection_methods:pollfd()
@@ -324,26 +306,6 @@ function connection_methods:loop(timeout)
 	else
 		return handle_step_return(self, self.cq:loop(timeout))
 	end
-end
-
-function connection_methods:connect(timeout)
-	local ok, err, errno = self.socket:connect(timeout)
-	if not ok then
-		return nil, err, errno
-	end
-	return true
-end
-
-function connection_methods:checktls()
-	return self.socket:checktls()
-end
-
-function connection_methods:localname()
-	return ca.fileresult(self.socket:localname())
-end
-
-function connection_methods:peername()
-	return ca.fileresult(self.socket:peername())
 end
 
 function connection_methods:shutdown()

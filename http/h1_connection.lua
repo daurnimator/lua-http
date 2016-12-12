@@ -2,13 +2,17 @@
 
 local cqueues = require "cqueues"
 local monotime = cqueues.monotime
-local ca = require "cqueues.auxlib"
 local cc = require "cqueues.condition"
 local ce = require "cqueues.errno"
+local connection_common = require "http.connection_common"
+local onerror = connection_common.onerror
 local h1_stream = require "http.h1_stream"
 local new_fifo = require "fifo"
 
 local connection_methods = {}
+for k,v in pairs(connection_common.methods) do
+	connection_methods[k] = v
+end
 local connection_mt = {
 	__name = "http.h1_connection";
 	__index = connection_methods;
@@ -17,17 +21,6 @@ local connection_mt = {
 function connection_mt:__tostring()
 	return string.format("http.h1_connection{type=%q;version=%.1f}",
 		self.type, self.version)
-end
-
-local function onerror(socket, op, why, lvl) -- luacheck: ignore 212
-	if why == ce.ETIMEDOUT then
-		if op == "fill" or op == "read" then
-			socket:clearerr("r")
-		elseif op == "flush" then
-			socket:clearerr("w")
-		end
-	end
-	return string.format("%s: %s", op, ce.strerror(why)), why
 end
 
 -- assumes ownership of the socket
@@ -59,49 +52,6 @@ local function new_connection(socket, conn_type, version)
 	socket:setmode("b", "bf")
 	socket:onerror(onerror)
 	return self
-end
-
-function connection_methods:onidle_() -- luacheck: ignore 212
-end
-
-function connection_methods:onidle(...)
-	local old_handler = self.onidle_
-	if select("#", ...) > 0 then
-		self.onidle_ = ...
-	end
-	return old_handler
-end
-
-function connection_methods:connect(timeout)
-	if self.socket == nil then
-		return nil
-	end
-	local ok, err, errno = self.socket:connect(timeout)
-	if not ok then
-		return nil, err, errno
-	end
-	return true
-end
-
-function connection_methods:checktls()
-	if self.socket == nil then
-		return nil
-	end
-	return self.socket:checktls()
-end
-
-function connection_methods:localname()
-	if self.socket == nil then
-		return nil
-	end
-	return ca.fileresult(self.socket:localname())
-end
-
-function connection_methods:peername()
-	if self.socket == nil then
-		return nil
-	end
-	return ca.fileresult(self.socket:peername())
 end
 
 function connection_methods:clearerr(...)

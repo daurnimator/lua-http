@@ -1,7 +1,8 @@
 local ca = require "cqueues.auxlib"
-local ce = require "cqueues.errno"
 local cs = require "cqueues.socket"
 local http_tls = require "http.tls"
+local connection_common = require "http.connection_common"
+local onerror = connection_common.onerror
 local new_h1_connection = require "http.h1_connection".new
 local new_h2_connection = require "http.h2_connection".new
 local openssl_ctx = require "openssl.ssl.context"
@@ -25,20 +26,6 @@ else
 	default_h11_ctx = default_ctx
 end
 default_h2_ctx:setOptions(openssl_ctx.OP_NO_TLSv1 + openssl_ctx.OP_NO_TLSv1_1)
-
-local function onerror(socket, op, why, lvl) -- luacheck: ignore 212
-	local err = string.format("%s: %s", op, ce.strerror(why))
-	if op == "starttls" then
-		local ssl = socket:checktls()
-		if ssl and ssl.getVerifyResult then
-			local code, msg = ssl:getVerifyResult()
-			if code ~= 0 then
-				err = err .. ":" .. msg
-			end
-		end
-	end
-	return err, why
-end
 
 local function negotiate(s, options, timeout)
 	s:onerror(onerror)

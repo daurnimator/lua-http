@@ -4,6 +4,8 @@ local ca = require "cqueues.auxlib"
 local cc = require "cqueues.condition"
 local ce = require "cqueues.errno"
 local cs = require "cqueues.socket"
+local connection_common = require "http.connection_common"
+local onerror = connection_common.onerror
 local h1_connection = require "http.h1_connection"
 local h2_connection = require "http.h2_connection"
 local http_tls = require "http.tls"
@@ -18,20 +20,6 @@ local name = require "openssl.x509.name"
 local altname = require "openssl.x509.altname"
 
 local hang_timeout = 0.03
-
-local function onerror(socket, op, why, lvl) -- luacheck: ignore 212
-	local err = string.format("%s: %s", op, ce.strerror(why))
-	if op == "starttls" then
-		local ssl = socket:checktls()
-		if ssl and ssl.getVerifyResult then
-			local code, msg = ssl:getVerifyResult()
-			if code ~= 0 then
-				err = err .. ":" .. msg
-			end
-		end
-	end
-	return err, why
-end
 
 -- Sense for TLS or SSL client hello
 -- returns `true`, `false` or `nil, err`
