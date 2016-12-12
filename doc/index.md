@@ -754,7 +754,7 @@ See [`connection:onidle(new_handler)`](#connection:onidle)
 ### `h2_connection:write_window_update(inc, timeout)` <!-- --> {#http.h2_connection:write_window_update}
 
 
-### `h2_connection:write_goaway_frame(last_stream_id, err_code, debug_msg)` <!-- --> {#http.h2_connection:write_goaway_frame}
+### `h2_connection:write_goaway_frame(last_stream_id, err_code, debug_msg, timeout)` <!-- --> {#http.h2_connection:write_goaway_frame}
 
 
 ### `h2_connection:set_peer_settings(peer_settings)` <!-- --> {#http.h2_connection:set_peer_settings}

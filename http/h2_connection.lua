@@ -493,11 +493,11 @@ function connection_methods:write_window_update(...)
 	return self.stream0:write_window_update(...)
 end
 
-function connection_methods:write_goaway_frame(last_stream_id, err_code, debug_msg)
+function connection_methods:write_goaway_frame(last_stream_id, err_code, debug_msg, timeout)
 	if last_stream_id == nil then
 		last_stream_id = math.max(self.highest_odd_stream, self.highest_even_stream)
 	end
-	return self.stream0:write_goaway_frame(last_stream_id, err_code, debug_msg)
+	return self.stream0:write_goaway_frame(last_stream_id, err_code, debug_msg, timeout)
 end
 
 function connection_methods:set_peer_settings(peer_settings)
