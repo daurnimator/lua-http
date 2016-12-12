@@ -255,7 +255,7 @@ local function new_ctx(host, version)
 	crt:setBasicConstraints{CA=false}
 	crt:setBasicConstraintsCritical(true)
 	-- generate a new private/public key pair
-	local key = pkey.new()
+	local key = pkey.new({bits=2048})
 	crt:setPublicKey(key)
 	crt:sign(key)
 	assert(ctx:setPrivateKey(key))
