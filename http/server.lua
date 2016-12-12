@@ -245,6 +245,7 @@ local function new_ctx(host, version)
 	local dn = name.new()
 	dn:add("CN", host)
 	crt:setSubject(dn)
+	crt:setIssuer(dn) -- should match subject for a self-signed
 	local alt = altname.new()
 	alt:add("DNS", host)
 	crt:setSubjectAlt(alt)
