@@ -76,18 +76,32 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#connection:checktls"><code>connection:checktls()</code> <!-- --></a></li>
 <li><a href="#connection:localname"><code>connection:localname()</code> <!-- --></a></li>
 <li><a href="#connection:peername"><code>connection:peername()</code> <!-- --></a></li>
+<li><a href="#connection:flush"><code>connection:flush(timeout)</code> <!-- --></a></li>
 <li><a href="#connection:shutdown"><code>connection:shutdown()</code> <!-- --></a></li>
 <li><a href="#connection:close"><code>connection:close()</code> <!-- --></a></li>
 <li><a href="#connection:new_stream"><code>connection:new_stream()</code> <!-- --></a></li>
 <li><a href="#connection:get_next_incoming_stream"><code>connection:get_next_incoming_stream(timeout)</code> <!-- --></a></li>
+<li><a href="#http.connection:onidle"><code>connection:onidle(new_handler)</code> <!-- --></a></li>
 </ul></li>
 <li><a href="#stream">stream</a><ul>
 <li><a href="#stream.connection"><code>stream.connection</code> <!-- --></a></li>
+<li><a href="#stream:checktls"><code>stream:checktls()</code> <!-- --></a></li>
+<li><a href="#stream:localname"><code>stream:localname()</code> <!-- --></a></li>
+<li><a href="#stream:peername"><code>stream:peername()</code> <!-- --></a></li>
 <li><a href="#stream:get_headers"><code>stream:get_headers(timeout)</code> <!-- --></a></li>
 <li><a href="#stream:write_headers"><code>stream:write_headers(headers, end_stream, timeout)</code> <!-- --></a></li>
+<li><a href="#stream:write_continue"><code>stream:write_continue(timeout)</code> <!-- --></a></li>
 <li><a href="#stream:get_next_chunk"><code>stream:get_next_chunk(timeout)</code> <!-- --></a></li>
+<li><a href="#stream:each_chunk"><code>stream:each_chunk()</code> <!-- --></a></li>
+<li><a href="#stream:get_body_as_string"><code>stream:get_body_as_string(timeout)</code> <!-- --></a></li>
+<li><a href="#stream:get_body_chars"><code>stream:get_body_chars(n, timeout)</code> <!-- --></a></li>
+<li><a href="#stream:get_body_until"><code>stream:get_body_until(pattern, plain, include_pattern, timeout)</code> <!-- --></a></li>
+<li><a href="#stream:save_body_to_file"><code>stream:save_body_to_file(file, timeout)</code> <!-- --></a></li>
+<li><a href="#stream:get_body_as_file"><code>stream:get_body_as_file(timeout)</code> <!-- --></a></li>
 <li><a href="#stream:unget"><code>stream:unget(str)</code> <!-- --></a></li>
 <li><a href="#stream:write_chunk"><code>stream:write_chunk(chunk, end_stream, timeout)</code> <!-- --></a></li>
+<li><a href="#stream:write_body_from_string"><code>stream:write_body_from_string(str, timeout)</code> <!-- --></a></li>
+<li><a href="#stream:write_body_from_file"><code>stream:write_body_from_file(file, timeout)</code> <!-- --></a></li>
 <li><a href="#stream:shutdown"><code>stream:shutdown()</code> <!-- --></a></li>
 </ul></li>
 </ul></li>
@@ -105,9 +119,19 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.h1_connection">http.h1_connection</a><ul>
 <li><a href="#connection.new"><code>new(socket, conn_type, version)</code> <!-- --></a></li>
 <li><a href="#http.h1_connection.version"><code>h1_connection.version</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:connect"><code>h1_connection:connect(timeout)</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:checktls"><code>h1_connection:checktls()</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:localname"><code>h1_connection:localname()</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:peername"><code>h1_connection:peername()</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:flush"><code>h1_connection:flush(timeout)</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:shutdown"><code>h1_connection:shutdown()</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:close"><code>h1_connection:close()</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:new_stream"><code>h1_connection:new_stream()</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:get_next_incoming_stream"><code>h1_connection:get_next_incoming_stream(timeout)</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:onidle"><code>h1_connection:onidle(new_handler)</code> <!-- --></a></li>
 <li><a href="#http.h1_connection:clearerr"><code>h1_connection:clearerr(...)</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:error"><code>h1_connection:error(...)</code> <!-- --></a></li>
 <li><a href="#http.h1_connection:take_socket"><code>h1_connection:take_socket()</code> <!-- --></a></li>
-<li><a href="#http.h1_connection:flush"><code>h1_connection:flush(...)</code> <!-- --></a></li>
 <li><a href="#http.h1_connection:read_request_line"><code>h1_connection:read_request_line(timeout)</code> <!-- --></a></li>
 <li><a href="#http.h1_connection:read_status_line"><code>h1_connection:read_status_line(timeout)</code> <!-- --></a></li>
 <li><a href="#http.h1_connection:read_header"><code>h1_connection:read_header(timeout)</code> <!-- --></a></li>
@@ -127,6 +151,25 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.h1_reason_phrases-example">Example</a></li>
 </ul></li>
 <li><a href="#http.h1_stream">http.h1_stream</a><ul>
+<li><a href="#h1_stream.connection"><code>h1_stream.connection</code> <!-- --></a></li>
+<li><a href="#h1_stream:checktls"><code>h1_stream:checktls()</code> <!-- --></a></li>
+<li><a href="#h1_stream:localname"><code>h1_stream:localname()</code> <!-- --></a></li>
+<li><a href="#h1_stream:peername"><code>h1_stream:peername()</code> <!-- --></a></li>
+<li><a href="#h1_stream:get_headers"><code>h1_stream:get_headers(timeout)</code> <!-- --></a></li>
+<li><a href="#h1_stream:write_headers"><code>h1_stream:write_headers(headers, end_stream, timeout)</code> <!-- --></a></li>
+<li><a href="#h1_stream:write_continue"><code>h1_stream:write_continue(timeout)</code> <!-- --></a></li>
+<li><a href="#h1_stream:get_next_chunk"><code>h1_stream:get_next_chunk(timeout)</code> <!-- --></a></li>
+<li><a href="#h1_stream:each_chunk"><code>h1_stream:each_chunk()</code> <!-- --></a></li>
+<li><a href="#h1_stream:get_body_as_string"><code>h1_stream:get_body_as_string(timeout)</code> <!-- --></a></li>
+<li><a href="#h1_stream:get_body_chars"><code>h1_stream:get_body_chars(n, timeout)</code> <!-- --></a></li>
+<li><a href="#h1_stream:get_body_until"><code>h1_stream:get_body_until(pattern, plain, include_pattern, timeout)</code> <!-- --></a></li>
+<li><a href="#h1_stream:save_body_to_file"><code>h1_stream:save_body_to_file(file, timeout)</code> <!-- --></a></li>
+<li><a href="#h1_stream:get_body_as_file"><code>h1_stream:get_body_as_file(timeout)</code> <!-- --></a></li>
+<li><a href="#h1_stream:unget"><code>h1_stream:unget(str)</code> <!-- --></a></li>
+<li><a href="#h1_stream:write_chunk"><code>h1_stream:write_chunk(chunk, end_stream, timeout)</code> <!-- --></a></li>
+<li><a href="#h1_stream:write_body_from_string"><code>h1_stream:write_body_from_string(str, timeout)</code> <!-- --></a></li>
+<li><a href="#h1_stream:write_body_from_file"><code>h1_stream:write_body_from_file(file, timeout)</code> <!-- --></a></li>
+<li><a href="#h1_stream:shutdown"><code>h1_stream:shutdown()</code> <!-- --></a></li>
 <li><a href="#http.h1_stream:set_state"><code>h1_stream:set_state(new)</code> <!-- --></a></li>
 <li><a href="#http.h1_stream:read_headers"><code>h1_stream:read_headers(timeout)</code> <!-- --></a></li>
 </ul></li>
@@ -143,10 +186,12 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.h2_connection:checktls"><code>h2_connection:checktls()</code> <!-- --></a></li>
 <li><a href="#http.h2_connection:localname"><code>h2_connection:localname()</code> <!-- --></a></li>
 <li><a href="#http.h2_connection:peername"><code>h2_connection:peername()</code> <!-- --></a></li>
+<li><a href="#http.h2_connection:flush"><code>h2_connection:flush(timeout)</code> <!-- --></a></li>
 <li><a href="#http.h2_connection:shutdown"><code>h2_connection:shutdown()</code> <!-- --></a></li>
 <li><a href="#http.h2_connection:close"><code>h2_connection:close()</code> <!-- --></a></li>
 <li><a href="#http.h2_connection:new_stream"><code>h2_connection:new_stream(id)</code> <!-- --></a></li>
 <li><a href="#http.h2_connection:get_next_incoming_stream"><code>h2_connection:get_next_incoming_stream(timeout)</code> <!-- --></a></li>
+<li><a href="#http.h2_connection:onidle"><code>h2_connection:onidle(new_handler)</code> <!-- --></a></li>
 <li><a href="#http.h2_connection:read_http2_frame"><code>h2_connection:read_http2_frame(timeout)</code> <!-- --></a></li>
 <li><a href="#http.h2_connection:write_http2_frame"><code>h2_connection:write_http2_frame(typ, flags, streamid, payload, timeout)</code> <!-- --></a></li>
 <li><a href="#http.h2_connection:ping"><code>h2_connection:ping(timeout)</code> <!-- --></a></li>
@@ -165,6 +210,25 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.h2_error:assert"><code>h2_error:assert(cond, ...)</code> <!-- --></a></li>
 </ul></li>
 <li><a href="#http.h2_stream">http.h2_stream</a><ul>
+<li><a href="#h2_stream.connection"><code>h2_stream.connection</code> <!-- --></a></li>
+<li><a href="#h2_stream:checktls"><code>h2_stream:checktls()</code> <!-- --></a></li>
+<li><a href="#h2_stream:localname"><code>h2_stream:localname()</code> <!-- --></a></li>
+<li><a href="#h2_stream:peername"><code>h2_stream:peername()</code> <!-- --></a></li>
+<li><a href="#h2_stream:get_headers"><code>h2_stream:get_headers(timeout)</code> <!-- --></a></li>
+<li><a href="#h2_stream:write_headers"><code>h2_stream:write_headers(headers, end_stream, timeout)</code> <!-- --></a></li>
+<li><a href="#h2_stream:write_continue"><code>h2_stream:write_continue(timeout)</code> <!-- --></a></li>
+<li><a href="#h2_stream:get_next_chunk"><code>h2_stream:get_next_chunk(timeout)</code> <!-- --></a></li>
+<li><a href="#h2_stream:each_chunk"><code>h2_stream:each_chunk()</code> <!-- --></a></li>
+<li><a href="#h2_stream:get_body_as_string"><code>h2_stream:get_body_as_string(timeout)</code> <!-- --></a></li>
+<li><a href="#h2_stream:get_body_chars"><code>h2_stream:get_body_chars(n, timeout)</code> <!-- --></a></li>
+<li><a href="#h2_stream:get_body_until"><code>h2_stream:get_body_until(pattern, plain, include_pattern, timeout)</code> <!-- --></a></li>
+<li><a href="#h2_stream:save_body_to_file"><code>h2_stream:save_body_to_file(file, timeout)</code> <!-- --></a></li>
+<li><a href="#h2_stream:get_body_as_file"><code>h2_stream:get_body_as_file(timeout)</code> <!-- --></a></li>
+<li><a href="#h2_stream:unget"><code>h2_stream:unget(str)</code> <!-- --></a></li>
+<li><a href="#h2_stream:write_chunk"><code>h2_stream:write_chunk(chunk, end_stream, timeout)</code> <!-- --></a></li>
+<li><a href="#h2_stream:write_body_from_string"><code>h2_stream:write_body_from_string(str, timeout)</code> <!-- --></a></li>
+<li><a href="#h2_stream:write_body_from_file"><code>h2_stream:write_body_from_file(file, timeout)</code> <!-- --></a></li>
+<li><a href="#h2_stream:shutdown"><code>h2_stream:shutdown()</code> <!-- --></a></li>
 <li><a href="#http.h2_stream:set_state"><code>h2_stream:set_state(new)</code> <!-- --></a></li>
 <li><a href="#http.h2_stream:reprioritise"><code>h2_stream:reprioritise(child, exclusive)</code> <!-- --></a></li>
 <li><a href="#http.h2_stream:write_http2_frame"><code>h2_stream:write_http2_frame(typ, flags, payload, timeout)</code> <!-- --></a></li>
@@ -278,20 +342,6 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#http.socks:negotiate"><code>socks:negotiate(host, port, timeout)</code> <!-- --></a></li>
 <li><a href="#http.socks:close"><code>socks:close()</code> <!-- --></a></li>
 <li><a href="#http.socks:take_socket"><code>socks:take_socket()</code> <!-- --></a></li>
-</ul></li>
-<li><a href="#http.stream_common">http.stream_common</a><ul>
-<li><a href="#http.stream_common:checktls"><code>stream:checktls()</code> <!-- --></a></li>
-<li><a href="#http.stream_common:localname"><code>stream:localname()</code> <!-- --></a></li>
-<li><a href="#http.stream_common:peername"><code>stream:peername()</code> <!-- --></a></li>
-<li><a href="#http.stream_common:write_continue"><code>stream:write_continue(timeout)</code> <!-- --></a></li>
-<li><a href="#http.stream_common:each_chunk"><code>stream:each_chunk()</code> <!-- --></a></li>
-<li><a href="#http.stream_common:get_body_as_string"><code>stream:get_body_as_string(timeout)</code> <!-- --></a></li>
-<li><a href="#http.stream_common:get_body_chars"><code>stream:get_body_chars(n, timeout)</code> <!-- --></a></li>
-<li><a href="#http.stream_common:get_body_until"><code>stream:get_body_until(pattern, plain, include_pattern, timeout)</code> <!-- --></a></li>
-<li><a href="#http.stream_common:save_body_to_file"><code>stream:save_body_to_file(file, timeout)</code> <!-- --></a></li>
-<li><a href="#http.stream_common:get_body_as_file"><code>stream:get_body_as_file(timeout)</code> <!-- --></a></li>
-<li><a href="#http.stream_common:write_body_from_string"><code>stream:write_body_from_string(str, timeout)</code> <!-- --></a></li>
-<li><a href="#http.stream_common:write_body_from_file"><code>stream:write_body_from_file(file, timeout)</code> <!-- --></a></li>
 </ul></li>
 <li><a href="#http.tls">http.tls</a><ul>
 <li><a href="#http.tls.has_alpn"><code>has_alpn</code> <!-- --></a></li>
@@ -432,7 +482,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <h2>Terminology</h2>
 <p>Much lua-http terminology is borrowed from HTTP 2.</p>
 <p><em><a href="#connection">Connection</a></em> - An abstraction over an underlying TCP/IP socket. lua-http currently has two connection types: one for HTTP 1, one for HTTP 2.</p>
-<p><em><a href="#stream">Stream</a></em> - A request/response on a connection object. lua-http has two stream types: one for <a href="#http.h1_stream"><em>HTTP 1 streams</em></a>, and one for <a href="#http.h2_stream"><em>HTTP 2 streams</em></a>. They common interfaces are described in <a href="#stream"><em>stream</em></a> and <a href="#http.stream_common"><em>http.stream_common</em></a>.</p>
+<p><em><a href="#stream">Stream</a></em> - A request/response on a connection object. lua-http has two stream types: one for <a href="#http.h1_stream"><em>HTTP 1 streams</em></a>, and one for <a href="#http.h2_stream"><em>HTTP 2 streams</em></a>. The common interfaces is described in <a href="#stream"><em>stream</em></a>.</p>
 </section>
 </section>
 <section id="interfaces" class="level1">
@@ -469,13 +519,17 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <p>Returns the connection information for the socket <em>peer</em> (as in, the next hop). Returns address family, IP address and port for an external socket. For unix sockets, the function returns <code>AF_UNIX</code> and the path. If the connection object is not connected, returns <code>AF_UNSPEC</code> (0). On error, returns <code>nil</code> an error message and an error number.</p>
 <p><em>Note: If the client is using a proxy, the :peername() will be the proxy, not the remote server connection.</em></p>
 </section>
+<section id="connection:flush" class="level3">
+<h3><code>connection:flush(timeout)</code> <!-- --></h3>
+<p>Flushes all buffered outgoing data on the socket. Returns <code>true</code> on success. Returns <code>false</code> and the error if the socket fails to flush.</p>
+</section>
 <section id="connection:shutdown" class="level3">
 <h3><code>connection:shutdown()</code> <!-- --></h3>
 <p>Performs an orderly shutdown of the connection by closing all streams and calls <code>:shutdown()</code> on the socket. The connection cannot be re-opened.</p>
 </section>
 <section id="connection:close" class="level3">
 <h3><code>connection:close()</code> <!-- --></h3>
-<p>Closes a connection and releases operating systems resources. Note that close performs a <code>connection:shutdown()</code> prior to releasing resources.</p>
+<p>Closes a connection and releases operating systems resources. Note that <code>:close()</code> performs a <a href="#connection:shutdown"><code>connection:shutdown()</code></a> prior to releasing resources.</p>
 </section>
 <section id="connection:new_stream" class="level3">
 <h3><code>connection:new_stream()</code> <!-- --></h3>
@@ -485,13 +539,29 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <h3><code>connection:get_next_incoming_stream(timeout)</code> <!-- --></h3>
 <p>Returns the next peer initiated <a href="#stream"><em>stream</em></a> on the connection. This function can be used to yield and &quot;listen&quot; for incoming HTTP streams.</p>
 </section>
+<section id="http.connection:onidle" class="level3">
+<h3><code>connection:onidle(new_handler)</code> <!-- --></h3>
+<p>Provide a callback to get called when the connection becomes idle i.e. when there is no request in progress and no pipelined streams waiting. When called it will receive the <code>connection</code> as the first argument. Returns the previous handler.</p>
+</section>
 </section>
 <section id="stream" class="level2">
 <h2>stream</h2>
-<p>All stream types expose the following fields and functions. The stream modules also share common functionality available via the <a href="#http.stream_common"><em>http.stream_common</em></a> module.</p>
+<p>All stream types expose the following fields and functions:</p>
 <section id="stream.connection" class="level3">
 <h3><code>stream.connection</code> <!-- --></h3>
 <p>The underlying <a href="#connection"><em>connection</em></a> object.</p>
+</section>
+<section id="stream:checktls" class="level3">
+<h3><code>stream:checktls()</code> <!-- --></h3>
+<p>Convenience wrapper equivalent to <a href="#connection:checktls"><code>stream.connection:checktls()</code></a></p>
+</section>
+<section id="stream:localname" class="level3">
+<h3><code>stream:localname()</code> <!-- --></h3>
+<p>Convenience wrapper equivalent to <a href="#connection:localname"><code>stream.connection:localname()</code></a></p>
+</section>
+<section id="stream:peername" class="level3">
+<h3><code>stream:peername()</code> <!-- --></h3>
+<p>Convenience wrapper equivalent to <a href="#connection:peername"><code>stream.connection:peername()</code></a></p>
 </section>
 <section id="stream:get_headers" class="level3">
 <h3><code>stream:get_headers(timeout)</code> <!-- --></h3>
@@ -501,9 +571,32 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <h3><code>stream:write_headers(headers, end_stream, timeout)</code> <!-- --></h3>
 <p>Write the given <a href="#http.headers"><em>headers</em></a> object to the stream. The function takes a flag indicating if this is the last chunk in the stream, if <code>true</code> the stream will be closed. If <code>timeout</code> is specified, the stream will wait for the send to complete until <code>timeout</code> is exceeded.</p>
 </section>
+<section id="stream:write_continue" class="level3">
+<h3><code>stream:write_continue(timeout)</code> <!-- --></h3>
+<p>Sends a 100-continue header block.</p>
+</section>
 <section id="stream:get_next_chunk" class="level3">
 <h3><code>stream:get_next_chunk(timeout)</code> <!-- --></h3>
 <p>Returns the next chunk of the http body from the socket, otherwise it yields while waiting for input. This function will yield indefinitely, or until <code>timeout</code> is exceeded. If the message is compressed, runs inflate to decompress the data. On error, returns <code>nil</code>, an error message and an error number.</p>
+</section>
+<section id="stream:each_chunk" class="level3">
+<h3><code>stream:each_chunk()</code> <!-- --></h3>
+<p>Iterator over <a href="#stream:get_next_chunk"><code>stream:get_next_chunk()</code></a></p>
+</section>
+<section id="stream:get_body_as_string" class="level3">
+<h3><code>stream:get_body_as_string(timeout)</code> <!-- --></h3>
+</section>
+<section id="stream:get_body_chars" class="level3">
+<h3><code>stream:get_body_chars(n, timeout)</code> <!-- --></h3>
+</section>
+<section id="stream:get_body_until" class="level3">
+<h3><code>stream:get_body_until(pattern, plain, include_pattern, timeout)</code> <!-- --></h3>
+</section>
+<section id="stream:save_body_to_file" class="level3">
+<h3><code>stream:save_body_to_file(file, timeout)</code> <!-- --></h3>
+</section>
+<section id="stream:get_body_as_file" class="level3">
+<h3><code>stream:get_body_as_file(timeout)</code> <!-- --></h3>
 </section>
 <section id="stream:unget" class="level3">
 <h3><code>stream:unget(str)</code> <!-- --></h3>
@@ -512,6 +605,12 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <section id="stream:write_chunk" class="level3">
 <h3><code>stream:write_chunk(chunk, end_stream, timeout)</code> <!-- --></h3>
 <p>Writes the string <code>chunk</code> to the stream. If <code>end_stream</code> is true, the body will be finalized and the stream will be closed. <code>write_chunk</code> yields indefinitely, or until <code>timeout</code> is exceeded.</p>
+</section>
+<section id="stream:write_body_from_string" class="level3">
+<h3><code>stream:write_body_from_string(str, timeout)</code> <!-- --></h3>
+</section>
+<section id="stream:write_body_from_file" class="level3">
+<h3><code>stream:write_body_from_file(file, timeout)</code> <!-- --></h3>
 </section>
 <section id="stream:shutdown" class="level3">
 <h3><code>stream:shutdown()</code> <!-- --></h3>
@@ -620,18 +719,59 @@ defaults to <code>true</code>.</p>
 <li><code>1.0</code></li>
 <li><code>1.1</code></li>
 </ul>
+<p>See <a href="#connection.version"><code>connection.version</code></a></p>
+</section>
+<section id="http.h1_connection:connect" class="level3">
+<h3><code>h1_connection:connect(timeout)</code> <!-- --></h3>
+<p>See <a href="#connection:connect"><code>connection:connect(timeout)</code></a></p>
+</section>
+<section id="http.h1_connection:checktls" class="level3">
+<h3><code>h1_connection:checktls()</code> <!-- --></h3>
+<p>See <a href="#connection:checktls"><code>connection:checktls()</code></a></p>
+</section>
+<section id="http.h1_connection:localname" class="level3">
+<h3><code>h1_connection:localname()</code> <!-- --></h3>
+<p>See <a href="#connection:localname"><code>connection:localname()</code></a></p>
+</section>
+<section id="http.h1_connection:peername" class="level3">
+<h3><code>h1_connection:peername()</code> <!-- --></h3>
+<p>See <a href="#connection:peername"><code>connection:peername()</code></a></p>
+</section>
+<section id="http.h1_connection:flush" class="level3">
+<h3><code>h1_connection:flush(timeout)</code> <!-- --></h3>
+<p>See <a href="#connection:flush"><code>connection:flush(timeout)</code></a></p>
+</section>
+<section id="http.h1_connection:shutdown" class="level3">
+<h3><code>h1_connection:shutdown()</code> <!-- --></h3>
+<p>See <a href="#connection:shutdown"><code>connection:shutdown()</code></a></p>
+</section>
+<section id="http.h1_connection:close" class="level3">
+<h3><code>h1_connection:close()</code> <!-- --></h3>
+<p>See <a href="#connection:close"><code>connection:close()</code></a></p>
+</section>
+<section id="http.h1_connection:new_stream" class="level3">
+<h3><code>h1_connection:new_stream()</code> <!-- --></h3>
+<p>See <a href="#connection:new_stream"><code>connection:new_stream()</code></a> for more information.</p>
+</section>
+<section id="http.h1_connection:get_next_incoming_stream" class="level3">
+<h3><code>h1_connection:get_next_incoming_stream(timeout)</code> <!-- --></h3>
+<p>See <a href="#connection:get_next_incoming_stream"><code>connection:get_next_incoming_stream(timeout)</code></a></p>
+</section>
+<section id="http.h1_connection:onidle" class="level3">
+<h3><code>h1_connection:onidle(new_handler)</code> <!-- --></h3>
+<p>See <a href="#connection:onidle"><code>connection:onidle(new_handler)</code></a></p>
 </section>
 <section id="http.h1_connection:clearerr" class="level3">
 <h3><code>h1_connection:clearerr(...)</code> <!-- --></h3>
 <p>Clears errors to allow for further read or write operations on the connection. Returns the error number of existing errors. This function is used to recover from known errors.</p>
 </section>
+<section id="http.h1_connection:error" class="level3">
+<h3><code>h1_connection:error(...)</code> <!-- --></h3>
+<p>Returns the error number of existing errors.</p>
+</section>
 <section id="http.h1_connection:take_socket" class="level3">
 <h3><code>h1_connection:take_socket()</code> <!-- --></h3>
 <p>Used to hand the reference of the connection socket to another object. Resets the socket to defaults and returns the single existing reference of the socket to the calling routine. This function can be used for connection upgrades such as upgrading from HTTP 1 to a WebSocket.</p>
-</section>
-<section id="http.h1_connection:flush" class="level3">
-<h3><code>h1_connection:flush(...)</code> <!-- --></h3>
-<p>Flushes all buffered outgoing data on the socket. Returns <code>true</code> on success. Returns <code>false</code> and the error if the socket fails to flush.</p>
 </section>
 <section id="http.h1_connection:read_request_line" class="level3">
 <h3><code>h1_connection:read_request_line(timeout)</code> <!-- --></h3>
@@ -706,17 +846,98 @@ defaults to <code>true</code>.</p>
 </section>
 <section id="http.h1_stream" class="level2">
 <h2>http.h1_stream</h2>
-<p>An h1_stream represents an HTTP 1.0 or 1.1 request/response. The module follows the <a href="#stream"><em>stream</em></a> interface and the methods from <a href="#http.stream_common"><em>http.stream_common</em></a>, as well as the following HTTP 1 specific functions:</p>
+<p>An h1_stream represents an HTTP 1.0 or 1.1 request/response. The module follows the <a href="#stream"><em>stream</em></a> interface as well as HTTP 1.x specific functions.</p>
+<section id="h1_stream.connection" class="level3">
+<h3><code>h1_stream.connection</code> <!-- --></h3>
+<p>See <a href="#stream.connection"><code>stream.connection</code></a></p>
+</section>
+<section id="h1_stream:checktls" class="level3">
+<h3><code>h1_stream:checktls()</code> <!-- --></h3>
+<p>See <a href="#stream:checktls"><code>stream:checktls()</code></a></p>
+</section>
+<section id="h1_stream:localname" class="level3">
+<h3><code>h1_stream:localname()</code> <!-- --></h3>
+<p>See <a href="#stream:localname"><code>stream:localname()</code></a></p>
+</section>
+<section id="h1_stream:peername" class="level3">
+<h3><code>h1_stream:peername()</code> <!-- --></h3>
+<p>See <a href="#stream:peername"><code>stream:peername()</code></a></p>
+</section>
+<section id="h1_stream:get_headers" class="level3">
+<h3><code>h1_stream:get_headers(timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:get_headers"><code>stream:get_headers(timeout)</code></a></p>
+</section>
+<section id="h1_stream:write_headers" class="level3">
+<h3><code>h1_stream:write_headers(headers, end_stream, timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:write_headers"><code>stream:write_headers(headers, end_stream, timeout)</code></a></p>
+</section>
+<section id="h1_stream:write_continue" class="level3">
+<h3><code>h1_stream:write_continue(timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:write_continue"><code>stream:write_continue(timeout)</code></a></p>
+</section>
+<section id="h1_stream:get_next_chunk" class="level3">
+<h3><code>h1_stream:get_next_chunk(timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:get_next_chunk"><code>stream:get_next_chunk(timeout)</code></a></p>
+</section>
+<section id="h1_stream:each_chunk" class="level3">
+<h3><code>h1_stream:each_chunk()</code> <!-- --></h3>
+<p>See <a href="#stream:each_chunk"><code>stream:each_chunk()</code></a></p>
+</section>
+<section id="h1_stream:get_body_as_string" class="level3">
+<h3><code>h1_stream:get_body_as_string(timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:get_body_as_string"><code>stream:get_body_as_string(timeout)</code></a></p>
+</section>
+<section id="h1_stream:get_body_chars" class="level3">
+<h3><code>h1_stream:get_body_chars(n, timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:get_body_chars"><code>stream:get_body_chars(n, timeout)</code></a></p>
+</section>
+<section id="h1_stream:get_body_until" class="level3">
+<h3><code>h1_stream:get_body_until(pattern, plain, include_pattern, timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:get_body_until"><code>stream:get_body_until(pattern, plain, include_pattern, timeout)</code></a></p>
+</section>
+<section id="h1_stream:save_body_to_file" class="level3">
+<h3><code>h1_stream:save_body_to_file(file, timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:save_body_to_file"><code>stream:save_body_to_file(file, timeout)</code></a></p>
+</section>
+<section id="h1_stream:get_body_as_file" class="level3">
+<h3><code>h1_stream:get_body_as_file(timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:get_body_as_file"><code>stream:get_body_as_file(timeout)</code></a></p>
+</section>
+<section id="h1_stream:unget" class="level3">
+<h3><code>h1_stream:unget(str)</code> <!-- --></h3>
+<p>See <a href="#stream:unget"><code>stream:unget(str)</code></a></p>
+</section>
+<section id="h1_stream:write_chunk" class="level3">
+<h3><code>h1_stream:write_chunk(chunk, end_stream, timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:write_chunk"><code>stream:write_chunk(chunk, end_stream, timeout)</code></a></p>
+</section>
+<section id="h1_stream:write_body_from_string" class="level3">
+<h3><code>h1_stream:write_body_from_string(str, timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:write_body_from_string"><code>stream:write_body_from_string(str, timeout)</code></a></p>
+</section>
+<section id="h1_stream:write_body_from_file" class="level3">
+<h3><code>h1_stream:write_body_from_file(file, timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:write_body_from_file"><code>stream:write_body_from_file(file, timeout)</code></a></p>
+</section>
+<section id="h1_stream:shutdown" class="level3">
+<h3><code>h1_stream:shutdown()</code> <!-- --></h3>
+<p>See <a href="#stream:shutdown"><code>stream:shutdown()</code></a></p>
+</section>
 <section id="http.h1_stream:set_state" class="level3">
 <h3><code>h1_stream:set_state(new)</code> <!-- --></h3>
-<p>Sets h1_stream.state if <code>new</code> is one of the following valid states:</p>
-<p><code>lua valid_states = {     [&quot;idle&quot;] = 1; -- initial     [&quot;open&quot;] = 2; -- have sent or received headers; haven't sent body yet     [&quot;half closed (local)&quot;] = 3; -- have sent whole body     [&quot;half closed (remote)&quot;] = 3; -- have received whole body     [&quot;closed&quot;] = 4; -- complete }</code></p>
-<p>Asserts if <code>new</code> is not a valid value.</p>
+<p>Sets the state of the stream to <code>new</code>. <code>new</code> must be one of the following valid states:</p>
+<ul>
+<li><code>&quot;open&quot;</code>: have sent or received headers; haven't sent body yet</li>
+<li><code>&quot;half closed (local)&quot;</code>: have sent whole body</li>
+<li><code>&quot;half closed (remote)&quot;</code>: have received whole body</li>
+<li><code>&quot;closed&quot;</code>: complete</li>
+</ul>
+<p>Not all state transitions are allowed.</p>
 </section>
 <section id="http.h1_stream:read_headers" class="level3">
 <h3><code>h1_stream:read_headers(timeout)</code> <!-- --></h3>
 <p>Reads and returns a table containing the request line and all HTTP headers as key value pairs.</p>
-<p>This function should rarely be used, you're probably looking for <a href="#stream:get_headers"><code>:get_headers()</code></a>.</p>
+<p>This function should rarely be used, you're probably looking for <a href="#h1_stream:get_headers"><code>:get_headers()</code></a>.</p>
 </section>
 </section>
 <section id="http.h2_connection" class="level2">
@@ -727,7 +948,8 @@ defaults to <code>true</code>.</p>
 </section>
 <section id="http.h2_connection.version" class="level3">
 <h3><code>h2_connection.version</code> <!-- --></h3>
-<p>Contains the value of the HTTP 2 version number for the connection. Currently will hold the value of <code>2</code></p>
+<p>Contains the value of the HTTP 2 version number for the connection. Currently will hold the value of <code>2</code>.</p>
+<p>See <a href="#connection.version"><code>connection.version</code></a></p>
 </section>
 <section id="http.h2_connection:pollfd" class="level3">
 <h3><code>h2_connection:pollfd()</code> <!-- --></h3>
@@ -763,6 +985,10 @@ defaults to <code>true</code>.</p>
 <h3><code>h2_connection:peername()</code> <!-- --></h3>
 <p>See <a href="#connection:peername"><code>connection:peername()</code></a></p>
 </section>
+<section id="http.h2_connection:flush" class="level3">
+<h3><code>h2_connection:flush(timeout)</code> <!-- --></h3>
+<p>See <a href="#connection:flush"><code>connection:flush(timeout)</code></a></p>
+</section>
 <section id="http.h2_connection:shutdown" class="level3">
 <h3><code>h2_connection:shutdown()</code> <!-- --></h3>
 <p>See <a href="#connection:shutdown"><code>connection:shutdown()</code></a></p>
@@ -779,7 +1005,11 @@ For server initiated streams, this will be the next free even numbered stream.</
 </section>
 <section id="http.h2_connection:get_next_incoming_stream" class="level3">
 <h3><code>h2_connection:get_next_incoming_stream(timeout)</code> <!-- --></h3>
-<p>See <a href="#connection:get_next_incoming_stream"><code>connection:get_next_incoming_stream()</code></a></p>
+<p>See <a href="#connection:get_next_incoming_stream"><code>connection:get_next_incoming_stream(timeout)</code></a></p>
+</section>
+<section id="http.h2_connection:onidle" class="level3">
+<h3><code>h2_connection:onidle(new_handler)</code> <!-- --></h3>
+<p>See <a href="#connection:onidle"><code>connection:onidle(new_handler)</code></a></p>
 </section>
 <section id="http.h2_connection:read_http2_frame" class="level3">
 <h3><code>h2_connection:read_http2_frame(timeout)</code> <!-- --></h3>
@@ -847,7 +1077,83 @@ For server initiated streams, this will be the next free even numbered stream.</
 </section>
 <section id="http.h2_stream" class="level2">
 <h2>http.h2_stream</h2>
-<p>In addition to following the <a href="#stream"><em>stream</em></a> interface and the methods from <a href="#http.stream_common">http.stream_common</a>, an <code>http.h2_stream</code> has the following methods:</p>
+<p>An h2_stream represents an HTTP 2 stream. The module follows the <a href="#stream"><em>stream</em></a> interface as well as HTTP 2 specific functions.</p>
+<section id="h2_stream.connection" class="level3">
+<h3><code>h2_stream.connection</code> <!-- --></h3>
+<p>See <a href="#stream.connection"><code>stream.connection</code></a></p>
+</section>
+<section id="h2_stream:checktls" class="level3">
+<h3><code>h2_stream:checktls()</code> <!-- --></h3>
+<p>See <a href="#stream:checktls"><code>stream:checktls()</code></a></p>
+</section>
+<section id="h2_stream:localname" class="level3">
+<h3><code>h2_stream:localname()</code> <!-- --></h3>
+<p>See <a href="#stream:localname"><code>stream:localname()</code></a></p>
+</section>
+<section id="h2_stream:peername" class="level3">
+<h3><code>h2_stream:peername()</code> <!-- --></h3>
+<p>See <a href="#stream:peername"><code>stream:peername()</code></a></p>
+</section>
+<section id="h2_stream:get_headers" class="level3">
+<h3><code>h2_stream:get_headers(timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:get_headers"><code>stream:get_headers(timeout)</code></a></p>
+</section>
+<section id="h2_stream:write_headers" class="level3">
+<h3><code>h2_stream:write_headers(headers, end_stream, timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:write_headers"><code>stream:write_headers(headers, end_stream, timeout)</code></a></p>
+</section>
+<section id="h2_stream:write_continue" class="level3">
+<h3><code>h2_stream:write_continue(timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:write_continue"><code>stream:write_continue(timeout)</code></a></p>
+</section>
+<section id="h2_stream:get_next_chunk" class="level3">
+<h3><code>h2_stream:get_next_chunk(timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:get_next_chunk"><code>stream:get_next_chunk(timeout)</code></a></p>
+</section>
+<section id="h2_stream:each_chunk" class="level3">
+<h3><code>h2_stream:each_chunk()</code> <!-- --></h3>
+<p>See <a href="#stream:each_chunk"><code>stream:each_chunk()</code></a></p>
+</section>
+<section id="h2_stream:get_body_as_string" class="level3">
+<h3><code>h2_stream:get_body_as_string(timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:get_body_as_string"><code>stream:get_body_as_string(timeout)</code></a></p>
+</section>
+<section id="h2_stream:get_body_chars" class="level3">
+<h3><code>h2_stream:get_body_chars(n, timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:get_body_chars"><code>stream:get_body_chars(n, timeout)</code></a></p>
+</section>
+<section id="h2_stream:get_body_until" class="level3">
+<h3><code>h2_stream:get_body_until(pattern, plain, include_pattern, timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:get_body_until"><code>stream:get_body_until(pattern, plain, include_pattern, timeout)</code></a></p>
+</section>
+<section id="h2_stream:save_body_to_file" class="level3">
+<h3><code>h2_stream:save_body_to_file(file, timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:save_body_to_file"><code>stream:save_body_to_file(file, timeout)</code></a></p>
+</section>
+<section id="h2_stream:get_body_as_file" class="level3">
+<h3><code>h2_stream:get_body_as_file(timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:get_body_as_file"><code>stream:get_body_as_file(timeout)</code></a></p>
+</section>
+<section id="h2_stream:unget" class="level3">
+<h3><code>h2_stream:unget(str)</code> <!-- --></h3>
+<p>See <a href="#stream:unget"><code>stream:unget(str)</code></a></p>
+</section>
+<section id="h2_stream:write_chunk" class="level3">
+<h3><code>h2_stream:write_chunk(chunk, end_stream, timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:write_chunk"><code>stream:write_chunk(chunk, end_stream, timeout)</code></a></p>
+</section>
+<section id="h2_stream:write_body_from_string" class="level3">
+<h3><code>h2_stream:write_body_from_string(str, timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:write_body_from_string"><code>stream:write_body_from_string(str, timeout)</code></a></p>
+</section>
+<section id="h2_stream:write_body_from_file" class="level3">
+<h3><code>h2_stream:write_body_from_file(file, timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:write_body_from_file"><code>stream:write_body_from_file(file, timeout)</code></a></p>
+</section>
+<section id="h2_stream:shutdown" class="level3">
+<h3><code>h2_stream:shutdown()</code> <!-- --></h3>
+<p>See <a href="#stream:shutdown"><code>stream:shutdown()</code></a></p>
+</section>
 <section id="http.h2_stream:set_state" class="level3">
 <h3><code>h2_stream:set_state(new)</code> <!-- --></h3>
 </section>
@@ -1280,6 +1586,7 @@ myheaders:append<span class="ot">(</span><span class="st">&quot;set-cookie&quot;
 <li><code>host</code> (required) a string to pass to the SOCKS server as the host to connect to. Will be resolved locally if <a href="#http.socks.needs_resolve"><code>.needs_resolve</code></a> is <code>true</code></li>
 <li><code>port</code> (required) a number to pass to the SOCKS server as the port to connect to</li>
 </ul>
+<p>On error, returns <code>nil</code> an error message and an error number.</p>
 </section>
 <section id="http.socks:close" class="level3">
 <h3><code>socks:close()</code> <!-- --></h3>
@@ -1287,51 +1594,6 @@ myheaders:append<span class="ot">(</span><span class="st">&quot;set-cookie&quot;
 <section id="http.socks:take_socket" class="level3">
 <h3><code>socks:take_socket()</code> <!-- --></h3>
 <p>Take possesion of the socket object managed by the http.socks object. Returns the socket (or <code>nil</code> if not available).</p>
-</section>
-</section>
-<section id="http.stream_common" class="level2">
-<h2>http.stream_common</h2>
-<p>The module <code>http.stream_common</code> provides common functions for streams (no matter the underlying protocol version). It exports a table <code>methods</code> of functions that build on top of the lower level <a href="#stream"><em>stream</em></a> interface.</p>
-<section id="http.stream_common:checktls" class="level3">
-<h3><code>stream:checktls()</code> <!-- --></h3>
-<p>Convenience wrapper equivalent to <code>stream.connection:checktls()</code></p>
-</section>
-<section id="http.stream_common:localname" class="level3">
-<h3><code>stream:localname()</code> <!-- --></h3>
-<p>Convenience wrapper equivalent to <code>stream.connection:localname()</code></p>
-</section>
-<section id="http.stream_common:peername" class="level3">
-<h3><code>stream:peername()</code> <!-- --></h3>
-<p>Convenience wrapper equivalent to <code>stream.connection:peername()</code></p>
-</section>
-<section id="http.stream_common:write_continue" class="level3">
-<h3><code>stream:write_continue(timeout)</code> <!-- --></h3>
-<p>Sends a 100-continue header block.</p>
-</section>
-<section id="http.stream_common:each_chunk" class="level3">
-<h3><code>stream:each_chunk()</code> <!-- --></h3>
-<p>Iterator over <a href="#stream:get_next_chunk"><code>stream:get_next_chunk()</code></a></p>
-</section>
-<section id="http.stream_common:get_body_as_string" class="level3">
-<h3><code>stream:get_body_as_string(timeout)</code> <!-- --></h3>
-</section>
-<section id="http.stream_common:get_body_chars" class="level3">
-<h3><code>stream:get_body_chars(n, timeout)</code> <!-- --></h3>
-</section>
-<section id="http.stream_common:get_body_until" class="level3">
-<h3><code>stream:get_body_until(pattern, plain, include_pattern, timeout)</code> <!-- --></h3>
-</section>
-<section id="http.stream_common:save_body_to_file" class="level3">
-<h3><code>stream:save_body_to_file(file, timeout)</code> <!-- --></h3>
-</section>
-<section id="http.stream_common:get_body_as_file" class="level3">
-<h3><code>stream:get_body_as_file(timeout)</code> <!-- --></h3>
-</section>
-<section id="http.stream_common:write_body_from_string" class="level3">
-<h3><code>stream:write_body_from_string(str, timeout)</code> <!-- --></h3>
-</section>
-<section id="http.stream_common:write_body_from_file" class="level3">
-<h3><code>stream:write_body_from_file(file, timeout)</code> <!-- --></h3>
 </section>
 </section>
 <section id="http.tls" class="level2">
@@ -1629,10 +1891,11 @@ li.collapsible:before {
   margin-left: -1rem; /* undo ul's padding-left */
   width: 1rem;
   display: inline-block;
-  content: '- ';
+  text-align: center;
+  content: '-';
 }
 li.collapsible[state="collapsed"]:before {
-  content: '+ ';
+  content: '+';
 }
 li.collapsible[state="collapsed"] > ul {
   display: none;
