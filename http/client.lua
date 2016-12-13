@@ -2,9 +2,8 @@ local ca = require "cqueues.auxlib"
 local cs = require "cqueues.socket"
 local http_tls = require "http.tls"
 local connection_common = require "http.connection_common"
-local onerror = connection_common.onerror
-local new_h1_connection = require "http.h1_connection".new
-local new_h2_connection = require "http.h2_connection".new
+local h1_connection = require "http.h1_connection"
+local h2_connection = require "http.h2_connection"
 local openssl_ctx = require "openssl.ssl.context"
 
 -- Create a shared 'default' TLS contexts
@@ -27,8 +26,10 @@ else
 end
 default_h2_ctx:setOptions(openssl_ctx.OP_NO_TLSv1 + openssl_ctx.OP_NO_TLSv1_1)
 
-local function negotiate(s, options, timeout)
-	s:onerror(onerror)
+local function negotiate(self, options, timeout)
+	if cs.type(self) then -- passing cqueues socket
+		self = connection_common.new(self, "client")
+	end
 	local tls = options.tls
 	local version = options.version
 	if tls then
@@ -46,13 +47,13 @@ local function negotiate(s, options, timeout)
 				error("Unknown HTTP version: " .. tostring(version))
 			end
 		end
-		local ok, err, errno = s:starttls(ctx, timeout)
+		local ok, err, errno = self:starttls(ctx, timeout)
 		if not ok then
 			return nil, err, errno
 		end
 	end
 	if version == nil then
-		local ssl = s:checktls()
+		local ssl = self:checktls()
 		if ssl then
 			if http_tls.has_alpn and ssl:getAlpnSelected() == "h2" then
 				version = 2
@@ -65,9 +66,9 @@ local function negotiate(s, options, timeout)
 		end
 	end
 	if version < 2 then
-		return new_h1_connection(s, "client", version)
+		return h1_connection.new_from_common(self, version)
 	elseif version == 2 then
-		return new_h2_connection(s, "client", options.h2_settings)
+		return h2_connection.new_from_common(self, options.h2_settings)
 	else
 		error("Unknown HTTP version: " .. tostring(version))
 	end
