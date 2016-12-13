@@ -156,7 +156,7 @@ Performs an orderly shutdown of the connection by closing all streams and calls 
 
 ### `connection:close()` <!-- --> {#connection:close}
 
-Closes a connection and releases operating systems resources. Note that close performs a `connection:shutdown()` prior to releasing resources.
+Closes a connection and releases operating systems resources. Note that close performs a [`connection:shutdown()`](#connection:shutdown) prior to releasing resources.
 
 
 ### `connection:new_stream()` <!-- --> {#connection:new_stream}
@@ -1211,17 +1211,17 @@ The module `http.stream_common` provides common functions for streams (no matter
 
 ### `stream:checktls()` <!-- --> {#http.stream_common:checktls}
 
-Convenience wrapper equivalent to `stream.connection:checktls()`
+Convenience wrapper equivalent to [`stream.connection:checktls()`](#connection:checktls)
 
 
 ### `stream:localname()` <!-- --> {#http.stream_common:localname}
 
-Convenience wrapper equivalent to `stream.connection:localname()`
+Convenience wrapper equivalent to [`stream.connection:localname()`](#connection:localname)
 
 
 ### `stream:peername()` <!-- --> {#http.stream_common:peername}
 
-Convenience wrapper equivalent to `stream.connection:peername()`
+Convenience wrapper equivalent to [`stream.connection:peername()`](#connection:peername)
 
 
 ### `stream:write_continue(timeout)` <!-- --> {#http.stream_common:write_continue}
