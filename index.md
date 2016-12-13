@@ -156,7 +156,7 @@ Performs an orderly shutdown of the connection by closing all streams and calls 
 
 ### `connection:close()` <!-- --> {#connection:close}
 
-Closes a connection and releases operating systems resources. Note that close performs a [`connection:shutdown()`](#connection:shutdown) prior to releasing resources.
+Closes a connection and releases operating systems resources. Note that `:close()` performs a [`connection:shutdown()`](#connection:shutdown) prior to releasing resources.
 
 
 ### `connection:new_stream()` <!-- --> {#connection:new_stream}
