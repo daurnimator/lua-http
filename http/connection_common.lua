@@ -2,6 +2,10 @@ local ca = require "cqueues.auxlib"
 local ce = require "cqueues.errno"
 
 local connection_methods = {}
+local connection_mt = {
+	__name = "http.connection_common";
+	__index = connection_methods;
+}
 
 local function onerror(socket, op, why, lvl) -- luacheck: ignore 212
 	local err = string.format("%s: %s", op, ce.strerror(why))
@@ -22,6 +26,24 @@ local function onerror(socket, op, why, lvl) -- luacheck: ignore 212
 		end
 	end
 	return err, why
+end
+
+-- assumes ownership of the socket
+local function new_connection(socket, conn_type)
+	assert(socket, "must provide a socket")
+	if conn_type ~= "client" and conn_type ~= "server" then
+		error('invalid connection type. must be "client" or "server"')
+	end
+	local self = setmetatable({
+		socket = socket;
+		type = conn_type;
+		version = nil;
+		-- A function that will be called if the connection becomes idle
+		onidle_ = nil;
+	}, connection_mt)
+	socket:setmode("b", "bf")
+	socket:onerror(onerror)
+	return self
 end
 
 function connection_methods:onidle_() -- luacheck: ignore 212
@@ -69,5 +91,7 @@ end
 
 return {
 	onerror = onerror;
+	new = new_connection;
 	methods = connection_methods;
+	mt = connection_mt;
 }

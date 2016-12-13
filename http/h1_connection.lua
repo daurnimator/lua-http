@@ -23,35 +23,27 @@ function connection_mt:__tostring()
 		self.type, self.version)
 end
 
--- assumes ownership of the socket
-local function new_connection(socket, conn_type, version)
-	assert(socket, "must provide a socket")
-	if conn_type ~= "client" and conn_type ~= "server" then
-		error('invalid connection type. must be "client" or "server"')
-	end
+local function new_from_common(self, version)
 	assert(version == 1 or version == 1.1, "unsupported version")
-	local self = setmetatable({
-		socket = socket;
-		type = conn_type;
-		version = version;
+	self.version = version
 
-		-- for server: streams waiting to go out
-		-- for client: streams waiting for a response
-		pipeline = new_fifo();
-		-- pipeline condition is stored in stream itself
+	-- for server: streams waiting to go out
+	-- for client: streams waiting for a response
+	self.pipeline = new_fifo()
+	-- pipeline condition is stored in stream itself
 
-		-- for server: held while request being read
-		-- for client: held while writing request
-		req_locked = nil;
-		-- signaled when unlocked
-		req_cond = cc.new();
+	-- for server: held while request being read
+	-- for client: held while writing request
+	-- self.req_locked = nil
+	-- signaled when unlocked
+	self.req_cond = cc.new()
 
-		-- A function that will be called if the connection becomes idle
-		onidle_ = nil;
-	}, connection_mt)
-	socket:setmode("b", "bf")
-	socket:onerror(onerror)
-	return self
+	return setmetatable(self, connection_mt)
+end
+
+local function new_connection(socket, conn_type, version)
+	local self = connection_common.new(socket, conn_type)
+	return new_from_common(self, version)
 end
 
 function connection_methods:clearerr(...)
@@ -417,6 +409,7 @@ function connection_methods:write_body_plain(body, timeout)
 end
 
 return {
+	new_from_common = new_from_common;
 	new = new_connection;
 	methods = connection_methods;
 	mt = connection_mt;

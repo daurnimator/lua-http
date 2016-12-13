@@ -93,11 +93,7 @@ local function socket_has_preface(socket, unget, timeout)
 	return is_h2
 end
 
-local function new_connection(socket, conn_type, settings)
-	if conn_type ~= "client" and conn_type ~= "server" then
-		error('invalid connection type. must be "client" or "server"')
-	end
-
+local function new_from_common(self, settings)
 	local cq do -- Allocate cqueue first up, as it can throw when out of files
 		local ok, err = pcall(cqueues.new)
 		if not ok then
@@ -107,11 +103,7 @@ local function new_connection(socket, conn_type, settings)
 		cq = err
 	end
 
-	socket:setvbuf("full", math.huge) -- 'infinite' buffering; no write locks needed
-	socket:setmode("b", "bf") -- full buffering for now; will be set to no buffering after settings sent
-	socket:onerror(onerror)
-
-	local ssl = socket:checktls()
+	local ssl = self.socket:checktls()
 	if ssl then
 		local cipher = ssl:getCipherInfo()
 		if h2_banned_ciphers[cipher.name] then
@@ -119,51 +111,51 @@ local function new_connection(socket, conn_type, settings)
 		end
 	end
 
-	local self = setmetatable({
-		socket = socket;
-		type = conn_type;
-		version = 2; -- for compat with h1_connection
+	self.socket:setvbuf("full", math.huge) -- 'infinite' buffering; no write locks needed
 
-		streams = setmetatable({}, {__mode="kv"});
-		n_active_streams = 0;
-		onidle_ = nil;
-		stream0 = nil; -- store separately with a strong reference
-		need_continuation = nil; -- stream
-		cq = cq;
-		close_me = false; -- to indicate that :close() should be called after exiting the current :step()
-		highest_odd_stream = -1;
-		highest_even_stream = -2;
-		send_goaway_lowest = nil;
-		recv_goaway_lowest = nil;
-		recv_goaway = cc.new();
-		new_streams = new_fifo();
-		new_streams_cond = cc.new();
-		peer_settings = default_settings;
-		peer_settings_cond = cc.new(); -- signaled when the peer has changed their settings
-		acked_settings = default_settings;
-		send_settings = {n = 0};
-		send_settings_ack_cond = cc.new(); -- for when server ACKs our settings
-		send_settings_acked = 0;
-		peer_flow_credits = 65535; -- 5.2.1
-		peer_flow_credits_increase = cc.new();
-		encoding_context = nil;
-		decoding_context = nil;
-		pongs = {}; -- pending pings we've sent. keyed by opaque 8 byte payload
-	}, connection_mt)
-	self:new_stream(0)
+	self.version = 2 -- for compat with h1_connection
+	self.streams = setmetatable({}, {__mode="kv"})
+	self.n_active_streams = 0
+	self.cq = cq
+	self.close_me = false -- to indicate that :close() should be called after exiting the current :step()
+	self.highest_odd_stream = -1
+	self.highest_even_stream = -2
+	-- self.send_goaway_lowest = nil
+	-- self.recv_goaway_lowest = nil
+	self.recv_goaway = cc.new()
+	self.new_streams = new_fifo()
+	self.new_streams_cond = cc.new()
+	self.peer_settings = default_settings
+	self.peer_settings_cond = cc.new() -- signaled when the peer has changed their settings
+	self.acked_settings = default_settings
+	self.send_settings = {n = 0}
+	self.send_settings_ack_cond = cc.new() -- for when server ACKs our settings
+	self.send_settings_acked = 0
+	self.peer_flow_credits = 65535 -- 5.2.1
+	self.peer_flow_credits_increase = cc.new()
 	self.encoding_context = hpack.new(default_settings[0x1])
 	self.decoding_context = hpack.new(default_settings[0x1])
+	self.pongs = {} -- pending pings we've sent. keyed by opaque 8 byte payload
+
+	setmetatable(self, connection_mt)
+
+	self:new_stream(0) -- sets self.stream0 as a strong reference
 	self.cq:wrap(connection_main_loop, self)
 
 	if self.type == "client" then
-		-- fully buffered write; will be flushed when sending settings
-		assert(socket:xwrite(preface, "f", 0))
+		-- fully buffered write; will be flushed along with settings
+		assert(self.socket:xwrite(preface, "f", 0))
 	end
 	assert(self.stream0:write_settings_frame(false, settings or {}, 0))
-	socket:setmode("b", "bn") -- writes that don't explicitly buffer will now flush the buffer
+	self.socket:setmode("b", "bn") -- writes that don't explicitly buffer will now flush the buffer
 	-- note that the buffer is *not* flushed right now
 
 	return self
+end
+
+local function new_connection(socket, conn_type, settings)
+	local self = connection_common.new(socket, conn_type)
+	return new_from_common(self, settings)
 end
 
 function connection_methods:pollfd()
@@ -543,6 +535,7 @@ end
 return {
 	preface = preface;
 	socket_has_preface = socket_has_preface;
+	new_from_common = new_from_common;
 	new = new_connection;
 	methods = connection_methods;
 	mt = connection_mt;
