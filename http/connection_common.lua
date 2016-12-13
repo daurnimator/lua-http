@@ -68,6 +68,17 @@ function connection_methods:connect(timeout)
 	return true
 end
 
+function connection_methods:starttls(ctx, timeout)
+	if self.socket == nil then
+		return nil
+	end
+	local ok, err, errno = self.socket:starttls(ctx, timeout)
+	if not ok then
+		return nil, err, errno
+	end
+	return true
+end
+
 function connection_methods:checktls()
 	if self.socket == nil then
 		return nil
