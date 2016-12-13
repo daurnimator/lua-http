@@ -99,7 +99,7 @@ Much lua-http terminology is borrowed from HTTP 2.
 
 _[Connection](#connection)_ - An abstraction over an underlying TCP/IP socket. lua-http currently has two connection types: one for HTTP 1, one for HTTP 2.
 
-_[Stream](#stream)_ - A request/response on a connection object. lua-http has two stream types: one for [*HTTP 1 streams*](#http.h1_stream), and one for [*HTTP 2 streams*](#http.h2_stream). They common interfaces are described in [*stream*](#stream) and [*http.stream_common*](#http.stream_common).
+_[Stream](#stream)_ - A request/response on a connection object. lua-http has two stream types: one for [*HTTP 1 streams*](#http.h1_stream), and one for [*HTTP 2 streams*](#http.h2_stream). The common interfaces is described in [*stream*](#stream).
 
 
 # Interfaces
@@ -176,12 +176,26 @@ Provide a callback to get called when the connection becomes idle i.e. when ther
 
 ## stream
 
-All stream types expose the following fields and functions.
-The stream modules also share common functionality available via the [*http.stream_common*](#http.stream_common) module.
+All stream types expose the following fields and functions:
 
 ### `stream.connection` <!-- --> {#stream.connection}
 
 The underlying [*connection*](#connection) object.
+
+
+### `stream:checktls()` <!-- --> {#stream:checktls}
+
+Convenience wrapper equivalent to [`stream.connection:checktls()`](#connection:checktls)
+
+
+### `stream:localname()` <!-- --> {#stream:localname}
+
+Convenience wrapper equivalent to [`stream.connection:localname()`](#connection:localname)
+
+
+### `stream:peername()` <!-- --> {#stream:peername}
+
+Convenience wrapper equivalent to [`stream.connection:peername()`](#connection:peername)
 
 
 ### `stream:get_headers(timeout)` <!-- --> {#stream:get_headers}
@@ -194,9 +208,34 @@ Retrieves the next complete headers object (i.e. a block of headers or trailers)
 Write the given [*headers*](#http.headers) object to the stream. The function takes a flag indicating if this is the last chunk in the stream, if `true` the stream will be closed. If `timeout` is specified, the stream will wait for the send to complete until `timeout` is exceeded.
 
 
+### `stream:write_continue(timeout)` <!-- --> {#stream:write_continue}
+
+Sends a 100-continue header block.
+
+
 ### `stream:get_next_chunk(timeout)` <!-- --> {#stream:get_next_chunk}
 
 Returns the next chunk of the http body from the socket, otherwise it yields while waiting for input. This function will yield indefinitely, or until `timeout` is exceeded. If the message is compressed, runs inflate to decompress the data. On error, returns `nil`, an error message and an error number.
+
+
+### `stream:each_chunk()` <!-- --> {#stream:each_chunk}
+
+Iterator over [`stream:get_next_chunk()`](#stream:get_next_chunk)
+
+
+### `stream:get_body_as_string(timeout)` <!-- --> {#stream:get_body_as_string}
+
+
+### `stream:get_body_chars(n, timeout)` <!-- --> {#stream:get_body_chars}
+
+
+### `stream:get_body_until(pattern, plain, include_pattern, timeout)` <!-- --> {#stream:get_body_until}
+
+
+### `stream:save_body_to_file(file, timeout)` <!-- --> {#stream:save_body_to_file}
+
+
+### `stream:get_body_as_file(timeout)` <!-- --> {#stream:get_body_as_file}
 
 
 ### `stream:unget(str)` <!-- --> {#stream:unget}
@@ -207,6 +246,12 @@ Places `str` back on the incoming data buffer, allowing it to be returned again 
 ### `stream:write_chunk(chunk, end_stream, timeout)` <!-- --> {#stream:write_chunk}
 
 Writes the string `chunk` to the stream. If `end_stream` is true, the body will be finalized and the stream will be closed. `write_chunk` yields indefinitely, or until `timeout` is exceeded.
+
+
+### `stream:write_body_from_string(str, timeout)` <!-- --> {#stream:write_body_from_string}
+
+
+### `stream:write_body_from_file(file, timeout)` <!-- --> {#stream:write_body_from_file}
 
 
 ### `stream:shutdown()` <!-- --> {#stream:shutdown}
@@ -494,7 +539,7 @@ print(reason_phrases["342"]) --> "Unassigned"
 
 ## http.h1_stream
 
-An h1_stream represents an HTTP 1.0 or 1.1 request/response. The module follows the [*stream*](#stream) interface and the methods from [*http.stream_common*](#http.stream_common), as well as the following HTTP 1 specific functions:
+An h1_stream represents an HTTP 1.0 or 1.1 request/response. The module follows the [*stream*](#stream) interface as well as HTTP 1.x specific functions.
 
 ### `h1_stream:set_state(new)` <!-- --> {#http.h1_stream:set_state}
 
@@ -684,8 +729,7 @@ If `cond` is falsy (i.e. `false` or `nil`), throws an error with the first eleme
 
 ## http.h2_stream
 
-In addition to following the [*stream*](#stream) interface and the methods from [http.stream_common](#http.stream_common),
-an `http.h2_stream` has the following methods:
+An h2_stream represents an HTTP 2 stream. The module follows the [*stream*](#stream) interface as well as HTTP 2 specific functions.
 
 ### `h2_stream:set_state(new)` <!-- --> {#http.h2_stream:set_state}
 
@@ -1203,56 +1247,6 @@ On error, returns `nil` an error message and an error number.
 ### `socks:take_socket()` <!-- --> {#http.socks:take_socket}
 
 Take possesion of the socket object managed by the http.socks object. Returns the socket (or `nil` if not available).
-
-
-## http.stream_common
-
-The module `http.stream_common` provides common functions for streams (no matter the underlying protocol version). It exports a table `methods` of functions that build on top of the lower level [*stream*](#stream) interface.
-
-### `stream:checktls()` <!-- --> {#http.stream_common:checktls}
-
-Convenience wrapper equivalent to [`stream.connection:checktls()`](#connection:checktls)
-
-
-### `stream:localname()` <!-- --> {#http.stream_common:localname}
-
-Convenience wrapper equivalent to [`stream.connection:localname()`](#connection:localname)
-
-
-### `stream:peername()` <!-- --> {#http.stream_common:peername}
-
-Convenience wrapper equivalent to [`stream.connection:peername()`](#connection:peername)
-
-
-### `stream:write_continue(timeout)` <!-- --> {#http.stream_common:write_continue}
-
-Sends a 100-continue header block.
-
-
-### `stream:each_chunk()` <!-- --> {#http.stream_common:each_chunk}
-
-Iterator over [`stream:get_next_chunk()`](#stream:get_next_chunk)
-
-
-### `stream:get_body_as_string(timeout)` <!-- --> {#http.stream_common:get_body_as_string}
-
-
-### `stream:get_body_chars(n, timeout)` <!-- --> {#http.stream_common:get_body_chars}
-
-
-### `stream:get_body_until(pattern, plain, include_pattern, timeout)` <!-- --> {#http.stream_common:get_body_until}
-
-
-### `stream:save_body_to_file(file, timeout)` <!-- --> {#http.stream_common:save_body_to_file}
-
-
-### `stream:get_body_as_file(timeout)` <!-- --> {#http.stream_common:get_body_as_file}
-
-
-### `stream:write_body_from_string(str, timeout)` <!-- --> {#http.stream_common:write_body_from_string}
-
-
-### `stream:write_body_from_file(file, timeout)` <!-- --> {#http.stream_common:write_body_from_file}
 
 
 ## http.tls
