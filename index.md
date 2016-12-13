@@ -144,6 +144,11 @@ Returns the connection information for the socket *peer* (as in, the next hop). 
 *Note: If the client is using a proxy, the :peername() will be the proxy, not the remote server connection.* 
 
 
+### `connection:flush(timeout)` <!-- --> {#connection:flush}
+
+Flushes all buffered outgoing data on the socket. Returns `true` on success. Returns `false` and the error if the socket fails to flush.
+
+
 ### `connection:shutdown()` <!-- --> {#connection:shutdown}
 
 Performs an orderly shutdown of the connection by closing all streams and calls `:shutdown()` on the socket. The connection cannot be re-opened. 
@@ -341,11 +346,6 @@ Returns the error number of existing errors.
 ### `h1_connection:take_socket()` <!-- --> {#http.h1_connection:take_socket}
 
 Used to hand the reference of the connection socket to another object. Resets the socket to defaults and returns the single existing reference of the socket to the calling routine. This function can be used for connection upgrades such as upgrading from HTTP 1 to a WebSocket.
-
-
-### `h1_connection:flush(...)` <!-- --> {#http.h1_connection:flush}
-
-Flushes all buffered outgoing data on the socket. Returns `true` on success. Returns `false` and the error if the socket fails to flush.
 
 
 ### `h1_connection:read_request_line(timeout)` <!-- --> {#http.h1_connection:read_request_line}
