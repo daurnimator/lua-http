@@ -638,19 +638,14 @@ See [`stream:shutdown()`](#stream:shutdown)
 
 ### `h1_stream:set_state(new)` <!-- --> {#http.h1_stream:set_state}
 
-Sets h1_stream.state if `new` is one of the following valid states:
+Sets the state of the stream to `new`. `new` must be one of the following valid states:
 
-```lua
-valid_states = {
-	["idle"] = 1; -- initial
-	["open"] = 2; -- have sent or received headers; haven't sent body yet
-	["half closed (local)"] = 3; -- have sent whole body
-	["half closed (remote)"] = 3; -- have received whole body
-	["closed"] = 4; -- complete
-}
-  ```
-  
-Asserts if `new` is not a valid value.
+  - `"open"`: have sent or received headers; haven't sent body yet
+  - `"half closed (local)"`: have sent whole body
+  - `"half closed (remote)"`: have received whole body
+  - `"closed"`: complete
+
+Not all state transitions are allowed.
 
 
 ### `h1_stream:read_headers(timeout)` <!-- --> {#http.h1_stream:read_headers}
