@@ -67,6 +67,11 @@ function connection_methods:peername()
 	return ca.fileresult(self.socket:peername())
 end
 
+-- Primarily used for testing
+function connection_methods:flush(timeout)
+	return self.socket:flush("n", timeout)
+end
+
 return {
 	onerror = onerror;
 	methods = connection_methods;

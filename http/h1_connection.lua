@@ -140,11 +140,6 @@ function connection_methods:get_next_incoming_stream(timeout)
 	return stream
 end
 
--- Primarily used for testing
-function connection_methods:flush(...)
-	return self.socket:flush(...)
-end
-
 function connection_methods:read_request_line(timeout)
 	local deadline = timeout and (monotime()+timeout)
 	local preline
