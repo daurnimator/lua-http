@@ -332,6 +332,58 @@ Specifies the HTTP version used for the connection handshake. Valid values are:
   - `1.0`
   - `1.1`
 
+See [`connection.version`](#connection.version)
+
+
+### `h1_connection:connect(timeout)` <!-- --> {#http.h1_connection:connect}
+
+See [`connection:connect(timeout)`](#connection:connect)
+
+
+### `h1_connection:checktls()` <!-- --> {#http.h1_connection:checktls}
+
+See [`connection:checktls()`](#connection:checktls)
+
+
+### `h1_connection:localname()` <!-- --> {#http.h1_connection:localname}
+
+See [`connection:localname()`](#connection:localname)
+
+
+### `h1_connection:peername()` <!-- --> {#http.h1_connection:peername}
+
+See [`connection:peername()`](#connection:peername)
+
+
+### `h1_connection:flush(timeout)` <!-- --> {#http.h1_connection:flush}
+
+See [`connection:flush(timeout)`](#connection:flush)
+
+
+### `h1_connection:shutdown()` <!-- --> {#http.h1_connection:shutdown}
+
+See [`connection:shutdown()`](#connection:shutdown)
+
+
+### `h1_connection:close()` <!-- --> {#http.h1_connection:close}
+
+See [`connection:close()`](#connection:close)
+
+
+### `h1_connection:new_stream()` <!-- --> {#http.h1_connection:new_stream}
+
+See [`connection:new_stream()`](#connection:new_stream) for more information.
+
+
+### `h1_connection:get_next_incoming_stream(timeout)` <!-- --> {#http.h1_connection:get_next_incoming_stream}
+
+See [`connection:get_next_incoming_stream(timeout)`](#connection:get_next_incoming_stream)
+
+
+### `h1_connection:onidle(new_handler)` <!-- --> {#http.h1_connection:onidle}
+
+See [`connection:onidle(new_handler)`](#connection:onidle)
+
 
 ### `h1_connection:clearerr(...)` <!-- --> {#http.h1_connection:clearerr}
 
