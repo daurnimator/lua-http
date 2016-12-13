@@ -479,7 +479,9 @@ hence an *http.h2_connection* acts much like a scheduler.
 
 ### `h2_connection.version` <!-- --> {#http.h2_connection.version}
 
-Contains the value of the HTTP 2 version number for the connection. Currently will hold the value of `2`
+Contains the value of the HTTP 2 version number for the connection. Currently will hold the value of `2`.
+
+See [`connection.version`](#connection.version)
 
 
 ### `h2_connection:pollfd()` <!-- --> {#http.h2_connection:pollfd}
@@ -520,6 +522,11 @@ See [`connection:localname()`](#connection:localname)
 See [`connection:peername()`](#connection:peername)
 
 
+### `h2_connection:flush(timeout)` <!-- --> {#http.h2_connection:flush}
+
+See [`connection:flush(timeout)`](#connection:flush)
+
+
 ### `h2_connection:shutdown()` <!-- --> {#http.h2_connection:shutdown}
 
 See [`connection:shutdown()`](#connection:shutdown)
@@ -540,7 +547,12 @@ See [`connection:new_stream()`](#connection:new_stream) for more information.
 
 ### `h2_connection:get_next_incoming_stream(timeout)` <!-- --> {#http.h2_connection:get_next_incoming_stream}
 
-See [`connection:get_next_incoming_stream()`](#connection:get_next_incoming_stream)
+See [`connection:get_next_incoming_stream(timeout)`](#connection:get_next_incoming_stream)
+
+
+### `h2_connection:onidle(new_handler)` <!-- --> {#http.h2_connection:onidle}
+
+See [`connection:onidle(new_handler)`](#connection:onidle)
 
 
 ### `h2_connection:read_http2_frame(timeout)` <!-- --> {#http.h2_connection:read_http2_frame}
