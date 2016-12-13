@@ -77,10 +77,11 @@ li.collapsible:before {
   margin-left: -1rem; /* undo ul's padding-left */
   width: 1rem;
   display: inline-block;
-  content: '- ';
+  text-align: center;
+  content: '-';
 }
 li.collapsible[state="collapsed"]:before {
-  content: '+ ';
+  content: '+';
 }
 li.collapsible[state="collapsed"] > ul {
   display: none;
