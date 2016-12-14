@@ -328,11 +328,9 @@ end
 
 function connection_methods:close()
 	local ok, err = self:shutdown()
-	if cqueues.running() == self.cq then
-		self.close_me = true
-		cqueues.poll()
-	else
-		cqueues.poll()
+	self.close_me = true
+	cqueues.poll()
+	if cqueues.running() ~= self.cq then
 		cqueues.poll()
 		self.socket:close()
 	end
