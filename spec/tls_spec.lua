@@ -5,12 +5,19 @@ describe("http.tls module", function()
 	local cs = require "cqueues.socket"
 	local openssl_ctx = require "openssl.ssl.context"
 	local openssl_pkey = require "openssl.pkey"
+	local openssl_x509 = require "openssl.x509"
 	it("banned ciphers list denies a negotiated banned cipher", function()
+		local banned_cipher_list do
+			local t = {}
+			for cipher in pairs(tls.banned_ciphers) do
+				table.insert(t, cipher)
+			end
+			banned_cipher_list = table.concat(t, ":")
+		end
 		local s, c = ca.assert(cs.pair())
 		local cq = cqueues.new()
 		cq:wrap(function()
 			local ctx = openssl_ctx.new("TLSv1", false)
-			ctx:setCipherList("EXPORT:eNULL:!EC:!AES") -- Purposefully insecure!
 			assert(c:starttls(ctx))
 			local ssl = assert(s:checktls())
 			local cipher = ssl:getCipherInfo()
@@ -18,8 +25,14 @@ describe("http.tls module", function()
 		end)
 		cq:wrap(function()
 			local ctx = openssl_ctx.new("TLSv1", true)
+			ctx:setCipherList(banned_cipher_list)
 			ctx:setEphemeralKey(openssl_pkey.new{ type = "EC", curve = "prime256v1" })
-			ctx:setCipherList("ALL:eNULL") -- Purposefully insecure!
+			local crt = openssl_x509.new()
+			local key = openssl_pkey.new()
+			crt:setPublicKey(key)
+			crt:sign(key)
+			assert(ctx:setPrivateKey(key))
+			assert(ctx:setCertificate(crt))
 			assert(s:starttls(ctx))
 			local ssl = assert(s:checktls())
 			local cipher = ssl:getCipherInfo()
