@@ -975,7 +975,7 @@ function stream_methods:shutdown()
 			len = len + #chunk.data
 		end
 	end
-	if len > 0 then
+	if len > 0 and not self.connection.close_me then
 		self.connection:write_window_update(len)
 	end
 end
