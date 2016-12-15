@@ -1336,7 +1336,7 @@ On success, returns the response [*headers*](#http.headers) and a [*stream*](#st
 
 *http.server* objects are used to encapulate the accept() and dispatch of http clients. Each client request triggers `onstream` which is called from an independant cqueue, providing an independant process for each request. `onstream` can also be used for testing and upgrading a request, with HTTP 1.1 to WebSockets being the notible example.
 
-For examples of how to use the server library, please see the examples directory in the source tree.
+For examples of how to use the server library, please see the [examples directory](https://github.com/daurnimator/lua-http/tree/master/examples) in the source tree.
 
 ### `new(options)` <!-- --> {#http.server.new}
 
