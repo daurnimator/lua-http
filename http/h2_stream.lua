@@ -955,10 +955,7 @@ end
 
 function stream_methods:shutdown()
 	if self.state ~= "idle" and self.state ~= "closed" and self.id ~= 0 then
-		local ok, err, errno = self:write_rst_stream(0)
-		if not ok and errno ~= ce.EPIPE then
-			error(err)
-		end
+		self:write_rst_stream(0, 0) -- ignore result
 	end
 	local len = 0
 	for i=1, self.chunk_fifo:length() do
