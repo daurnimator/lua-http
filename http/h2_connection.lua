@@ -128,7 +128,15 @@ local function new_connection(socket, conn_type, settings)
 		n_active_streams = 0;
 		onidle_ = nil;
 		stream0 = nil; -- store separately with a strong reference
+
+		-- For continuations
 		need_continuation = nil; -- stream
+		recv_headers_buffer = nil;
+		recv_headers_buffer_pos = nil;
+		recv_headers_buffer_pad_len = nil;
+		recv_headers_buffer_items = nil;
+		recv_headers_buffer_length = nil;
+
 		cq = cq;
 		close_me = false; -- to indicate that :close() should be called after exiting the current :step()
 		highest_odd_stream = -1;
@@ -179,6 +187,9 @@ function connection_methods:timeout()
 end
 
 local function handle_frame(self, typ, flag, streamid, payload)
+	if self.need_continuation and (typ ~= 0x9 or self.need_continuation.id ~= streamid) then
+		return nil, h2_error.errors.PROTOCOL_ERROR:new_traceback("CONTINUATION frame expected"), ce.EPROTO
+	end
 	local handler = h2_stream.frame_handlers[typ]
 	-- http2 spec section 4.1:
 	-- Implementations MUST ignore and discard any frame that has a type that is unknown.
