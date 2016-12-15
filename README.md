@@ -20,8 +20,6 @@ Can be found at [https://daurnimator.github.io/lua-http/](https://daurnimator.gi
 [![Coverage Status](https://coveralls.io/repos/daurnimator/lua-http/badge.svg?branch=master&service=github)](https://coveralls.io/github/daurnimator/lua-http?branch=master)
 
   - First release impending!
-  - HTTP request API is mostly stable
-  - The HTTP server API is reaching stability
 
 
 # Installation
