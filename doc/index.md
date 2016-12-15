@@ -1426,19 +1426,23 @@ Shutdown the server and close the socket. A closed server cannot be reused.
 
 ### `server:pollfd()` <!-- --> {#http.server:pollfd}
 
-Returns a file descriptor (as an integer) or `nil`. The file descriptor can be passed to a system API like select or kqueue to wait on anything this server object wants to do. *pollfd* is used for integrating with other main loops, and should be used in combination with [*events*](#http.server:events) and [*timeout*](#http.server:timeout). 
+Returns a file descriptor (as an integer) or `nil`.
+
+The file descriptor can be passed to a system API like `select` or `kqueue` to wait on anything this server object wants to do. This method is used for integrating with other main loops, and should be used in combination with [`:events()`](#http.server:events) and [`:timeout()`](#http.server:timeout).
 
 
 ### `server:events()` <!-- --> {#http.server:events}
 
-Returns a string indicating the type of events the object is waiting on: the string will contain "r" if it wants to be *step*ed when [*pollfd*](#http.server:pollfd) has had POLLIN indicated; "w" for POLLOUT or "p" for POLLPRI. This interface is compatible with cqueues.
+Returns a string indicating the type of events the object is waiting on: the string will contain `"r"` if it wants to be *step*ed when [*pollfd*](#http.server:pollfd) has had POLLIN indicated; `"w"` for POLLOUT or `"p"` for POLLPRI.
 
-Note that the system may also return `POLLIN|POLLOUT` as `"rw"` and a telent service may use `'rp'` for `POLLIN|POLLPRI`. These features are not commonly implemented in TCP communications. 
+This method is used for integrating with other main loops, and should be used in combination with [`:pollfd()`](#http.server:pollfd) and [`:timeout()`](#http.server:timeout).
 
 
 ### `server:timeout()` <!-- --> {#http.server:timeout}
 
-The timeout before :step() should be called.
+The maximum time (in seconds) to wait before calling [`server:step()`](#http.server:step).
+
+This method is used for integrating with other main loops, and should be used in combination with [`:pollfd()`](#http.server:pollfd) and [`:events()`](#http.server:events).
 
 
 ### `server:empty()` <!-- --> {#http.server:empty}
