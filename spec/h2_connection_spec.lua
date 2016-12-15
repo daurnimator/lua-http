@@ -22,22 +22,15 @@ describe("http2 connection", function()
 			s:close()
 		end
 
-		-- Start an actual connection so that the tostring shows dependant streams
-		local s, c = new_pair()
-		local cq = cqueues.new()
-		cq:wrap(function()
+		do -- Start an actual connection so that the tostring shows dependant streams
+			local s, c = new_pair()
 			local stream = c:new_stream()
 			assert.same("http.h2_stream{", tostring(stream):match("^.-%{"))
 			assert.same("http.h2_connection{", tostring(c):match("^.-%{"))
 			stream:shutdown()
 			assert(c:close())
-		end)
-		cq:wrap(function()
-			assert_loop(s)
 			assert(s:close())
-		end)
-		assert_loop(cq, TEST_TIMEOUT)
-		assert.truthy(cq:empty())
+		end
 	end)
 	it("Rejects invalid #preface", function()
 		local function test_preface(text)
