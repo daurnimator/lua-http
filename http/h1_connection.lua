@@ -94,15 +94,6 @@ function connection_methods:shutdown(dir)
 	end
 end
 
-function connection_methods:close()
-	self:shutdown()
-	if self.socket then
-		cqueues.poll()
-		cqueues.poll()
-		self.socket:close()
-	end
-end
-
 function connection_methods:new_stream()
 	assert(self.type == "client")
 	if self.socket == nil or self.socket:eof("w") then

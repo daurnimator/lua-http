@@ -295,14 +295,6 @@ function connection_methods:shutdown()
 	return ok, err, errno
 end
 
-function connection_methods:close()
-	local ok, err = self:shutdown()
-	cqueues.poll()
-	cqueues.poll()
-	self.socket:close()
-	return ok, err
-end
-
 function connection_methods:new_stream(id)
 	if id then
 		assert(id % 1 == 0)

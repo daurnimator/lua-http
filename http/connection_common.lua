@@ -1,3 +1,4 @@
+local cqueues = require "cqueues"
 local ca = require "cqueues.auxlib"
 local ce = require "cqueues.errno"
 
@@ -70,6 +71,16 @@ end
 -- Primarily used for testing
 function connection_methods:flush(timeout)
 	return self.socket:flush("n", timeout)
+end
+
+function connection_methods:close()
+	self:shutdown()
+	if self.socket then
+		cqueues.poll()
+		cqueues.poll()
+		self.socket:close()
+	end
+	return true
 end
 
 return {
