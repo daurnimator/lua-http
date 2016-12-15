@@ -168,7 +168,7 @@ local function new_connection(socket, conn_type, settings)
 		assert(socket:xwrite(preface, "f", 0))
 	end
 	assert(self.stream0:write_settings_frame(false, settings or {}, 0))
-	socket:setmode("b", "bn") -- writes that don't explicitly buffer will now flush the buffer
+	socket:setmode("b", "bna") -- writes that don't explicitly buffer will now flush the buffer. autoflush on
 	-- note that the buffer is *not* flushed right now
 
 	return self
@@ -229,14 +229,6 @@ function connection_main_loop(self)
 			h2_error.errors.PROTOCOL_ERROR("invalid connection preface. not an http2 client?")
 		end
 	end
-
-	-- create a thread that flushes
-	cqueues.running():wrap(function(socket)
-		local ok, err, errno = socket:flush("n")
-		if not ok and errno ~= ce.EPIPE then
-			error(err)
-		end
-	end, self.socket)
 
 	local ok, connection_error
 
