@@ -3,7 +3,7 @@
 lua-http is an performant, capable HTTP and WebSocket library for Lua 5.1, 5.2, 5.3 and LuaJIT. Some of the features of the library include: 
 
   - Support for HTTP versions 1, 1.1 and 2 as specified by [RFC 7230](https://tools.ietf.org/html/rfc7230) and [RFC 7540](https://tools.ietf.org/html/rfc7540)
-  - Provides both client and server APIs 
+  - Provides both client and server APIs
   - Fully asynchronous API that does not block the current thread when executing operations that typically block
   - Support for WebSockets as specified by [RFC 6455](https://tools.ietf.org/html/rfc6455) including ping/pong, binary data transfer and TLS encryption
   - Transport Layer Security (TLS) - lua-http supports HTTPS and WSS via [luaossl](https://github.com/wahern/luaossl).
@@ -29,14 +29,14 @@ The lua-http library was written to fill a gap in the Lua ecosystem by providing
   - Can be used at a very high level without need to understand the transportation of HTTP data (other than connection addresses).
   - Provides a rich low level API, if desired, for creating powerful HTTP based tools at the protocol level.
 
-As a result of these design goals, the library is simple and un-obtrusive and can accommodate tens of thousands of connections on commodity hardware. 
+As a result of these design goals, the library is simple and unobtrusive and can accommodate tens of thousands of connections on commodity hardware.
 
 lua-http is a flexible HTTP and WebSocket library that allows developers to concentrate on line-of-business features when building Internet enabled applications. If you are looking for a way to streamline development of an internet enabled application, enable HTTP networking in your game, create a new Internet Of Things (IoT) system, or write a performant custom web server for a specific use case, lua-http has the tools you need.
 
 
 ## Common Use Cases
 
-The following are two simple demonstrations of how the lua-http library can be used: 
+The following are two simple demonstrations of how the lua-http library can be used:
 
 ### Retrieving a Document
 
@@ -70,14 +70,14 @@ assert(ws:close())
 
 ## Asynchronous Operation
 
-lua-http has been written to perform asynchronously so that it can be used in your application, server or game without blocking your main loop. Asynchronous operations are achieved by utilizing cqueues, a Lua/C library that incorporates Lua yielding and kernel level APIs to reduce CPU usage. All lua-http operations including DNS lookup, TLS negotiation and read/write operations will not block the main application thread when run from inside a cqueue or cqueue enabled "container". While sometimes it is necessary to block a routine (yield) and wait for external data, any blocking API calls take an optional timeout to ensure good behavior of networked applications and avoid unresponsive or "dead" routines.
+lua-http has been written to perform asynchronously so that it can be used in your application, server or game without blocking your main loop. Asynchronous operations are achieved by utilizing cqueues, a Lua/C library that incorporates Lua yielding and kernel level APIs to reduce CPU usage. All lua-http operations including DNS lookup, TLS negotiation and read/write operations will not block the main application thread when run from inside a cqueue or cqueue enabled "container". While sometimes it is necessary to block a routine (yield) and wait for external data, any blocking API calls take an optional timeout to ensure good behaviour of networked applications and avoid unresponsive or "dead" routines.
 
-Asynchronous operations are one of the most powerful features of lua-http and require no effort on the developers part. For instance, an HTTP server can be instantiated within any Lua main loop and run alongside application code without adversely affecting the main application process. If other cqueue enabled components are integrated within a cqueue loop, the application is entirely event driven through kernel level polling APIs. 
+Asynchronous operations are one of the most powerful features of lua-http and require no effort on the developers part. For instance, an HTTP server can be instantiated within any Lua main loop and run alongside application code without adversely affecting the main application process. If other cqueue enabled components are integrated within a cqueue loop, the application is entirely event driven through kernel level polling APIs.
 
 cqueues can be used in conjunction with lua-http to integrate other features into your lua application and create powerful, performant, web enabled applications. Some of the examples in this guide will use cqueues for simple demonstrations. For more resources about cqueues, please see:
 
   - [The cqueues website](http://25thandclement.com/~william/projects/cqueues.html) for more information about the cqueues library.
-  - cqueues examples can be found with the cqueues source code available through [git or archives](http://www.25thandclement.com/~william/projects/cqueues.html#download) or accessed online [here](https://github.com/wahern/cqueues/tree/master/examples). 
+  - cqueues examples can be found with the cqueues source code available through [git or archives](http://www.25thandclement.com/~william/projects/cqueues.html#download) or accessed online [here](https://github.com/wahern/cqueues/tree/master/examples).
   - For more information on integrating cqueues with other event loop libraries please see [integration with other event loops](https://github.com/wahern/cqueues/wiki/Integrations-with-other-main-loops).
   - For other libraries that use cqueues such as asynchronous APIs for Redis and PostgreSQL, please see [the cqueues wiki entry here](https://github.com/wahern/cqueues/wiki/Libraries-that-use-cqueues).
 
@@ -312,7 +312,7 @@ This function returns a new connection to an HTTP server. Once a connection has 
 	  - `family` (integer, optional): socket family to use.  
 		defaults to `AF_INET`
 	  - `host` (string): host to connect to.  
-		may be either a hostname or an ip address
+		may be either a hostname or an IP address
 	  - `port` (string|integer): port to connect to in numeric form  
 		e.g. `"80"` or `80`
 	  - `path` (string): path to connect to (UNIX sockets)
@@ -1326,7 +1326,7 @@ On success, returns the response [*headers*](#http.headers) and a [*stream*](#st
 
 ## http.server
 
-*http.server* objects are used to encapulate the accept() and dispatch of http clients. Each client request triggers `onstream` which is called from an independant cqueue, providing an independant process for each request. `onstream` can also be used for testing and upgrading a request, with HTTP 1.1 to WebSockets being the notible example.
+*http.server* objects are used to encapsulate the accept() and dispatch of http clients. Each client request triggers `onstream` which is called from an independent cqueue, providing an independent process for each request. `onstream` can also be used for testing and upgrading a request, with HTTP 1.1 to WebSockets being the notable example.
 
 For examples of how to use the server library, please see the [examples directory](https://github.com/daurnimator/lua-http/tree/master/examples) in the source tree.
 
@@ -1354,12 +1354,12 @@ Creates a new socket and returns an HTTP server that will accept() from it.
 Parameters are the same as [`new(options)`](#http.server.new) except instead of `.socket` you provide the following:
 
   - `.host` (*string*): Local IP address in dotted decimal or IPV6 notation. This value is required if `.path` is not specified.
-  - `.port` (*number*): IP port for the local socket. Specify 0 for automatic port selection. Ports 1-1024 require the application has root privilege to run. Maximum value is 65535. If `.tls == nil` then this value is required. Othewise, the defaults are:
+  - `.port` (*number*): IP port for the local socket. Specify 0 for automatic port selection. Ports 1-1024 require the application has root privilege to run. Maximum value is 65535. If `.tls == nil` then this value is required. Otherwise, the defaults are:
 	  - `80` if `.tls == false`
 	  - `443` if `.tls == true`
   - `.path` (*string*): Path to UNIX a socket. This value is required if `.host` is not specified.
   - `.family` (*string*): Protocol family. Default is `"AF_INET"`
-  - `.v6only` (*boolean*): Specifiy `true` to limit all connections to ipv6 only (no ipv4-mapped-ipv6). Default is `false`.
+  - `.v6only` (*boolean*): Specify `true` to limit all connections to ipv6 only (no ipv4-mapped-ipv6). Default is `false`.
   - `.mode` (*string*): `fchmod` or `chmod` socket after creating UNIX domain socket.
   - `.mask` (*boolean*): Set and restore umask when binding UNIX domain socket.
   - `.unlink` (*boolean*): `true` means unlink socket path before binding.
@@ -1489,7 +1489,7 @@ On error, returns `nil` an error message and an error number.
 
 ### `socks:take_socket()` <!-- --> {#http.socks:take_socket}
 
-Take possesion of the socket object managed by the http.socks object. Returns the socket (or `nil` if not available).
+Take possession of the socket object managed by the http.socks object. Returns the socket (or `nil` if not available).
 
 
 ## http.tls
@@ -1503,12 +1503,12 @@ It may be disabled if OpenSSL was compiled without ALPN support, or is an old ve
 
 ### `modern_cipher_list` <!-- --> {#http.tls.modern_cipher_list}
 
-The [Mozilla "Modern" cipher list](https://wiki.mozilla.org/Security/Server_Side_TLS#Modern_compatibility) as a colon seperated list, ready to pass to OpenSSL
+The [Mozilla "Modern" cipher list](https://wiki.mozilla.org/Security/Server_Side_TLS#Modern_compatibility) as a colon separated list, ready to pass to OpenSSL
 
 
 ### `intermediate_cipher_list` <!-- --> {#http.tls.intermediate_cipher_list}
 
-The [Mozilla "Intermediate" cipher list](https://wiki.mozilla.org/Security/Server_Side_TLS#Intermediate_compatibility_.28default.29) as a colon seperated list, ready to pass to OpenSSL
+The [Mozilla "Intermediate" cipher list](https://wiki.mozilla.org/Security/Server_Side_TLS#Intermediate_compatibility_.28default.29) as a colon separated list, ready to pass to OpenSSL
 
 
 ### `banned_ciphers` <!-- --> {#http.tls.banned_ciphers}
@@ -1700,7 +1700,7 @@ Sends a ping frame.
 
 ### `websocket:send_pong(data, timeout)` <!-- --> {#http.websocket:send_pong}
 
-Sends a pong frame. Works as a unidirectional keepalive.
+Sends a pong frame. Works as a unidirectional keep-alive.
 
   - `data` is optional
 
@@ -1763,7 +1763,7 @@ A few key differences to the prosody `net.http.request`:
   - must be called from within a running cqueue
   - The callback may be called from a different thread in the cqueue
   - The returned object will be a [*http.request*](#http.request) object
-	  - This object is passed to the callback on errors and as the 4th argument on success
+	  - This object is passed to the callback on errors and as the fourth argument on success
   - The default user-agent will be from lua-http (rather than `"Prosody XMPP Server"`)
   - lua-http features (such as HTTP2) will be used where possible
 
