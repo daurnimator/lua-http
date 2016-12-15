@@ -303,6 +303,27 @@ print(bit.band(1, 3)) --> 1
 
 Deals with obtaining a connection to an HTTP server.
 
+### `negotiate(socket, options, timeout)` <!-- --> {#http.client.negotiate}
+
+Negotiates the HTTP settings with the remote server. If TLS has been specified, this function instantiates the encryption tunnel. Parameters are as follows:
+
+  - `socket` is a cqueues socket object
+  - `options` is a table containing:
+	- `.tls` (boolean, optional): Should TLS be used?  
+	  defaults to `false`
+	- `.ctx` (userdata, optional): the `SSL_CTX*` to use if `.tls` is `true`.  
+	  If `.ctx` is `nil` then a default context will be used.
+	- `.sendname` (string|boolean, optional): the [TLS SNI](https://en.wikipedia.org/wiki/Server_Name_Indication) host to send.  
+	  defaults to `true`
+	  - `true` indicates to copy the `.host` field as long as it is **not** an IP
+	  - `false` disables SNI
+	- `.version` (`nil`|1.0|1.1|2): HTTP version to use.
+	  - `nil`: attempts HTTP 2 and falls back to HTTP 1.1
+	  - `1.0`
+	  - `1.1`
+	  - `2`
+	- `.h2_settings` (table, optional): HTTP 2 settings to use. See [*http.h2_connection*](#http.h2_connection) for details
+
 
 ### `connect(options, timeout)` <!-- --> {#http.client.connect}
 
@@ -316,10 +337,6 @@ This function returns a new connection to an HTTP server. Once a connection has 
 	  - `port` (string|integer): port to connect to in numeric form  
 		e.g. `"80"` or `80`
 	  - `path` (string): path to connect to (UNIX sockets)
-	  - `sendname` (string|boolean, optional): the [TLS SNI](https://en.wikipedia.org/wiki/Server_Name_Indication) host to send.  
-		defaults to `true`
-		  - `true` indicates to copy the `host` field
-		  - `false` disables SNI
 	  - `v6only` (boolean, optional): if the `IPV6_V6ONLY` flag should be set on the underlying socket.
   - `timeout` (optional) is the maximum amount of time (in seconds) to allow for connection to be established.  
 	This includes time for DNS lookup, connection, TLS negotiation (if TLS enabled) and in the case of HTTP 2: settings exchange.
@@ -336,24 +353,6 @@ local myconnection = http_client.connect {
 	tls = false;
 }
 ```
-
-
-### `negotiate(socket, options, timeout)` <!-- --> {#http.client.negotiate}
-
-Negotiates the HTTP settings with the remote server. If TLS has been specified, this function instantiates the encryption tunnel. Parameters are as follows:
-
-  - `socket` is a cqueues socket object
-  - `options` is a table containing:
-	  - `tls` (boolean|userdata, optional): the `SSL_CTX*` to use, or a boolean to indicate the default TLS context.  
-		defaults to `true`.
-		  - `true` indicates to use the default TLS settings, see [*http.tls*](#http.tls) for information.
-		  - `false` means do not negotiate TLS
-	  - `version` (`nil`|1.0|1.1|2): HTTP version to use.
-		  - `nil`: attempts HTTP 2 and falls back to HTTP 1.1
-		  - `1.0`
-		  - `1.1`
-		  - `2`
-	  - `h2_settings` (table, optional): HTTP 2 settings to use. See [*http.h2_connection*](#http.h2_connection) for details
 
 
 ## http.h1_connection
