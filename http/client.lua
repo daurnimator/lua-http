@@ -17,10 +17,6 @@ local IPaddress = (IPv4address + IPv6addrz) * EOF
 -- Create a shared 'default' TLS context
 local default_ctx = http_tls.new_client_context()
 
--- OpenSSL did not always have hostname validation.
--- See https://wiki.openssl.org/index.php/Hostname_validation
-local openssl_has_hostname_validation = openssl_verify_param.new().setHost ~= nil
-
 local function negotiate(s, options, timeout)
 	s:onerror(onerror)
 	local tls = options.tls
@@ -48,7 +44,7 @@ local function negotiate(s, options, timeout)
 		if version == 2 then
 			ssl:setOptions(openssl_ctx.OP_NO_TLSv1 + openssl_ctx.OP_NO_TLSv1_1)
 		end
-		if options.host and openssl_has_hostname_validation then
+		if options.host and http_tls.has_hostname_validation then
 			local params = openssl_verify_param.new()
 			if ip then
 				params:setIP(options.host)

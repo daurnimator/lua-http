@@ -1500,6 +1500,13 @@ Boolean indicating if ALPN is available in the current environment.
 It may be disabled if OpenSSL was compiled without ALPN support, or is an old version.
 
 
+### `has_hostname_validation` <!-- --> {#http.tls.has_hostname_validation}
+
+Boolean indicating if [hostname validation](https://wiki.openssl.org/index.php/Hostname_validation) is available in the current environment.
+
+It may be disabled if OpenSSL is an old version.
+
+
 ### `modern_cipher_list` <!-- --> {#http.tls.modern_cipher_list}
 
 The [Mozilla "Modern" cipher list](https://wiki.mozilla.org/Security/Server_Side_TLS#Modern_compatibility) as a colon separated list, ready to pass to OpenSSL

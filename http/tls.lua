@@ -5,6 +5,9 @@ local openssl_verify_param = require "openssl.x509.verify_param"
 -- Detect if openssl was compiled with ALPN enabled
 local has_alpn = openssl_ctx.new().setAlpnSelect ~= nil
 
+-- OpenSSL did not always have hostname validation.
+local has_hostname_validation = openssl_verify_param.new().setHost ~= nil
+
 -- Creates a cipher list suitable for passing to `setCipherList`
 local function cipher_list(arr)
 	return table.concat(arr, ":")
@@ -724,6 +727,7 @@ end
 
 return {
 	has_alpn = has_alpn;
+	has_hostname_validation = has_hostname_validation;
 	modern_cipher_list = modern_cipher_list;
 	intermediate_cipher_list = intermediate_cipher_list;
 	banned_ciphers = banned_ciphers;
