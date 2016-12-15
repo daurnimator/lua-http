@@ -968,6 +968,7 @@ function stream_methods:shutdown()
 	if len > 0 then
 		self.connection:write_window_update(len)
 	end
+	return true
 end
 
 -- this function *should never throw*

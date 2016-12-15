@@ -203,6 +203,7 @@ function stream_methods:shutdown()
 		end
 		self:set_state("closed")
 	end
+	return true
 end
 
 -- read_headers may be called more than once for a stream
