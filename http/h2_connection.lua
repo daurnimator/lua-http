@@ -488,7 +488,7 @@ function connection_methods:settings(tbl, timeout)
 	-- Now wait for ACK
 	while self.send_settings_acked < n do
 		timeout = deadline and (deadline-monotime())
-		local which = cqueues.poll(self, self.send_settings_ack_cond, timeout)
+		local which = cqueues.poll(self.send_settings_ack_cond, self, timeout)
 		if which == self then
 			local ok2, err2, errno2 = self:step(0)
 			if not ok2 then
