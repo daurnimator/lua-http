@@ -962,14 +962,6 @@ Returns the new stream as a [h2_stream](#http.h2_stream).
 ### `h2_stream:write_window_update(inc)` <!-- --> {#http.h2_stream:write_window_update}
 
 
-### `h2_stream:read_continuation(timeout)` <!-- --> {#http.h2_stream:read_continuation}
-
-Reads a continuation frame from the underlying connection.
-If the next frame is not a continuation frame then returns an error.
-
-On success returns a boolean indicating if this was the last continuation frame and the frame payload.
-
-
 ### `h2_stream:write_continuation_frame(payload, end_headers, timeout)` <!-- --> {#http.h2_stream:write_continuation_frame}
 
 
