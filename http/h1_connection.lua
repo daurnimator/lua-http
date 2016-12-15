@@ -2,6 +2,7 @@
 
 local cqueues = require "cqueues"
 local monotime = cqueues.monotime
+local ca = require "cqueues.auxlib"
 local cc = require "cqueues.condition"
 local ce = require "cqueues.errno"
 local connection_common = require "http.connection_common"
@@ -90,7 +91,9 @@ function connection_methods:shutdown(dir)
 		end
 	end
 	if self.socket then
-		self.socket:shutdown(dir)
+		return ca.fileresult(self.socket:shutdown(dir))
+	else
+		return true
 	end
 end
 
