@@ -186,7 +186,7 @@ function connection_methods:timeout()
 	return self.cq:timeout()
 end
 
-local function handle_frame(self, typ, flag, streamid, payload)
+local function handle_frame(self, typ, flag, streamid, payload, deadline)
 	if self.need_continuation and (typ ~= 0x9 or self.need_continuation.id ~= streamid) then
 		return nil, h2_error.errors.PROTOCOL_ERROR:new_traceback("CONTINUATION frame expected"), ce.EPROTO
 	end
@@ -204,10 +204,10 @@ local function handle_frame(self, typ, flag, streamid, payload)
 			self.new_streams:push(stream)
 			self.new_streams_cond:signal(1)
 		end
-		local ok, err = handler(stream, flag, payload)
+		local ok, err = handler(stream, flag, payload, deadline)
 		if not ok then
 			if h2_error.is(err) and err.stream_error then
-				local ok2, err2 = stream:write_rst_stream(err.code)
+				local ok2, err2 = stream:write_rst_stream(err.code, deadline and deadline-monotime())
 				if not ok2 then
 					return nil, err2
 				end

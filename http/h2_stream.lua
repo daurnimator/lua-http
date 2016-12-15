@@ -170,7 +170,7 @@ function chunk_methods:ack(no_window_update)
 end
 
 -- DATA
-frame_handlers[0x0] = function(stream, flags, payload)
+frame_handlers[0x0] = function(stream, flags, payload, deadline) -- luacheck: ignore 212
 	if stream.id == 0 then
 		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("'DATA' frames MUST be associated with a stream")
 	end
@@ -390,7 +390,7 @@ local function process_end_headers(stream, end_stream, pad_len, pos, promised_st
 end
 
 -- HEADERS
-frame_handlers[0x1] = function(stream, flags, payload)
+frame_handlers[0x1] = function(stream, flags, payload, deadline) -- luacheck: ignore 212
 	if stream.id == 0 then
 		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("'HEADERS' frames MUST be associated with a stream")
 	end
@@ -534,7 +534,7 @@ function stream_methods:write_priority_frame(exclusive, stream_dep, weight, time
 end
 
 -- RST_STREAM
-frame_handlers[0x3] = function(stream, flags, payload) -- luacheck: ignore 212
+frame_handlers[0x3] = function(stream, flags, payload, deadline) -- luacheck: ignore 212
 	if stream.id == 0 then
 		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("'RST_STREAM' frames MUST be associated with a stream")
 	end
@@ -577,7 +577,7 @@ function stream_methods:write_rst_stream(err_code, timeout)
 end
 
 -- SETTING
-frame_handlers[0x4] = function(stream, flags, payload)
+frame_handlers[0x4] = function(stream, flags, payload, deadline)
 	if stream.id ~= 0 then
 		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("stream identifier for a 'SETTINGS' frame MUST be zero")
 	end
@@ -631,7 +631,7 @@ frame_handlers[0x4] = function(stream, flags, payload)
 		stream.connection:set_peer_settings(peer_settings)
 		-- Ack server's settings
 		-- XXX: This shouldn't ignore all errors (it probably should not flush)
-		stream:write_settings_frame(true)
+		stream:write_settings_frame(true, nil, deadline and deadline-monotime())
 		return true
 	end
 end
@@ -708,7 +708,7 @@ function stream_methods:write_settings_frame(ACK, settings, timeout)
 end
 
 -- PUSH_PROMISE
-frame_handlers[0x5] = function(stream, flags, payload)
+frame_handlers[0x5] = function(stream, flags, payload, deadline) -- luacheck: ignore 212
 	if not stream.connection.acked_settings[0x2] then
 		-- An endpoint that has both set this parameter to 0 and had it acknowledged MUST
 		-- treat the receipt of a PUSH_PROMISE frame as a connection error of type PROTOCOL_ERROR.
@@ -781,7 +781,7 @@ function stream_methods:write_push_promise_frame(promised_stream_id, payload, en
 end
 
 -- PING
-frame_handlers[0x6] = function(stream, flags, payload)
+frame_handlers[0x6] = function(stream, flags, payload, deadline)
 	if stream.id ~= 0 then
 		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("'PING' must be on stream id 0")
 	end
@@ -799,7 +799,7 @@ frame_handlers[0x6] = function(stream, flags, payload)
 		end
 		return true
 	else
-		return stream:write_ping_frame(true, payload)
+		return stream:write_ping_frame(true, payload, deadline and deadline-monotime())
 	end
 end
 
@@ -815,7 +815,7 @@ function stream_methods:write_ping_frame(ACK, payload, timeout)
 end
 
 -- GOAWAY
-frame_handlers[0x7] = function(stream, flags, payload) -- luacheck: ignore 212
+frame_handlers[0x7] = function(stream, flags, payload, deadline) -- luacheck: ignore 212
 	if stream.id ~= 0 then
 		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("'GOAWAY' frames must be on stream id 0")
 	end
@@ -852,7 +852,7 @@ function stream_methods:write_goaway_frame(last_streamid, err_code, debug_msg, t
 end
 
 -- WINDOW_UPDATE
-frame_handlers[0x8] = function(stream, flags, payload) -- luacheck: ignore 212
+frame_handlers[0x8] = function(stream, flags, payload, deadline) -- luacheck: ignore 212
 	if #payload ~= 4 then
 		return nil, h2_errors.FRAME_SIZE_ERROR:new_traceback("'WINDOW_UPDATE' frames must be 4 bytes")
 	end
@@ -907,7 +907,7 @@ function stream_methods:write_window_update(inc)
 end
 
 -- CONTINUATION
-frame_handlers[0x9] = function(stream, flags, payload) -- luacheck: ignore 212
+frame_handlers[0x9] = function(stream, flags, payload, deadline) -- luacheck: ignore 212
 	if stream.id == 0 then
 		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("'CONTINUATION' frames MUST be associated with a stream")
 	end
