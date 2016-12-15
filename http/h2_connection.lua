@@ -390,7 +390,7 @@ function connection_methods:get_next_incoming_stream(timeout)
 			-- For now, assume not.
 			return nil
 		end
-		local which = cqueues.poll(self, self.new_streams_cond, self.recv_goaway, timeout)
+		local which = cqueues.poll(self.new_streams_cond, self.recv_goaway, self, timeout)
 		if which == self then
 			local ok, err, errno = self:step(0)
 			if not ok then
@@ -482,7 +482,7 @@ function connection_methods:ping(timeout)
 	assert(self.stream0:write_ping_frame(false, payload, timeout))
 	while self.pongs[payload] do
 		timeout = deadline and (deadline-monotime())
-		local which = cqueues.poll(self, cond, timeout)
+		local which = cqueues.poll(cond, self, timeout)
 		if which == self then
 			local ok, err, errno = self:step(0)
 			if not ok then
