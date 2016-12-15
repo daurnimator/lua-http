@@ -149,7 +149,7 @@ Returns the connection information for the local socket. Returns address family,
 
 Returns the connection information for the socket *peer* (as in, the next hop). Returns address family, IP address and port for an external socket. For unix sockets, the function returns `AF_UNIX` and the path. If the connection object is not connected, returns `AF_UNSPEC` (0). On error, returns `nil` an error message and an error number.
 
-*Note: If the client is using a proxy, the :peername() will be the proxy, not the remote server connection.* 
+*Note: If the client is using a proxy, the values returned `:peername()` point to the proxy, not the remote server.*
 
 
 ### `connection:flush(timeout)` <!-- --> {#connection:flush}
@@ -1336,7 +1336,7 @@ Creates a new instance of an HTTP server listening on the given socket.
 
   - `.socket` (*cqueues.socket*): the socket that `accept()` will be called on
   - `.onerror` (*function*): Function that will be called when an error occurs (default handler throws an error). See [server:onerror()](#http.server:onerror)
-  - `.onstream` (*function*): Callback function for handling a new client request. The function receives the [*server*](#http.server) and the new [*stream*](#stream) as parameters. If the callback throws an error it will be reported from [*step*](#http.server:step) or [*loop*](#http.server:loop)
+  - `.onstream` (*function*): Callback function for handling a new client request. The function receives the [*server*](#http.server) and the new [*stream*](#stream) as parameters. If the callback throws an error it will be reported from [`:step()`](#http.server:step) or [`:loop()`](#http.server:loop)
   - `.tls` (*boolean*): Specifies if the system should use Transport Layer Security. Values are:
 	  - `nil`: Allow both tls and non-tls connections
 	  - `true`: Allows tls connections only
@@ -1369,12 +1369,12 @@ Parameters are the same as [`new(options)`](#http.server.new) except instead of 
 
 ### `server:onerror(new_handler)` <!-- --> {#http.server:onerror}
 
-If called with parameters, the function replaces the current error handler function with `new_handler` and returns a reference to the old function. Calling the function with no parameters returns the current error handler. The default handler throws an error. The `onerror` function for the server can be set during instantiation through the `options` table passed to the [*server.listen(options)*](#server.listen) function.
+If called with parameters, the function replaces the current error handler function with `new_handler` and returns a reference to the old function. Calling the function with no parameters returns the current error handler. The default handler throws an error. The `onerror` function for the server can be set during instantiation through the `options` table passed to the [`server.listen(options)`](#server.listen) function.
 
 
 ### `server:listen(timeout)` <!-- --> {#http.server:listen}
 
-Initializes the server socket and if required, resolves DNS. *server:listen* is required if [*localname*](#http.server:localname) is called before [*step*](#http.server:step) or [*loop*](#http.server:loop). On error, returns `nil`, an error message and an error number.
+Initializes the server socket and if required, resolves DNS. `server:listen()` is required if [*localname*](#http.server:localname) is called before [*step*](#http.server:step) or [*loop*](#http.server:loop). On error, returns `nil`, an error message and an error number.
 
 
 ### `server:localname()` <!-- --> {#http.server:localname}
@@ -1406,7 +1406,7 @@ The file descriptor can be passed to a system API like `select` or `kqueue` to w
 
 ### `server:events()` <!-- --> {#http.server:events}
 
-Returns a string indicating the type of events the object is waiting on: the string will contain `"r"` if it wants to be *step*ed when [*pollfd*](#http.server:pollfd) has had POLLIN indicated; `"w"` for POLLOUT or `"p"` for POLLPRI.
+Returns a string indicating the type of events the object is waiting on: the string will contain `"r"` if it wants to be *step*ed when the file descriptor returned by [`pollfd()`](#http.server:pollfd) has had POLLIN indicated; `"w"` for POLLOUT or `"p"` for POLLPRI.
 
 This method is used for integrating with other main loops, and should be used in combination with [`:pollfd()`](#http.server:pollfd) and [`:timeout()`](#http.server:timeout).
 
@@ -1432,12 +1432,12 @@ This can be used for integration with external main loops.
 
 ### `server:loop(timeout)` <!-- --> {#http.server:loop}
 
-Run the server as a blocking loop for up to `timeout` seconds. The server will continue to listen and accept client requests until either [*pause*](#http.server:pause) or [*close*](#http.server:close) is called, or an error is experienced.
+Run the server as a blocking loop for up to `timeout` seconds. The server will continue to listen and accept client requests until either [`:pause()`](#http.server:pause) or [`:close()`](#http.server:close) is called, or an error is experienced.
 
 
 ### `server:add_socket(socket)` <!-- --> {#http.server:add_socket}
 
-Add a new connection socket to the server for processing. The server will use the current `onstream` request handler and all `options` currently specified through the [*server.listen(options)*](#http.server.listen) constructor. `add_socket` can be used to process connection sockets obtained from an external source such as:
+Add a new connection socket to the server for processing. The server will use the current `onstream` request handler and all `options` currently specified through the [`server.listen(options)`](#http.server.listen) constructor. `add_socket` can be used to process connection sockets obtained from an external source such as:
 
   - Another cqueues thread with some other master socket.
   - From inetd for start on demand daemons.
