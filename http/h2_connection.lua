@@ -59,8 +59,6 @@ function connection_mt:__tostring()
 		self.type)
 end
 
-local connection_main_loop
-
 -- Read bytes from the given socket looking for the http2 connection preface
 -- optionally ungets the bytes in case of failure
 local function socket_has_preface(socket, unget, timeout)
@@ -98,15 +96,6 @@ local function new_connection(socket, conn_type, settings)
 		error('invalid connection type. must be "client" or "server"')
 	end
 
-	local cq do -- Allocate cqueue first up, as it can throw when out of files
-		local ok, err = pcall(cqueues.new)
-		if not ok then
-			local errno = ce.EMFILE
-			return nil, ce.strerror(errno), errno
-		end
-		cq = err
-	end
-
 	socket:setvbuf("full", math.huge) -- 'infinite' buffering; no write locks needed
 	socket:setmode("b", "bf") -- full buffering for now; will be set to no buffering after settings sent
 	socket:onerror(onerror)
@@ -129,6 +118,10 @@ local function new_connection(socket, conn_type, settings)
 		onidle_ = nil;
 		stream0 = nil; -- store separately with a strong reference
 
+		has_confirmed_preface = false;
+		has_first_settings = false;
+		had_eagain = false;
+
 		-- For continuations
 		need_continuation = nil; -- stream
 		recv_headers_buffer = nil;
@@ -137,8 +130,6 @@ local function new_connection(socket, conn_type, settings)
 		recv_headers_buffer_items = nil;
 		recv_headers_buffer_length = nil;
 
-		cq = cq;
-		close_me = false; -- to indicate that :close() should be called after exiting the current :step()
 		highest_odd_stream = -1;
 		highest_even_stream = -2;
 		send_goaway_lowest = nil;
@@ -161,7 +152,6 @@ local function new_connection(socket, conn_type, settings)
 	self:new_stream(0)
 	self.encoding_context = hpack.new(default_settings[0x1])
 	self.decoding_context = hpack.new(default_settings[0x1])
-	self.cq:wrap(connection_main_loop, self)
 
 	if self.type == "client" then
 		-- fully buffered write; will be flushed when sending settings
@@ -175,15 +165,18 @@ local function new_connection(socket, conn_type, settings)
 end
 
 function connection_methods:pollfd()
-	return self.cq:pollfd()
+	return self.socket:pollfd()
 end
 
 function connection_methods:events()
-	return self.cq:events()
+	return self.socket:events()
 end
 
 function connection_methods:timeout()
-	return self.cq:timeout()
+	if not self.had_eagain then
+		return 0
+	end
+	return self.socket:timeout()
 end
 
 local function handle_frame(self, typ, flag, streamid, payload, deadline)
@@ -222,96 +215,66 @@ local function handle_frame(self, typ, flag, streamid, payload, deadline)
 	return true
 end
 
-function connection_main_loop(self)
-	if self.type == "server" then
-		local ok, err = socket_has_preface(self.socket, false)
+function connection_methods:step(timeout)
+	local deadline = timeout and monotime()+timeout
+	if not self.has_confirmed_preface and self.type == "server" then
+		local ok, err, errno = socket_has_preface(self.socket, false, timeout)
 		if ok == nil then
-			error(err)
+			if errno == ce.ETIMEDOUT then
+				return true
+			end
+			return nil, err, errno
 		end
 		if not ok then
-			h2_error.errors.PROTOCOL_ERROR("invalid connection preface. not an http2 client?")
+			return nil, h2_error.errors.PROTOCOL_ERROR:new_traceback("invalid connection preface. not an http2 client?"), ce.EPROTO
+		end
+		self.has_confirmed_preface = true
+	end
+
+	local ok, connection_error, errno
+	local typ, flag, streamid, payload = self:read_http2_frame(deadline and deadline-monotime())
+	if typ == nil then
+		-- flag might be `nil` on EOF
+		ok, connection_error, errno = nil, flag, streamid
+	elseif not self.has_first_settings and typ ~= 0x4 then -- XXX: Should this be more strict? e.g. what if it's an ACK?
+		ok, connection_error, errno = false, h2_error.errors.PROTOCOL_ERROR:new_traceback("A SETTINGS frame MUST be the first frame sent in an HTTP/2 connection"), ce.EPROTO
+	else
+		ok, connection_error, errno = handle_frame(self, typ, flag, streamid, payload, deadline)
+		if ok then
+			self.has_first_settings = true
 		end
 	end
 
-	local ok, connection_error
-
-	do
-		local typ, flag, streamid, payload = self:read_http2_frame()
-		if typ == nil then
-			-- flag might be `nil` on EOF
-			ok, connection_error = nil, flag
-		elseif typ ~= 0x4 then -- XXX: Should this be more strict? e.g. what if it's an ACK?
-			ok, connection_error = false, h2_error.errors.PROTOCOL_ERROR:new_traceback("A SETTINGS frame MUST be the first frame sent in an HTTP/2 connection")
-		else
-			ok, connection_error = handle_frame(self, typ, flag, streamid, payload)
+	if not ok and connection_error and errno ~= ce.ETIMEDOUT then
+		if not self.socket:eof("w") then
+			local code, message
+			if h2_error.is(connection_error) then
+				code, message = connection_error.code, connection_error.message
+			else
+				code = h2_error.errors.INTERNAL_ERROR.code
+			end
+			-- ignore write failure here; there's nothing that can be done
+			self:write_goaway_frame(nil, code, message, deadline and deadline-monotime())
 		end
-	end
-
-	while ok do
-		local typ, flag, streamid, payload = self:read_http2_frame()
-		if typ == nil then
-			-- flag might be `nil` on EOF
-			ok, connection_error = nil, flag
-		else
-			ok, connection_error = handle_frame(self, typ, flag, streamid, payload)
-		end
-	end
-
-	if connection_error then
-		if h2_error.is(connection_error) then
-			self:write_goaway_frame(nil, connection_error.code, connection_error.message) -- ignore failure
-		else
-			self:write_goaway_frame(nil, h2_error.errors.PROTOCOL_ERROR.code) -- ignore failure
-		end
-		error(connection_error)
+		return nil, connection_error, errno
 	end
 
 	return true
 end
 
-local function handle_step_return(self, step_ok, last_err, errno)
-	if self.close_me then
-		self:close()
-	end
-	if step_ok then
-		return true
-	elseif not self.close_me then
-		if not self.socket:eof("w") then
-			local code, message
-			if step_ok then
-				code = h2_error.errors.NO_ERROR.code
-			elseif h2_error.is(last_err) then
-				code = last_err.code
-				message = last_err.message
-			else
-				code = h2_error.errors.INTERNAL_ERROR.code
-			end
-			-- ignore write failure here; there's nothing that can be done
-			self:write_goaway_frame(nil, code, message)
-		end
-		self:shutdown()
-		return nil, last_err, errno
-	end
-end
-
 function connection_methods:empty()
-	return self.cq:empty()
-end
-
-function connection_methods:step(timeout)
-	if self:empty() then
-		return handle_step_return(self, false, nil, nil)
-	else
-		return handle_step_return(self, self.cq:step(timeout))
-	end
+	return self.socket:eof("r")
 end
 
 function connection_methods:loop(timeout)
-	if self:empty() then
-		return handle_step_return(self, false, nil, nil)
-	else
-		return handle_step_return(self, self.cq:loop(timeout))
+	local deadline = timeout and monotime()+timeout
+	while not self:empty() do
+		local ok, err, errno = self:step(deadline and deadline-monotime())
+		if not ok then
+			return nil, err, errno
+		end
 	end
+	return true
 end
 
 function connection_methods:shutdown()
@@ -334,13 +297,9 @@ end
 
 function connection_methods:close()
 	local ok, err = self:shutdown()
-	self.close_me = true
 	cqueues.poll()
-	if cqueues.running() ~= self.cq then
-		cqueues.poll()
-		self.socket:close()
-		self.cq:close()
-	end
+	cqueues.poll()
+	self.socket:close()
 	return ok, err
 end
 
@@ -384,7 +343,7 @@ end
 function connection_methods:get_next_incoming_stream(timeout)
 	local deadline = timeout and (monotime()+timeout)
 	while self.new_streams:length() == 0 do
-		if self.recv_goaway_lowest then
+		if self.recv_goaway_lowest or self.socket:eof("r") then
 			-- TODO? clarification required: can the sender of a GOAWAY subsequently start streams?
 			-- (with a lower stream id than they sent in the GOAWAY)
 			-- For now, assume not.
@@ -412,8 +371,10 @@ end
 function connection_methods:read_http2_frame(timeout)
 	local deadline = timeout and (monotime()+timeout)
 	local frame_header, err, errno = self.socket:xread(9, timeout)
+	self.had_eagain = false
 	if frame_header == nil then
 		if errno == ce.ETIMEDOUT then
+			self.had_eagain = true
 			return nil, err, errno
 		elseif err == nil then
 			if self.socket:pending() > 0 then
@@ -430,6 +391,7 @@ function connection_methods:read_http2_frame(timeout)
 		return nil, h2_error.errors.FRAME_SIZE_ERROR:new_traceback("frame too large"), ce.E2BIG
 	end
 	local payload, err2, errno2 = self.socket:xread(size, deadline and (deadline-monotime()))
+	self.had_eagain = false
 	if payload and #payload < size then -- hit EOF
 		local ok, errno4 = self.socket:unget(payload)
 		if not ok then
@@ -438,6 +400,9 @@ function connection_methods:read_http2_frame(timeout)
 		payload = nil
 	end
 	if payload == nil then
+		if errno2 == ce.ETIMEDOUT then
+			self.had_eagain = true
+		end
 		-- put frame header back into socket so a retry will work
 		local ok, errno3 = self.socket:unget(frame_header)
 		if not ok then
