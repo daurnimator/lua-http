@@ -319,7 +319,7 @@ function connection_methods:shutdown()
 	if self.send_goaway_lowest then
 		ok = true
 	else
-		ok, err, errno = self:write_goaway_frame(nil, h2_error.errors.NO_ERROR.code, "connection closed")
+		ok, err, errno = self:write_goaway_frame(nil, h2_error.errors.NO_ERROR.code, "connection closed", 0)
 		if not ok and errno == ce.EPIPE then
 			-- other end already closed
 			ok, err, errno = true, nil, nil
@@ -537,8 +537,8 @@ function connection_methods:settings(tbl, timeout)
 			if not ok2 then
 				return nil, err2, errno2
 			end
-		elseif which ~= self.send_settings_ack_cond then
-			self:write_goaway_frame(nil, h2_error.errors.SETTINGS_TIMEOUT.code, "timeout exceeded")
+		elseif which == timeout then
+			self:write_goaway_frame(nil, h2_error.errors.SETTINGS_TIMEOUT.code, "timeout exceeded", 0)
 			return nil, onerror(self.socket, "settings", ce.ETIMEDOUT)
 		end
 	end
