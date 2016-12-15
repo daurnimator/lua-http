@@ -1755,14 +1755,14 @@ Currently either [`"lua-zlib"`](https://github.com/brimworks/lua-zlib) or [`"lzl
 
 Returns a closure that inflates (uncompresses) a zlib stream.
 
-The closure takes a string of compressed data and an end of stream flag (`boolean`) as parameters and returns the inflated output as a string. To improve performance across multiple calls, maintain the reference to the function and sent end_of_stream to `false`. The function will throw an error if the input is invalid. See the zlib example a the end of this chapter.
+The closure takes a string of compressed data and an end of stream flag (`boolean`) as parameters and returns the inflated output as a string. The function will throw an error if the input is not a valid zlib stream.
 
 
 ### `deflate()` <!-- --> {#http.zlib.deflate}
 
 Returns a closure that deflates (compresses) a zlib stream. 
 
-The closure takes a string of uncompressed data and an end of stream flag (`boolean`) as parameters and returns the deflated output as a string. To improve performance across multiple calls, maintain the reference to the function and send `end_of_stream=false`. The function will throw an error if the input is invalid. See the zlib example a the end of this chapter.
+The closure takes a string of uncompressed data and an end of stream flag (`boolean`) as parameters and returns the deflated output as a string.
 
 
 ### Example {#http.zlib-example}
