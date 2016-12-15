@@ -1452,7 +1452,9 @@ Returns `true` if the master socket and all client connection have been closed, 
 
 ### `server:step(timeout)` <!-- --> {#http.server:step}
 
-Services zero or one response/request. This function can be used for fine control over the response processing. However, [*server:loop()*](#http.server:loop) is the recommended way to run the server for most applications. Returns `nil`, an error and an error message on failure. 
+Step once through server's main loop: any waiting clients will be `accept()`-ed, any pending streams will start getting processed, and each `onstream` handler will get be run at most once. This method will block for *up to* `timeout` seconds. Returns `nil`, an error and an error message on failure.
+
+This can be used for integration with external main loops.
 
 
 ### `server:loop(timeout)` <!-- --> {#http.server:loop}
