@@ -1365,9 +1365,9 @@ Creates a new instance of an HTTP server listening on the given socket.
   - `.onerror` (*function*): Function that will be called when an error occurs (default handler throws an error). See [server:onerror()](#http.server:onerror)
   - `.onstream` (*function*): Callback function for handling a new client request. The function receives the [*server*](#http.server) and the new [*stream*](#stream) as parameters. If the callback throws an error it will be reported from [*step*](#http.server:step) or [*loop*](#http.server:loop)
   - `.tls` (*boolean*): Specifies if the system should use Transport Layer Security. Values are:
-    - `nil`: Allow both tls and non-tls connections
-    - `true`: Allows tls connections only
-    - `false`: Allows non-tls connections only
+	  - `nil`: Allow both tls and non-tls connections
+	  - `true`: Allows tls connections only
+	  - `false`: Allows non-tls connections only
   - `.ctx` (*context object*): An `openssl.ssl.context` object to use for tls connections. If `nil` is passed, a self-signed context will be generated.
   - `.client_timeout` (*number*): Timeout (in seconds) to wait for client to send first bytes and/or complete TLS handshake. Default is 10 seconds.
   - `.version` (*number*): The http version to allow to connect (default: any)
@@ -1382,8 +1382,8 @@ Parameters are the same as [`new(options)`](#http.server.new) except instead of 
 
   - `.host` (*string*): Local IP address in dotted decimal or IPV6 notation. This value is required if `.path` is not specified.
   - `.port` (*number*): IP port for the local socket. Specify 0 for automatic port selection. Ports 1-1024 require the application has root privilege to run. Maximum value is 65535. If `.tls == nil` then this value is required. Othewise, the defaults are:
-    - `80` if `.tls == false`
-    - `443` if `.tls == true`
+	  - `80` if `.tls == false`
+	  - `443` if `.tls == true`
   - `.path` (*string*): Path to UNIX a socket. This value is required if `.host` is not specified.
   - `.family` (*string*): Protocol family. Default is `"AF_INET"`
   - `.v6only` (*boolean*): Specifiy `true` to limit all connections to ipv6 only (no ipv4-mapped-ipv6). Default is `false`.
