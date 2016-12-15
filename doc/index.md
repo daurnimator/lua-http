@@ -994,7 +994,7 @@ Each field has a *name*, a *value* and a *never_index* flag that indicates if th
 
 Each headers object has an index by field name to efficiently retrieve values by key. Keep in mind that there can be multiple values for a given field name. (e.g. an HTTP server may send two `Set-Cookie` headers).
 
-As noted in the [Conventions](#Conventions) section, HTTP 1 request and status line fields are passed around inside of headers objects under keys `":authority"`, `":method"`, `":path"`, `":scheme"` and `":status"` as defined in HTTP 2. As such, they are all kept in string form (important to remember for the :status field).
+As noted in the [Conventions](#Conventions) section, HTTP 1 request and status line fields are passed around inside of headers objects under keys `":authority"`, `":method"`, `":path"`, `":scheme"` and `":status"` as defined in HTTP 2. As such, they are all kept in string form (important to remember for the `":status"` field).
 
 ### `new()` <!-- --> {#http.headers.new}
 
@@ -1353,28 +1353,28 @@ On success, returns the response [*headers*](#http.headers) and a [*stream*](#st
 
 ## http.server
 
-The http.server object is used to listen on sockets and respond to all types of HTTP requests. Each client request is threaded and independent of the other client requests. An `http.server` is instantiated by passing a number of options including an `onstream` response handler that processes the HTTP requests and provides a stream mechanism for response. `onstream` can also be used for testing and upgrading a request, with HTTP 1.1 to WebSockets being the notible example. The server can be made non-blocking when used in conjunction with cqueues. 
+*http.server* objects are used to encapulate the accept() and dispatch of http clients. Each client request triggers `onstream` which is called from an independant cqueue, providing an independant process for each request. `onstream` can also be used for testing and upgrading a request, with HTTP 1.1 to WebSockets being the notible example.
 
-For examples of how to use the server library, please see the example directory in the source tree.
+For examples of how to use the server library, please see the examples directory in the source tree.
 
 
 ### `listen(options)` <!-- --> {#http.server.listen}
 
 Create a new instance of an HTTP Server by passing in table `options`. The following is a list of the most commonly used options:
 
-  - `.client_timeout` (*number*): Timeout (in seconds) to wait for client to send first bytes and/or complete TLS handshake. Default is 10 seconds.
   - `.host` (*string*): Local IP address in dotted decimal or IPV6 notation. This value is required if `.path` is not specified.
   - `.port` (*number*): IP port for the local socket. Specify 0 for automatic port selection. Ports 1-1024 require the application has root privilege to run. Maximum value is 65535. If `.tls == nil` then this value is required. Othewise, the defaults are:
     - `80` if `.tls == false`
     - `443` if `.tls == true`
   - `.path` (*string*): Path to UNIX a socket. This value is required if `.host` is not specified.
-  - `.onerror` (*function*): Function that will be called when an error occurs (default: do nothing). See [server:onerror()](#http.server:onerror)
+  - `.onerror` (*function*): Function that will be called when an error occurs (default handler throws an error). See [server:onerror()](#http.server:onerror)
   - `.onstream` (*function*): Callback function for handling a new client request. The function requires parameters for [*server*](#http.server) and [*stream*](#stream) and if your function throws an error it will be reported from [*step*](#http.server:step) or [*loop*](#http.server:loop)
   - `.tls` (*boolean*): Specifies if the system should use Transport Layer Security. Values are:
     - `nil`: Allow both tls and non-tls connections
     - `true`: Allows tls connections only
     - `false`: Allows non-tls connections only
   - `.ctx` (*context object*): An `openssl.ssl.context` object to use for tls connections. If `nil` is passed, a self-signed context will be generated.
+  - `.client_timeout` (*number*): Timeout (in seconds) to wait for client to send first bytes and/or complete TLS handshake. Default is 10 seconds.
   - `.version` (*number*): The http version to allow to connect (default: any)
   - `.family` (*string*): Protocol family. Default is `"AP_INET"`
   - `.v6only` (*boolean*): Specifiy `true` to limit all connections to ipv6 only (no ipv4-mapped-ipv6). Default is `false`.
@@ -1419,19 +1419,19 @@ Shutdown the server and close the socket. A closed server cannot be reused.
 
 ### `server:pollfd()` <!-- --> {#http.server:pollfd}
 
-Returns a file descriptor (as an integer) or `nil`. The file descriptor can be passed to a system API like select or kqueue to wait on anything this server object wants to do. [*pollfd*] is used for integrating with other main loops, and should be used in combination with [*events*](#http.server:events) and [*timeout*](#http.server:timeout). 
+Returns a file descriptor (as an integer) or `nil`. The file descriptor can be passed to a system API like select or kqueue to wait on anything this server object wants to do. *pollfd* is used for integrating with other main loops, and should be used in combination with [*events*](#http.server:events) and [*timeout*](#http.server:timeout). 
 
 
 ### `server:events()` <!-- --> {#http.server:events}
 
-Returns a string representing the poll-mask that should be used to poll the object. If the object polls on `POLLIN`, *events* will return `"r"`. If the object polls on `POLLOUT` *events* returns `"w"`
+Returns a string indicating the type of events the object is waiting on: the string will contain "r" if it wants to be *step*ed when [*pollfd*](#http.server:pollfd) has had POLLIN indicated; "w" for POLLOUT or "p" for POLLPRI. This interface is compatible with cqueues.
 
-Note that the system may  also return `POLLIN|POLLOUT` as `"rw"` and a telent service may use `'rp'` for `POLLIN|POLLPRI`. These features are not commonly implemented in TCP communications. 
+Note that the system may also return `POLLIN|POLLOUT` as `"rw"` and a telent service may use `'rp'` for `POLLIN|POLLPRI`. These features are not commonly implemented in TCP communications. 
 
 
 ### `server:timeout()` <!-- --> {#http.server:timeout}
 
-Returns a number or `nil` that represents a timeout in seconds.
+The timeout before :step() should be called.
 
 
 ### `server:empty()` <!-- --> {#http.server:empty}
@@ -1439,9 +1439,9 @@ Returns a number or `nil` that represents a timeout in seconds.
 Returns `true` if the master socket and all client connection have been closed, `false` otherwise.
 
 
-### `server:step()` <!-- --> {#http.server:step}
+### `server:step(timeout)` <!-- --> {#http.server:step}
 
-Initiates a single response/request. This function can be used for fine control over the response processing. However, [*server:loop()*](#http.server:loop) is the recommended way to run the server for most applications. Returns `nil`, an error and an error message on failure. 
+Services zero or one response/request. This function can be used for fine control over the response processing. However, [*server:loop()*](#http.server:loop) is the recommended way to run the server for most applications. Returns `nil`, an error and an error message on failure. 
 
 
 ### `server:loop()` <!-- --> {#http.server:loop}
@@ -1742,7 +1742,7 @@ Currently either [`"lua-zlib"`](https://github.com/brimworks/lua-zlib) or [`"lzl
 
 Returns a closure that inflates (uncompresses) a zlib stream.
 
-The closure takes a string of compressed data and an end of stream flag (`boolean`) as parameters and returns the inflated output as a string. To improve performance across multiple calls, maintain the reference to the function and send `end_of_stream=false`. The function will throw an error if the input is invalid. See the zlib example a the end of this chapter.
+The closure takes a string of compressed data and an end of stream flag (`boolean`) as parameters and returns the inflated output as a string. To improve performance across multiple calls, maintain the reference to the function and sent end_of_stream to `false`. The function will throw an error if the input is invalid. See the zlib example a the end of this chapter.
 
 
 ### `deflate()` <!-- --> {#http.zlib.deflate}
