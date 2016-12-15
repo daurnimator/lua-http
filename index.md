@@ -77,11 +77,8 @@ Asynchronous operations are one of the most powerful features of lua-http and re
 cqueues can be used in conjunction with lua-http to integrate other features into your lua application and create powerful, performant, web enabled applications. Some of the examples in this guide will use cqueues for simple demonstrations. For more resources about cqueues, please see:
 
   - [The cqueues website](http://25thandclement.com/~william/projects/cqueues.html) for more information about the cqueues library.
-
   - cqueues examples can be found with the cqueues source code available through [git or archives](http://www.25thandclement.com/~william/projects/cqueues.html#download) or accessed online [here](https://github.com/wahern/cqueues/tree/master/examples). 
-
   - For more information on integrating cqueues with other event loop libraries please see [integration with other event loops](https://github.com/wahern/cqueues/wiki/Integrations-with-other-main-loops).
-
   - For other libraries that use cqueues such as asynchronous APIs for Redis and PostgreSQL, please see [the cqueues wiki entry here](https://github.com/wahern/cqueues/wiki/Libraries-that-use-cqueues).
 
 
@@ -92,16 +89,13 @@ The following is a list of API conventions and general reference:
 ### HTTP
 
   - HTTP 1 request and status line fields are passed around inside of _[headers](#http.headers)_ objects under keys `":authority"`, `":method"`, `":path"`, `":scheme"` and `":status"` as defined in HTTP 2. As such, they are all kept in string form (important to remember for the `:status` field).
-
   - Header fields should always be used with lower case keys.
 
 
 ### Errors
 
   - Invalid function parameters will throw a lua error (if validated).
-
   - Errors are returned as `nil`, error, errno unless noted otherwise.
-
   - Some HTTP 2 operations return/throw special [http 2 error objects](#http.h2_error).
 
 
@@ -315,27 +309,19 @@ Deals with obtaining a connection to an HTTP server.
 This function returns a new connection to an HTTP server. Once a connection has been opened, a stream can be created to start a request/response exchange. Please see [`h1_stream.new_stream`](h1_stream.new_stream) and [`h2_stream.new_stream`](h2_stream.new_stream) for more information about creating requests.
 
   - `options` is a table containing the options to [`http.client.negotiate`](#http.client.negotiate), plus the following:
-
 	  - `family` (integer, optional): socket family to use.  
-		defaults to `AF_INET`  
-
+		defaults to `AF_INET`
 	  - `host` (string): host to connect to.  
-		may be either a hostname or an ip address  
-
+		may be either a hostname or an ip address
 	  - `port` (string|integer): port to connect to in numeric form  
-		e.g. `"80"` or `80`  
-
+		e.g. `"80"` or `80`
 	  - `path` (string): path to connect to (UNIX sockets)
-
 	  - `sendname` (string|boolean, optional): the [TLS SNI](https://en.wikipedia.org/wiki/Server_Name_Indication) host to send.  
-		defaults to `true`  
+		defaults to `true`
 		  - `true` indicates to copy the `host` field
 		  - `false` disables SNI
-
 	  - `v6only` (boolean, optional): if the `IPV6_V6ONLY` flag should be set on the underlying socket.
-
-  - `timeout` (optional) is the maximum amount of time (in seconds) to allow for connection to be established.
-
+  - `timeout` (optional) is the maximum amount of time (in seconds) to allow for connection to be established.  
 	This includes time for DNS lookup, connection, TLS negotiation (if TLS enabled) and in the case of HTTP 2: settings exchange.
 
 #### Example {#http.client.connect-example}
@@ -357,27 +343,22 @@ local myconnection = http_client.connect {
 Negotiates the HTTP settings with the remote server. If TLS has been specified, this function instantiates the encryption tunnel. Parameters are as follows:
 
   - `socket` is a cqueues socket object
-
   - `options` is a table containing:
-
 	  - `tls` (boolean|userdata, optional): the `SSL_CTX*` to use, or a boolean to indicate the default TLS context.  
 		defaults to `true`.
-
 		  - `true` indicates to use the default TLS settings, see [*http.tls*](#http.tls) for information.
 		  - `false` means do not negotiate TLS
-
 	  - `version` (`nil`|1.0|1.1|2): HTTP version to use.
 		  - `nil`: attempts HTTP 2 and falls back to HTTP 1.1
 		  - `1.0`
 		  - `1.1`
 		  - `2`
-
 	  - `h2_settings` (table, optional): HTTP 2 settings to use. See [*http.h2_connection*](#http.h2_connection) for details
 
 
 ## http.h1_connection
 
-The h1_connection module adheres to the [*connection*](#connection) interface and provides HTTP 1 and 1.1 specific operations.  
+The h1_connection module adheres to the [*connection*](#connection) interface and provides HTTP 1 and 1.1 specific operations.
 
 ### `new(socket, conn_type, version)` <!-- --> {#connection.new}
 
@@ -740,7 +721,7 @@ See [`connection:close()`](#connection:close)
 
 ### `h2_connection:new_stream(id)` <!-- --> {#http.h2_connection:new_stream}
 
-`id` (optional) is the stream id to assign the new stream.  For client initiated streams, this will be the next free odd numbered stream.  
+`id` (optional) is the stream id to assign the new stream. For client initiated streams, this will be the next free odd numbered stream.
 For server initiated streams, this will be the next free even numbered stream.
 
 See [`connection:new_stream()`](#connection:new_stream) for more information.
@@ -1396,7 +1377,7 @@ Parameters are the same as [`new(options)`](#http.server.new) except instead of 
 
 ### `server:onerror(new_handler)` <!-- --> {#http.server:onerror}
 
-If called with parameters, the function replaces the current error handler function with `new_handler`  and returns a reference to the old function. Calling the function with no parameters returns the current error handler. The default handler throws an error. The `onerror` function for the server can be set during instantiation through the `options` table passed to the [*server.listen(options)*](#server.listen) function.
+If called with parameters, the function replaces the current error handler function with `new_handler` and returns a reference to the old function. Calling the function with no parameters returns the current error handler. The default handler throws an error. The `onerror` function for the server can be set during instantiation through the `options` table passed to the [*server.listen(options)*](#server.listen) function.
 
 
 ### `server:listen(timeout)` <!-- --> {#http.server:listen}
@@ -1679,7 +1660,6 @@ Defaults to `3` seconds.
 Completes negotiation with a websocket client.
 
   - `options` is a table containing:
-
 	  - `headers` (optional) a [headers](#http.headers) object to use as a prototype for the response headers
 	  - `protocols` (optional) should be a lua table containing a sequence of protocols to allow from the client
 
