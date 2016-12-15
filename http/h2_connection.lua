@@ -333,6 +333,7 @@ function connection_methods:close()
 	if cqueues.running() ~= self.cq then
 		cqueues.poll()
 		self.socket:close()
+		self.cq:close()
 	end
 	return ok, err
 end
