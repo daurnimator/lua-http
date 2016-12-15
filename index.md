@@ -1455,9 +1455,9 @@ Returns `true` if the master socket and all client connection have been closed, 
 Services zero or one response/request. This function can be used for fine control over the response processing. However, [*server:loop()*](#http.server:loop) is the recommended way to run the server for most applications. Returns `nil`, an error and an error message on failure. 
 
 
-### `server:loop()` <!-- --> {#http.server:loop}
+### `server:loop(timeout)` <!-- --> {#http.server:loop}
 
-Run the server as a blocking loop. The server will continue to listen and accept client requests until either [*pause*](#http.server:pause) or [*close*](#http.server:close) is called, or an error is experienced. If this function takes advantange of cqueues stacking and when called from within a cqueue, the server will not block the main Lua application thread. 
+Run the server as a blocking loop for up to `timeout` seconds. The server will continue to listen and accept client requests until either [*pause*](#http.server:pause) or [*close*](#http.server:close) is called, or an error is experienced.
 
 
 ### `server:add_socket(socket)` <!-- --> {#http.server:add_socket}
