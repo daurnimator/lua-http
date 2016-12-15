@@ -197,22 +197,25 @@ local function handle_frame(self, typ, flag, streamid, payload, deadline)
 		local stream = self.streams[streamid]
 		if stream == nil and (not self.recv_goaway_lowest or streamid < self.recv_goaway_lowest) then
 			if xor(streamid % 2 == 1, self.type == "client") then
-				return nil, h2_error.errors.PROTOCOL_ERROR:new_traceback("Streams initiated by a client MUST use odd-numbered stream identifiers; those initiated by the server MUST use even-numbered stream identifiers")
+				return nil, h2_error.errors.PROTOCOL_ERROR:new_traceback("Streams initiated by a client MUST use odd-numbered stream identifiers; those initiated by the server MUST use even-numbered stream identifiers"), ce.EPROTO
 			end
 			-- TODO: check MAX_CONCURRENT_STREAMS
 			stream = self:new_stream(streamid)
 			self.new_streams:push(stream)
 			self.new_streams_cond:signal(1)
 		end
-		local ok, err = handler(stream, flag, payload, deadline)
+		local ok, err, errno = handler(stream, flag, payload, deadline)
 		if not ok then
 			if h2_error.is(err) and err.stream_error then
-				local ok2, err2 = stream:write_rst_stream(err.code, deadline and deadline-monotime())
+				local ok2, err2, errno2 = stream:write_rst_stream(err.code, deadline and deadline-monotime())
 				if not ok2 then
-					return nil, err2
+					return nil, err2, errno2
 				end
 			else -- connection error or unknown error
-				return nil, err
+				if errno == nil and h2_error.is(err) and err.code == h2_error.errors.PROTOCOL_ERROR.code then
+					errno = ce.EPROTO
+				end
+				return nil, err, errno
 			end
 		end
 	end
@@ -424,7 +427,7 @@ function connection_methods:read_http2_frame(timeout)
 	end
 	local size, typ, flags, streamid = sunpack(">I3 B B I4", frame_header)
 	if size > self.acked_settings[0x5] then
-		return nil, h2_error.errors.FRAME_SIZE_ERROR:new_traceback("frame too large")
+		return nil, h2_error.errors.FRAME_SIZE_ERROR:new_traceback("frame too large"), ce.E2BIG
 	end
 	local payload, err2, errno2 = self.socket:xread(size, deadline and (deadline-monotime()))
 	if payload and #payload < size then -- hit EOF
