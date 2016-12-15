@@ -148,8 +148,7 @@ local function handle_socket(self, socket)
 			if stream == nil then
 				if (err ~= nil -- client closed connection
 					and errno ~= ce.ECONNRESET
-					and errno ~= ce.ENOTCONN)
-				  or (cs.type(conn.socket) == "socket" and conn.socket:pending() ~= 0) then
+					and errno ~= ce.ENOTCONN) then
 					error_operation = "get_next_incoming_stream"
 					error_context = conn
 				end
