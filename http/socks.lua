@@ -129,7 +129,7 @@ local function username_password_auth(self, deadline)
 			return nil, err, errno
 		end
 		if version ~= "\1" then
-			return nil, "username_password_auth: invalid username/password auth version", ce.EPROTO
+			return nil, "username_password_auth: invalid username/password auth version", ce.EILSEQ
 		end
 	end
 	do
@@ -190,7 +190,7 @@ function socks_methods:negotiate(host, port, timeout)
 			end
 			return nil, err, errno
 		elseif byte ~= "\5" then
-			return nil, "socks:negotiate: not SOCKS5", ce.EPROTO
+			return nil, "socks:negotiate: not SOCKS5", ce.EILSEQ
 		end
 	end
 	local auth_method do
@@ -203,7 +203,7 @@ function socks_methods:negotiate(host, port, timeout)
 			return nil, err, errno
 		end
 		if self.available_auth_methods[auth_method] == nil then
-			return nil, "socks:negotiate: unknown authentication method", ce.EPROTO
+			return nil, "socks:negotiate: unknown authentication method", ce.EILSEQ
 		end
 	end
 	if auth_method == "\0" then -- luacheck: ignore 542
@@ -238,7 +238,7 @@ function socks_methods:negotiate(host, port, timeout)
 			end
 			return nil, err, errno
 		elseif byte ~= "\5" then
-			return nil, "socks:negotiate: not SOCKS5", ce.EPROTO
+			return nil, "socks:negotiate: not SOCKS5", ce.EILSEQ
 		end
 	end
 	do
@@ -288,7 +288,7 @@ function socks_methods:negotiate(host, port, timeout)
 			end
 			return nil, err, errno
 		elseif byte ~= "\0" then
-			return nil, "socks:negotiate: reserved field set to non-zero", ce.EPROTO
+			return nil, "socks:negotiate: reserved field set to non-zero", ce.EILSEQ
 		end
 	end
 	local dst_family, dst_host, dst_port do

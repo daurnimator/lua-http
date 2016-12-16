@@ -169,7 +169,7 @@ function stream_methods:shutdown()
 		if not self.body_write_type then
 			-- Can send an automatic error response
 			local error_headers
-			if self.connection:error("r") == ce.EPROTO then
+			if self.connection:error("r") == ce.EILSEQ then
 				error_headers = bad_request_headers
 			else
 				error_headers = server_error_headers

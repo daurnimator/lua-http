@@ -185,7 +185,7 @@ end
 
 local function handle_frame(self, typ, flag, streamid, payload, deadline)
 	if self.need_continuation and (typ ~= 0x9 or self.need_continuation.id ~= streamid) then
-		return nil, h2_error.errors.PROTOCOL_ERROR:new_traceback("CONTINUATION frame expected"), ce.EPROTO
+		return nil, h2_error.errors.PROTOCOL_ERROR:new_traceback("CONTINUATION frame expected"), ce.EILSEQ
 	end
 	local handler = h2_stream.frame_handlers[typ]
 	-- http2 spec section 4.1:
@@ -194,7 +194,7 @@ local function handle_frame(self, typ, flag, streamid, payload, deadline)
 		local stream = self.streams[streamid]
 		if stream == nil and (not self.recv_goaway_lowest or streamid < self.recv_goaway_lowest) then
 			if xor(streamid % 2 == 1, self.type == "client") then
-				return nil, h2_error.errors.PROTOCOL_ERROR:new_traceback("Streams initiated by a client MUST use odd-numbered stream identifiers; those initiated by the server MUST use even-numbered stream identifiers"), ce.EPROTO
+				return nil, h2_error.errors.PROTOCOL_ERROR:new_traceback("Streams initiated by a client MUST use odd-numbered stream identifiers; those initiated by the server MUST use even-numbered stream identifiers"), ce.EILSEQ
 			end
 			-- TODO: check MAX_CONCURRENT_STREAMS
 			stream = self:new_stream(streamid)
@@ -227,7 +227,7 @@ function connection_methods:step(timeout)
 			return nil, err, errno
 		end
 		if not ok then
-			return nil, h2_error.errors.PROTOCOL_ERROR:new_traceback("invalid connection preface. not an http2 client?"), ce.EPROTO
+			return nil, h2_error.errors.PROTOCOL_ERROR:new_traceback("invalid connection preface. not an http2 client?"), ce.EILSEQ
 		end
 		self.has_confirmed_preface = true
 	end
@@ -238,7 +238,7 @@ function connection_methods:step(timeout)
 		-- flag might be `nil` on EOF
 		ok, connection_error, errno = nil, flag, streamid
 	elseif not self.has_first_settings and typ ~= 0x4 then -- XXX: Should this be more strict? e.g. what if it's an ACK?
-		ok, connection_error, errno = false, h2_error.errors.PROTOCOL_ERROR:new_traceback("A SETTINGS frame MUST be the first frame sent in an HTTP/2 connection"), ce.EPROTO
+		ok, connection_error, errno = false, h2_error.errors.PROTOCOL_ERROR:new_traceback("A SETTINGS frame MUST be the first frame sent in an HTTP/2 connection"), ce.EILSEQ
 	else
 		ok, connection_error, errno = handle_frame(self, typ, flag, streamid, payload, deadline)
 		if ok then
@@ -258,7 +258,7 @@ function connection_methods:step(timeout)
 			self:write_goaway_frame(nil, code, message, deadline and deadline-monotime())
 		end
 		if errno == nil and h2_error.is(connection_error) and connection_error.code == h2_error.errors.PROTOCOL_ERROR.code then
-			errno = ce.EPROTO
+			errno = ce.EILSEQ
 		end
 		return nil, connection_error, errno
 	end
@@ -376,8 +376,8 @@ function connection_methods:read_http2_frame(timeout)
 			return nil, err, errno
 		elseif err == nil then
 			if self.socket:pending() > 0 then
-				self.socket:seterror("r", ce.EPROTO)
-				return nil, onerror(self.socket, "read_http2_frame", ce.EPROTO)
+				self.socket:seterror("r", ce.EILSEQ)
+				return nil, onerror(self.socket, "read_http2_frame", ce.EILSEQ)
 			end
 			return nil
 		else
@@ -407,8 +407,8 @@ function connection_methods:read_http2_frame(timeout)
 			return nil, onerror(self.socket, "unget", errno3, 2)
 		end
 		if err2 == nil then
-			self.socket:seterror("r", ce.EPROTO)
-			return nil, onerror(self.socket, "read_http2_frame", ce.EPROTO)
+			self.socket:seterror("r", ce.EILSEQ)
+			return nil, onerror(self.socket, "read_http2_frame", ce.EILSEQ)
 		end
 		return nil, err2, errno2
 	end

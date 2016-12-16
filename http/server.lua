@@ -70,7 +70,7 @@ local function wrap_socket(self, socket, deadline)
 			elseif (proto == "http/1.1") and (version == nil or version < 2) then
 				version = 1.1
 			elseif proto ~= nil then
-				return nil, "unexpected ALPN protocol: " .. proto, ce.EPROTONOSUPPORT
+				return nil, "unexpected ALPN protocol: " .. proto, ce.EILSEQNOSUPPORT
 			end
 		end
 	end
