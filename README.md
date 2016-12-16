@@ -19,15 +19,13 @@ Can be found at [https://daurnimator.github.io/lua-http/](https://daurnimator.gi
 [![Build Status](https://travis-ci.org/daurnimator/lua-http.svg)](https://travis-ci.org/daurnimator/lua-http)
 [![Coverage Status](https://coveralls.io/repos/daurnimator/lua-http/badge.svg?branch=master&service=github)](https://coveralls.io/github/daurnimator/lua-http?branch=master)
 
-  - First release impending!
-
 
 # Installation
 
 It's recommended to install lua-http by using [luarocks](https://luarocks.org/).
 This will automatically install run-time lua dependencies for you.
 
-    $ luarocks install --server=http://luarocks.org/dev http
+    $ luarocks install http
 
 ## Dependencies
 
