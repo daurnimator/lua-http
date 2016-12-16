@@ -7,7 +7,7 @@ lua-http is an performant, capable HTTP and WebSocket library for Lua 5.1, 5.2, 
   - Fully asynchronous API that does not block the current thread when executing operations that typically block
   - Support for WebSockets as specified by [RFC 6455](https://tools.ietf.org/html/rfc6455) including ping/pong, binary data transfer and TLS encryption
   - Transport Layer Security (TLS) - lua-http supports HTTPS and WSS via [luaossl](https://github.com/wahern/luaossl).
-  - Easy integration into other event-loop based application models
+  - Easy integration into other event-loop or scripts
 
 ### Why lua-http?
 
@@ -106,4 +106,3 @@ Much lua-http terminology is borrowed from HTTP 2.
 _[Connection](#connection)_ - An abstraction over an underlying TCP/IP socket. lua-http currently has two connection types: one for HTTP 1, one for HTTP 2.
 
 _[Stream](#stream)_ - A request/response on a connection object. lua-http has two stream types: one for [*HTTP 1 streams*](#http.h1_stream), and one for [*HTTP 2 streams*](#http.h2_stream). The common interfaces is described in [*stream*](#stream).
-
