@@ -953,7 +953,7 @@ Returns the new stream as a [h2_stream](#http.h2_stream).
 ### `h2_stream:write_window_update_frame(inc, timeout)` <!-- --> {#http.h2_stream:write_window_update_frame}
 
 
-### `h2_stream:write_window_update(inc)` <!-- --> {#http.h2_stream:write_window_update}
+### `h2_stream:write_window_update(inc, timeout)` <!-- --> {#http.h2_stream:write_window_update}
 
 
 ### `h2_stream:write_continuation_frame(payload, end_headers, timeout)` <!-- --> {#http.h2_stream:write_continuation_frame}
