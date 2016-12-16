@@ -205,9 +205,6 @@ local function handle_frame(self, typ, flag, streamid, payload, deadline)
 					return nil, err2, errno2
 				end
 			else -- connection error or unknown error
-				if errno == nil and h2_error.is(err) and err.code == h2_error.errors.PROTOCOL_ERROR.code then
-					errno = ce.EPROTO
-				end
 				return nil, err, errno
 			end
 		end
@@ -255,6 +252,9 @@ function connection_methods:step(timeout)
 			end
 			-- ignore write failure here; there's nothing that can be done
 			self:write_goaway_frame(nil, code, message, deadline and deadline-monotime())
+		end
+		if errno == nil and h2_error.is(connection_error) and connection_error.code == h2_error.errors.PROTOCOL_ERROR.code then
+			errno = ce.EPROTO
 		end
 		return nil, connection_error, errno
 	end
