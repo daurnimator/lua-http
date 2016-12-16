@@ -131,7 +131,7 @@ body > * {
 .author {
     display: none
 }
-@media(min-width: 55rem) {
+@media screen and (min-width: 55rem) {
     .meta {
         position: fixed;
         width: 20rem;
@@ -144,5 +144,13 @@ body > * {
         display: block; /* required for e.g. konqueror */
         margin-left: 20rem;
         overflow: auto;
+    }
+}
+@media print {
+    section.level1 {
+        page-break-inside: avoid
+    }
+    nav a::after {
+        content: leader('.') target-counter(attr(href url), page, decimal)
     }
 }
