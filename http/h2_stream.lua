@@ -172,10 +172,12 @@ end
 -- DATA
 frame_handlers[0x0] = function(stream, flags, payload, deadline) -- luacheck: ignore 212
 	if stream.id == 0 then
-		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("'DATA' frames MUST be associated with a stream")
+		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("'DATA' framess MUST be associated with a stream")
 	end
-	if stream.state ~= "open" and stream.state ~= "half closed (local)" then
-		return nil, h2_errors.STREAM_CLOSED:new_traceback("'DATA' frame not allowed in '" .. stream.state .. "' state", true)
+	if stream.state == "idle" or stream.state == "reserved (remote)" then
+		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("'DATA' frames not allowed in 'idle' state")
+	elseif stream.state ~= "open" and stream.state ~= "half closed (local)" then
+		return nil, h2_errors.STREAM_CLOSED:new_traceback("'DATA' frames not allowed in '" .. stream.state .. "' state", true)
 	end
 
 	local end_stream = band(flags, 0x1) ~= 0
@@ -542,7 +544,7 @@ frame_handlers[0x3] = function(stream, flags, payload, deadline) -- luacheck: ig
 		return nil, h2_errors.FRAME_SIZE_ERROR:new_traceback("'RST_STREAM' frames must be 4 bytes")
 	end
 	if stream.state == "idle" then
-		return nil, h2_errors.PROTOCOL_ERROR:new_traceback([['RST_STREAM' frames MUST NOT be sent for a stream in the "idle" state]])
+		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("'RST_STREAM' frames MUST NOT be sent for a stream in the 'idle' state")
 	end
 
 	local err_code = sunpack(">I4", payload)
@@ -563,7 +565,7 @@ function stream_methods:write_rst_stream(err_code, timeout)
 		h2_errors.PROTOCOL_ERROR("'RST_STREAM' frames MUST be associated with a stream")
 	end
 	if self.state == "idle" then
-		h2_errors.PROTOCOL_ERROR([['RST_STREAM' frames MUST NOT be sent for a stream in the "idle" state]], true)
+		h2_errors.PROTOCOL_ERROR([['RST_STREAM' frames MUST NOT be sent for a stream in the "idle" state]])
 	end
 	local flags = 0
 	local payload = spack(">I4", err_code)
@@ -857,7 +859,7 @@ frame_handlers[0x8] = function(stream, flags, payload, deadline) -- luacheck: ig
 		return nil, h2_errors.FRAME_SIZE_ERROR:new_traceback("'WINDOW_UPDATE' frames must be 4 bytes")
 	end
 	if stream.id ~= 0 and stream.state == "idle" then
-		return nil, h2_errors.PROTOCOL_ERROR:new_traceback([['WINDOW_UPDATE' frames not allowed in "idle" state]], true)
+		return nil, h2_errors.PROTOCOL_ERROR:new_traceback([['WINDOW_UPDATE' frames not allowed in "idle" state]])
 	end
 
 	local tmp = sunpack(">I4", payload)
@@ -888,7 +890,7 @@ end
 function stream_methods:write_window_update_frame(inc, timeout)
 	local flags = 0
 	if self.id ~= 0 and self.state == "idle" then
-		h2_errors.PROTOCOL_ERROR([['WINDOW_UPDATE' frames not allowed in "idle" state]], true)
+		h2_errors.PROTOCOL_ERROR([['WINDOW_UPDATE' frames not allowed in "idle" state]])
 	end
 	if inc >= 0x80000000 or inc <= 0 then
 		h2_errors.PROTOCOL_ERROR("invalid window update increment", true)
