@@ -5,7 +5,7 @@ Each field has a *name*, a *value* and a *never_index* flag that indicates if th
 
 Each headers object has an index by field name to efficiently retrieve values by key. Keep in mind that there can be multiple values for a given field name. (e.g. an HTTP server may send two `Set-Cookie` headers).
 
-As noted in the [Conventions](#Conventions) section, HTTP 1 request and status line fields are passed around inside of headers objects under keys `":authority"`, `":method"`, `":path"`, `":scheme"` and `":status"` as defined in HTTP 2. As such, they are all kept in string form (important to remember for the `":status"` field).
+As noted in the [Conventions](#conventions) section, HTTP 1 request and status line fields are passed around inside of headers objects under keys `":authority"`, `":method"`, `":path"`, `":scheme"` and `":status"` as defined in HTTP 2. As such, they are all kept in string form (important to remember for the `":status"` field).
 
 ### `new()` <!-- --> {#http.headers.new}
 
