@@ -349,6 +349,9 @@ local function process_end_headers(stream, end_stream, pad_len, pos, promised_st
 	end
 
 	local headers, newpos = stream.connection.decoding_context:decode_headers(payload, nil, pos)
+	if not headers then
+		return nil, newpos
+	end
 	if newpos ~= #payload + 1 then
 		return nil, h2_errors.COMPRESSION_ERROR:new_traceback("incomplete header fragment")
 	end
