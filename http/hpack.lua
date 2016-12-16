@@ -843,13 +843,15 @@ function methods:decode_headers(payload, header_list, pos)
 			self:add_to_dynamic_table(name, value, compound_key(name, value))
 			header_list:append(name, value, false)
 		elseif band(first_byte, 0x20) ~= 0 then -- Section 6.3
-			local size, newpos = decode_integer(payload, 5, pos)
-			if size == nil then break end
 			--[[ Section 4.2
 			This dynamic table size update MUST occur at the beginning of the
 			first header block following the change to the dynamic table size.
 			In HTTP/2, this follows a settings acknowledgment.]]
-			-- TODO!
+			if header_list:len() > 0 then
+				return nil, h2_errors.COMPRESSION_ERROR:new_traceback("dynamic table size update MUST occur at the beginning of a header block")
+			end
+			local size, newpos = decode_integer(payload, 5, pos)
+			if size == nil then break end
 			pos = newpos
 			local ok, err = self:resize_dynamic_table(size)
 			if not ok then
