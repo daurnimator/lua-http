@@ -98,7 +98,7 @@ li.collapsible > ul {
     element.onclick = function(event) {
       if (event.toElement != this) return;
       if (this.getAttribute('state') == 'collapsed') {
-        this.setAttribute('state', void 0);
+        this.removeAttribute('state');
       } else {
         this.setAttribute('state', 'collapsed');
       }
