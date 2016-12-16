@@ -532,7 +532,7 @@ describe("high level http1 connection operations", function()
 		c:close()
 		-- perform a read operation so we note the EOF
 		assert.same({nil, nil}, {s:read_status_line()})
-		-- now waiting for a stream should return EPIPE
+		-- now waiting for a stream should also return EOF
 		assert.same({nil, nil}, {s:get_next_incoming_stream()})
 		s:close()
 	end)
