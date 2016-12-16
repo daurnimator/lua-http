@@ -1,14 +1,16 @@
 ## http.h2_connection
 
-An HTTP 2 connection can have multiple streams actively transmitting data at once,
+The *h2_connection* module adheres to the [*connection*](#connection) interface and provides HTTP 2 specific operations. An HTTP 2 connection can have multiple streams actively transmitting data at once,
 hence an *http.h2_connection* acts much like a scheduler.
 
 ### `new(socket, conn_type, settings)` <!-- --> {#http.h2_connection.new}
 
+Constructor for a new connection. Takes a cqueues socket object, a [connection type string](#connection.type) and an optional table of HTTP 2 settings. Returns the newly initialized connection object in a non-connected state.
+
 
 ### `h2_connection.version` <!-- --> {#http.h2_connection.version}
 
-Contains the value of the HTTP 2 version number for the connection. Currently will hold the value of `2`.
+Contains the HTTP connection version. Currently this will always be `2`.
 
 See [`connection.version`](#connection.version)
 
@@ -68,8 +70,8 @@ See [`connection:close()`](#connection:close)
 
 ### `h2_connection:new_stream(id)` <!-- --> {#http.h2_connection:new_stream}
 
-`id` (optional) is the stream id to assign the new stream. For client initiated streams, this will be the next free odd numbered stream.
-For server initiated streams, this will be the next free even numbered stream.
+Create and return a new [*h2_stream*](#http.h2_stream).
+`id` (optional) is the stream id to assign the new stream, if not specified for client initiated streams this will be the next free odd numbered stream, for server initiated streams this will be the next free even numbered stream.
 
 See [`connection:new_stream()`](#connection:new_stream) for more information.
 

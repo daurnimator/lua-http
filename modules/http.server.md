@@ -53,7 +53,7 @@ Initializes the server socket and if required, resolves DNS. `server:listen()` i
 
 ### `server:localname()` <!-- --> {#http.server:localname}
 
-Returns the connection information for the local socket. Returns address family, IP address and port for an external socket. For Unix domain sockets, the function returns AF_UNIX and the path. If the connection object is not connected, returns AF_UNSPEC (0). On error, returns `nil` an error message and an error number.
+Returns the connection information for the local socket. Returns address family, IP address and port for an external socket. For Unix domain sockets, the function returns AF_UNIX and the path. If the connection object is not connected, returns AF_UNSPEC (0). On error, returns `nil`, an error message and an error number.
 
 
 ### `server:pause()` <!-- --> {#http.server:pause}
@@ -99,7 +99,7 @@ Returns `true` if the master socket and all client connection have been closed, 
 
 ### `server:step(timeout)` <!-- --> {#http.server:step}
 
-Step once through server's main loop: any waiting clients will be `accept()`-ed, any pending streams will start getting processed, and each `onstream` handler will get be run at most once. This method will block for *up to* `timeout` seconds. Returns `nil`, an error and an error message on failure.
+Step once through server's main loop: any waiting clients will be `accept()`-ed, any pending streams will start getting processed, and each `onstream` handler will get be run at most once. This method will block for *up to* `timeout` seconds. On error, returns `nil`, an error message and an error number.
 
 This can be used for integration with external main loops.
 

@@ -18,7 +18,7 @@ The HTTP version number of the connection as a number.
 
 ### `connection:connect(timeout)` <!-- --> {#connection:connect}
 
-Completes the connection to the remote server using the address specified, HTTP version and any options specified in the `connection.new` constructor. The `connect` function will yield until the connection attempt finishes (success or failure) or until `timeout` is exceeded. Connecting may include DNS lookups, TLS negotiation and HTTP2 settings exchange. Returns `true` on success. On failure returns `nil` and an error message.
+Completes the connection to the remote server using the address specified, HTTP version and any options specified in the `connection.new` constructor. The `connect` function will yield until the connection attempt finishes (success or failure) or until `timeout` is exceeded. Connecting may include DNS lookups, TLS negotiation and HTTP2 settings exchange. Returns `true` on success. On error, returns `nil`, an error message and an error number.
 
 
 ### `connection:checktls()` <!-- --> {#connection:checktls}
@@ -28,12 +28,12 @@ Checks the socket for a valid Transport Layer Security connection. Returns the l
 
 ### `connection:localname()` <!-- --> {#connection:localname}
 
-Returns the connection information for the local socket. Returns address family, IP address and port for an external socket. For Unix domain sockets, the function returns `AF_UNIX` and the path. If the connection object is not connected, returns `AF_UNSPEC` (0). On error, returns `nil` an error message and an error number.
+Returns the connection information for the local socket. Returns address family, IP address and port for an external socket. For Unix domain sockets, the function returns `AF_UNIX` and the path. If the connection object is not connected, returns `AF_UNSPEC` (0). On error, returns `nil`, an error message and an error number.
 
 
 ### `connection:peername()` <!-- --> {#connection:peername}
 
-Returns the connection information for the socket *peer* (as in, the next hop). Returns address family, IP address and port for an external socket. For unix sockets, the function returns `AF_UNIX` and the path. If the connection object is not connected, returns `AF_UNSPEC` (0). On error, returns `nil` an error message and an error number.
+Returns the connection information for the socket *peer* (as in, the next hop). Returns address family, IP address and port for an external socket. For unix sockets, the function returns `AF_UNIX` and the path. If the connection object is not connected, returns `AF_UNSPEC` (0). On error, returns `nil`, an error message and an error number.
 
 *Note: If the client is using a proxy, the values returned `:peername()` point to the proxy, not the remote server.*
 
@@ -55,7 +55,7 @@ Closes a connection and releases operating systems resources. Note that `:close(
 
 ### `connection:new_stream()` <!-- --> {#connection:new_stream}
 
-Creates a new [*stream*](#stream) on the connection. Use `:new_stream()` to initiate a new http request. In HTTP 1, a new stream can be used for request/response exchanges. In HTTP 2 a new stream can be used for request/response exchanges, organising stream priorities or to initiate a push promise.
+Creates and returns a new [*stream*](#stream) on the connection.
 
 
 ### `connection:get_next_incoming_stream(timeout)` <!-- --> {#connection:get_next_incoming_stream}

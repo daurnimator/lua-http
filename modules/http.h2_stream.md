@@ -105,6 +105,10 @@ See [`stream:shutdown()`](#stream:shutdown)
 
 ### `h2_stream:write_http2_frame(typ, flags, payload, timeout)` <!-- --> {#http.h2_stream:write_http2_frame}
 
+Writes a frame with `h2_stream`'s stream id.
+
+See [`h2_connection:write_http2_frame(typ, flags, streamid, payload, timeout)`](#http.h2_connection:write_http2_frame)
+
 
 ### `h2_stream:write_data_frame(payload, end_stream, padded, timeout)` <!-- --> {#http.h2_stream:write_data_frame}
 

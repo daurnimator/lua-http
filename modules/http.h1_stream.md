@@ -1,6 +1,6 @@
 ## http.h1_stream
 
-An h1_stream represents an HTTP 1.0 or 1.1 request/response. The module follows the [*stream*](#stream) interface as well as HTTP 1.x specific functions.
+The *h1_stream* module adheres to the [*stream*](#stream) interface and provides HTTP 1.x specific operations.
 
 The gzip transfer encoding is supported transparently.
 

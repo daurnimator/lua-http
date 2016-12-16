@@ -33,9 +33,7 @@ Add username + password authorisation to the set of allowed authorisation method
 
 Complete the SOCKS connection.
 
-Negotiates a socks connection. `host` is a required string passed to the SOCKS server as the host address. The address will be resolved locally if [`.needs_resolve`](#http.socks.needs_resolve) is `true`. `port` is a required number to pass to the SOCKS server as the connection port.
-
-On error, returns `nil` an error message and an error number.
+Negotiates a socks connection. `host` is a required string passed to the SOCKS server as the host address. The address will be resolved locally if [`.needs_resolve`](#http.socks.needs_resolve) is `true`. `port` is a required number to pass to the SOCKS server as the connection port. On error, returns `nil`, an error message and an error number.
 
 
 ### `socks:close()` <!-- --> {#http.socks:close}
