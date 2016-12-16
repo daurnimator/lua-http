@@ -199,7 +199,7 @@ local function handle_frame(self, typ, flag, streamid, payload, deadline)
 		end
 		local ok, err, errno = handler(stream, flag, payload, deadline)
 		if not ok then
-			if h2_error.is(err) and err.stream_error then
+			if h2_error.is(err) and err.stream_error and streamid ~= 0 and stream.state ~= "idle" then
 				local ok2, err2, errno2 = stream:write_rst_stream(err.code, deadline and deadline-monotime())
 				if not ok2 then
 					return nil, err2, errno2
