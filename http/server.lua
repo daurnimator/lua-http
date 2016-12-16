@@ -225,6 +225,7 @@ local function new_ctx(host, version)
 		ctx:setOptions(openssl_ctx.OP_NO_TLSv1 + openssl_ctx.OP_NO_TLSv1_1)
 	end
 	local crt = x509.new()
+	crt:setVersion(3)
 	-- serial needs to be unique or browsers will show uninformative error messages
 	crt:setSerial(openssl_bignum.fromBinary(openssl_rand.bytes(16)))
 	-- use the host we're listening on as canonical name
