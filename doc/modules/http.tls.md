@@ -33,4 +33,9 @@ Ciphers not known by OpenSSL are missing from the set.
 
 ### `new_client_context()` <!-- --> {#http.tls.new_client_context}
 
+Create and return a new luaossl SSL context useful for HTTP client connections.
+
+
 ### `new_server_context()` <!-- --> {#http.tls.new_server_context}
+
+Create and return a new luaossl SSL context useful for HTTP server connections.
