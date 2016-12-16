@@ -314,11 +314,13 @@ function connection_methods:new_stream(id)
 	assert(self.streams[id] == nil, "stream id already in use")
 	assert(id < 2^32, "stream id too large")
 	if id % 2 == 0 then
-		assert(id > self.highest_even_stream, "stream id too small")
-		self.highest_even_stream = id
+		if id > self.highest_even_stream then
+			self.highest_even_stream = id
+		end
 	else
-		assert(id > self.highest_odd_stream, "stream id too small")
-		self.highest_odd_stream = id
+		if id > self.highest_odd_stream then
+			self.highest_odd_stream = id
+		end
 	end
 	local stream = h2_stream.new(self, id)
 	if id == 0 then
