@@ -9,17 +9,6 @@ lua-http is an performant, capable HTTP and WebSocket library for Lua 5.1, 5.2, 
   - Transport Layer Security (TLS) - lua-http supports HTTPS and WSS via [luaossl](https://github.com/wahern/luaossl).
   - Easy integration into other event-loop based application models
 
-### Portability
-
-lua-http is pure Lua code with dependencies on the following external libraries:
-
-  - [cqueues](http://25thandclement.com/~william/projects/cqueues.html) - Posix API library for Lua
-  - [luaossl](http://25thandclement.com/~william/projects/luaossl.html) - Lua bindings for TLS/SSL
-  - [lua-zlib](https://github.com/brimworks/lua-zlib) - Optional Lua bindings for zlib
-
-lua-http can run on any operating system supported by cqueues and openssl, which at the time of writing is GNU/Linux, FreeBSD, NetBSD, OpenBSD, OSX and Solaris.
-
-
 ### Why lua-http?
 
 The lua-http library was written to fill a gap in the Lua ecosystem by providing an HTTP and WebSocket library with the following traits:
@@ -32,6 +21,17 @@ The lua-http library was written to fill a gap in the Lua ecosystem by providing
 As a result of these design goals, the library is simple and unobtrusive and can accommodate tens of thousands of connections on commodity hardware.
 
 lua-http is a flexible HTTP and WebSocket library that allows developers to concentrate on line-of-business features when building Internet enabled applications. If you are looking for a way to streamline development of an internet enabled application, enable HTTP networking in your game, create a new Internet Of Things (IoT) system, or write a performant custom web server for a specific use case, lua-http has the tools you need.
+
+
+### Portability
+
+lua-http is pure Lua code with dependencies on the following external libraries:
+
+  - [cqueues](http://25thandclement.com/~william/projects/cqueues.html) - Posix API library for Lua
+  - [luaossl](http://25thandclement.com/~william/projects/luaossl.html) - Lua bindings for TLS/SSL
+  - [lua-zlib](https://github.com/brimworks/lua-zlib) - Optional Lua bindings for zlib
+
+lua-http can run on any operating system supported by cqueues and openssl, which at the time of writing is GNU/Linux, FreeBSD, NetBSD, OpenBSD, OSX and Solaris.
 
 
 ## Common Use Cases
