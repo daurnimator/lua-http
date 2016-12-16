@@ -74,7 +74,7 @@ local function new_prosody(url, ex, callback)
 			end
 		end
 		if ex.sslctx then
-			req.tls = ex.sslctx
+			req.ctx = ex.sslctx
 		end
 	end
 	cq:wrap(do_request, req, callback)
