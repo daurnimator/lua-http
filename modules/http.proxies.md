@@ -11,6 +11,11 @@ Returns an empty 'proxies' object
 
 Reads environmental variables that are used to control if requests go through a proxy.
 
+  - `http_proxy` (or `CGI_HTTP_PROXY` if running in a program with `GATEWAY_INTERFACE` set): the proxy to use for normal HTTP connections
+  - `https_proxy` or `HTTPS_PROXY`: the proxy to use for HTTPS connections
+  - `all_proxy` or `ALL_PROXY`: the proxy to use for **all** connections, overridden by other options
+  - `no_proxy` or `NO_PROXY`: a list of hosts to **not** use a proxy for
+
 Returns `proxies`.
 
 
