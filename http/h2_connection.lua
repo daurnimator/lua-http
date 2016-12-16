@@ -70,6 +70,10 @@ local function socket_has_preface(socket, unget, timeout)
 		local ok, err, errno = socket:xread(#bytes-#preface, deadline and (deadline-monotime()))
 		if ok == nil then
 			if err == nil then
+				if #bytes == 0 then
+					-- client immediately closed
+					return
+				end
 				is_h2 = false
 				break
 			else
