@@ -1,3 +1,9 @@
 UNRELEASED
 
- - First release
+  - Support for HTTP versions 1, 1.1 and 2
+  - Provides both client and server APIs
+  - Friendly request API with sensible defaults for security
+  - All operations are fully non-blocking and can be managed with cqueues
+  - Support for WebSockets (client and server), including ping/pong, binary data transfer and TLS encryption.
+  - Transport Layer Security (TLS) - lua-http supports HTTPS and WSS via luaossl.
+  - luasocket compatibility API if you're looking to use lua-http with older projects.
