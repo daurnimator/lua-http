@@ -164,8 +164,8 @@ function chunk_methods:ack(no_window_update)
 	local len = self.original_length
 	if len > 0 and not no_window_update then
 		-- ignore errors
-		self.stream:write_window_update(len)
-		self.stream.connection:write_window_update(len)
+		self.stream:write_window_update(len, 0)
+		self.stream.connection:write_window_update(len, 0)
 	end
 end
 
@@ -899,13 +899,15 @@ function stream_methods:write_window_update_frame(inc, timeout)
 	return self:write_http2_frame(0x8, flags, payload, timeout)
 end
 
-function stream_methods:write_window_update(inc)
+function stream_methods:write_window_update(inc, timeout)
 	while inc >= 0x80000000 do
-		local ok, err = self:write_window_update_frame(0x7fffffff)
-		if not ok then return nil, err end
+		local ok, err, errno = self:write_window_update_frame(0x7fffffff, 0)
+		if not ok then
+			return nil, err, errno
+		end
 		inc = inc - 0x7fffffff
 	end
-	return self:write_window_update_frame(inc)
+	return self:write_window_update_frame(inc, timeout)
 end
 
 -- CONTINUATION
@@ -968,7 +970,7 @@ function stream_methods:shutdown()
 		end
 	end
 	if len > 0 then
-		self.connection:write_window_update(len)
+		self.connection:write_window_update(len, 0)
 	end
 	return true
 end
