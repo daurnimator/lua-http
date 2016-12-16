@@ -1,5 +1,7 @@
 ## stream
 
+An HTTP *stream* is an abstraction of a request/response within a HTTP connection. Within a stream there may be a number of "header" blocks as well as data known as the "body".
+
 All stream types expose the following fields and functions:
 
 ### `stream.connection` <!-- --> {#stream.connection}

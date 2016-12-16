@@ -1,10 +1,10 @@
 ## http.h1_connection
 
-The h1_connection module adheres to the [*connection*](#connection) interface and provides HTTP 1 and 1.1 specific operations.
+The *h1_connection* module adheres to the [*connection*](#connection) interface and provides HTTP 1 and 1.1 specific operations.
 
 ### `new(socket, conn_type, version)` <!-- --> {#connection.new}
 
-Constructor for a new connection. Takes a socket instance, a connection type string and a numeric HTTP version number. Valid values for the connection type are `"client"` and `"server"`. Valid values for the version number are `1` and `1.1`. On success returns the newly initialized connection object in a non-connected state. On failure returns `nil`, an error message and an error number.
+Constructor for a new connection. Takes a cqueues socket object, a [connection type string](#connection.type) and a numeric HTTP version number. Valid values for the connection type are `"client"` and `"server"`. Valid values for the version number are `1` and `1.1`. Returns the newly initialized connection object.
 
 
 ### `h1_connection.version` <!-- --> {#http.h1_connection.version}
@@ -53,6 +53,8 @@ See [`connection:close()`](#connection:close)
 
 
 ### `h1_connection:new_stream()` <!-- --> {#http.h1_connection:new_stream}
+
+In HTTP 1, only a client may initiate new streams with this function.
 
 See [`connection:new_stream()`](#connection:new_stream) for more information.
 
