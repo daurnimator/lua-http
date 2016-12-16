@@ -158,17 +158,3 @@ Writes the chunked body terminator `"0\r\n"` to the socket and flushes the socke
 ### `h1_connection:write_body_plain(body, timeout)` <!-- --> {#http.h1_connection:write_body_plain}
 
 Writes the contents of `body` to the socket and flushes the socket output buffer immediately. Yields until success or `timeout` is exceeded. Returns `nil`, an error message and an error number if the write fails.
-
-
-## http.h1_reason_phrases
-
-A table mapping from status codes (as strings) to reason phrases for HTTP 1. Any unknown status codes return `"Unassigned"`
-
-
-### Example {#http.h1_reason_phrases-example}
-
-```lua
-local reason_phrases = require "http.h1_reason_phrases"
-print(reason_phrases["200"]) --> "OK"
-print(reason_phrases["342"]) --> "Unassigned"
-```
