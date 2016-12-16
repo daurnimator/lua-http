@@ -31,7 +31,7 @@ local function is_tls_client_hello(socket, timeout)
 		return nil, err or ce.EPIPE, errno
 	end
 	local use_tls = not not (
-		first_bytes:match("^\22\3...\1") or -- TLS
+		first_bytes:match("^[\21\22]\3[\1\2\3]..\1") or -- TLS
 		first_bytes:match("^[\128-\255][\9-\255]\1") -- SSLv2
 	)
 	local ok
