@@ -269,7 +269,7 @@ end
 
 Takes a table of options:
   - `.cq` (optional): A cqueues controller to use
-  - `.socket`: A cqueues socket object
+  - `.socket` (optional): A cqueues socket object to accept() from
   - `.onstream`: function to call back for each stream read
   - `.onerror`: function that will be called when an error occurs (default: throw an error)
   - `.tls`: `nil`: allow both tls and non-tls connections
@@ -288,17 +288,14 @@ local function new_server(tbl)
 	else
 		assert(cqueues.type(cq) == "controller", "optional cq field should be a cqueue controller")
 	end
-	local socket = assert(tbl.socket, "missing 'socket'")
+	local socket = tbl.socket
+	if socket ~= nil then
+		assert(cs.type(socket), "optional socket field should be a cqueues socket")
+	end
 	local onstream = assert(tbl.onstream, "missing 'onstream'")
-
 	if tbl.ctx == nil and tbl.tls ~= false then
 		error("OpenSSL context required if .tls isn't false")
 	end
-
-	-- Return errors rather than throwing
-	socket:onerror(function(s, op, why, lvl) -- luacheck: ignore 431 212
-		return why
-	end)
 
 	local self = setmetatable({
 		cq = cq;
@@ -316,7 +313,13 @@ local function new_server(tbl)
 		client_timeout = tbl.client_timeout;
 	}, server_mt)
 
-	cq:wrap(server_loop, self)
+	if socket then
+		-- Return errors rather than throwing
+		socket:onerror(function(socket, op, why, lvl) -- luacheck: ignore 431 212
+			return why
+		end)
+		cq:wrap(server_loop, self)
+	end
 
 	return self
 end
