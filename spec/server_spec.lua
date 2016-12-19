@@ -303,4 +303,22 @@ describe("http.server module", function()
 		assert_loop(cq, TEST_TIMEOUT)
 		assert.truthy(cq:empty())
 	end)
+	it("shouldn't throw an error calling :listen() after :close()", function()
+		local s = assert(server.listen {
+			host = "localhost";
+			port = 0;
+			onstream = function() end;
+		})
+		s:close()
+		s:listen()
+	end)
+	it("shouldn't throw an error calling :localname() after :close()", function()
+		local s = assert(server.listen {
+			host = "localhost";
+			port = 0;
+			onstream = function() end;
+		})
+		s:close()
+		s:localname()
+	end)
 end)
