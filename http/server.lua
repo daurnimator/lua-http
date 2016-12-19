@@ -408,7 +408,7 @@ function server_methods:listen(timeout)
 end
 
 function server_methods:localname()
-	return self.socket:localname()
+	return ca.fileresult(self.socket:localname())
 end
 
 function server_methods:pause()
