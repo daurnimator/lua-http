@@ -1,14 +1,15 @@
 ## connection
 
-lua-http has separate libraries for both HTTP 1 and HTTP 2 type communications. Future protocols will also be supported and exposed as new modules. As HTTP 1 and 2 share common concepts at the connection and stream level, the _[connection](#connection)_ and _[stream](#stream)_ modules have been written to contain common interfaces wherever possible. All _[connection](#connection)_ types expose the following fields:
+A connection encapsulates a socket and provides protocol specific operations. A connection may have [*streams*](#stream) which encapsulate the requests/responses happening over a conenction. Alternatively, you can ignore streams entirely and use low level protocol specific operations to read and write to the socket.
 
+All *connection* types expose the following fields:
 
 ### `connection.type` <!-- --> {#connection.type}
 
 The mode of use for the connection object. Valid values are:
 
-  - `"client"` - Connects to a remote URI
-  - `"server"` - Listens for connection on a local URI
+  - `"client"`: Acts as a client; this connection type is used by entities who want to make requests
+  - `"server"`: Acts as a server; this conenction type is used by entities who want to respond to requests
 
 
 ### `connection.version` <!-- --> {#connection.version}
