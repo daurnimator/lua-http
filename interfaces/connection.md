@@ -41,7 +41,7 @@ Returns the connection information for the socket *peer* (as in, the next hop). 
 
 ### `connection:flush(timeout)` <!-- --> {#connection:flush}
 
-Flushes all buffered outgoing data on the socket. Returns `true` on success. Returns `false` and the error if the socket fails to flush.
+Flushes buffered outgoing data on the socket to the operating system. Returns `true` on success. On error, returns `nil`, an error message and an error number.
 
 
 ### `connection:shutdown()` <!-- --> {#connection:shutdown}
