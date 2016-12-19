@@ -407,10 +407,13 @@ end
 -- Actually wait for and *do* the binding
 -- Don't *need* to call this, as if not it will be done lazily
 function server_methods:listen(timeout)
-	if self.socket == nil then
-		return
+	if self.socket then
+		local ok, err, errno = ca.fileresult(self.socket:listen(timeout))
+		if not ok then
+			return nil, err, errno
+		end
 	end
-	return ca.fileresult(self.socket:listen(timeout))
+	return true
 end
 
 function server_methods:localname()
