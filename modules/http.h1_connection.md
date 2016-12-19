@@ -149,12 +149,12 @@ Terminates a header block by writing a blank line (`"\r\n"`) to the socket. This
 
 Writes a chunk of data to the socket. `chunk_ext` must be `nil` as chunk extensions are not supported. Will yield until complete or `timeout` is exceeded. Returns true on success. Returns `nil`, an error message and an error number if the write fails.
 
-*Note that `chunk` will not be flushed to the remote server until [`write_body_last_chunk`](#http.h1_connection:write_body_last_chunk) is called.*
-
 
 ### `h1_connection:write_body_last_chunk(chunk_ext, timeout)` <!-- --> {#http.h1_connection:write_body_last_chunk}
 
-Writes the chunked body terminator `"0\r\n"` to the socket and flushes the socket output buffer. `chunk_ext` must be `nil` as chunk extensions are not supported. Will yield until complete or `timeout` is exceeded. Returns `nil`, an error message and an error number if the write fails.
+Writes the chunked body terminator `"0\r\n"` to the socket. `chunk_ext` must be `nil` as chunk extensions are not supported. Will yield until complete or `timeout` is exceeded. Returns `nil`, an error message and an error number if the write fails.
+
+*Note that the connection will not be immediately flushed to the remote server; normally this will occur when trailers are written.*
 
 
 ### `h1_connection:write_body_plain(body, timeout)` <!-- --> {#http.h1_connection:write_body_plain}
