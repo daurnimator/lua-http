@@ -312,23 +312,27 @@ function connection_methods:new_stream(id)
 			-- Pick next free odd number
 			id = self.highest_odd_stream + 2
 		else
-			-- Pick next free odd number
+			-- Pick next free even number
 			id = self.highest_even_stream + 2
 		end
 		-- TODO: check MAX_CONCURRENT_STREAMS
 	end
 	assert(self.streams[id] == nil, "stream id already in use")
 	assert(id < 2^32, "stream id too large")
+	local stream = h2_stream.new(self, id)
 	if id % 2 == 0 then
 		if id > self.highest_even_stream then
 			self.highest_even_stream = id
+		else -- stream 'already' existed but was possibly collected. see http2 spec 5.1.1
+			stream:set_state("closed")
 		end
 	else
 		if id > self.highest_odd_stream then
 			self.highest_odd_stream = id
+		else -- stream 'already' existed but was possibly collected. see http2 spec 5.1.1
+			stream:set_state("closed")
 		end
 	end
-	local stream = h2_stream.new(self, id)
 	if id == 0 then
 		self.stream0 = stream
 	else
