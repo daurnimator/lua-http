@@ -89,7 +89,7 @@ See [`connection:onidle(new_handler)`](#connection:onidle)
 ### `h2_connection:read_http2_frame(timeout)` <!-- --> {#http.h2_connection:read_http2_frame}
 
 
-### `h2_connection:write_http2_frame(typ, flags, streamid, payload, timeout)` <!-- --> {#http.h2_connection:write_http2_frame}
+### `h2_connection:write_http2_frame(typ, flags, streamid, payload, timeout, flush)` <!-- --> {#http.h2_connection:write_http2_frame}
 
 
 ### `h2_connection:ping(timeout)` <!-- --> {#http.h2_connection:ping}
