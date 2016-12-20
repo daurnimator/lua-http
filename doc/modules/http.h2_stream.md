@@ -103,29 +103,29 @@ See [`stream:shutdown()`](#stream:shutdown)
 ### `h2_stream:reprioritise(child, exclusive)` <!-- --> {#http.h2_stream:reprioritise}
 
 
-### `h2_stream:write_http2_frame(typ, flags, payload, timeout)` <!-- --> {#http.h2_stream:write_http2_frame}
+### `h2_stream:write_http2_frame(typ, flags, payload, timeout, flush)` <!-- --> {#http.h2_stream:write_http2_frame}
 
 Writes a frame with `h2_stream`'s stream id.
 
-See [`h2_connection:write_http2_frame(typ, flags, streamid, payload, timeout)`](#http.h2_connection:write_http2_frame)
+See [`h2_connection:write_http2_frame(typ, flags, streamid, payload, timeout, flush)`](#http.h2_connection:write_http2_frame)
 
 
-### `h2_stream:write_data_frame(payload, end_stream, padded, timeout)` <!-- --> {#http.h2_stream:write_data_frame}
+### `h2_stream:write_data_frame(payload, end_stream, padded, timeout, flush)` <!-- --> {#http.h2_stream:write_data_frame}
 
 
-### `h2_stream:write_headers_frame(payload, end_stream, end_headers, padded, exclusive, stream_dep, weight, timeout)` <!-- --> {#http.h2_stream:write_headers_frame}
+### `h2_stream:write_headers_frame(payload, end_stream, end_headers, padded, exclusive, stream_dep, weight, timeout, flush)` <!-- --> {#http.h2_stream:write_headers_frame}
 
 
-### `h2_stream:write_priority_frame(exclusive, stream_dep, weight, timeout)` <!-- --> {#http.h2_stream:write_priority_frame}
+### `h2_stream:write_priority_frame(exclusive, stream_dep, weight, timeout, flush)` <!-- --> {#http.h2_stream:write_priority_frame}
 
 
-### `h2_stream:write_rst_stream(err_code, timeout)` <!-- --> {#http.h2_stream:write_rst_stream}
+### `h2_stream:write_rst_stream(err_code, timeout, flush)` <!-- --> {#http.h2_stream:write_rst_stream}
 
 
-### `h2_stream:write_settings_frame(ACK, settings, timeout)` <!-- --> {#http.h2_stream:write_settings_frame}
+### `h2_stream:write_settings_frame(ACK, settings, timeout, flush)` <!-- --> {#http.h2_stream:write_settings_frame}
 
 
-### `h2_stream:write_push_promise_frame(promised_stream_id, payload, end_headers, padded, timeout)` <!-- --> {#http.h2_stream:write_push_promise_frame}
+### `h2_stream:write_push_promise_frame(promised_stream_id, payload, end_headers, padded, timeout, flush)` <!-- --> {#http.h2_stream:write_push_promise_frame}
 
 
 ### `h2_stream:push_promise(headers, timeout)` <!-- --> {#http.h2_stream:push_promise}
@@ -135,16 +135,16 @@ Pushes a new promise to the client.
 Returns the new stream as a [h2_stream](#http.h2_stream).
 
 
-### `h2_stream:write_ping_frame(ACK, payload, timeout)` <!-- --> {#http.h2_stream:write_ping_frame}
+### `h2_stream:write_ping_frame(ACK, payload, timeout, flush)` <!-- --> {#http.h2_stream:write_ping_frame}
 
 
-### `h2_stream:write_goaway_frame(last_streamid, err_code, debug_msg, timeout)` <!-- --> {#http.h2_stream:write_goaway_frame}
+### `h2_stream:write_goaway_frame(last_streamid, err_code, debug_msg, timeout, flush)` <!-- --> {#http.h2_stream:write_goaway_frame}
 
 
-### `h2_stream:write_window_update_frame(inc, timeout)` <!-- --> {#http.h2_stream:write_window_update_frame}
+### `h2_stream:write_window_update_frame(inc, timeout, flush)` <!-- --> {#http.h2_stream:write_window_update_frame}
 
 
 ### `h2_stream:write_window_update(inc, timeout)` <!-- --> {#http.h2_stream:write_window_update}
 
 
-### `h2_stream:write_continuation_frame(payload, end_headers, timeout)` <!-- --> {#http.h2_stream:write_continuation_frame}
+### `h2_stream:write_continuation_frame(payload, end_headers, timeout, flush)` <!-- --> {#http.h2_stream:write_continuation_frame}

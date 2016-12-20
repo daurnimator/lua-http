@@ -418,7 +418,7 @@ end
 -- If this times out, it was the flushing; not the write itself
 -- hence it's not always total failure.
 -- It's up to the caller to take some action (e.g. closing) rather than doing it here
-function connection_methods:write_http2_frame(typ, flags, streamid, payload, timeout)
+function connection_methods:write_http2_frame(typ, flags, streamid, payload, timeout, flush)
 	local deadline = timeout and monotime()+timeout
 	if #payload > self.peer_settings[0x5] then
 		return nil, h2_error.errors.FRAME_SIZE_ERROR:new_traceback("frame too large"), ce.E2BIG
@@ -428,7 +428,7 @@ function connection_methods:write_http2_frame(typ, flags, streamid, payload, tim
 	if not ok then
 		return nil, err, errno
 	end
-	return self.socket:xwrite(payload, deadline and deadline-monotime())
+	return self.socket:xwrite(payload, flush, deadline and deadline-monotime())
 end
 
 function connection_methods:ping(timeout)

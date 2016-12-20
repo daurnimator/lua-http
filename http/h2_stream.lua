@@ -115,8 +115,8 @@ function stream_methods:set_state(new)
 	end
 end
 
-function stream_methods:write_http2_frame(typ, flags, payload, timeout)
-	return self.connection:write_http2_frame(typ, flags, self.id, payload, timeout)
+function stream_methods:write_http2_frame(typ, flags, payload, timeout, flush)
+	return self.connection:write_http2_frame(typ, flags, self.id, payload, timeout, flush)
 end
 
 function stream_methods:reprioritise(child, exclusive)
@@ -231,7 +231,7 @@ frame_handlers[frame_types.DATA] = function(stream, flags, payload, deadline) --
 	return true
 end
 
-function stream_methods:write_data_frame(payload, end_stream, padded, timeout)
+function stream_methods:write_data_frame(payload, end_stream, padded, timeout, flush)
 	if self.id == 0 then
 		h2_errors.PROTOCOL_ERROR("'DATA' frames MUST be associated with a stream")
 	end
@@ -256,7 +256,7 @@ function stream_methods:write_data_frame(payload, end_stream, padded, timeout)
 	if new_stream_peer_flow_credits < 0 or new_connection_peer_flow_credits < 0 then
 		h2_errors.FLOW_CONTROL_ERROR("not enough flow credits")
 	end
-	local ok, err, errno = self:write_http2_frame(frame_types.DATA, flags, payload, timeout)
+	local ok, err, errno = self:write_http2_frame(frame_types.DATA, flags, payload, timeout, flush)
 	if not ok then return nil, err, errno end
 	self.peer_flow_credits = new_stream_peer_flow_credits
 	self.connection.peer_flow_credits = new_connection_peer_flow_credits
@@ -476,7 +476,7 @@ frame_handlers[frame_types.HEADERS] = function(stream, flags, payload, deadline)
 	end
 end
 
-function stream_methods:write_headers_frame(payload, end_stream, end_headers, padded, exclusive, stream_dep, weight, timeout)
+function stream_methods:write_headers_frame(payload, end_stream, end_headers, padded, exclusive, stream_dep, weight, timeout, flush)
 	assert(self.state ~= "closed" and self.state ~= "half closed (local)")
 	local pad_len, pri, padding = "", "", ""
 	local flags = 0
@@ -502,7 +502,7 @@ function stream_methods:write_headers_frame(payload, end_stream, end_headers, pa
 		pri = spack("> I4 B", tmp, weight)
 	end
 	payload = pad_len .. pri .. payload .. padding
-	local ok, err, errno = self:write_http2_frame(frame_types.HEADERS, flags, payload, timeout)
+	local ok, err, errno = self:write_http2_frame(frame_types.HEADERS, flags, payload, timeout, flush)
 	if ok == nil then return nil, err, errno end
 	self.stats_sent_headers = self.stats_sent_headers + 1
 	if end_stream then
@@ -546,7 +546,7 @@ frame_handlers[frame_types.PRIORITY] = function(stream, flags, payload) -- luach
 	return true
 end
 
-function stream_methods:write_priority_frame(exclusive, stream_dep, weight, timeout)
+function stream_methods:write_priority_frame(exclusive, stream_dep, weight, timeout, flush)
 	assert(stream_dep < 0x80000000)
 	local tmp = stream_dep
 	if exclusive then
@@ -554,7 +554,7 @@ function stream_methods:write_priority_frame(exclusive, stream_dep, weight, time
 	end
 	weight = weight and weight - 1 or 0
 	local payload = spack("> I4 B", tmp, weight)
-	return self:write_http2_frame(frame_types.PRIORITY, 0, payload, timeout)
+	return self:write_http2_frame(frame_types.PRIORITY, 0, payload, timeout, flush)
 end
 
 frame_handlers[frame_types.RST_STREAM] = function(stream, flags, payload, deadline) -- luacheck: ignore 212
@@ -581,7 +581,7 @@ frame_handlers[frame_types.RST_STREAM] = function(stream, flags, payload, deadli
 	return true
 end
 
-function stream_methods:write_rst_stream(err_code, timeout)
+function stream_methods:write_rst_stream(err_code, timeout, flush)
 	if self.id == 0 then
 		h2_errors.PROTOCOL_ERROR("'RST_STREAM' frames MUST be associated with a stream")
 	end
@@ -590,7 +590,7 @@ function stream_methods:write_rst_stream(err_code, timeout)
 	end
 	local flags = 0
 	local payload = spack(">I4", err_code)
-	local ok, err, errno = self:write_http2_frame(frame_types.RST_STREAM, flags, payload, timeout)
+	local ok, err, errno = self:write_http2_frame(frame_types.RST_STREAM, flags, payload, timeout, flush)
 	if not ok then return nil, err, errno end
 	if self.state ~= "closed" then
 		self:set_state("closed")
@@ -704,7 +704,7 @@ local function pack_settings_payload(settings)
 	return spack(">" .. ("I2 I4"):rep(i), unpack(a, 1, i*2))
 end
 
-function stream_methods:write_settings_frame(ACK, settings, timeout)
+function stream_methods:write_settings_frame(ACK, settings, timeout, flush)
 	if self.id ~= 0 then
 		h2_errors.PROTOCOL_ERROR("'SETTINGS' frames must be on stream id 0")
 	end
@@ -719,7 +719,7 @@ function stream_methods:write_settings_frame(ACK, settings, timeout)
 		flags = 0
 		payload = pack_settings_payload(settings)
 	end
-	local ok, err, errno = self:write_http2_frame(frame_types.SETTING, flags, payload, timeout)
+	local ok, err, errno = self:write_http2_frame(frame_types.SETTING, flags, payload, timeout, flush)
 	if ok and not ACK then
 		local n = self.connection.send_settings.n + 1
 		self.connection.send_settings.n = n
@@ -779,7 +779,7 @@ frame_handlers[frame_types.PUSH_PROMISE] = function(stream, flags, payload, dead
 	end
 end
 
-function stream_methods:write_push_promise_frame(promised_stream_id, payload, end_headers, padded, timeout)
+function stream_methods:write_push_promise_frame(promised_stream_id, payload, end_headers, padded, timeout, flush)
 	assert(self.state == "open" or self.state == "half closed (remote)")
 	assert(self.id ~= 0)
 	local pad_len, padding = "", ""
@@ -798,7 +798,7 @@ function stream_methods:write_push_promise_frame(promised_stream_id, payload, en
 	-- TODO: promised_stream_id must be valid for sender
 	promised_stream_id = spack(">I4", promised_stream_id)
 	payload = pad_len .. promised_stream_id .. payload .. padding
-	return self:write_http2_frame(frame_types.PUSH_PROMISE, flags, payload, timeout)
+	return self:write_http2_frame(frame_types.PUSH_PROMISE, flags, payload, timeout, flush)
 end
 
 frame_handlers[frame_types.PING] = function(stream, flags, payload, deadline)
@@ -823,7 +823,7 @@ frame_handlers[frame_types.PING] = function(stream, flags, payload, deadline)
 	end
 end
 
-function stream_methods:write_ping_frame(ACK, payload, timeout)
+function stream_methods:write_ping_frame(ACK, payload, timeout, flush)
 	if self.id ~= 0 then
 		h2_errors.PROTOCOL_ERROR("'PING' frames must be on stream id 0")
 	end
@@ -831,7 +831,7 @@ function stream_methods:write_ping_frame(ACK, payload, timeout)
 		h2_errors.FRAME_SIZE_ERROR("'PING' frames must have 8 byte payload")
 	end
 	local flags = ACK and 0x1 or 0
-	return self:write_http2_frame(frame_types.PING, flags, payload, timeout)
+	return self:write_http2_frame(frame_types.PING, flags, payload, timeout, flush)
 end
 
 frame_handlers[frame_types.GOAWAY] = function(stream, flags, payload, deadline) -- luacheck: ignore 212
@@ -852,7 +852,7 @@ frame_handlers[frame_types.GOAWAY] = function(stream, flags, payload, deadline) 
 	return true
 end
 
-function stream_methods:write_goaway_frame(last_streamid, err_code, debug_msg, timeout)
+function stream_methods:write_goaway_frame(last_streamid, err_code, debug_msg, timeout, flush)
 	if self.id ~= 0 then
 		h2_errors.PROTOCOL_ERROR("'GOAWAY' frames MUST be on stream 0")
 	end
@@ -862,7 +862,7 @@ function stream_methods:write_goaway_frame(last_streamid, err_code, debug_msg, t
 	if debug_msg then
 		payload = payload .. debug_msg
 	end
-	local ok, err, errno = self:write_http2_frame(frame_types.GOAWAY, flags, payload, timeout)
+	local ok, err, errno = self:write_http2_frame(frame_types.GOAWAY, flags, payload, timeout, flush)
 	if not ok then
 		return nil, err, errno
 	end
@@ -903,7 +903,7 @@ frame_handlers[frame_types.WINDOW_UPDATE] = function(stream, flags, payload, dea
 	return true
 end
 
-function stream_methods:write_window_update_frame(inc, timeout)
+function stream_methods:write_window_update_frame(inc, timeout, flush)
 	local flags = 0
 	if self.id ~= 0 and self.state == "idle" then
 		h2_errors.PROTOCOL_ERROR([['WINDOW_UPDATE' frames not allowed in "idle" state]])
@@ -912,7 +912,7 @@ function stream_methods:write_window_update_frame(inc, timeout)
 		h2_errors.PROTOCOL_ERROR("invalid window update increment", true)
 	end
 	local payload = spack(">I4", inc)
-	return self:write_http2_frame(frame_types.WINDOW_UPDATE, flags, payload, timeout)
+	return self:write_http2_frame(frame_types.WINDOW_UPDATE, flags, payload, timeout, flush)
 end
 
 function stream_methods:write_window_update(inc, timeout)
@@ -961,13 +961,13 @@ frame_handlers[frame_types.CONTINUATION] = function(stream, flags, payload, dead
 	end
 end
 
-function stream_methods:write_continuation_frame(payload, end_headers, timeout)
+function stream_methods:write_continuation_frame(payload, end_headers, timeout, flush)
 	assert(self.state == "open" or self.state == "half closed (remote)")
 	local flags = 0
 	if end_headers then
 		flags = bor(flags, 0x4)
 	end
-	return self:write_http2_frame(frame_types.CONTINUATION, flags, payload, timeout)
+	return self:write_http2_frame(frame_types.CONTINUATION, flags, payload, timeout, flush)
 end
 
 -------------------------------------------
