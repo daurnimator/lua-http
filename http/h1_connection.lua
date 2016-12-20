@@ -114,16 +114,18 @@ function connection_methods:get_next_incoming_stream(timeout)
 	repeat
 		-- Wait until previous requests have been fully read
 		if self.req_locked then
-			if not self.req_cond:wait(deadline and deadline - monotime()) then
+			assert(cqueues.running(), "cannot wait for condition if not within a cqueues coroutine")
+			if cqueues.poll(self.req_cond, timeout) == timeout then
 				return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 			end
+			timeout = deadline and deadline-monotime()
 			assert(self.req_locked == nil)
 		end
 		if self.socket == nil then
 			return nil
 		end
 		-- Wait for at least one byte
-		local ok, err, errno = self.socket:fill(1, deadline and deadline-monotime())
+		local ok, err, errno = self.socket:fill(1, timeout)
 		if not ok then
 			return nil, err, errno
 		end

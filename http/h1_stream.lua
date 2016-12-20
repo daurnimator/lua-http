@@ -240,7 +240,8 @@ function stream_methods:read_headers(timeout)
 	else -- client
 		-- Make sure we're at front of connection pipeline
 		if self.connection.pipeline:peek() ~= self then
-			if not self.pipeline_cond:wait(deadline and (deadline-monotime)) then
+			assert(cqueues.running(), "cannot wait for condition if not within a cqueues coroutine")
+			if cqueues.poll(self.pipeline_cond, timeout) == timeout then
 				return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 			end
 			assert(self.connection.pipeline:peek() == self)
@@ -392,7 +393,8 @@ function stream_methods:get_headers(timeout)
 			if self.state == "closed" or self.state == "half closed (remote)" then
 				return nil
 			end
-			if not self.headers_cond:wait(timeout) then
+			assert(cqueues.running(), "cannot wait for condition if not within a cqueues coroutine")
+			if cqueues.poll(self.headers_cond, timeout) == timeout then
 				return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 			end
 			timeout = deadline and deadline-monotime()
@@ -471,7 +473,8 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		end
 		-- Make sure we're at the front of the pipeline
 		if self.connection.pipeline:peek() ~= self then
-			if not self.pipeline_cond:wait(deadline and (deadline-monotime)) then
+			assert(cqueues.running(), "cannot wait for condition if not within a cqueues coroutine")
+			if cqueues.poll(self.pipeline_cond, timeout) == timeout then
 				return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 			end
 			assert(self.connection.pipeline:peek() == self)
@@ -500,7 +503,8 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 			end
 			if self.req_locked then
 				-- Wait until previous responses have been fully written
-				if not self.connection.req_cond:wait(deadline and (deadline-monotime())) then
+				assert(cqueues.running(), "cannot wait for condition if not within a cqueues coroutine")
+				if cqueues.poll(self.connection.req_cond, timeout) == timeout then
 					return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 				end
 				assert(self.req_locked == nil)
