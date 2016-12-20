@@ -369,7 +369,7 @@ local function validate_headers(headers, is_request, nth_header, ended_stream)
 	return true
 end
 
-local function process_end_headers(stream, end_stream, pad_len, pos, promised_stream_id, payload)
+local function process_end_headers(stream, end_stream, pad_len, pos, promised_stream, payload)
 	if pad_len > 0 then
 		if pad_len + pos - 1 > #payload then
 			return nil, h2_errors.PROTOCOL_ERROR:new_traceback("length of the padding is the length of the frame payload or greater"), ce.EILSEQ
@@ -387,7 +387,7 @@ local function process_end_headers(stream, end_stream, pad_len, pos, promised_st
 		return nil, h2_errors.COMPRESSION_ERROR:new_traceback("incomplete header fragment"), ce.EILSEQ
 	end
 
-	if not promised_stream_id then
+	if not promised_stream then
 		stream.stats_recv_headers = stream.stats_recv_headers + 1
 		local validate_ok, validate_err, errno2 = validate_headers(headers, stream.type ~= "client", stream.stats_recv_headers, stream.state == "half closed (remote)" or stream.state == "closed")
 		if not validate_ok then
@@ -415,8 +415,6 @@ local function process_end_headers(stream, end_stream, pad_len, pos, promised_st
 			return nil, validate_err, errno2
 		end
 
-		local promised_stream = stream.connection:new_stream(promised_stream_id)
-		stream:reprioritise(promised_stream)
 		promised_stream:set_state("reserved (remote)")
 		promised_stream.recv_headers_fifo:push(headers)
 		stream.connection.new_streams:push(promised_stream)
@@ -531,9 +529,7 @@ function stream_methods:write_headers_frame(payload, end_stream, end_headers, pa
 			self:set_state("half closed (local)")
 		end
 	else
-		if self.state == "reserved (local)" then
-			self:set_state("half closed (remote)")
-		elseif self.state == "idle" then
+		if self.state == "idle" or self.state == "reserved (local)" then
 			self:set_state("open")
 		end
 	end
@@ -812,15 +808,19 @@ frame_handlers[frame_types.PUSH_PROMISE] = function(stream, flags, payload, dead
 		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("headers too large"), ce.EILSEQ
 	end
 
+	local promised_stream = stream.connection:new_stream(promised_stream_id)
+	stream:reprioritise(promised_stream)
+
 	if end_headers then
-		return process_end_headers(stream, false, pad_len, pos, promised_stream_id, payload)
+		return process_end_headers(stream, false, pad_len, pos, promised_stream, payload)
 	else
+		stream.connection.need_continuation = stream
+		stream.connection.promised_stream = promised_stream
 		stream.connection.recv_headers_buffer = { payload }
 		stream.connection.recv_headers_buffer_pos = pos
 		stream.connection.recv_headers_buffer_pad_len = pad_len
 		stream.connection.recv_headers_buffer_items = 1
 		stream.connection.recv_headers_buffer_length = len
-		stream.connection.promised_steam_id = promised_stream_id
 		return true
 	end
 end
@@ -828,6 +828,8 @@ end
 function stream_methods:write_push_promise_frame(promised_stream_id, payload, end_headers, padded, timeout, flush)
 	assert(self.state == "open" or self.state == "half closed (remote)")
 	assert(self.id ~= 0)
+	local promised_stream = self.connection.streams[promised_stream_id]
+	assert(promised_stream and promised_stream.state == "idle")
 	local pad_len, padding = "", ""
 	local flags = 0
 	if end_headers then
@@ -838,13 +840,17 @@ function stream_methods:write_push_promise_frame(promised_stream_id, payload, en
 		pad_len = spack("> B", padded)
 		padding = ("\0"):rep(padded)
 	end
-	assert(promised_stream_id > 0)
-	assert(promised_stream_id < 0x80000000)
-	assert(promised_stream_id % 2 == 0)
-	-- TODO: promised_stream_id must be valid for sender
 	promised_stream_id = spack(">I4", promised_stream_id)
 	payload = pad_len .. promised_stream_id .. payload .. padding
-	return self:write_http2_frame(frame_types.PUSH_PROMISE, flags, payload, timeout, flush)
+	local ok, err, errno = self:write_http2_frame(frame_types.PUSH_PROMISE, flags, payload, timeout, flush)
+	if ok == nil then
+		return nil, err, errno
+	end
+	if not end_headers then
+		promised_stream.end_stream_after_continuation = false
+	end
+	promised_stream:set_state("reserved (local)")
+	return true
 end
 
 frame_handlers[frame_types.PING] = function(stream, flags, payload, deadline)
@@ -990,25 +996,25 @@ frame_handlers[frame_types.CONTINUATION] = function(stream, flags, payload, dead
 	stream.connection.recv_headers_buffer_length = len
 
 	if end_headers then
+		local promised_stream = stream.connection.promised_stream
 		local pad_len = stream.connection.recv_headers_buffer_pad_len
 		local pos = stream.connection.recv_headers_buffer_pos
 		payload = table.concat(stream.connection.recv_headers_buffer, "", 1, stream.connection.recv_headers_buffer_items)
-		local promised_steam_id = stream.connection.promised_steam_id
 		stream.connection.recv_headers_buffer = nil
 		stream.connection.recv_headers_buffer_pos = nil
 		stream.connection.recv_headers_buffer_pad_len = nil
 		stream.connection.recv_headers_buffer_items = nil
 		stream.connection.recv_headers_buffer_length = nil
-		stream.connection.promised_steam_id = nil
+		stream.connection.promised_stream = nil
 		stream.connection.need_continuation = nil
-		return process_end_headers(stream, false, pad_len, pos, promised_steam_id, payload)
+		return process_end_headers(stream, false, pad_len, pos, promised_stream, payload)
 	else
 		return true
 	end
 end
 
 function stream_methods:write_continuation_frame(payload, end_headers, timeout, flush)
-	assert(self.state == "open" or self.state == "half closed (remote)")
+	assert(self.state == "open" or self.state == "half closed (remote)" or self.state == "reserved (local)")
 	local flags = 0
 	if end_headers then
 		flags = bor(flags, 0x4)
@@ -1170,17 +1176,14 @@ function stream_methods:push_promise(headers, timeout)
 
 	local promised_stream = self.connection:new_stream()
 	self:reprioritise(promised_stream)
-	local promised_stream_id = promised_stream.id
 
 	local padded = nil
 	local ok, err, errno = write_headers(self, function(payload, end_headers, deadline)
-		return self:write_push_promise_frame(promised_stream_id, payload, end_headers, padded, deadline)
+		return self:write_push_promise_frame(promised_stream.id, payload, end_headers, padded, deadline)
 	end, headers, timeout)
 	if not ok then
 		return nil, err, errno
 	end
-
-	promised_stream:set_state("reserved (local)")
 
 	return promised_stream
 end
