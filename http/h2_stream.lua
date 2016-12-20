@@ -18,6 +18,22 @@ end
 
 local MAX_HEADER_BUFFER_SIZE = 400*1024 -- 400 KB is max size in h2o
 
+local frame_types = {
+	[0x0] = "DATA";
+	[0x1] = "HEADERS";
+	[0x2] = "PRIORITY";
+	[0x3] = "RST_STREAM";
+	[0x4] = "SETTING";
+	[0x5] = "PUSH_PROMISE";
+	[0x6] = "PING";
+	[0x7] = "GOAWAY";
+	[0x8] = "WINDOW_UPDATE";
+	[0x9] = "CONTINUATION";
+}
+for i=0x0, 0x9 do
+	frame_types[frame_types[i]] = i
+end
+
 local frame_handlers = {}
 
 local stream_methods = {}
@@ -171,8 +187,7 @@ function chunk_methods:ack(no_window_update)
 	end
 end
 
--- DATA
-frame_handlers[0x0] = function(stream, flags, payload, deadline) -- luacheck: ignore 212
+frame_handlers[frame_types.DATA] = function(stream, flags, payload, deadline) -- luacheck: ignore 212
 	if stream.id == 0 then
 		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("'DATA' framess MUST be associated with a stream"), ce.EILSEQ
 	end
@@ -241,7 +256,7 @@ function stream_methods:write_data_frame(payload, end_stream, padded, timeout)
 	if new_stream_peer_flow_credits < 0 or new_connection_peer_flow_credits < 0 then
 		h2_errors.FLOW_CONTROL_ERROR("not enough flow credits")
 	end
-	local ok, err, errno = self:write_http2_frame(0x0, flags, payload, timeout)
+	local ok, err, errno = self:write_http2_frame(frame_types.DATA, flags, payload, timeout)
 	if not ok then return nil, err, errno end
 	self.peer_flow_credits = new_stream_peer_flow_credits
 	self.connection.peer_flow_credits = new_connection_peer_flow_credits
@@ -396,8 +411,7 @@ local function process_end_headers(stream, end_stream, pad_len, pos, promised_st
 	return true
 end
 
--- HEADERS
-frame_handlers[0x1] = function(stream, flags, payload, deadline) -- luacheck: ignore 212
+frame_handlers[frame_types.HEADERS] = function(stream, flags, payload, deadline) -- luacheck: ignore 212
 	if stream.id == 0 then
 		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("'HEADERS' frames MUST be associated with a stream"), ce.EILSEQ
 	end
@@ -488,7 +502,7 @@ function stream_methods:write_headers_frame(payload, end_stream, end_headers, pa
 		pri = spack("> I4 B", tmp, weight)
 	end
 	payload = pad_len .. pri .. payload .. padding
-	local ok, err, errno = self:write_http2_frame(0x1, flags, payload, timeout)
+	local ok, err, errno = self:write_http2_frame(frame_types.HEADERS, flags, payload, timeout)
 	if ok == nil then return nil, err, errno end
 	self.stats_sent_headers = self.stats_sent_headers + 1
 	if end_stream then
@@ -507,8 +521,7 @@ function stream_methods:write_headers_frame(payload, end_stream, end_headers, pa
 	return ok
 end
 
--- PRIORITY
-frame_handlers[0x2] = function(stream, flags, payload) -- luacheck: ignore 212
+frame_handlers[frame_types.PRIORITY] = function(stream, flags, payload) -- luacheck: ignore 212
 	if stream.id == 0 then
 		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("'PRIORITY' frames MUST be associated with a stream"), ce.EILSEQ
 	end
@@ -541,11 +554,10 @@ function stream_methods:write_priority_frame(exclusive, stream_dep, weight, time
 	end
 	weight = weight and weight - 1 or 0
 	local payload = spack("> I4 B", tmp, weight)
-	return self:write_http2_frame(0x2, 0, payload, timeout)
+	return self:write_http2_frame(frame_types.PRIORITY, 0, payload, timeout)
 end
 
--- RST_STREAM
-frame_handlers[0x3] = function(stream, flags, payload, deadline) -- luacheck: ignore 212
+frame_handlers[frame_types.RST_STREAM] = function(stream, flags, payload, deadline) -- luacheck: ignore 212
 	if stream.id == 0 then
 		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("'RST_STREAM' frames MUST be associated with a stream"), ce.EILSEQ
 	end
@@ -578,7 +590,7 @@ function stream_methods:write_rst_stream(err_code, timeout)
 	end
 	local flags = 0
 	local payload = spack(">I4", err_code)
-	local ok, err, errno = self:write_http2_frame(0x3, flags, payload, timeout)
+	local ok, err, errno = self:write_http2_frame(frame_types.RST_STREAM, flags, payload, timeout)
 	if not ok then return nil, err, errno end
 	if self.state ~= "closed" then
 		self:set_state("closed")
@@ -587,8 +599,7 @@ function stream_methods:write_rst_stream(err_code, timeout)
 	return ok
 end
 
--- SETTING
-frame_handlers[0x4] = function(stream, flags, payload, deadline)
+frame_handlers[frame_types.SETTING] = function(stream, flags, payload, deadline)
 	if stream.id ~= 0 then
 		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("stream identifier for a 'SETTINGS' frame MUST be zero"), ce.EILSEQ
 	end
@@ -708,7 +719,7 @@ function stream_methods:write_settings_frame(ACK, settings, timeout)
 		flags = 0
 		payload = pack_settings_payload(settings)
 	end
-	local ok, err, errno = self:write_http2_frame(0x4, flags, payload, timeout)
+	local ok, err, errno = self:write_http2_frame(frame_types.SETTING, flags, payload, timeout)
 	if ok and not ACK then
 		local n = self.connection.send_settings.n + 1
 		self.connection.send_settings.n = n
@@ -718,8 +729,7 @@ function stream_methods:write_settings_frame(ACK, settings, timeout)
 	return ok, err, errno
 end
 
--- PUSH_PROMISE
-frame_handlers[0x5] = function(stream, flags, payload, deadline) -- luacheck: ignore 212
+frame_handlers[frame_types.PUSH_PROMISE] = function(stream, flags, payload, deadline) -- luacheck: ignore 212
 	if not stream.connection.acked_settings[0x2] then
 		-- An endpoint that has both set this parameter to 0 and had it acknowledged MUST
 		-- treat the receipt of a PUSH_PROMISE frame as a connection error of type PROTOCOL_ERROR.
@@ -788,11 +798,10 @@ function stream_methods:write_push_promise_frame(promised_stream_id, payload, en
 	-- TODO: promised_stream_id must be valid for sender
 	promised_stream_id = spack(">I4", promised_stream_id)
 	payload = pad_len .. promised_stream_id .. payload .. padding
-	return self:write_http2_frame(0x5, flags, payload, timeout)
+	return self:write_http2_frame(frame_types.PUSH_PROMISE, flags, payload, timeout)
 end
 
--- PING
-frame_handlers[0x6] = function(stream, flags, payload, deadline)
+frame_handlers[frame_types.PING] = function(stream, flags, payload, deadline)
 	if stream.id ~= 0 then
 		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("'PING' must be on stream id 0"), ce.EILSEQ
 	end
@@ -822,11 +831,10 @@ function stream_methods:write_ping_frame(ACK, payload, timeout)
 		h2_errors.FRAME_SIZE_ERROR("'PING' frames must have 8 byte payload")
 	end
 	local flags = ACK and 0x1 or 0
-	return self:write_http2_frame(0x6, flags, payload, timeout)
+	return self:write_http2_frame(frame_types.PING, flags, payload, timeout)
 end
 
--- GOAWAY
-frame_handlers[0x7] = function(stream, flags, payload, deadline) -- luacheck: ignore 212
+frame_handlers[frame_types.GOAWAY] = function(stream, flags, payload, deadline) -- luacheck: ignore 212
 	if stream.id ~= 0 then
 		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("'GOAWAY' frames must be on stream id 0"), ce.EILSEQ
 	end
@@ -854,7 +862,7 @@ function stream_methods:write_goaway_frame(last_streamid, err_code, debug_msg, t
 	if debug_msg then
 		payload = payload .. debug_msg
 	end
-	local ok, err, errno = self:write_http2_frame(0x7, flags, payload, timeout)
+	local ok, err, errno = self:write_http2_frame(frame_types.GOAWAY, flags, payload, timeout)
 	if not ok then
 		return nil, err, errno
 	end
@@ -862,8 +870,7 @@ function stream_methods:write_goaway_frame(last_streamid, err_code, debug_msg, t
 	return true
 end
 
--- WINDOW_UPDATE
-frame_handlers[0x8] = function(stream, flags, payload, deadline) -- luacheck: ignore 212
+frame_handlers[frame_types.WINDOW_UPDATE] = function(stream, flags, payload, deadline) -- luacheck: ignore 212
 	if #payload ~= 4 then
 		return nil, h2_errors.FRAME_SIZE_ERROR:new_traceback("'WINDOW_UPDATE' frames must be 4 bytes"), ce.EILSEQ
 	end
@@ -905,7 +912,7 @@ function stream_methods:write_window_update_frame(inc, timeout)
 		h2_errors.PROTOCOL_ERROR("invalid window update increment", true)
 	end
 	local payload = spack(">I4", inc)
-	return self:write_http2_frame(0x8, flags, payload, timeout)
+	return self:write_http2_frame(frame_types.WINDOW_UPDATE, flags, payload, timeout)
 end
 
 function stream_methods:write_window_update(inc, timeout)
@@ -919,8 +926,7 @@ function stream_methods:write_window_update(inc, timeout)
 	return self:write_window_update_frame(inc, timeout)
 end
 
--- CONTINUATION
-frame_handlers[0x9] = function(stream, flags, payload, deadline) -- luacheck: ignore 212
+frame_handlers[frame_types.CONTINUATION] = function(stream, flags, payload, deadline) -- luacheck: ignore 212
 	if stream.id == 0 then
 		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("'CONTINUATION' frames MUST be associated with a stream"), ce.EILSEQ
 	end
@@ -961,7 +967,7 @@ function stream_methods:write_continuation_frame(payload, end_headers, timeout)
 	if end_headers then
 		flags = bor(flags, 0x4)
 	end
-	return self:write_http2_frame(0x9, flags, payload, timeout)
+	return self:write_http2_frame(frame_types.CONTINUATION, flags, payload, timeout)
 end
 
 -------------------------------------------
