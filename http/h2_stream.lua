@@ -713,14 +713,22 @@ local function pack_settings_payload(settings)
 	if MAX_HEADER_LIST_SIZE ~= nil then
 		append(0x6, MAX_HEADER_LIST_SIZE)
 	end
-	return spack(">" .. ("I2 I4"):rep(i), unpack(a, 1, i*2))
+	local settings_to_merge = {
+		HEADER_TABLE_SIZE;
+		ENABLE_PUSH;
+		MAX_CONCURRENT_STREAMS;
+		INITIAL_WINDOW_SIZE;
+		MAX_FRAME_SIZE;
+		MAX_HEADER_LIST_SIZE;
+	}
+	return spack(">" .. ("I2 I4"):rep(i), unpack(a, 1, i*2)), settings_to_merge
 end
 
 function stream_methods:write_settings_frame(ACK, settings, timeout, flush)
 	if self.id ~= 0 then
 		h2_errors.PROTOCOL_ERROR("'SETTINGS' frames must be on stream id 0")
 	end
-	local flags, payload
+	local flags, payload, settings_to_merge
 	if ACK then
 		if settings ~= nil then
 			h2_errors.PROTOCOL_ERROR("'SETTINGS' ACK cannot have new settings")
@@ -729,13 +737,13 @@ function stream_methods:write_settings_frame(ACK, settings, timeout, flush)
 		payload = ""
 	else
 		flags = 0
-		payload = pack_settings_payload(settings)
+		payload, settings_to_merge = pack_settings_payload(settings)
 	end
 	local ok, err, errno = self:write_http2_frame(frame_types.SETTING, flags, payload, timeout, flush)
 	if ok and not ACK then
 		local n = self.connection.send_settings.n + 1
 		self.connection.send_settings.n = n
-		self.connection.send_settings[n] = settings
+		self.connection.send_settings[n] = settings_to_merge
 		ok = n
 	end
 	return ok, err, errno
