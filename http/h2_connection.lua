@@ -141,9 +141,9 @@ local function new_connection(socket, conn_type, settings)
 		recv_goaway = cc.new();
 		new_streams = new_fifo();
 		new_streams_cond = cc.new();
-		peer_settings = default_settings;
+		peer_settings = {};
 		peer_settings_cond = cc.new(); -- signaled when the peer has changed their settings
-		acked_settings = default_settings;
+		acked_settings = {};
 		send_settings = {n = 0};
 		send_settings_ack_cond = cc.new(); -- for when server ACKs our settings
 		send_settings_acked = 0;
@@ -154,6 +154,8 @@ local function new_connection(socket, conn_type, settings)
 		pongs = {}; -- pending pings we've sent. keyed by opaque 8 byte payload
 	}, connection_mt)
 	self:new_stream(0)
+	merge_settings(self.peer_settings, default_settings)
+	merge_settings(self.acked_settings, default_settings)
 	self.encoding_context = hpack.new(default_settings[known_settings.HEADER_TABLE_SIZE])
 	self.decoding_context = hpack.new(default_settings[known_settings.HEADER_TABLE_SIZE])
 
