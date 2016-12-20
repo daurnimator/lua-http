@@ -805,6 +805,7 @@ describe("http.request module", function()
 			end)
 			cq:wrap(function() -- SOCKS server
 				local sock = socks_server:accept()
+				sock:setmode("b", "b")
 				assert.same("\5", sock:read(1))
 				local n = assert(sock:read(1)):byte()
 				local available_auth = assert(sock:read(n))
