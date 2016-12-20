@@ -9,6 +9,7 @@ local connection_common = require "http.connection_common"
 local onerror = connection_common.onerror
 local h2_error = require "http.h2_error"
 local h2_stream = require "http.h2_stream"
+local known_settings = h2_stream.known_settings
 local hpack = require "http.hpack"
 local h2_banned_ciphers = require "http.tls".banned_ciphers
 local spack = string.pack or require "compat53.string".pack
@@ -26,12 +27,12 @@ end
 local preface = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"
 
 local default_settings = {
-	[0x1] = 4096; -- HEADER_TABLE_SIZE
-	[0x2] = true; -- ENABLE_PUSH
-	[0x3] = math.huge; -- MAX_CONCURRENT_STREAMS
-	[0x4] = 65535; -- INITIAL_WINDOW_SIZE
-	[0x5] = 16384; -- MAX_FRAME_SIZE
-	[0x6] = math.huge;  -- MAX_HEADER_LIST_SIZE
+	[known_settings.HEADER_TABLE_SIZE] = 4096;
+	[known_settings.ENABLE_PUSH] = true;
+	[known_settings.MAX_CONCURRENT_STREAMS] = math.huge;
+	[known_settings.INITIAL_WINDOW_SIZE] = 65535;
+	[known_settings.MAX_FRAME_SIZE] = 16384;
+	[known_settings.MAX_HEADER_LIST_SIZE] = math.huge;
 }
 
 local function merge_settings(tbl, new)
@@ -152,8 +153,8 @@ local function new_connection(socket, conn_type, settings)
 		pongs = {}; -- pending pings we've sent. keyed by opaque 8 byte payload
 	}, connection_mt)
 	self:new_stream(0)
-	self.encoding_context = hpack.new(default_settings[0x1])
-	self.decoding_context = hpack.new(default_settings[0x1])
+	self.encoding_context = hpack.new(default_settings[known_settings.HEADER_TABLE_SIZE])
+	self.decoding_context = hpack.new(default_settings[known_settings.HEADER_TABLE_SIZE])
 
 	if self.type == "client" then
 		-- fully buffered write; will be flushed when sending settings
@@ -383,7 +384,7 @@ function connection_methods:read_http2_frame(timeout)
 		end
 	end
 	local size, typ, flags, streamid = sunpack(">I3 B B I4", frame_header)
-	if size > self.acked_settings[0x5] then
+	if size > self.acked_settings[known_settings.MAX_FRAME_SIZE] then
 		return nil, h2_error.errors.FRAME_SIZE_ERROR:new_traceback("frame too large"), ce.E2BIG
 	end
 	local payload, err2, errno2 = self.socket:xread(size, deadline and (deadline-monotime()))
@@ -419,7 +420,7 @@ end
 -- hence it's not always total failure.
 -- It's up to the caller to take some action (e.g. closing) rather than doing it here
 function connection_methods:write_http2_frame(typ, flags, streamid, payload, timeout, flush)
-	if #payload > self.peer_settings[0x5] then
+	if #payload > self.peer_settings[known_settings.MAX_FRAME_SIZE] then
 		return nil, h2_error.errors.FRAME_SIZE_ERROR:new_traceback("frame too large"), ce.E2BIG
 	end
 	local header = spack(">I3 B B I4", #payload, typ, flags, streamid)

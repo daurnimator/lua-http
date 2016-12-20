@@ -18,6 +18,18 @@ end
 
 local MAX_HEADER_BUFFER_SIZE = 400*1024 -- 400 KB is max size in h2o
 
+local known_settings = {
+	[0x1] = "HEADER_TABLE_SIZE";
+	[0x2] = "ENABLE_PUSH";
+	[0x3] = "MAX_CONCURRENT_STREAMS";
+	[0x4] = "INITIAL_WINDOW_SIZE";
+	[0x5] = "MAX_FRAME_SIZE";
+	[0x6] = "MAX_HEADER_LIST_SIZE";
+}
+for i=0x1, 0x6 do
+	known_settings[known_settings[i]] = i
+end
+
 local frame_types = {
 	[0x0] = "DATA";
 	[0x1] = "HEADERS";
@@ -66,7 +78,7 @@ local function new_stream(connection, id)
 		state = "idle";
 
 		id = id;
-		peer_flow_credits = id ~= 0 and connection.peer_settings[0x4];
+		peer_flow_credits = id ~= 0 and connection.peer_settings[known_settings.INITIAL_WINDOW_SIZE];
 		peer_flow_credits_increase = cc.new();
 		parent = nil;
 		dependees = setmetatable({}, {__mode="kv"});
@@ -618,11 +630,11 @@ frame_handlers[frame_types.SETTING] = function(stream, flags, payload, deadline)
 		local peer_settings = {}
 		for i=1, #payload, 6 do
 			local id, val = sunpack(">I2 I4", payload, i)
-			if id == 0x1 then
+			if id == known_settings.HEADER_TABLE_SIZE then
 				stream.connection.encoding_context:set_max_dynamic_table_size(val)
 				-- Add a 'max size' element to the next outgoing header
 				stream.connection.encoding_context:encode_max_size(val)
-			elseif id == 0x2 then
+			elseif id == known_settings.ENABLE_PUSH then
 				-- Convert to boolean
 				if val == 0 then
 					val = false
@@ -637,11 +649,11 @@ frame_handlers[frame_types.SETTING] = function(stream, flags, payload, deadline)
 					-- error of type PROTOCOL_ERROR.
 					return nil, h2_errors.PROTOCOL_ERROR:new_traceback("SETTINGS_ENABLE_PUSH not allowed for clients"), ce.EILSEQ
 				end
-			elseif id == 0x4 then
+			elseif id == known_settings.INITIAL_WINDOW_SIZE then
 				if val >= 2^31 then
 					return nil, h2_errors.FLOW_CONTROL_ERROR:new_traceback("SETTINGS_INITIAL_WINDOW_SIZE must be less than 2^31"), ce.EILSEQ
 				end
-			elseif id == 0x5 then
+			elseif id == known_settings.MAX_FRAME_SIZE then
 				if val < 16384 then
 					return nil, h2_errors.PROTOCOL_ERROR:new_traceback("SETTINGS_MAX_FRAME_SIZE must be greater than or equal to 16384"), ce.EILSEQ
 				elseif val >= 2^24 then
@@ -730,7 +742,7 @@ function stream_methods:write_settings_frame(ACK, settings, timeout, flush)
 end
 
 frame_handlers[frame_types.PUSH_PROMISE] = function(stream, flags, payload, deadline) -- luacheck: ignore 212
-	if not stream.connection.acked_settings[0x2] then
+	if not stream.connection.acked_settings[known_settings.ENABLE_PUSH] then
 		-- An endpoint that has both set this parameter to 0 and had it acknowledged MUST
 		-- treat the receipt of a PUSH_PROMISE frame as a connection error of type PROTOCOL_ERROR.
 		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("SETTINGS_ENABLE_PUSH is 0"), ce.EILSEQ
@@ -1052,7 +1064,7 @@ local function write_headers(self, func, headers, timeout)
 	local payload = encoding_context:render_data()
 	encoding_context:clear_data()
 
-	local SETTINGS_MAX_FRAME_SIZE = self.connection.peer_settings[0x5]
+	local SETTINGS_MAX_FRAME_SIZE = self.connection.peer_settings[known_settings.MAX_FRAME_SIZE]
 	if #payload <= SETTINGS_MAX_FRAME_SIZE then
 		local ok, err, errno = func(payload, true, deadline)
 		if not ok then
@@ -1149,7 +1161,7 @@ function stream_methods:write_chunk(payload, end_stream, timeout)
 			end
 			timeout = deadline and (deadline-monotime())
 		end
-		local SETTINGS_MAX_FRAME_SIZE = self.connection.peer_settings[0x5]
+		local SETTINGS_MAX_FRAME_SIZE = self.connection.peer_settings[known_settings.MAX_FRAME_SIZE]
 		local max_available = math.min(self.peer_flow_credits, self.connection.peer_flow_credits, SETTINGS_MAX_FRAME_SIZE)
 		if max_available < (#payload - sent) then
 			if max_available > 0 then
@@ -1177,6 +1189,7 @@ return {
 	methods = stream_methods;
 	mt = stream_mt;
 
+	known_settings = known_settings;
 	frame_handlers = frame_handlers;
 	pack_settings_payload = pack_settings_payload;
 }
