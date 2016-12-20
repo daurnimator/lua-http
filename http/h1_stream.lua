@@ -501,13 +501,13 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 				assert(self.connection.version < 1.1 or headers:has(":authority"), "missing authority")
 				path = assert(headers:get(":path"), "missing path")
 			end
-			if self.req_locked then
+			if self.connection.req_locked then
 				-- Wait until previous responses have been fully written
 				assert(cqueues.running(), "cannot wait for condition if not within a cqueues coroutine")
 				if cqueues.poll(self.connection.req_cond, timeout) == timeout then
 					return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 				end
-				assert(self.req_locked == nil)
+				assert(self.connection.req_locked == nil)
 			end
 			self.connection.pipeline:push(self)
 			self.connection.req_locked = self
