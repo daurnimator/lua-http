@@ -26,6 +26,10 @@ local request_methods = {
 	post302 = false;
 }
 
+local default_h2_settings = {
+	ENABLE_PUSH = false;
+}
+
 local request_mt = {
 	__name = "http.request";
 	__index = request_methods;
@@ -408,6 +412,7 @@ function request_methods:go(timeout)
 					ctx = self.ctx;
 					sendname = self.sendname ~= nil and self.sendname or host;
 					version = self.version;
+					h2_settings = default_h2_settings;
 				}, deadline and deadline-monotime())
 				if connection == nil then
 					sock:close()
@@ -446,6 +451,7 @@ function request_methods:go(timeout)
 				ctx = self.ctx;
 				sendname = self.sendname ~= nil and self.sendname or host;
 				version = self.version;
+				h2_settings = default_h2_settings;
 			}, deadline and deadline-monotime())
 			if connection == nil then
 				sock:close()
@@ -465,6 +471,7 @@ function request_methods:go(timeout)
 			ctx = self.ctx;
 			sendname = self.sendname;
 			version = self.version;
+			h2_settings = default_h2_settings;
 		}, deadline and deadline-monotime())
 		if connection == nil then
 			return nil, err, errno
