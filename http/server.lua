@@ -139,30 +139,38 @@ local function handle_socket(self, socket)
 	else
 		local cond = cc.new()
 		local idle = true
+		local deadline
 		conn:onidle(function()
 			idle = true
+			deadline = self.intra_stream_timeout + monotime()
 			cond:signal(1)
 		end)
 		while true do
+			local timeout = deadline and deadline-monotime() or self.intra_stream_timeout
 			local stream
-			stream, err, errno = conn:get_next_incoming_stream()
+			stream, err, errno = conn:get_next_incoming_stream(timeout)
 			if stream == nil then
 				if (err ~= nil -- client closed connection
 					and errno ~= ce.ECONNRESET
-					and errno ~= ce.ENOTCONN) then
+					and errno ~= ce.ENOTCONN
+					and errno ~= ce.ETIMEDOUT) then
 					error_operation = "get_next_incoming_stream"
 					error_context = conn
+					break
+				elseif errno ~= ce.ETIMEDOUT or not idle or deadline <= monotime() then -- want to go around loop again if deadline not hit
+					break
 				end
-				break
+			else
+				idle = false
+				deadline = nil
+				self.cq:wrap(function()
+					local ok, err2 = http_util.yieldable_pcall(self.onstream, self, stream)
+					stream:shutdown()
+					if not ok then
+						self:onerror()(self, stream, "onstream", err2)
+					end
+				end)
 			end
-			idle = false
-			self.cq:wrap(function()
-				local ok, err2 = http_util.yieldable_pcall(self.onstream, self, stream)
-				stream:shutdown()
-				if not ok then
-					self:onerror()(self, stream, "onstream", err2)
-				end
-			end)
 		end
 		-- wait for streams to complete
 		if not idle then
@@ -255,6 +263,7 @@ local server_methods = {
 	version = nil;
 	max_concurrent = math.huge;
 	connection_setup_timeout = 10;
+	intra_stream_timeout = 10;
 }
 local server_mt = {
 	__name = "http.server";
@@ -281,6 +290,7 @@ Takes a table of options:
   - `.version`: the http version to allow to connect (default: any)
   - `.max_concurrent`: Maximum number of connections to allow live at a time (default: infinity)
   - `.connection_setup_timeout`: Timeout (in seconds) to wait for client to send first bytes and/or complete TLS handshake (default: 10)
+  - `.intra_stream_timeout`: Timeout (in seoncds) to wait between start of client streams (default: 10)
 ]]
 local function new_server(tbl)
 	local cq = tbl.cq
@@ -312,6 +322,7 @@ local function new_server(tbl)
 		paused = false;
 		connection_done = cc.new(); -- signalled when connection has been closed
 		connection_setup_timeout = tbl.connection_setup_timeout;
+		intra_stream_timeout = tbl.intra_stream_timeout;
 	}, server_mt)
 
 	if socket then
@@ -386,6 +397,7 @@ local function listen(tbl)
 		version = tbl.version;
 		max_concurrent = tbl.max_concurrent;
 		connection_setup_timeout = tbl.connection_setup_timeout;
+		intra_stream_timeout = tbl.intra_stream_timeout;
 	}
 end
 

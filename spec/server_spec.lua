@@ -245,6 +245,48 @@ describe("http.server module", function()
 		assert_loop(cq, TEST_TIMEOUT)
 		assert.truthy(cq:empty())
 	end)
+	it("times out clients if intra_stream_timeout is exceeded", function()
+		local server = assert(http_server.new {
+			tls = false;
+			onstream = function(_, stream)
+				assert(stream:get_headers())
+				local headers = http_headers.new()
+				headers:append(":status", "200")
+				assert(stream:write_headers(headers, true))
+			end;
+			intra_stream_timeout = 0.1;
+		})
+		local s, c = ca.assert(cs.pair())
+		server:add_socket(s)
+		local cq = cqueues.new()
+		cq:wrap(function()
+			assert_loop(server)
+		end)
+		cq:wrap(function()
+			local conn = assert(http_client.negotiate(c, {
+				version = 1.1;
+			}))
+			local headers = http_headers.new()
+			headers:append(":method", "GET")
+			headers:append(":path", "/")
+			headers:append(":authority", "foo")
+			-- Normal request
+			local stream1 = conn:new_stream()
+			assert(stream1:write_headers(headers, true))
+			assert(stream1:get_headers())
+			-- Wait for less than intra_stream_timeout: should work as normal
+			cqueues.sleep(0.05)
+			local stream2 = conn:new_stream()
+			assert(stream2:write_headers(headers, true))
+			assert(stream2:get_headers())
+			-- Wait for more then intra_stream_timeout: server should have closed connection
+			cqueues.sleep(0.2)
+			local stream3 = conn:new_stream()
+			assert.same(ce.EPIPE, select(3, stream3:write_headers(headers, true)))
+		end)
+		assert_loop(cq, TEST_TIMEOUT)
+		assert.truthy(cq:empty())
+	end)
 	it("allows pausing+resuming the server", function()
 		local s = assert(http_server.listen {
 			host = "localhost";
