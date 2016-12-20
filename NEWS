@@ -1,3 +1,10 @@
+UNRELEASED
+
+  - Remove broken http.server `.client_timeout` option (replaced with `.connection_setup_timeout`)
+  - Fix http1 pipelining locks
+  - Fix sending http2 continuations
+
+
 0.1 - 2016-12-17
 
   - Support for HTTP versions 1, 1.1 and 2
