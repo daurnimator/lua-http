@@ -679,10 +679,16 @@ local function pack_settings_payload(settings)
 		i = i + 1
 	end
 	local HEADER_TABLE_SIZE = settings[0x1]
+	if HEADER_TABLE_SIZE == nil then
+		HEADER_TABLE_SIZE = settings.HEADER_TABLE_SIZE
+	end
 	if HEADER_TABLE_SIZE ~= nil then
 		append(0x1, HEADER_TABLE_SIZE)
 	end
 	local ENABLE_PUSH = settings[0x2]
+	if ENABLE_PUSH == nil then
+		ENABLE_PUSH = settings.ENABLE_PUSH
+	end
 	if ENABLE_PUSH ~= nil then
 		if type(ENABLE_PUSH) == "boolean" then
 			ENABLE_PUSH = ENABLE_PUSH and 1 or 0
@@ -691,10 +697,16 @@ local function pack_settings_payload(settings)
 		ENABLE_PUSH = ENABLE_PUSH ~= 0
 	end
 	local MAX_CONCURRENT_STREAMS = settings[0x3]
+	if MAX_CONCURRENT_STREAMS == nil then
+		MAX_CONCURRENT_STREAMS = settings.MAX_CONCURRENT_STREAMS
+	end
 	if MAX_CONCURRENT_STREAMS ~= nil then
 		append(0x3, MAX_CONCURRENT_STREAMS)
 	end
 	local INITIAL_WINDOW_SIZE = settings[0x4]
+	if INITIAL_WINDOW_SIZE == nil then
+		INITIAL_WINDOW_SIZE = settings.INITIAL_WINDOW_SIZE
+	end
 	if INITIAL_WINDOW_SIZE ~= nil then
 		if INITIAL_WINDOW_SIZE >= 2^31 then
 			h2_errors.FLOW_CONTROL_ERROR("SETTINGS_INITIAL_WINDOW_SIZE must be less than 2^31")
@@ -702,6 +714,9 @@ local function pack_settings_payload(settings)
 		append(0x4, INITIAL_WINDOW_SIZE)
 	end
 	local MAX_FRAME_SIZE = settings[0x5]
+	if MAX_FRAME_SIZE == nil then
+		MAX_FRAME_SIZE = settings.MAX_FRAME_SIZE
+	end
 	if MAX_FRAME_SIZE ~= nil then
 		if MAX_FRAME_SIZE < 16384 then
 			h2_errors.PROTOCOL_ERROR("SETTINGS_MAX_FRAME_SIZE must be greater than or equal to 16384")
@@ -711,6 +726,9 @@ local function pack_settings_payload(settings)
 		append(0x5, MAX_FRAME_SIZE)
 	end
 	local MAX_HEADER_LIST_SIZE = settings[0x6]
+	if MAX_HEADER_LIST_SIZE == nil then
+		MAX_HEADER_LIST_SIZE = settings.MAX_HEADER_LIST_SIZE
+	end
 	if MAX_HEADER_LIST_SIZE ~= nil then
 		append(0x6, MAX_HEADER_LIST_SIZE)
 	end
