@@ -1115,28 +1115,32 @@ function stream_methods:unget(str)
 	return true
 end
 
-local function write_headers(self, func, headers, timeout)
+local function write_headers(self, func, headers, extra_frame_data_len, timeout)
 	local deadline = timeout and (monotime()+timeout)
+
+	local SETTINGS_MAX_FRAME_SIZE = self.connection.peer_settings[known_settings.MAX_FRAME_SIZE]
+	local first_frame_max_size = SETTINGS_MAX_FRAME_SIZE - extra_frame_data_len
+	assert(first_frame_max_size >= 0)
+
 	local encoding_context = self.connection.encoding_context
 	encoding_context:encode_headers(headers)
 	local payload = encoding_context:render_data()
 	encoding_context:clear_data()
 
-	local SETTINGS_MAX_FRAME_SIZE = self.connection.peer_settings[known_settings.MAX_FRAME_SIZE]
-	if #payload <= SETTINGS_MAX_FRAME_SIZE then
+	if #payload <= first_frame_max_size then
 		local ok, err, errno = func(payload, true, deadline)
 		if not ok then
 			return ok, err, errno
 		end
 	else
 		do
-			local partial = payload:sub(1, SETTINGS_MAX_FRAME_SIZE)
+			local partial = payload:sub(1, first_frame_max_size)
 			local ok, err, errno = func(partial, false, deadline)
 			if not ok then
 				return ok, err, errno
 			end
 		end
-		local sent = SETTINGS_MAX_FRAME_SIZE
+		local sent = first_frame_max_size
 		local max = #payload-SETTINGS_MAX_FRAME_SIZE
 		while sent < max do
 			local partial = payload:sub(sent+1, sent+SETTINGS_MAX_FRAME_SIZE)
@@ -1165,7 +1169,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 	local padded, exclusive, stream_dep, weight = nil, nil, nil, nil
 	return write_headers(self, function(payload, end_headers, deadline)
 		return self:write_headers_frame(payload, end_stream, end_headers, padded, exclusive, stream_dep, weight, deadline and deadline-monotime())
-	end, headers, timeout)
+	end, headers, 0, timeout)
 end
 
 function stream_methods:push_promise(headers, timeout)
@@ -1180,7 +1184,7 @@ function stream_methods:push_promise(headers, timeout)
 	local padded = nil
 	local ok, err, errno = write_headers(self, function(payload, end_headers, deadline)
 		return self:write_push_promise_frame(promised_stream.id, payload, end_headers, padded, deadline)
-	end, headers, timeout)
+	end, headers, 4, timeout) -- 4 is size of promised stream id
 	if not ok then
 		return nil, err, errno
 	end
