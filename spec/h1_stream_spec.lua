@@ -273,20 +273,28 @@ describe("http1 stream", function()
 			while z:get_next_chunk() do end
 			streams[zh:get(":path")] = z
 		end)
+		local client_sync = cc.new()
 		cq:wrap(function()
+			if client_sync then client_sync:wait() end
 			local a = client:new_stream()
 			local ah = new_headers()
 			ah:append(":authority", "myauthority")
 			ah:append(":method", "GET")
 			ah:append(":path", "/a")
 			assert(a:write_headers(ah, true))
+		end)
+		cq:wrap(function()
+			client_sync:signal(); client_sync = nil;
 			local b = client:new_stream()
 			local bh = new_headers()
 			bh:append(":authority", "myauthority")
 			bh:append(":method", "POST")
 			bh:append(":path", "/b")
 			assert(b:write_headers(bh, false))
+			cqueues.sleep(0.01)
 			assert(b:write_chunk("this is some POST data", true))
+		end)
+		cq:wrap(function()
 			local c = client:new_stream()
 			local ch = new_headers()
 			ch:append(":authority", "myauthority")
@@ -298,20 +306,21 @@ describe("http1 stream", function()
 		assert.truthy(cq:empty())
 		-- All requests read; now for responses
 		-- Don't want /a to be first.
-		local sync = cc.new()
+		local server_sync = cc.new()
 		cq:wrap(function()
-			if sync then sync:wait() end
+			if server_sync then server_sync:wait() end
 			local h = new_headers()
 			h:append(":status", "200")
 			assert(streams["/a"]:write_headers(h, true))
 		end)
 		cq:wrap(function()
-			sync:signal(1); sync = nil;
+			server_sync:signal(); server_sync = nil;
 			local h = new_headers()
 			h:append(":status", "200")
 			assert(streams["/b"]:write_headers(h, true))
 		end)
 		cq:wrap(function()
+			if server_sync then server_sync:wait() end
 			local h = new_headers()
 			h:append(":status", "200")
 			assert(streams["/c"]:write_headers(h, true))
