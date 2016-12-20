@@ -179,39 +179,34 @@ describe("http.server module", function()
 	end)
 	it("taking socket from underlying connection is handled well by server", function()
 		local cq = cqueues.new()
-		local onstream = spy.new(function(s, stream)
+		local onstream = spy.new(function(server, stream)
 			local sock = stream.connection:take_socket()
-			s:close()
+			server:close()
 			assert.same("test", sock:read("*a"))
 			sock:close()
 		end);
-		local s = assert(http_server.listen {
-			host = "localhost";
-			port = 0;
+		local server = assert(http_server.new {
+			tls = false;
 			onstream = onstream;
 		})
-		assert(s:listen())
-		local _, host, port = s:localname()
+		local s, c = ca.assert(cs.pair())
+		server:add_socket(s)
 		cq:wrap(function()
-			assert_loop(s)
+			assert_loop(server)
 		end)
 		cq:wrap(function()
-			local sock = cs.connect {
-				host = host;
-				port = port;
-			}
-			assert(sock:write("test"))
-			assert(sock:flush())
-			sock:close()
+			assert(c:write("test"))
+			assert(c:flush())
+			c:close()
 		end)
 		assert_loop(cq, TEST_TIMEOUT)
 		assert.truthy(cq:empty())
 		assert.spy(onstream).was.called()
 	end)
 	it("an idle http2 stream doesn't block the server", function()
-		local s = assert(http_server.listen {
-			host = "localhost";
-			port = 0;
+		local server = assert(http_server.new {
+			tls = false;
+			version = 2;
 			onstream = function(_, stream)
 				if stream.id == 1 then
 					stream:get_next_chunk()
@@ -224,19 +219,16 @@ describe("http.server module", function()
 				end
 			end;
 		})
-		assert(s:listen())
-		local client_family, client_host, client_port = s:localname()
-		local conn = assert(http_client.connect({
-			family = client_family;
-			host = client_host;
-			port = client_port;
-			version = 2;
-		}))
+		local s, c = ca.assert(cs.pair())
+		server:add_socket(s)
 		local cq = cqueues.new()
 		cq:wrap(function()
-			assert_loop(s)
+			assert_loop(server)
 		end)
 		cq:wrap(function()
+			local conn = assert(http_client.negotiate(c, {
+				version = 2;
+			}))
 			local headers = http_headers.new()
 			headers:append(":authority", "myauthority")
 			headers:append(":method", "GET")
@@ -248,7 +240,7 @@ describe("http.server module", function()
 			assert(stream2:write_headers(headers, true))
 			assert(stream2:get_headers())
 			conn:close()
-			s:close()
+			server:close()
 		end)
 		assert_loop(cq, TEST_TIMEOUT)
 		assert.truthy(cq:empty())
