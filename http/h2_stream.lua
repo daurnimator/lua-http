@@ -96,6 +96,8 @@ local function new_stream(connection, id)
 
 		chunk_fifo = new_fifo();
 		chunk_cond = cc.new();
+
+		end_stream_after_continuation = nil;
 	}, stream_mt)
 	return self
 end
@@ -515,9 +517,14 @@ function stream_methods:write_headers_frame(payload, end_stream, end_headers, pa
 	end
 	payload = pad_len .. pri .. payload .. padding
 	local ok, err, errno = self:write_http2_frame(frame_types.HEADERS, flags, payload, timeout, flush)
-	if ok == nil then return nil, err, errno end
+	if ok == nil then
+		return nil, err, errno
+	end
 	self.stats_sent_headers = self.stats_sent_headers + 1
-	if end_stream then
+	if not end_headers then
+		self.end_stream_after_continuation = end_stream
+	end
+	if end_stream and end_headers then
 		if self.state == "half closed (remote)" then
 			self:set_state("closed")
 		else
@@ -1006,7 +1013,25 @@ function stream_methods:write_continuation_frame(payload, end_headers, timeout, 
 	if end_headers then
 		flags = bor(flags, 0x4)
 	end
-	return self:write_http2_frame(frame_types.CONTINUATION, flags, payload, timeout, flush)
+	local ok, err, errno = self:write_http2_frame(frame_types.CONTINUATION, flags, payload, timeout, flush)
+	if ok == nil then
+		return nil, err, errno
+	end
+	if self.end_stream_after_continuation and end_headers then
+		if self.state == "half closed (remote)" then
+			self:set_state("closed")
+		else
+			self:set_state("half closed (local)")
+		end
+	else
+		if self.state == "idle" then
+			self:set_state("open")
+		end
+	end
+	if end_headers then
+		self.end_stream_after_continuation = nil
+	end
+	return ok
 end
 
 -------------------------------------------
