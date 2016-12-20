@@ -34,15 +34,13 @@ local default_settings = {
 	[0x6] = math.huge;  -- MAX_HEADER_LIST_SIZE
 }
 
-local function merge_settings(new, old)
-	return {
-		[0x1] = new[0x1] or old[0x1];
-		[0x2] = new[0x2] or old[0x2];
-		[0x3] = new[0x3] or old[0x3];
-		[0x4] = new[0x4] or old[0x4];
-		[0x5] = new[0x5] or old[0x5];
-		[0x6] = new[0x6] or old[0x6];
-	}
+local function merge_settings(tbl, new)
+	for i=0x1, 0x6 do
+		local v = new[i]
+		if v ~= nil then
+			tbl[i] = v
+		end
+	end
 end
 
 local connection_methods = {}
@@ -470,7 +468,7 @@ function connection_methods:write_goaway_frame(last_stream_id, err_code, debug_m
 end
 
 function connection_methods:set_peer_settings(peer_settings)
-	self.peer_settings = merge_settings(peer_settings, self.peer_settings)
+	merge_settings(self.peer_settings, peer_settings)
 	self.peer_settings_cond:signal()
 end
 
@@ -480,7 +478,7 @@ function connection_methods:ack_settings()
 	local acked_settings = self.send_settings[n]
 	if acked_settings then
 		self.send_settings[n] = nil
-		self.acked_settings = merge_settings(acked_settings, self.acked_settings)
+		merge_settings(self.acked_settings, acked_settings)
 	end
 	self.send_settings_ack_cond:signal()
 end
