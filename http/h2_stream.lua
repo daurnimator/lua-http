@@ -688,6 +688,7 @@ local function pack_settings_payload(settings)
 			ENABLE_PUSH = ENABLE_PUSH and 1 or 0
 		end
 		append(0x2, ENABLE_PUSH)
+		ENABLE_PUSH = ENABLE_PUSH ~= 0
 	end
 	local MAX_CONCURRENT_STREAMS = settings[0x3]
 	if MAX_CONCURRENT_STREAMS ~= nil then
