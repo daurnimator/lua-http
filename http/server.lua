@@ -45,7 +45,8 @@ end
 -- Wrap a bare cqueues socket in an HTTP connection of a suitable version
 -- Starts TLS if necessary
 -- this function *should never throw*
-local function wrap_socket(self, socket, deadline)
+local function wrap_socket(self, socket, timeout)
+	local deadline = timeout and monotime()+timeout
 	socket:setmode("b", "b")
 	socket:onerror(onerror)
 	local version = self.version
@@ -126,7 +127,7 @@ end
 
 local function handle_socket(self, socket)
 	local error_operation, error_context
-	local conn, err, errno = wrap_socket(self, socket)
+	local conn, err, errno = wrap_socket(self, socket, self.connection_setup_timeout)
 	if not conn then
 		socket:close()
 		if err ~= ce.EPIPE -- client closed connection
@@ -253,7 +254,7 @@ end
 local server_methods = {
 	version = nil;
 	max_concurrent = math.huge;
-	client_timeout = 10;
+	connection_setup_timeout = 10;
 }
 local server_mt = {
 	__name = "http.server";
@@ -279,7 +280,7 @@ Takes a table of options:
   - `       `nil`: a self-signed context will be generated
   - `.version`: the http version to allow to connect (default: any)
   - `.max_concurrent`: Maximum number of connections to allow live at a time (default: infinity)
-  - `.client_timeout`: Timeout (in seconds) to wait for client to send first bytes and/or complete TLS handshake (default: 10)
+  - `.connection_setup_timeout`: Timeout (in seconds) to wait for client to send first bytes and/or complete TLS handshake (default: 10)
 ]]
 local function new_server(tbl)
 	local cq = tbl.cq
@@ -310,7 +311,7 @@ local function new_server(tbl)
 		pause_cond = cc.new();
 		paused = false;
 		connection_done = cc.new(); -- signalled when connection has been closed
-		client_timeout = tbl.client_timeout;
+		connection_setup_timeout = tbl.connection_setup_timeout;
 	}, server_mt)
 
 	if socket then
@@ -384,7 +385,7 @@ local function listen(tbl)
 		ctx = ctx;
 		version = tbl.version;
 		max_concurrent = tbl.max_concurrent;
-		client_timeout = tbl.client_timeout;
+		connection_setup_timeout = tbl.connection_setup_timeout;
 	}
 end
 
