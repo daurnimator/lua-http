@@ -302,44 +302,13 @@ function connection_methods:shutdown()
 end
 
 function connection_methods:new_stream(id)
+	if id and self.streams[id] ~= nil then
+		error("stream id already in use")
+	end
+	local stream = h2_stream.new(self)
 	if id then
-		assert(id % 1 == 0)
-	else
-		if self.recv_goaway_lowest then
-			h2_error.errors.PROTOCOL_ERROR("Receivers of a GOAWAY frame MUST NOT open additional streams on the connection")
-		end
-		if self.type == "client" then
-			-- Pick next free odd number
-			id = self.highest_odd_stream + 2
-		else
-			-- Pick next free even number
-			id = self.highest_even_stream + 2
-		end
-		-- TODO: check MAX_CONCURRENT_STREAMS
+		stream:pick_id(id)
 	end
-	assert(self.streams[id] == nil, "stream id already in use")
-	assert(id < 2^32, "stream id too large")
-	local stream = h2_stream.new(self, id)
-	if id % 2 == 0 then
-		if id > self.highest_even_stream then
-			self.highest_even_stream = id
-		else -- stream 'already' existed but was possibly collected. see http2 spec 5.1.1
-			stream:set_state("closed")
-		end
-	else
-		if id > self.highest_odd_stream then
-			self.highest_odd_stream = id
-		else -- stream 'already' existed but was possibly collected. see http2 spec 5.1.1
-			stream:set_state("closed")
-		end
-	end
-	if id == 0 then
-		self.stream0 = stream
-	else
-		-- Add dependency on stream 0. http2 spec, 5.3.1
-		self.stream0:reprioritise(stream)
-	end
-	self.streams[id] = stream
 	return stream
 end
 

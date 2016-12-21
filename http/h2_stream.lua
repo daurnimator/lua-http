@@ -65,21 +65,20 @@ function stream_mt:__tostring()
 	end
 	table.sort(dependee_list)
 	dependee_list = table.concat(dependee_list, ",")
-	return string.format("http.h2_stream{connection=%s;id=%d;state=%q;parent=%s;dependees={%s}}",
-		tostring(self.connection), self.id, self.state,
+	return string.format("http.h2_stream{connection=%s;id=%s;state=%q;parent=%s;dependees={%s}}",
+		tostring(self.connection), tostring(self.id), self.state,
 		(self.parent and tostring(self.parent.id) or "nil"), dependee_list)
 end
 
-local function new_stream(connection, id)
-	assert(type(id) == "number" and id >= 0 and id <= 0x7fffffff, "invalid stream id")
+local function new_stream(connection)
 	local self = setmetatable({
 		connection = connection;
 		type = connection.type;
 
 		state = "idle";
 
-		id = id;
-		peer_flow_credits = id ~= 0 and connection.peer_settings[known_settings.INITIAL_WINDOW_SIZE];
+		id = nil;
+		peer_flow_credits = 0;
 		peer_flow_credits_increase = cc.new();
 		parent = nil;
 		dependees = setmetatable({}, {__mode="kv"});
@@ -104,6 +103,52 @@ local function new_stream(connection, id)
 	return self
 end
 
+function stream_methods:pick_id(id)
+	assert(self.id == nil)
+	if id == nil then
+		if self.recv_goaway_lowest then
+			h2_error.errors.PROTOCOL_ERROR("Receivers of a GOAWAY frame MUST NOT open additional streams on the connection")
+		end
+		if self.type == "client" then
+			-- Pick next free odd number
+			id = self.connection.highest_odd_stream + 2
+			self.connection.highest_odd_stream = id
+		else
+			-- Pick next free even number
+			id = self.connection.highest_even_stream + 2
+			self.connection.highest_even_stream = id
+		end
+		self.id = id
+	else
+		assert(type(id) == "number" and id >= 0 and id <= 0x7fffffff and id % 1 == 0, "invalid stream id")
+		self.id = id
+		if id % 2 == 0 then
+			if id > self.connection.highest_even_stream then
+				self.connection.highest_even_stream = id
+			else -- stream 'already' existed but was possibly collected. see http2 spec 5.1.1
+				self:set_state("closed")
+			end
+		else
+			if id > self.connection.highest_odd_stream then
+				self.connection.highest_odd_stream = id
+			else -- stream 'already' existed but was possibly collected. see http2 spec 5.1.1
+				self:set_state("closed")
+			end
+		end
+	end
+	-- TODO: check MAX_CONCURRENT_STREAMS
+	self.connection.streams[id] = self
+	if id == 0 then
+		self.connection.stream0 = self
+	else
+		self.peer_flow_credits = self.connection.peer_settings[known_settings.INITIAL_WINDOW_SIZE]
+		self.peer_flow_credits_increase:signal()
+		-- Add dependency on stream 0. http2 spec, 5.3.1
+		self.connection.stream0:reprioritise(self)
+	end
+	return true
+end
+
 local valid_states = {
 	["idle"] = 1; -- initial
 	["open"] = 2; -- have sent or received headers; haven't sent body yet
@@ -119,6 +164,9 @@ function stream_methods:set_state(new)
 	if new_order <= valid_states[old] then
 		error("invalid state progression ('"..old.."' to '"..new.."')")
 	end
+	if new ~= "closed" then
+		assert(self.id)
+	end
 	self.state = new
 	if old == "idle" and new ~= "closed" then
 		self.connection.n_active_streams = self.connection.n_active_streams + 1
@@ -132,11 +180,13 @@ function stream_methods:set_state(new)
 end
 
 function stream_methods:write_http2_frame(typ, flags, payload, timeout, flush)
-	return self.connection:write_http2_frame(typ, flags, self.id, payload, timeout, flush)
+	local stream_id = assert(self.id, "stream has unset id")
+	return self.connection:write_http2_frame(typ, flags, stream_id, payload, timeout, flush)
 end
 
 function stream_methods:reprioritise(child, exclusive)
 	assert(child)
+	assert(child.id)
 	assert(child.id ~= 0) -- cannot reprioritise stream 0
 	if self == child then
 		-- http2 spec, section 5.3.1
@@ -501,6 +551,9 @@ end
 
 function stream_methods:write_headers_frame(payload, end_stream, end_headers, padded, exclusive, stream_dep, weight, timeout, flush)
 	assert(self.state ~= "closed" and self.state ~= "half closed (local)")
+	if self.id == nil then
+		self:pick_id()
+	end
 	local pad_len, pri, padding = "", "", ""
 	local flags = 0
 	if end_stream then
@@ -574,6 +627,9 @@ end
 
 function stream_methods:write_priority_frame(exclusive, stream_dep, weight, timeout, flush)
 	assert(stream_dep < 0x80000000)
+	if self.id == nil then
+		self:pick_id()
+	end
 	local tmp = stream_dep
 	if exclusive then
 		tmp = bor(tmp, 0x80000000)
@@ -1209,6 +1265,7 @@ function stream_methods:push_promise(headers, timeout)
 	assert(headers:has(":authority"))
 
 	local promised_stream = self.connection:new_stream()
+	promised_stream:pick_id()
 	self:reprioritise(promised_stream)
 
 	local padded = nil
