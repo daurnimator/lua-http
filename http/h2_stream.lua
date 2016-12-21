@@ -173,6 +173,10 @@ function stream_methods:set_state(new)
 		assert(self.id)
 	end
 	self.state = new
+	if new == "closed" or new == "half closed (remote)" then
+		self.recv_headers_cond:signal()
+		self.chunk_cond:signal()
+	end
 	if old == "idle" and new ~= "closed" then
 		self.connection.n_active_streams = self.connection.n_active_streams + 1
 	elseif old ~= "idle" and new == "closed" then
@@ -289,15 +293,14 @@ frame_handlers[frame_types.DATA] = function(stream, flags, payload, deadline) --
 
 	if end_stream then
 		stream.chunk_fifo:push(nil)
-	end
-	stream.chunk_cond:signal()
-
-	if end_stream then
+		-- chunk_cond gets signaled by :set_state
 		if stream.state == "half closed (local)" then
 			stream:set_state("closed")
 		else
 			stream:set_state("half closed (remote)")
 		end
+	else
+		stream.chunk_cond:signal()
 	end
 
 	return true
@@ -455,17 +458,17 @@ local function process_end_headers(stream, end_stream, pad_len, pos, promised_st
 			stream.content_length = tonumber(headers:get("content-length"), 10)
 		end
 		stream.recv_headers_fifo:push(headers)
-		stream.recv_headers_cond:signal()
 
 		if end_stream then
 			stream.chunk_fifo:push(nil)
-			stream.chunk_cond:signal()
+			-- recv_headers_cond and chunk_cond get signaled by :set_state
 			if stream.state == "half closed (local)" then
 				stream:set_state("closed")
 			else
 				stream:set_state("half closed (remote)")
 			end
 		else
+			stream.recv_headers_cond:signal()
 			if stream.state == "idle" then
 				stream:set_state("open")
 			end
@@ -666,8 +669,6 @@ frame_handlers[frame_types.RST_STREAM] = function(stream, flags, payload, deadli
 	}
 
 	stream:set_state("closed")
-	stream.recv_headers_cond:signal()
-	stream.chunk_cond:signal()
 
 	return true
 end
