@@ -42,7 +42,11 @@ See [`connection:peername()`](#connection:peername)
 See [`connection:flush(timeout)`](#connection:flush)
 
 
-### `h1_connection:shutdown()` <!-- --> {#http.h1_connection:shutdown}
+### `h1_connection:shutdown(dir)` <!-- --> {#http.h1_connection:shutdown}
+
+Shut down is as graceful as possible: pipelined streams are [shutdown](#http.h1_stream:shutdown), then the underlying socket is shut down in the appropriate direction(s).
+
+`dir` is a string representing the direction of communication to shut down communication in. If it contains `"r"` it will shut down reading, if it contains `"w"` it will shut down writing. The default is `"rw"`, i.e. to shutdown communication in both directions.
 
 See [`connection:shutdown()`](#connection:shutdown)
 
