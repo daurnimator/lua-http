@@ -309,6 +309,7 @@ function connection_methods:read_body_chunk(timeout)
 				return nil, onerror(self.socket, "unget", unget_errno1)
 			end
 			if err2 == nil then
+				self.socket:seterror("r", ce.EILSEQ)
 				return nil, onerror(self.socket, "read_body_chunk", ce.EILSEQ)
 			end
 			return nil, err2, errno2
