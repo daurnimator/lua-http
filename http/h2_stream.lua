@@ -1367,6 +1367,7 @@ return {
 	mt = stream_mt;
 
 	known_settings = known_settings;
+	frame_types = frame_types;
 	frame_handlers = frame_handlers;
 	pack_settings_payload = pack_settings_payload;
 }
