@@ -147,15 +147,11 @@ function connection_methods:read_request_line(timeout)
 		line, err, errno = self.socket:xread("*L", deadline and (deadline-monotime()))
 	end
 	if line == nil then
-		if err == nil and self.socket:pending() > 0 then
-			self.socket:seterror("r", ce.EILSEQ)
-			if preline then
-				local ok, errno2 = self.socket:unget(preline)
-				if not ok then
-					return nil, onerror(self.socket, "unget", errno2)
-				end
+		if preline then
+			local ok, errno2 = self.socket:unget(preline)
+			if not ok then
+				return nil, onerror(self.socket, "unget", errno2)
 			end
-			return nil, onerror(self.socket, "read_request_line", ce.EILSEQ)
 		end
 		return nil, err, errno
 	end
@@ -181,10 +177,6 @@ end
 function connection_methods:read_status_line(timeout)
 	local line, err, errno = self.socket:xread("*L", timeout)
 	if line == nil then
-		if err == nil and self.socket:pending() > 0 then
-			self.socket:seterror("r", ce.EILSEQ)
-			return nil, onerror(self.socket, "read_status_line", ce.EILSEQ)
-		end
 		return nil, err, errno
 	end
 	local httpversion, status_code, reason_phrase = line:match("^HTTP/(1%.[01]) (%d%d%d) (.*)\r\n$")
@@ -276,10 +268,6 @@ function connection_methods:read_body_chunk(timeout)
 	local deadline = timeout and (monotime()+timeout)
 	local chunk_header, err, errno = self.socket:xread("*L", timeout)
 	if chunk_header == nil then
-		if err == nil and self.socket:pending() > 0 then
-			self.socket:seterror("r", ce.EILSEQ)
-			return nil, onerror(self.socket, "read_body_chunk", ce.EILSEQ)
-		end
 		return nil, err, errno
 	end
 	local chunk_size, chunk_ext = chunk_header:match("^(%x+) *(.-)\r\n")
