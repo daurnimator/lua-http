@@ -5,7 +5,8 @@ local ce = require "cqueues.errno"
 local new_fifo = require "fifo"
 local band = require "http.bit".band
 local bor = require "http.bit".bor
-local h2_errors = require "http.h2_error".errors
+local h2_error = require "http.h2_error"
+local h2_errors = h2_error.errors
 local stream_common = require "http.stream_common"
 local spack = string.pack or require "compat53.string".pack
 local sunpack = string.unpack or require "compat53.string".unpack
@@ -596,7 +597,7 @@ frame_handlers[frame_types.RST_STREAM] = function(stream, flags, payload, deadli
 	return true
 end
 
-function stream_methods:write_rst_stream(err_code, timeout, flush)
+function stream_methods:write_rst_stream_frame(err_code, timeout, flush)
 	if self.id == 0 then
 		h2_errors.PROTOCOL_ERROR("'RST_STREAM' frames MUST be associated with a stream")
 	end
@@ -612,6 +613,25 @@ function stream_methods:write_rst_stream(err_code, timeout, flush)
 	end
 	self:shutdown()
 	return ok
+end
+
+function stream_methods:rst_stream(err, timeout)
+	local code
+	if err == nil then
+		code = 0
+	elseif h2_error.is(err) then
+		code = err.code
+	else
+		err = h2_errors.INTERNAL_ERROR:new {
+			message = tostring(err);
+			stream_error = true;
+		}
+		code = err.code
+	end
+	if self.rst_stream_error == nil then
+		self.rst_stream_error = err
+	end
+	return self:write_rst_stream_frame(code, timeout)
 end
 
 frame_handlers[frame_types.SETTING] = function(stream, flags, payload, deadline)
@@ -1044,7 +1064,7 @@ end
 
 function stream_methods:shutdown()
 	if self.state ~= "idle" and self.state ~= "closed" and self.id ~= 0 then
-		self:write_rst_stream(0, 0) -- ignore result
+		self:rst_stream(nil, 0) -- ignore result
 	end
 	local len = 0
 	for i=1, self.chunk_fifo:length() do

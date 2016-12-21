@@ -119,7 +119,10 @@ See [`h2_connection:write_http2_frame(typ, flags, streamid, payload, timeout, fl
 ### `h2_stream:write_priority_frame(exclusive, stream_dep, weight, timeout, flush)` <!-- --> {#http.h2_stream:write_priority_frame}
 
 
-### `h2_stream:write_rst_stream(err_code, timeout, flush)` <!-- --> {#http.h2_stream:write_rst_stream}
+### `h2_stream:write_rst_stream_frame(err_code, timeout, flush)` <!-- --> {#http.h2_stream:write_rst_stream}
+
+
+### `h2_stream:rst_stream(err, timeout)` <!-- --> {#http.h2_stream:rst_stream}
 
 
 ### `h2_stream:write_settings_frame(ACK, settings, timeout, flush)` <!-- --> {#http.h2_stream:write_settings_frame}
