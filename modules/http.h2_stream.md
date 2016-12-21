@@ -97,6 +97,9 @@ See [`stream:write_body_from_file(file, timeout)`](#stream:write_body_from_file)
 See [`stream:shutdown()`](#stream:shutdown)
 
 
+### `h2_stream:pick_id(id)` <!-- --> {#http.h2_stream:pick_id}
+
+
 ### `h2_stream:set_state(new)` <!-- --> {#http.h2_stream:set_state}
 
 
