@@ -16,6 +16,10 @@ local default_user_agent = string.format("%s/%s", http_version.name, http_versio
 local default_hsts_store = http_hsts.new_store()
 local default_proxies = http_proxies.new():update()
 
+local default_h2_settings = {
+	ENABLE_PUSH = false;
+}
+
 local request_methods = {
 	hsts = default_hsts_store;
 	proxies = default_proxies;
@@ -24,10 +28,6 @@ local request_methods = {
 	max_redirects = 5;
 	post301 = false;
 	post302 = false;
-}
-
-local default_h2_settings = {
-	ENABLE_PUSH = false;
 }
 
 local request_mt = {
