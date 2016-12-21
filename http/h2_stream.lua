@@ -767,8 +767,12 @@ frame_handlers[frame_types.SETTING] = function(stream, flags, payload, deadline)
 		end
 		stream.connection:set_peer_settings(peer_settings)
 		-- Ack server's settings
-		-- XXX: This shouldn't ignore all errors (it probably should not flush)
-		stream:write_settings_frame(true, nil, deadline and deadline-monotime())
+		local ok, err, errno = stream:write_settings_frame(true, nil, 0, "f")
+		if not ok then
+			return ok, err, errno
+		end
+		-- ignore :flush failure
+		stream.connection:flush(deadline and deadline-monotime())
 		return true
 	end
 end
@@ -944,7 +948,7 @@ function stream_methods:write_push_promise_frame(promised_stream_id, payload, en
 	end
 	promised_stream_id = spack(">I4", promised_stream_id)
 	payload = pad_len .. promised_stream_id .. payload .. padding
-	local ok, err, errno = self:write_http2_frame(frame_types.PUSH_PROMISE, flags, payload, timeout, flush)
+	local ok, err, errno = self:write_http2_frame(frame_types.PUSH_PROMISE, flags, payload, 0, "f")
 	if ok == nil then
 		return nil, err, errno
 	end
@@ -955,7 +959,11 @@ function stream_methods:write_push_promise_frame(promised_stream_id, payload, en
 		promised_stream.end_stream_after_continuation = false
 	end
 	promised_stream:set_state("reserved (local)")
-	return true
+	if flush ~= "f" then
+		return self.connection:flush(timeout)
+	else
+		return true
+	end
 end
 
 frame_handlers[frame_types.PING] = function(stream, flags, payload, deadline)
@@ -1019,12 +1027,16 @@ function stream_methods:write_goaway_frame(last_streamid, err_code, debug_msg, t
 	if debug_msg then
 		payload = payload .. debug_msg
 	end
-	local ok, err, errno = self:write_http2_frame(frame_types.GOAWAY, flags, payload, timeout, flush)
+	local ok, err, errno = self:write_http2_frame(frame_types.GOAWAY, flags, payload, 0, "f")
 	if not ok then
 		return nil, err, errno
 	end
 	self.connection.send_goaway_lowest = math.min(last_streamid, self.connection.send_goaway_lowest or math.huge)
-	return true
+	if flush ~= "f" then
+		return self.connection:flush(timeout)
+	else
+		return true
+	end
 end
 
 frame_handlers[frame_types.WINDOW_UPDATE] = function(stream, flags, payload, deadline) -- luacheck: ignore 212
@@ -1074,7 +1086,7 @@ end
 
 function stream_methods:write_window_update(inc, timeout)
 	while inc >= 0x80000000 do
-		local ok, err, errno = self:write_window_update_frame(0x7fffffff, 0)
+		local ok, err, errno = self:write_window_update_frame(0x7fffffff, 0, "f")
 		if not ok then
 			return nil, err, errno
 		end
