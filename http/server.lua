@@ -80,7 +80,7 @@ local function wrap_socket(self, socket, timeout)
 	if version == nil then
 		local is_h2, err, errno = h2_connection.socket_has_preface(socket, true, deadline and (deadline-monotime()))
 		if is_h2 == nil then
-			return nil, err, errno
+			return nil, err or ce.EPIPE, errno
 		end
 		version = is_h2 and 2 or 1.1
 	end
