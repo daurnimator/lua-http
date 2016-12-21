@@ -99,6 +99,7 @@ local function new_stream(connection, id)
 		chunk_cond = cc.new();
 
 		end_stream_after_continuation = nil;
+		content_length = nil;
 	}, stream_mt)
 	return self
 end
@@ -227,9 +228,15 @@ frame_handlers[frame_types.DATA] = function(stream, flags, payload, deadline) --
 		payload = payload:sub(2, -pad_len-1)
 	end
 
+	local stats_recv = stream.stats_recv + #payload
+	if stream.content_length and stats_recv > stream.content_length then
+		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("content-length exceeded", true), ce.EILSEQ
+	end
+
 	local chunk = new_chunk(stream, original_length, payload)
 	stream.chunk_fifo:push(chunk)
-	stream.stats_recv = stream.stats_recv + #payload
+	stream.stats_recv = stats_recv
+
 	if end_stream then
 		stream.chunk_fifo:push(nil)
 	end
@@ -393,6 +400,9 @@ local function process_end_headers(stream, end_stream, pad_len, pos, promised_st
 		local validate_ok, validate_err, errno2 = validate_headers(headers, stream.type ~= "client", stream.stats_recv_headers, stream.state == "half closed (remote)" or stream.state == "closed")
 		if not validate_ok then
 			return nil, validate_err, errno2
+		end
+		if headers:has("content-length") then
+			stream.content_length = tonumber(headers:get("content-length"), 10)
 		end
 		stream.recv_headers_fifo:push(headers)
 		stream.recv_headers_cond:signal()
