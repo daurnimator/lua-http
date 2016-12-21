@@ -1,5 +1,6 @@
 describe("http.client module", function()
 	local client = require "http.client"
+	local http_connection_common = require "http.connection_common"
 	local http_h1_connection = require "http.h1_connection"
 	local http_h2_connection = require "http.h2_connection"
 	local http_headers = require "http.headers"
@@ -104,5 +105,27 @@ describe("http.client module", function()
 			assert(s:starttls(new_server_ctx()))
 			return http_h2_connection.new(s, "server", {})
 		end)
+	end)
+	it("reports errors from :starttls", function()
+		-- default settings should fail as it should't allow self-signed
+		local s, c = ca.assert(cs.pair())
+		local cq = cqueues.new();
+		cq:wrap(function()
+			local ok, err = client.negotiate(c, {
+				tls = true;
+			})
+			assert.falsy(ok)
+			assert.truthy(err:match("starttls: "))
+		end)
+		cq:wrap(function()
+			s:onerror(http_connection_common.onerror)
+			local ok, err = s:starttls()
+			assert.falsy(ok)
+			assert.truthy(err:match("starttls: "))
+		end)
+		assert_loop(cq, TEST_TIMEOUT)
+		assert.truthy(cq:empty())
+		c:close()
+		s:close()
 	end)
 end)
