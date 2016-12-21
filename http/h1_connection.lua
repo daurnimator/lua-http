@@ -308,6 +308,9 @@ function connection_methods:read_body_chunk(timeout)
 			if not unget_ok1 then
 				return nil, onerror(self.socket, "unget", unget_errno1)
 			end
+			if err2 == nil then
+				return nil, onerror(self.socket, "read_body_chunk", ce.EILSEQ)
+			end
 			return nil, err2, errno2
 		end
 		-- if `fill` succeeded these shouldn't be able to fail
