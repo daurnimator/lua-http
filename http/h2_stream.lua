@@ -236,25 +236,20 @@ local chunk_mt = {
 	__index = chunk_methods;
 }
 
-local function new_chunk(stream, original_length, data)
+local function new_chunk(original_length, data)
 	return setmetatable({
-		stream = stream;
 		original_length = original_length;
-		data = data;
 		acked = false;
+		data = data;
 	}, chunk_mt)
 end
 
-function chunk_methods:ack(no_window_update)
+function chunk_methods:ack()
 	if self.acked then
-		return
-	end
-	self.acked = true
-	local len = self.original_length
-	if len > 0 and not no_window_update then
-		-- ignore errors
-		self.stream:write_window_update(len, 0)
-		self.stream.connection:write_window_update(len, 0)
+		return 0
+	else
+		self.acked = true
+		return self.original_length
 	end
 end
 
@@ -288,7 +283,7 @@ frame_handlers[frame_types.DATA] = function(stream, flags, payload, deadline) --
 		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("content-length exceeded", true), ce.EILSEQ
 	end
 
-	local chunk = new_chunk(stream, original_length, payload)
+	local chunk = new_chunk(original_length, payload)
 	stream.chunk_fifo:push(chunk)
 	stream.stats_recv = stats_recv
 
@@ -1167,8 +1162,7 @@ function stream_methods:shutdown()
 	for i=1, self.chunk_fifo:length() do
 		local chunk = self.chunk_fifo:peek(i)
 		if chunk ~= nil then
-			chunk:ack(true)
-			len = len + #chunk.data
+			len = len + chunk:ack()
 		end
 	end
 	if len > 0 then
@@ -1221,13 +1215,18 @@ function stream_methods:get_next_chunk(timeout)
 		return nil
 	else
 		local data = chunk.data
-		chunk:ack(false)
+		local len = chunk:ack()
+		if len > 0 then
+			-- if they don't get flushed now they will get flushed on next read or write
+			self:write_window_update(len, 0)
+			self.connection:write_window_update(len, 0)
+		end
 		return data
 	end
 end
 
 function stream_methods:unget(str)
-	local chunk = new_chunk(self, 0, str) -- 0 means :ack does nothing
+	local chunk = new_chunk(0, str)
 	self.chunk_fifo:insert(1, chunk)
 	return true
 end
