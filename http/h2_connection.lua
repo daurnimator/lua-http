@@ -135,7 +135,9 @@ local function new_connection(socket, conn_type, settings)
 		recv_headers_buffer_length = nil;
 
 		highest_odd_stream = -1;
+		highest_odd_non_priority_stream = -1;
 		highest_even_stream = -2;
+		highest_even_non_priority_stream = -2;
 		send_goaway_lowest = nil;
 		recv_goaway_lowest = nil;
 		recv_goaway = cc.new();
