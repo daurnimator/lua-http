@@ -2,8 +2,8 @@
 --[[
 Example of websocket client usage
 
-  - Connects to the coinbase feed.
-	Documentation of feed: https://docs.exchange.coinbase.com/#websocket-feed
+  - Connects to the gdax market data feed.
+	Documentation of feed: https://docs.gdax.com/#websocket-feed
   - Sends a subscribe message
   - Prints off 5 messages
   - Close the socket and clean up.
@@ -11,7 +11,7 @@ Example of websocket client usage
 
 local websocket = require "http.websocket"
 
-local ws = websocket.new_from_uri("wss://ws-feed.exchange.coinbase.com")
+local ws = websocket.new_from_uri("wss://ws-feed.gdax.com")
 assert(ws:connect())
 assert(ws:send([[{"type": "subscribe", "product_id": "BTC-USD"}]]))
 for _=1, 5 do
