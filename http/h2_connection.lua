@@ -158,14 +158,12 @@ local function new_connection(socket, conn_type, settings)
 	self.decoding_context = hpack.new(default_settings[known_settings.HEADER_TABLE_SIZE])
 
 	socket:setvbuf("full", math.huge) -- 'infinite' buffering; no write locks needed
-	socket:setmode("b", "bf") -- full buffering for now; will be set to no buffering after settings sent
+	socket:setmode("b", "bna") -- writes that don't explicitly buffer will now flush the buffer. autoflush on
 	socket:onerror(onerror)
 	if self.type == "client" then
-		-- fully buffered write; will be flushed when sending settings
 		assert(socket:xwrite(preface, "f", 0))
 	end
-	assert(self.stream0:write_settings_frame(false, settings or {}, 0))
-	socket:setmode("b", "bna") -- writes that don't explicitly buffer will now flush the buffer. autoflush on
+	assert(self.stream0:write_settings_frame(false, settings or {}, 0, "f"))
 	-- note that the buffer is *not* flushed right now
 
 	return self
