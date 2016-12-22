@@ -73,6 +73,7 @@ local function new_stream(connection)
 
 		req_method = nil; -- string
 		peer_version = nil; -- 1.0 or 1.1
+		headers_in_progress = nil;
 		headers_fifo = new_fifo();
 		headers_cond = cc.new();
 		body_buffer = nil;
@@ -215,51 +216,56 @@ function stream_methods:read_headers(timeout)
 	if self.state == "closed" or self.state == "half closed (remote)" then
 		return nil
 	end
-	local headers = new_headers()
 	local status_code
 	local is_trailers = self.body_read_type == "chunked"
-	if is_trailers then -- luacheck: ignore 542
-	elseif self.type == "server" then
-		if self.state == "half closed (local)" then
-			return nil
-		end
-		local method, path, httpversion =
-			self.connection:read_request_line(deadline and (deadline-monotime()))
-		if method == nil then
-			return nil, path, httpversion
-		end
-		self.req_method = method
-		self.peer_version = httpversion
-		headers:append(":method", method)
-		if method == "CONNECT" then
-			headers:append(":authority", path)
-		else
-			headers:append(":path", path)
-		end
-		headers:append(":scheme", self:checktls() and "https" or "http")
-		self:set_state("open")
-	else -- client
-		-- Make sure we're at front of connection pipeline
-		if self.connection.pipeline:peek() ~= self then
-			assert(cqueues.running(), "cannot wait for condition if not within a cqueues coroutine")
-			if cqueues.poll(self.pipeline_cond, timeout) == timeout then
-				return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
+	local headers = self.headers_in_progress
+	if not headers then
+		headers = new_headers()
+		if is_trailers then -- luacheck: ignore 542
+		elseif self.type == "server" then
+			if self.state == "half closed (local)" then
+				return nil
 			end
-			assert(self.connection.pipeline:peek() == self)
-		end
-		local httpversion, reason_phrase
-		httpversion, status_code, reason_phrase =
-			self.connection:read_status_line(deadline and (deadline-monotime()))
-		if httpversion == nil then
-			if status_code == nil then
-				return nil, ce.strerror(ce.EPIPE), ce.EPIPE
+			local method, path, httpversion =
+				self.connection:read_request_line(deadline and (deadline-monotime()))
+			if method == nil then
+				return nil, path, httpversion
 			end
-			return nil, status_code, reason_phrase
+			self.req_method = method
+			self.peer_version = httpversion
+			headers:append(":method", method)
+			if method == "CONNECT" then
+				headers:append(":authority", path)
+			else
+				headers:append(":path", path)
+			end
+			headers:append(":scheme", self:checktls() and "https" or "http")
+			self:set_state("open")
+		else -- client
+			-- Make sure we're at front of connection pipeline
+			if self.connection.pipeline:peek() ~= self then
+				assert(cqueues.running(), "cannot wait for condition if not within a cqueues coroutine")
+				if cqueues.poll(self.pipeline_cond, timeout) == timeout then
+					return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
+				end
+				assert(self.connection.pipeline:peek() == self)
+			end
+			local httpversion, reason_phrase
+			httpversion, status_code, reason_phrase =
+				self.connection:read_status_line(deadline and (deadline-monotime()))
+			if httpversion == nil then
+				if status_code == nil then
+					return nil, ce.strerror(ce.EPIPE), ce.EPIPE
+				end
+				return nil, status_code, reason_phrase
+			end
+			self.peer_version = httpversion
+			headers:append(":status", status_code)
+			-- reason phase intentionally does not exist in HTTP2; discard for consistency
 		end
-		self.peer_version = httpversion
-		headers:append(":status", status_code)
-		-- reason phase intentionally does not exist in HTTP2; discard for consistency
+		self.headers_in_progress = headers
 	end
+
 	-- Use while loop for lua 5.1 compatibility
 	while true do
 		local k, v, errno = self.connection:read_header(deadline and (deadline-monotime()))
@@ -284,6 +290,7 @@ function stream_methods:read_headers(timeout)
 			end
 			return nil, err, errno
 		end
+		self.headers_in_progress = nil
 	end
 
 	do -- if client is sends `Connection: close`, server knows it can close at end of response
