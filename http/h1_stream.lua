@@ -474,6 +474,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		-- Make sure we're at the front of the pipeline
 		if self.connection.pipeline:peek() ~= self then
 			assert(cqueues.running(), "cannot wait for condition if not within a cqueues coroutine")
+			headers = headers:clone() -- don't want user to edit it and send wrong headers
 			if cqueues.poll(self.pipeline_cond, timeout) == timeout then
 				return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 			end
@@ -504,6 +505,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 			if self.connection.req_locked then
 				-- Wait until previous responses have been fully written
 				assert(cqueues.running(), "cannot wait for condition if not within a cqueues coroutine")
+				headers = headers:clone() -- don't want user to edit it and send wrong headers
 				if cqueues.poll(self.connection.req_cond, timeout) == timeout then
 					return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 				end
