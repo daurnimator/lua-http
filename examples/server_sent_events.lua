@@ -1,3 +1,4 @@
+#!/usr/bin/env lua
 --[[
 A server that responds with an infinite server-side-events format.
 https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events#Event_stream_format

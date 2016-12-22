@@ -1,3 +1,4 @@
+#!/usr/bin/env lua
 --[[
 Example of websocket client usage
 

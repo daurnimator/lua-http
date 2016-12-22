@@ -1,3 +1,4 @@
+#!/usr/bin/env lua
 --[[
 Makes a request to an HTTP2 endpoint that has an infinite length response.
 

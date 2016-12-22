@@ -1,3 +1,4 @@
+#!/usr/bin/env lua
 --[[
 A simple HTTP server
 

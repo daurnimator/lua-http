@@ -1,3 +1,4 @@
+#!/usr/bin/env lua
 --[=[
 This example serves a file/directory browser
 It defaults to serving the current directory.
