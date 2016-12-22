@@ -93,6 +93,12 @@ local function reply(myserver, stream) -- luacheck: ignore 212
 	res_headers:append("server", default_server)
 	res_headers:append("date", http_util.imf_date())
 
+	if req_method ~= "GET" and req_method ~= "HEAD" then
+		res_headers:upsert(":status", "405")
+		assert(stream:write_headers(res_headers, true))
+		return
+	end
+
 	local path = req_headers:get(":path")
 	local uri_t = assert(uri_reference:match(path), "invalid path")
 	path = http_util.resolve_relative_path("/", uri_t.path)
