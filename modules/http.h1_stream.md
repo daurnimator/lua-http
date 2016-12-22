@@ -113,6 +113,13 @@ Not all state transitions are allowed.
 
 ### `h1_stream:read_headers(timeout)` <!-- --> {#http.h1_stream:read_headers}
 
-Reads and returns a table containing the request line and all HTTP headers as key value pairs.
+Reads and returns a [header block](#http.headers) from the underlying connection. Does *not* take into account buffered header blocks. On error, returns `nil`, an error message and an error number.
 
 This function should rarely be used, you're probably looking for [`:get_headers()`](#http.h1_stream:get_headers).
+
+
+### `h1_stream:read_next_chunk(timeout)` <!-- --> {#http.h1_stream:read_next_chunk}
+
+Reads and returns the next chunk as a string from the underlying connection. Does *not* take into account buffered chunks. On error, returns `nil`, an error message and an error number.
+
+This function should rarely be used, you're probably looking for [`:get_next_chunk()`](#http.h1_stream:get_next_chunk).
