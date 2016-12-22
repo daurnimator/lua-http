@@ -163,6 +163,7 @@ function stream_methods:shutdown()
 	if self.type == "server" and (self.state == "open" or self.state == "half closed (remote)") then
 		-- Make sure we're at the front of the pipeline
 		if self.connection.pipeline:peek() ~= self then
+			-- FIXME: shouldn't have time-taking operation here
 			self.pipeline_cond:wait() -- wait without a timeout should never fail
 			assert(self.connection.pipeline:peek() == self)
 		end
@@ -174,7 +175,7 @@ function stream_methods:shutdown()
 			else
 				error_headers = server_error_headers
 			end
-			self:write_headers(error_headers, true)
+			self:write_headers(error_headers, true, 0)
 		end
 	end
 	if self.state == "half closed (local)" then
