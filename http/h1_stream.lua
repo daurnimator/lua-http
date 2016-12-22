@@ -188,7 +188,11 @@ function stream_methods:shutdown()
 			if self.body_read_type == "close" then
 				break
 			end
-			if self:get_next_chunk(0) == nil then
+			local chunk = self:read_next_chunk(0)
+			if chunk then
+				self.chunk_fifo:push(chunk)
+				self.chunk_cond:signal()
+			else
 				break -- ignore errors
 			end
 		until (self.stats_recv - start) >= clean_shutdown_limit
@@ -757,10 +761,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 	return true
 end
 
-function stream_methods:get_next_chunk(timeout)
-	if self.chunk_fifo:length() > 0 then
-		return self.chunk_fifo:pop()
-	end
+function stream_methods:read_next_chunk(timeout)
 	if self.state == "closed" or self.state == "half closed (remote)" then
 		return nil
 	end
@@ -778,7 +779,8 @@ function stream_methods:get_next_chunk(timeout)
 			end
 			self.headers_fifo:push(trailers)
 			self.headers_cond:signal(1)
-			-- :read_headers has already closed connection; return immediately
+			self.body_read_left = 0
+			-- last chunk, :read_headers should be called to get trailers
 			return nil
 		else
 			end_stream = false
@@ -834,6 +836,13 @@ function stream_methods:get_next_chunk(timeout)
 		end
 	end
 	return chunk, err, errno
+end
+
+function stream_methods:get_next_chunk(timeout)
+	if self.chunk_fifo:length() > 0 then
+		return self.chunk_fifo:pop()
+	end
+	return self:read_next_chunk(timeout)
 end
 
 function stream_methods:unget(str)
