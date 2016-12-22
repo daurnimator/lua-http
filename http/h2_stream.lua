@@ -1229,6 +1229,7 @@ end
 function stream_methods:unget(str)
 	local chunk = new_chunk(0, str)
 	self.chunk_fifo:insert(1, chunk)
+	self.chunk_cond:signal()
 	return true
 end
 
