@@ -99,10 +99,6 @@ local function new_connection(socket, conn_type, settings)
 		error('invalid connection type. must be "client" or "server"')
 	end
 
-	socket:setvbuf("full", math.huge) -- 'infinite' buffering; no write locks needed
-	socket:setmode("b", "bf") -- full buffering for now; will be set to no buffering after settings sent
-	socket:onerror(onerror)
-
 	local ssl = socket:checktls()
 	if ssl then
 		local cipher = ssl:getCipherInfo()
@@ -161,6 +157,9 @@ local function new_connection(socket, conn_type, settings)
 	self.encoding_context = hpack.new(default_settings[known_settings.HEADER_TABLE_SIZE])
 	self.decoding_context = hpack.new(default_settings[known_settings.HEADER_TABLE_SIZE])
 
+	socket:setvbuf("full", math.huge) -- 'infinite' buffering; no write locks needed
+	socket:setmode("b", "bf") -- full buffering for now; will be set to no buffering after settings sent
+	socket:onerror(onerror)
 	if self.type == "client" then
 		-- fully buffered write; will be flushed when sending settings
 		assert(socket:xwrite(preface, "f", 0))
