@@ -457,7 +457,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 	if self.body_write_type == "chunked" then
 		-- we are writing trailers; close off body
 		is_trailers = true
-		local ok, err, errno = self.connection:write_body_last_chunk(nil, deadline and deadline-monotime())
+		local ok, err, errno = self.connection:write_body_last_chunk(nil, 0)
 		if not ok then
 			return nil, err, errno
 		end
@@ -484,7 +484,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 			-- Should send status line
 			local reason_phrase = reason_phrases[status_code]
 			local version = math.min(self.connection.version, self.peer_version)
-			local ok, err, errno = self.connection:write_status_line(version, status_code, reason_phrase, deadline and deadline-monotime())
+			local ok, err, errno = self.connection:write_status_line(version, status_code, reason_phrase, 0)
 			if not ok then
 				return nil, err, errno
 			end
@@ -514,7 +514,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 			self.connection.pipeline:push(self)
 			self.connection.req_locked = self
 			-- write request line
-			local ok, err, errno = self.connection:write_request_line(method, path, self.connection.version, deadline and (deadline-monotime()))
+			local ok, err, errno = self.connection:write_request_line(method, path, self.connection.version, 0)
 			if not ok then
 				return nil, err, errno
 			end
@@ -662,7 +662,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 
 	for name, value in headers:each() do
 		if not ignore_fields[name] then
-			local ok, err, errno = self.connection:write_header(name, value, deadline and (deadline-monotime()))
+			local ok, err, errno = self.connection:write_header(name, value, 0)
 			if not ok then
 				return nil, err, errno
 			end
@@ -670,7 +670,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 			-- for CONNECT requests, :authority is the path
 			if self.req_method ~= "CONNECT" then
 				-- otherwise it's the Host header
-				local ok, err, errno = self.connection:write_header("host", value, deadline and (deadline-monotime()))
+				local ok, err, errno = self.connection:write_header("host", value, 0)
 				if not ok then
 					return nil, err, errno
 				end
@@ -683,7 +683,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		if not has(connection_header, "te") then
 			table.insert(connection_header, "te")
 		end
-		local ok, err, errno = self.connection:write_header("te", "gzip, deflate", deadline and deadline-monotime())
+		local ok, err, errno = self.connection:write_header("te", "gzip, deflate", 0)
 		if not ok then
 			return nil, err, errno
 		end
@@ -705,19 +705,19 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 			value[i] = table.concat(params, ";")
 		end
 		value = table.concat(value, ",")
-		local ok, err, errno = self.connection:write_header("transfer-encoding", value, deadline and (deadline-monotime()))
+		local ok, err, errno = self.connection:write_header("transfer-encoding", value, 0)
 		if not ok then
 			return nil, err, errno
 		end
 	elseif cl then
-		local ok, err, errno = self.connection:write_header("content-length", cl, deadline and (deadline-monotime()))
+		local ok, err, errno = self.connection:write_header("content-length", cl, 0)
 		if not ok then
 			return nil, err, errno
 		end
 	end
 	if connection_header and connection_header[1] then
 		local value = table.concat(connection_header, ",")
-		local ok, err, errno = self.connection:write_header("connection", value, deadline and (deadline-monotime()))
+		local ok, err, errno = self.connection:write_header("connection", value, 0)
 		if not ok then
 			return nil, err, errno
 		end

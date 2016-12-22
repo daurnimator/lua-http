@@ -50,6 +50,7 @@ local function new_connection(socket, conn_type, version)
 		-- A function that will be called if the connection becomes idle
 		onidle_ = nil;
 	}, connection_mt)
+	socket:setvbuf("full", math.huge) -- 'infinite' buffering; no write locks needed
 	socket:setmode("b", "bf")
 	socket:onerror(onerror)
 	return self
