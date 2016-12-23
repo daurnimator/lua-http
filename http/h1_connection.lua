@@ -291,13 +291,19 @@ function connection_methods:read_body_chunk(timeout)
 		-- you MUST read trailers after this!
 		return false, chunk_ext
 	else
-		local ok, err2, errno2 = self.socket:fill(chunk_size+2, deadline and deadline-monotime())
+		local ok, err2, errno2 = self.socket:fill(chunk_size+2, 0)
 		if not ok then
 			local unget_ok1, unget_errno1 = self.socket:unget(chunk_header)
 			if not unget_ok1 then
 				return nil, onerror(self.socket, "unget", unget_errno1)
 			end
-			if err2 == nil then
+			if errno2 == ce.ETIMEDOUT then
+				timeout = deadline and deadline-monotime()
+				if cqueues.poll(self.socket, timeout) ~= timeout then
+					-- retry
+					return self:read_body_chunk(deadline and deadline-monotime())
+				end
+			elseif err2 == nil then
 				self.socket:seterror("r", ce.EILSEQ)
 				return nil, onerror(self.socket, "read_body_chunk", ce.EILSEQ)
 			end
