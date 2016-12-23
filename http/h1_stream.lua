@@ -73,6 +73,7 @@ local function new_stream(connection)
 
 		req_method = nil; -- string
 		peer_version = nil; -- 1.0 or 1.1
+		has_main_headers = false;
 		headers_in_progress = nil;
 		headers_fifo = new_fifo();
 		headers_cond = cc.new();
@@ -162,53 +163,87 @@ bad_request_headers:append(":status", "400")
 local server_error_headers = new_headers()
 server_error_headers:append(":status", "503")
 function stream_methods:shutdown()
-	if self.type == "server" and (self.state == "open" or self.state == "half closed (remote)") then
-		-- Make sure we're at the front of the pipeline
-		if self.connection.pipeline:peek() ~= self then
-			-- FIXME: shouldn't have time-taking operation here
-			self.pipeline_cond:wait() -- wait without a timeout should never fail
-			assert(self.connection.pipeline:peek() == self)
-		end
-		if not self.body_write_type then
-			-- Can send an automatic error response
-			local error_headers
-			if self.connection:error("r") == ce.EILSEQ then
-				error_headers = bad_request_headers
-			else
-				error_headers = server_error_headers
-			end
-			self:write_headers(error_headers, true, 0)
-		end
-	end
-	if self.state == "half closed (local)" then
-		-- we'd like to finishing reading any remaining response so that we get out of the way
-		local start = self.stats_recv
-		repeat
-			-- don't bother continuing if we're reading until connection is closed
-			if self.body_read_type == "close" then
-				break
-			end
-			local chunk = self:read_next_chunk(0)
-			if chunk then
-				self.chunk_fifo:push(chunk)
-				self.chunk_cond:signal()
-			else
-				break -- ignore errors
-			end
-		until (self.stats_recv - start) >= clean_shutdown_limit
-		-- state may still be "half closed (local)" (but hopefully moved on to "closed")
-	end
 	if self.state == "idle" then
 		self:set_state("closed")
-	elseif self.state ~= "closed" then
-		-- This is a bad situation: we are trying to shutdown a connection that has the body partially sent
-		-- Especially in the case of Connection: close, where closing indicates EOF,
-		-- this will result in a client only getting a partial response.
-		-- Could also end up here if a client sending headers fails.
-		if self.connection.socket then
-			self.connection.socket:shutdown()
+	else
+		if self.type == "server" and (self.state == "open" or self.state == "half closed (remote)") then
+			-- Make sure we're at the front of the pipeline
+			if self.connection.pipeline:peek() ~= self then
+				-- FIXME: shouldn't have time-taking operation here
+				self.pipeline_cond:wait() -- wait without a timeout should never fail
+				assert(self.connection.pipeline:peek() == self)
+			end
+			if not self.body_write_type then
+				-- Can send an automatic error response
+				local error_headers
+				if self.connection:error("r") == ce.EILSEQ then
+					error_headers = bad_request_headers
+				else
+					error_headers = server_error_headers
+				end
+				self:write_headers(error_headers, true, 0)
+			end
 		end
-		self:set_state("closed")
+		-- read any remaining available response and get out of the way
+		local start = self.stats_recv
+		while (self.state == "open" or self.state == "half closed (local)") and (self.stats_recv - start) < clean_shutdown_limit do
+			if not self:step(0) then
+				break
+			end
+		end
+
+		if self.state ~= "closed" then
+			-- This is a bad situation: we are trying to shutdown a connection that has the body partially sent
+			-- Especially in the case of Connection: close, where closing indicates EOF,
+			-- this will result in a client only getting a partial response.
+			-- Could also end up here if a client sending headers fails.
+			if self.connection.socket then
+				self.connection.socket:shutdown()
+			end
+			self:set_state("closed")
+		end
+	end
+	return true
+end
+
+function stream_methods:step(timeout)
+	if self.state == "open" or self.state == "half closed (local)" or (self.state == "idle" and self.type == "server") then
+		if self.connection.socket == nil then
+			return nil, ce.strerror(ce.EPIPE), ce.EPIPE
+		end
+		if not self.has_main_headers then
+			local headers, err, errno = self:read_headers(timeout)
+			if headers == nil then
+				return nil, err, errno
+			end
+			self.headers_fifo:push(headers)
+			self.headers_cond:signal(1)
+			return true
+		end
+		if self.body_read_left ~= 0 then
+			local chunk, err, errno = self:read_next_chunk(timeout)
+			if chunk == nil then
+				if err == nil then
+					return true
+				end
+				return nil, err, errno
+			end
+			self.chunk_fifo:push(chunk)
+			self.chunk_cond:signal()
+			return true
+		end
+		if self.body_read_type == "chunked" then
+			local trailers, err, errno = self:read_headers(timeout)
+			if trailers == nil then
+				return nil, err, errno
+			end
+			self.headers_fifo:push(trailers)
+			self.headers_cond:signal(1)
+			return true
+		end
+	end
+	if self.state == "half closed (remote)" then
+		return nil, ce.strerror(ce.EIO), ce.EIO
 	end
 	return true
 end
@@ -300,6 +335,7 @@ function stream_methods:read_headers(timeout)
 			return nil, err, errno
 		end
 		self.headers_in_progress = nil
+		self.has_main_headers = status_code == nil or status_code:sub(1,1) ~= "1" or status_code == "101"
 	end
 
 	do -- if client is sends `Connection: close`, server knows it can close at end of response
