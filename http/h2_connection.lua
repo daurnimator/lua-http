@@ -362,7 +362,7 @@ function connection_methods:read_http2_frame(timeout)
 	if size > self.acked_settings[known_settings.MAX_FRAME_SIZE] then
 		return nil, h2_error.errors.FRAME_SIZE_ERROR:new_traceback("frame too large"), ce.E2BIG
 	end
-	local payload, err2, errno2 = self.socket:xread(size, deadline and (deadline-monotime()))
+	local payload, err2, errno2 = self.socket:xread(size, 0)
 	self.had_eagain = false
 	if payload and #payload < size then -- hit EOF
 		local ok, errno4 = self.socket:unget(payload)
@@ -372,15 +372,18 @@ function connection_methods:read_http2_frame(timeout)
 		payload = nil
 	end
 	if payload == nil then
-		if errno2 == ce.ETIMEDOUT then
-			self.had_eagain = true
-		end
 		-- put frame header back into socket so a retry will work
 		local ok, errno3 = self.socket:unget(frame_header)
 		if not ok then
 			return nil, onerror(self.socket, "unget", errno3, 2)
 		end
-		if err2 == nil then
+		if errno2 == ce.ETIMEDOUT then
+			self.had_eagain = true
+			timeout = deadline and deadline-monotime()
+			if cqueues.poll(self.socket, timeout) ~= timeout then
+				return self:read_http2_frame(deadline and deadline-monotime())
+			end
+		elseif err2 == nil then
 			self.socket:seterror("r", ce.EILSEQ)
 			return nil, onerror(self.socket, "read_http2_frame", ce.EILSEQ)
 		end
