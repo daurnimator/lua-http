@@ -360,6 +360,10 @@ function connection_methods:read_http2_frame(timeout)
 	end
 	local size, typ, flags, streamid = sunpack(">I3 B B I4", frame_header)
 	if size > self.acked_settings[known_settings.MAX_FRAME_SIZE] then
+		local ok, errno2 = self.socket:unget(frame_header)
+		if not ok then
+			return nil, onerror(self.socket, "unget", errno2, 2)
+		end
 		return nil, h2_error.errors.FRAME_SIZE_ERROR:new_traceback("frame too large"), ce.E2BIG
 	end
 	local payload, err2, errno2 = self.socket:xread(size, 0)
