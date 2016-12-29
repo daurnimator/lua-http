@@ -269,6 +269,10 @@ function stream_methods:read_headers(timeout)
 			-- reason phase intentionally does not exist in HTTP2; discard for consistency
 		end
 		self.headers_in_progress = headers
+	else
+		if not is_trailers and self.type == "client" then
+			status_code = headers:get(":status")
+		end
 	end
 
 	-- Use while loop for lua 5.1 compatibility
