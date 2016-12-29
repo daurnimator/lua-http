@@ -437,25 +437,17 @@ end
 function stream_methods:get_headers(timeout)
 	if self.headers_fifo:length() > 0 then
 		return self.headers_fifo:pop()
+	else
+		if self.state == "closed" or self.state == "half closed (remote)" then
+			return nil
+		end
+		local deadline = timeout and monotime()+timeout
+		local ok, err, errno = self:step(timeout)
+		if not ok then
+			return nil, err, errno
+		end
+		return self:get_headers(deadline and deadline-monotime())
 	end
-	if self.body_read_type == "chunked" then
-		-- wait for signal from trailers
-		-- XXX: what if nothing is reading body?
-		local deadline = timeout and monotime() + timeout
-		repeat
-			if self.state == "closed" or self.state == "half closed (remote)" then
-				return nil
-			end
-			assert(cqueues.running(), "cannot wait for condition if not within a cqueues coroutine")
-			if cqueues.poll(self.headers_cond, timeout) == timeout then
-				return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
-			end
-			timeout = deadline and deadline-monotime()
-		until self.headers_fifo:length() > 0
-		return self.headers_fifo:pop()
-	end
-	-- TODO: locking?
-	return self:read_headers(timeout)
 end
 
 local ignore_fields = {
