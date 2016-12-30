@@ -157,7 +157,7 @@ local function handle_socket(self, socket)
 					error_operation = "get_next_incoming_stream"
 					error_context = conn
 					break
-				elseif errno ~= ce.ETIMEDOUT or not idle or deadline <= monotime() then -- want to go around loop again if deadline not hit
+				elseif errno ~= ce.ETIMEDOUT or not idle or (deadline and deadline <= monotime()) then -- want to go around loop again if deadline not hit
 					break
 				end
 			else
