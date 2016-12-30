@@ -266,9 +266,14 @@ function stream_methods:read_headers(timeout)
 			if self.state == "half closed (local)" then
 				return nil
 			end
-			local method, path, httpversion =
-				self.connection:read_request_line(deadline and (deadline-monotime()))
+			local method, path, httpversion = self.connection:read_request_line(0)
 			if method == nil then
+				if httpversion == ce.ETIMEDOUT then
+					timeout = deadline and deadline-monotime()
+					if cqueues.poll(self.connection.socket, timeout) ~= timeout then
+						return self:read_headers(deadline and deadline-monotime())
+					end
+				end
 				return nil, path, httpversion
 			end
 			self.req_method = method
@@ -291,10 +296,14 @@ function stream_methods:read_headers(timeout)
 				assert(self.connection.pipeline:peek() == self)
 			end
 			local httpversion, reason_phrase
-			httpversion, status_code, reason_phrase =
-				self.connection:read_status_line(deadline and (deadline-monotime()))
+			httpversion, status_code, reason_phrase = self.connection:read_status_line(0)
 			if httpversion == nil then
-				if status_code == nil then
+				if reason_phrase == ce.ETIMEDOUT then
+					timeout = deadline and deadline-monotime()
+					if cqueues.poll(self.connection.socket, timeout) ~= timeout then
+						return self:read_headers(deadline and deadline-monotime())
+					end
+				elseif status_code == nil then
 					return nil, ce.strerror(ce.EPIPE), ce.EPIPE
 				end
 				return nil, status_code, reason_phrase
@@ -304,7 +313,6 @@ function stream_methods:read_headers(timeout)
 			-- reason phase intentionally does not exist in HTTP2; discard for consistency
 		end
 		self.headers_in_progress = headers
-		timeout = 0
 	else
 		if not is_trailers and self.type == "client" then
 			status_code = headers:get(":status")
@@ -313,7 +321,7 @@ function stream_methods:read_headers(timeout)
 
 	-- Use while loop for lua 5.1 compatibility
 	while true do
-		local k, v, errno = self.connection:read_header(timeout)
+		local k, v, errno = self.connection:read_header(0)
 		if k == nil then
 			if v ~= nil then
 				if errno == ce.ETIMEDOUT then
@@ -331,11 +339,10 @@ function stream_methods:read_headers(timeout)
 			k = ":authority"
 		end
 		headers:append(k, v)
-		timeout = 0
 	end
 
 	do
-		local ok, err, errno = self.connection:read_headers_done(timeout)
+		local ok, err, errno = self.connection:read_headers_done(0)
 		if ok == nil then
 			if errno == ce.ETIMEDOUT then
 				timeout = deadline and deadline-monotime()
