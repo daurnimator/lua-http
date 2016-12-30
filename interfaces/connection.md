@@ -17,6 +17,15 @@ The mode of use for the connection object. Valid values are:
 The HTTP version number of the connection as a number.
 
 
+### `connection:pollfd()` <!-- --> {#connection:pollfd}
+
+
+### `connection:events()` <!-- --> {#connection:events}
+
+
+### `connection:timeout()` <!-- --> {#connection:timeout}
+
+
 ### `connection:connect(timeout)` <!-- --> {#connection:connect}
 
 Completes the connection to the remote server using the address specified, HTTP version and any options specified in the `connection.new` constructor. The `connect` function will yield until the connection attempt finishes (success or failure) or until `timeout` is exceeded. Connecting may include DNS lookups, TLS negotiation and HTTP2 settings exchange. Returns `true` on success. On error, returns `nil`, an error message and an error number.
