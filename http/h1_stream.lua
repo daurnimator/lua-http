@@ -823,16 +823,14 @@ function stream_methods:read_next_chunk(timeout)
 		local deadline = timeout and (monotime()+timeout)
 		chunk, err, errno = self.connection:read_body_chunk(timeout)
 		if chunk == false then
-			-- read trailers
-			local trailers
-			trailers, err, errno = self:read_headers(deadline and (deadline-monotime()))
-			if not trailers then
+			-- last chunk, :read_headers should be called to get trailers
+			self.body_read_left = 0
+			-- for API compat: attempt to read trailers
+			local ok
+			ok, err, errno = self:step(deadline and deadline-monotime())
+			if not ok then
 				return nil, err, errno
 			end
-			self.headers_fifo:push(trailers)
-			self.headers_cond:signal(1)
-			self.body_read_left = 0
-			-- last chunk, :read_headers should be called to get trailers
 			return nil
 		else
 			end_stream = false
