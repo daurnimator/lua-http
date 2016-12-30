@@ -25,6 +25,27 @@ local function onerror(socket, op, why, lvl) -- luacheck: ignore 212
 	return err, why
 end
 
+function connection_methods:pollfd()
+	if self.socket == nil then
+		return nil
+	end
+	return self.socket:pollfd()
+end
+
+function connection_methods:events()
+	if self.socket == nil then
+		return nil
+	end
+	return self.socket:events()
+end
+
+function connection_methods:timeout()
+	if self.socket == nil then
+		return nil
+	end
+	return self.socket:timeout()
+end
+
 function connection_methods:onidle_() -- luacheck: ignore 212
 end
 

@@ -17,6 +17,21 @@ Specifies the HTTP version used for the connection handshake. Valid values are:
 See [`connection.version`](#connection.version)
 
 
+### `h1_connection:pollfd()` <!-- --> {#http.h1_connection:pollfd}
+
+See [`connection:pollfd()`](#connection:pollfd)
+
+
+### `h1_connection:events()` <!-- --> {#http.h1_connection:events}
+
+See [`connection:events()`](#connection:events)
+
+
+### `h1_connection:timeout()` <!-- --> {#http.h1_connection:timeout}
+
+See [`connection:timeout()`](#connection:timeout)
+
+
 ### `h1_connection:connect(timeout)` <!-- --> {#http.h1_connection:connect}
 
 See [`connection:connect(timeout)`](#connection:connect)

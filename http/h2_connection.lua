@@ -169,19 +169,11 @@ local function new_connection(socket, conn_type, settings)
 	return self
 end
 
-function connection_methods:pollfd()
-	return self.socket:pollfd()
-end
-
-function connection_methods:events()
-	return self.socket:events()
-end
-
 function connection_methods:timeout()
 	if not self.had_eagain then
 		return 0
 	end
-	return self.socket:timeout()
+	return connection_common.methods.timeout(self)
 end
 
 local function handle_frame(self, typ, flag, streamid, payload, deadline)
