@@ -666,6 +666,7 @@ frame_handlers[frame_types.RST_STREAM] = function(stream, flags, payload, deadli
 
 	stream.rst_stream_error = (h2_errors[err_code] or h2_errors.INTERNAL_ERROR):new {
 		message = string.format("'RST_STREAM' on stream #%d (code=0x%x)", stream.id, err_code);
+		stream_error = true;
 	}
 
 	stream:set_state("closed")
