@@ -355,7 +355,7 @@ local valid_pseudo_headers = {
 	[":status"] = false;
 }
 local function validate_headers(headers, is_request, nth_header, ended_stream)
-	do -- Validate that all colon fields are before other ones (section 8.1.2.1)
+	do -- Section 8.1.2.1: Validate that all colon fields are before other ones
 		local seen_non_colon = false
 		for name, value in headers:each() do
 			if name:sub(1,1) == ":" then
@@ -365,8 +365,7 @@ local function validate_headers(headers, is_request, nth_header, ended_stream)
 				defined for responses MUST NOT appear in requests.
 				Pseudo-header fields MUST NOT appear in trailers.
 				Endpoints MUST treat a request or response that contains
-				undefined or invalid pseudo-header fields as malformed
-				(Section 8.1.2.6)]]
+				undefined or invalid pseudo-header fields as malformed]]
 				if (is_request and nth_header ~= 1) or valid_pseudo_headers[name] ~= is_request then
 					return nil, h2_errors.PROTOCOL_ERROR:new_traceback("Pseudo-header fields are only valid in the context in which they are defined", true), ce.EILSEQ
 				end
