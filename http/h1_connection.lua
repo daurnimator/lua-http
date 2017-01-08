@@ -110,27 +110,30 @@ end
 -- this function *should never throw*
 function connection_methods:get_next_incoming_stream(timeout)
 	assert(self.type == "server")
-	local deadline = timeout and (monotime()+timeout)
 	-- Make sure we don't try and read before the previous request has been fully read
-	repeat
-		-- Wait until previous requests have been fully read
-		if self.req_locked then
-			assert(cqueues.running(), "cannot wait for condition if not within a cqueues coroutine")
-			if cqueues.poll(self.req_cond, timeout) == timeout then
-				return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
+	if self.req_locked then
+		local deadline = timeout and monotime()+timeout
+		assert(cqueues.running(), "cannot wait for condition if not within a cqueues coroutine")
+		if cqueues.poll(self.req_cond, timeout) == timeout then
+			return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
+		end
+		timeout = deadline and deadline-monotime()
+		assert(self.req_locked == nil)
+	end
+	if self.socket == nil then
+		return nil
+	end
+	-- Wait for at least one byte
+	local ok, err, errno = self.socket:fill(1, 0)
+	if not ok then
+		if errno == ce.ETIMEDOUT then
+			local deadline = timeout and monotime()+timeout
+			if cqueues.poll(self.socket, timeout) ~= timeout then
+				return self:get_next_incoming_stream(deadline and deadline-monotime())
 			end
-			timeout = deadline and deadline-monotime()
-			assert(self.req_locked == nil)
 		end
-		if self.socket == nil then
-			return nil
-		end
-		-- Wait for at least one byte
-		local ok, err, errno = self.socket:fill(1, timeout)
-		if not ok then
-			return nil, err, errno
-		end
-	until not self.req_locked
+		return nil, err, errno
+	end
 	local stream = h1_stream.new(self)
 	self.pipeline:push(stream)
 	self.req_locked = stream
