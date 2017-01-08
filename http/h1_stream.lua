@@ -821,7 +821,11 @@ function stream_methods:read_next_chunk(timeout)
 	local chunk, err, errno
 	if self.body_read_type == "chunked" then
 		local deadline = timeout and (monotime()+timeout)
-		chunk, err, errno = self.connection:read_body_chunk(timeout)
+		if self.body_read_left == 0 then
+			chunk = false
+		else
+			chunk, err, errno = self.connection:read_body_chunk(timeout)
+		end
 		if chunk == false then
 			-- last chunk, :read_headers should be called to get trailers
 			self.body_read_left = 0
