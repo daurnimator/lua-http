@@ -1,3 +1,4 @@
+#!/usr/bin/env lua
 --[[
 A simple HTTP server
 
@@ -19,7 +20,7 @@ local function reply(myserver, stream) -- luacheck: ignore 212
 	-- Log request to stdout
 	assert(io.stdout:write(string.format('[%s] "%s %s HTTP/%g"  "%s" "%s"\n',
 		os.date("%d/%b/%Y:%H:%M:%S %z"),
-		req_headers:get(":method") or "",
+		req_method or "",
 		req_headers:get(":path") or "",
 		stream.connection.version,
 		req_headers:get("referer") or "-",
@@ -38,7 +39,7 @@ local function reply(myserver, stream) -- luacheck: ignore 212
 	end
 end
 
-local myserver = http_server.listen {
+local myserver = assert(http_server.listen {
 	host = "localhost";
 	port = port;
 	onstream = reply;
@@ -49,7 +50,7 @@ local myserver = http_server.listen {
 		end
 		assert(io.stderr:write(msg, "\n"))
 	end;
-}
+})
 
 -- Manually call :listen() so that we are bound before calling :localname()
 assert(myserver:listen())

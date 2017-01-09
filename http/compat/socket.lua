@@ -111,6 +111,8 @@ function M.request(reqt, b)
 					if not chunk then
 						if err == nil then
 							return nil
+						elseif errno == ce.EPIPE then
+							return nil, "closed"
 						elseif errno == ce.ETIMEDOUT then
 							return nil, "timeout"
 						else
@@ -139,17 +141,18 @@ function M.request(reqt, b)
 	req.proxy = proxy or false
 	if user_headers then
 		for name, field in pairs(user_headers) do
+			name = name:lower()
 			field = "" .. field .. "" -- force coercion in same style as luasocket
 			if name == "host" then
 				req.headers:upsert(":authority", field)
 			else
-				req.headers:append(name:lower(), field)
+				req.headers:append(name, field)
 			end
 		end
 	end
 	local res_headers, stream, errno = req:go(deadline and deadline-monotime())
 	if not res_headers then
-		if errno == ce.EPIPE then
+		if errno == ce.EPIPE or stream == nil then
 			return nil, "closed"
 		elseif errno == ce.ETIMEDOUT then
 			return nil, "timeout"

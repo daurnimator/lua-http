@@ -67,5 +67,43 @@ $body$
 $for(include-after)$
 $include-after$
 $endfor$
+<style type="text/css">
+li.collapsible > ul {
+  display: none;
+}
+@media screen {
+  li.collapsible {
+    cursor: pointer;
+    list-style-type: none;
+  }
+  li.collapsible:before {
+    margin-left: -1rem; /* undo ul's padding-left */
+    width: 1rem;
+    display: inline-block;
+    text-align: center;
+    content: '-';
+  }
+  li.collapsible[state="collapsed"]:before {
+    content: '+';
+  }
+  li.collapsible:not([state="collapsed"]) > ul {
+    display: block;
+  }
+}
+</style>
+<script type="text/javascript">
+  document.querySelectorAll('nav > ul > li > ul > li').forEach(function(element) {
+    element.className = 'collapsible';
+    element.setAttribute('state', 'collapsed');
+    element.onclick = function(event) {
+      if (event.toElement != this) return;
+      if (this.getAttribute('state') == 'collapsed') {
+        this.removeAttribute('state');
+      } else {
+        this.setAttribute('state', 'collapsed');
+      }
+    }
+  });
+</script>
 </body>
 </html>

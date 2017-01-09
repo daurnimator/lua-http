@@ -1,49 +1,62 @@
 describe("http.server module", function()
-	local server = require "http.server"
-	local client = require "http.client"
+	local http_server = require "http.server"
+	local http_client = require "http.client"
 	local http_tls = require "http.tls"
-	local new_headers = require "http.headers".new
+	local http_headers = require "http.headers"
 	local cqueues = require "cqueues"
+	local ca = require "cqueues.auxlib"
 	local ce = require "cqueues.errno"
 	local cs = require "cqueues.socket"
 	local openssl_ctx = require "openssl.ssl.context"
 	local non_verifying_tls_context = http_tls.new_client_context()
 	non_verifying_tls_context:setVerify(openssl_ctx.VERIFY_NONE)
 	it("rejects missing 'ctx' field", function()
+		local s, c = ca.assert(cs.pair())
 		assert.has.errors(function()
-			server.new {
-				socket = (cs.pair());
+			http_server.new {
+				socket = s;
 				onstream = error;
 			}
 		end)
+		s:close()
+		c:close()
 	end)
 	it("rejects invalid 'cq' field", function()
+		local s, c = ca.assert(cs.pair())
 		assert.has.errors(function()
-			server.new {
-				socket = (cs.pair());
+			http_server.new {
+				socket = s;
 				tls = false;
 				onstream = error;
 				cq = 5;
 			}
 		end)
+		s:close()
+		c:close()
 	end)
 	it("__tostring works", function()
-		local s = server.new {
-			socket = (cs.pair());
+		local s, c = ca.assert(cs.pair())
+		s = http_server.new {
+			socket = s;
 			tls = false;
 			onstream = error;
 		}
 		assert.same("http.server{", tostring(s):match("^.-%{"))
+		s:close()
+		c:close()
 	end)
 	it(":onerror with no arguments doesn't clear", function()
-		local s = server.new {
-			socket = (cs.pair());
+		local s, c = ca.assert(cs.pair())
+		s = http_server.new {
+			socket = s;
 			tls = false;
 			onstream = error;
 		}
 		local onerror = s:onerror()
 		assert.same("function", type(onerror))
 		assert.same(onerror, s:onerror())
+		s:close()
+		c:close()
 	end)
 	local function simple_test(family, tls, client_version, server_version)
 		local cq = cqueues.new()
@@ -69,7 +82,7 @@ describe("http.server module", function()
 			s:close()
 		end)
 		options.onstream = onstream
-		local s = server.listen(options)
+		local s = assert(http_server.listen(options))
 		assert(s:listen())
 		cq:wrap(function()
 			assert_loop(s)
@@ -90,9 +103,9 @@ describe("http.server module", function()
 				ctx = non_verifying_tls_context;
 				version = client_version;
 			}
-			local conn = assert(client.connect(client_options))
+			local conn = assert(http_client.connect(client_options))
 			local stream = conn:new_stream()
-			local headers = new_headers()
+			local headers = http_headers.new()
 			headers:append(":authority", "myauthority")
 			headers:append(":method", "GET")
 			headers:append(":path", "/")
@@ -166,65 +179,57 @@ describe("http.server module", function()
 	end)
 	it("taking socket from underlying connection is handled well by server", function()
 		local cq = cqueues.new()
-		local onstream = spy.new(function(s, stream)
+		local onstream = spy.new(function(server, stream)
 			local sock = stream.connection:take_socket()
-			s:close()
+			server:close()
 			assert.same("test", sock:read("*a"))
 			sock:close()
 		end);
-		local s = server.listen {
-			host = "localhost";
-			port = 0;
+		local server = assert(http_server.new {
+			tls = false;
 			onstream = onstream;
-		}
-		assert(s:listen())
-		local _, host, port = s:localname()
+		})
+		local s, c = ca.assert(cs.pair())
+		server:add_socket(s)
 		cq:wrap(function()
-			assert_loop(s)
+			assert_loop(server)
 		end)
 		cq:wrap(function()
-			local sock = cs.connect {
-				host = host;
-				port = port;
-			}
-			assert(sock:write("test"))
-			assert(sock:flush())
-			sock:close()
+			assert(c:write("test"))
+			assert(c:flush())
+			c:close()
 		end)
 		assert_loop(cq, TEST_TIMEOUT)
 		assert.truthy(cq:empty())
 		assert.spy(onstream).was.called()
 	end)
 	it("an idle http2 stream doesn't block the server", function()
-		local s = server.listen {
-			host = "localhost";
-			port = 0;
+		local server = assert(http_server.new {
+			tls = false;
+			version = 2;
 			onstream = function(_, stream)
 				if stream.id == 1 then
 					stream:get_next_chunk()
 				else
 					assert.same(3, stream.id)
 					assert.same({}, {stream:get_next_chunk()})
-					local headers = new_headers()
+					local headers = http_headers.new()
 					headers:append(":status", "200")
 					assert(stream:write_headers(headers, true))
 				end
 			end;
-		}
-		assert(s:listen())
-		local client_family, client_host, client_port = s:localname()
-		local conn = assert(client.connect({
-			family = client_family;
-			host = client_host;
-			port = client_port;
-			version = 2;
-		}))
+		})
+		local s, c = ca.assert(cs.pair())
+		server:add_socket(s)
 		local cq = cqueues.new()
 		cq:wrap(function()
-			assert_loop(s)
+			assert_loop(server)
 		end)
 		cq:wrap(function()
-			local headers = new_headers()
+			local conn = assert(http_client.negotiate(c, {
+				version = 2;
+			}))
+			local headers = http_headers.new()
 			headers:append(":authority", "myauthority")
 			headers:append(":method", "GET")
 			headers:append(":path", "/")
@@ -235,22 +240,64 @@ describe("http.server module", function()
 			assert(stream2:write_headers(headers, true))
 			assert(stream2:get_headers())
 			conn:close()
-			s:close()
+			server:close()
+		end)
+		assert_loop(cq, TEST_TIMEOUT)
+		assert.truthy(cq:empty())
+	end)
+	it("times out clients if intra_stream_timeout is exceeded", function()
+		local server = assert(http_server.new {
+			tls = false;
+			onstream = function(_, stream)
+				assert(stream:get_headers())
+				local headers = http_headers.new()
+				headers:append(":status", "200")
+				assert(stream:write_headers(headers, true))
+			end;
+			intra_stream_timeout = 0.1;
+		})
+		local s, c = ca.assert(cs.pair())
+		server:add_socket(s)
+		local cq = cqueues.new()
+		cq:wrap(function()
+			assert_loop(server)
+		end)
+		cq:wrap(function()
+			local conn = assert(http_client.negotiate(c, {
+				version = 1.1;
+			}))
+			local headers = http_headers.new()
+			headers:append(":method", "GET")
+			headers:append(":path", "/")
+			headers:append(":authority", "foo")
+			-- Normal request
+			local stream1 = conn:new_stream()
+			assert(stream1:write_headers(headers, true))
+			assert(stream1:get_headers())
+			-- Wait for less than intra_stream_timeout: should work as normal
+			cqueues.sleep(0.05)
+			local stream2 = conn:new_stream()
+			assert(stream2:write_headers(headers, true))
+			assert(stream2:get_headers())
+			-- Wait for more then intra_stream_timeout: server should have closed connection
+			cqueues.sleep(0.2)
+			local stream3 = conn:new_stream()
+			assert.same(ce.EPIPE, select(3, stream3:write_headers(headers, true)))
 		end)
 		assert_loop(cq, TEST_TIMEOUT)
 		assert.truthy(cq:empty())
 	end)
 	it("allows pausing+resuming the server", function()
-		local s = server.listen {
+		local s = assert(http_server.listen {
 			host = "localhost";
 			port = 0;
 			onstream = function(_, stream)
 				assert(stream:get_headers())
-				local headers = new_headers()
+				local headers = http_headers.new()
 				headers:append(":status", "200")
 				assert(stream:write_headers(headers, true))
 			end;
-		}
+		})
 		assert(s:listen())
 		local client_family, client_host, client_port = s:localname()
 		local client_options = {
@@ -258,7 +305,7 @@ describe("http.server module", function()
 			host = client_host;
 			port = client_port;
 		}
-		local headers = new_headers()
+		local headers = http_headers.new()
 		headers:append(":authority", "myauthority")
 		headers:append(":method", "GET")
 		headers:append(":path", "/")
@@ -269,7 +316,7 @@ describe("http.server module", function()
 			assert_loop(s)
 		end)
 		local function do_req(timeout)
-			local conn = assert(client.connect(client_options))
+			local conn = assert(http_client.connect(client_options))
 			local stream = assert(conn:new_stream())
 			assert(stream:write_headers(headers, true))
 			local ok, err, errno = stream:get_headers(timeout)
@@ -289,5 +336,23 @@ describe("http.server module", function()
 		end)
 		assert_loop(cq, TEST_TIMEOUT)
 		assert.truthy(cq:empty())
+	end)
+	it("shouldn't throw an error calling :listen() after :close()", function()
+		local s = assert(http_server.listen {
+			host = "localhost";
+			port = 0;
+			onstream = function() end;
+		})
+		s:close()
+		s:listen()
+	end)
+	it("shouldn't throw an error calling :localname() after :close()", function()
+		local s = assert(http_server.listen {
+			host = "localhost";
+			port = 0;
+			onstream = function() end;
+		})
+		s:close()
+		s:localname()
 	end)
 end)

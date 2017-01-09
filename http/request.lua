@@ -16,6 +16,10 @@ local default_user_agent = string.format("%s/%s", http_version.name, http_versio
 local default_hsts_store = http_hsts.new_store()
 local default_proxies = http_proxies.new():update()
 
+local default_h2_settings = {
+	ENABLE_PUSH = false;
+}
+
 local request_methods = {
 	hsts = default_hsts_store;
 	proxies = default_proxies;
@@ -198,8 +202,10 @@ function request_methods:handle_redirect(orig_headers)
 		end
 		if new_scheme == "https" or new_scheme == "wss" then
 			new_req.tls = true
-		else
+		elseif new_scheme == "http" or new_scheme == "ws" then
 			new_req.tls = false
+		else
+			return nil, "unknown scheme", ce.EINVAL
 		end
 	else
 		if not is_connect then
@@ -332,6 +338,10 @@ function request_methods:set_form_data(form)
 	return self:set_body(body)
 end
 
+local function non_final_status(status)
+	return status:sub(1, 1) == "1" and status ~= "101"
+end
+
 function request_methods:go(timeout)
 	local deadline = timeout and (monotime()+timeout)
 
@@ -367,7 +377,7 @@ function request_methods:go(timeout)
 
 	local proxy = self.proxy
 	if proxy == nil and self.proxies then
-		assert(getmetatable(self.proxies) == http_proxies.mt, "proxies property should be a http.proxies object")
+		assert(getmetatable(self.proxies) == http_proxies.mt, "proxies property should be an http.proxies object")
 		local scheme = tls and "https" or "http" -- rather than :scheme
 		proxy = self.proxies:choose(scheme, host)
 	end
@@ -387,9 +397,6 @@ function request_methods:go(timeout)
 				if tls then
 					if connect_request.tls then
 						error("NYI: TLS over TLS")
-					else
-						-- Hack until https://github.com/wahern/cqueues/issues/137 is fixed
-						connect_request.sendname = self.sendname
 					end
 				end
 				-- Perform CONNECT request
@@ -410,7 +417,9 @@ function request_methods:go(timeout)
 				connection, err, errno2 = client.negotiate(sock, {
 					tls = tls;
 					ctx = self.ctx;
+					sendname = self.sendname ~= nil and self.sendname or host;
 					version = self.version;
+					h2_settings = default_h2_settings;
 				}, deadline and deadline-monotime())
 				if connection == nil then
 					sock:close()
@@ -421,7 +430,7 @@ function request_methods:go(timeout)
 					error("cannot use HTTP Proxy with CONNECT method")
 				end
 				if proxy.path ~= nil and proxy.path ~= "" then
-					error("a HTTP proxy cannot have a path component")
+					error("an HTTP proxy cannot have a path component")
 				end
 				-- TODO: Check if :path already has authority?
 				local old_url = self:to_uri(false)
@@ -438,8 +447,6 @@ function request_methods:go(timeout)
 				end
 			end
 		elseif proxy.scheme:match "^socks" then
-			-- https://github.com/wahern/cqueues/issues/137
-			assert(self.sendname == nil or self.sendname == host, "NYI: custom SNI over SOCKS")
 			local socks = http_socks.connect(proxy)
 			local ok, err, errno = socks:negotiate(host, port, deadline and deadline-monotime())
 			if not ok then
@@ -449,7 +456,9 @@ function request_methods:go(timeout)
 			connection, err, errno = client.negotiate(sock, {
 				tls = tls;
 				ctx = self.ctx;
+				sendname = self.sendname ~= nil and self.sendname or host;
 				version = self.version;
+				h2_settings = default_h2_settings;
 			}, deadline and deadline-monotime())
 			if connection == nil then
 				sock:close()
@@ -469,10 +478,13 @@ function request_methods:go(timeout)
 			ctx = self.ctx;
 			sendname = self.sendname;
 			version = self.version;
+			h2_settings = default_h2_settings;
 		}, deadline and deadline-monotime())
 		if connection == nil then
 			return nil, err, errno
 		end
+		-- Close the connection (and free resources) when done
+		connection:onidle(connection.close)
 	end
 
 	local stream do
@@ -502,6 +514,9 @@ function request_methods:go(timeout)
 				headers, err, errno = stream:get_headers(math.min(self.expect_100_timeout, deadline-monotime()))
 				if headers == nil and (errno ~= ce.ETIMEDOUT or monotime() > deadline) then
 					stream:shutdown()
+					if err == nil then
+						return nil, ce.strerror(ce.EPIPE), ce.EPIPE
+					end
 					return nil, err, errno
 				end
 			else
@@ -509,6 +524,9 @@ function request_methods:go(timeout)
 				headers, err, errno = stream:get_headers(self.expect_100_timeout)
 				if headers == nil and errno ~= ce.ETIMEDOUT then
 					stream:shutdown()
+					if err == nil then
+						return nil, ce.strerror(ce.EPIPE), ce.EPIPE
+					end
 					return nil, err, errno
 				end
 			end
@@ -547,15 +565,20 @@ function request_methods:go(timeout)
 			end
 		end
 	end
-	if not headers or headers:get(":status") == "100" then
-		repeat -- Skip through 100-continue headers
+	if not headers or non_final_status(headers:get(":status")) then
+		-- Skip through 1xx informational headers.
+		-- From RFC 7231 Section 6.2: "A user agent MAY ignore unexpected 1xx responses"
+		repeat
 			local err, errno
 			headers, err, errno = stream:get_headers(deadline and (deadline-monotime()))
 			if headers == nil then
 				stream:shutdown()
+				if err == nil then
+					return nil, ce.strerror(ce.EPIPE), ce.EPIPE
+				end
 				return nil, err, errno
 			end
-		until headers:get(":status") ~= "100"
+		until not non_final_status(headers:get(":status"))
 	end
 
 	-- RFC 6797 Section 8.1

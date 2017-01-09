@@ -182,8 +182,8 @@ local function read_frame(sock, deadline)
 		if not first_2 then
 			return nil, err, errno
 		elseif #first_2 ~= 2 then
-			sock:seterror("r", ce.EPROTO)
-			return nil, ce.strerror(ce.EPROTO), ce.EPROTO
+			sock:seterror("r", ce.EILSEQ)
+			return nil, ce.strerror(ce.EILSEQ), ce.EILSEQ
 		end
 		local byte1, byte2 = first_2:byte(1, 2)
 		frame = {
@@ -204,8 +204,8 @@ local function read_frame(sock, deadline)
 		local length, err, errno = sock:xread(2, "b", deadline and (deadline-monotime()))
 		if not length or #length ~= 2 then
 			if err == nil then
-				sock:seterror("r", ce.EPROTO)
-				return nil, ce.strerror(ce.EPROTO), ce.EPROTO
+				sock:seterror("r", ce.EILSEQ)
+				return nil, ce.strerror(ce.EILSEQ), ce.EILSEQ
 			end
 			return nil, err, errno
 		end
@@ -214,8 +214,8 @@ local function read_frame(sock, deadline)
 		local length, err, errno = sock:xread(8, "b", deadline and (deadline-monotime()))
 		if not length or #length ~= 8 then
 			if err == nil then
-				sock:seterror("r", ce.EPROTO)
-				return nil, ce.strerror(ce.EPROTO), ce.EPROTO
+				sock:seterror("r", ce.EILSEQ)
+				return nil, ce.strerror(ce.EILSEQ), ce.EILSEQ
 			end
 			return nil, err, errno
 		end
@@ -226,8 +226,8 @@ local function read_frame(sock, deadline)
 		local key, err, errno = sock:xread(4, "b", deadline and (deadline-monotime()))
 		if not key or #key ~= 4 then
 			if err == nil then
-				sock:seterror("r", ce.EPROTO)
-				return nil, ce.strerror(ce.EPROTO), ce.EPROTO
+				sock:seterror("r", ce.EILSEQ)
+				return nil, ce.strerror(ce.EILSEQ), ce.EILSEQ
 			end
 			return nil, err, errno
 		end
@@ -238,8 +238,8 @@ local function read_frame(sock, deadline)
 		local data, err, errno = sock:xread(frame.length, "b", deadline and (deadline-monotime()))
 		if data == nil or #data ~= frame.length then
 			if err == nil then
-				sock:seterror("r", ce.EPROTO)
-				return nil, ce.strerror(ce.EPROTO), ce.EPROTO
+				sock:seterror("r", ce.EILSEQ)
+				return nil, ce.strerror(ce.EILSEQ), ce.EILSEQ
 			end
 			return nil, err, errno
 		end
@@ -663,6 +663,11 @@ local function new_from_stream(stream, headers)
 		return nil, "websockets only supported with HTTP 1.x", ce.EINVAL
 	end
 
+	--[[ RFC 7230: A server MUST ignore an Upgrade header field that is
+	received in an HTTP/1.0 request]]
+	if stream.peer_version == 1.0 then
+		return nil, "upgrade headers MUST be ignored in HTTP 1.0", ce.EINVAL
+	end
 	local upgrade = headers:get("upgrade")
 	if not upgrade or upgrade:lower() ~= "websocket" then
 		return nil, "upgrade header not websocket", ce.EINVAL
@@ -686,13 +691,14 @@ local function new_from_stream(stream, headers)
 		end
 	end
 
-	local key = trim(headers:get("sec-websocket-key"))
+	local key = headers:get("sec-websocket-key")
 	if not key then
 		return nil, "missing sec-websocket-key", ce.EINVAL
 	end
+	key = trim(key)
 
 	if headers:get("sec-websocket-version") ~= "13" then
-		return nil, "unsupported sec-websocket-version"
+		return nil, "unsupported sec-websocket-version", ce.EINVAL
 	end
 
 	local protocols_available
@@ -756,7 +762,7 @@ function websocket_methods:accept(options, timeout)
 			end
 		end
 		if not chosen_protocol then
-			return nil, "no matching protocol", ce.EPROTONOSUPPORT
+			return nil, "no matching protocol", ce.EILSEQNOSUPPORT
 		end
 		response_headers:upsert("sec-websocket-protocol", chosen_protocol)
 	end

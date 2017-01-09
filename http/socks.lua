@@ -9,7 +9,9 @@ URI format is taken from curl:
   - socks5h:// is SOCKS5, but let the proxy resolve the hostname
 ]]
 
-local monotime = require "cqueues".monotime
+local cqueues = require "cqueues"
+local monotime = cqueues.monotime
+local ca = require "cqueues.auxlib"
 local ce = require "cqueues.errno"
 local cs = require "cqueues.socket"
 local spack = string.pack or require "compat53.string".pack
@@ -122,24 +124,24 @@ local function username_password_auth(self, deadline)
 		local version, err, errno = self.socket:xread(1, "b", deadline and deadline-monotime())
 		if not version then
 			if err == nil then
-				return nil, ce.strerror(ce.EPIPE), ce.EPIPE
+				return nil, "username_password_auth: "..ce.strerror(ce.EPIPE), ce.EPIPE
 			end
 			return nil, err, errno
 		end
 		if version ~= "\1" then
-			return nil, "invalid username/password auth version"
+			return nil, "username_password_auth: invalid username/password auth version", ce.EILSEQ
 		end
 	end
 	do
 		local ok, err, errno = self.socket:xread(1, "b", deadline and deadline-monotime())
 		if not ok then
 			if err == nil then
-				return nil, ce.strerror(ce.EPIPE), ce.EPIPE
+				return nil, "username_password_auth: "..ce.strerror(ce.EPIPE), ce.EPIPE
 			end
 			return nil, err, errno
 		end
 		if ok ~= "\0" then
-			return nil, ce.EACCES
+			return nil, "username_password_auth: "..ce.strerror(ce.EACCES), ce.EACCES
 		end
 	end
 	return true
@@ -153,16 +155,15 @@ function socks_methods:negotiate(host, port, timeout)
 
 	if self.socket == nil then
 		assert(self.host)
-		-- TODO: https://github.com/wahern/cqueues/issues/124
-		local socket, errno = cs.connect {
+		local socket, err, errno = ca.fileresult(cs.connect {
 			family = self.family;
 			host = self.host;
 			port = self.port;
-			sendname = host; -- Want to specify later; see https://github.com/wahern/cqueues/issues/137
+			sendname = false;
 			nodelay = true;
-		}
+		})
 		if socket == nil then
-			return nil, ce.strerror(errno), errno
+			return nil, err, errno
 		end
 		socket:onerror(onerror)
 		self.socket = socket
@@ -185,11 +186,11 @@ function socks_methods:negotiate(host, port, timeout)
 		local byte, err, errno = self.socket:xread(1, "b", deadline and deadline-monotime())
 		if not byte then
 			if err == nil then
-				return nil, ce.strerror(ce.EPIPE), ce.EPIPE
+				return nil, "socks:negotiate: "..ce.strerror(ce.EPIPE), ce.EPIPE
 			end
 			return nil, err, errno
 		elseif byte ~= "\5" then
-			return nil, "not SOCKS5"
+			return nil, "socks:negotiate: not SOCKS5", ce.EILSEQ
 		end
 	end
 	local auth_method do
@@ -197,12 +198,12 @@ function socks_methods:negotiate(host, port, timeout)
 		auth_method, err, errno = self.socket:xread(1, "b", deadline and deadline-monotime())
 		if not auth_method then
 			if err == nil then
-				return nil, ce.strerror(ce.EPIPE), ce.EPIPE
+				return nil, "socks:negotiate: "..ce.strerror(ce.EPIPE), ce.EPIPE
 			end
 			return nil, err, errno
 		end
 		if self.available_auth_methods[auth_method] == nil then
-			return nil, "Unknown authentication method"
+			return nil, "socks:negotiate: unknown authentication method", ce.EILSEQ
 		end
 	end
 	if auth_method == "\0" then -- luacheck: ignore 542
@@ -233,18 +234,18 @@ function socks_methods:negotiate(host, port, timeout)
 		local byte, err, errno = self.socket:xread(1, "b", deadline and deadline-monotime())
 		if not byte then
 			if err == nil then
-				return nil, ce.strerror(ce.EPIPE), ce.EPIPE
+				return nil, "socks:negotiate: "..ce.strerror(ce.EPIPE), ce.EPIPE
 			end
 			return nil, err, errno
 		elseif byte ~= "\5" then
-			return nil, "not SOCKS5"
+			return nil, "socks:negotiate: not SOCKS5", ce.EILSEQ
 		end
 	end
 	do
 		local code, err, errno = self.socket:xread(1, "b", deadline and deadline-monotime())
 		if not code then
 			if err == nil then
-				return nil, ce.strerror(ce.EPIPE), ce.EPIPE
+				return nil, "socks:negotiate: "..ce.strerror(ce.EPIPE), ce.EPIPE
 			end
 			return nil, err, errno
 		elseif code ~= "\0" then
@@ -274,26 +275,27 @@ function socks_methods:negotiate(host, port, timeout)
 				errno = ce.EAFNOSUPPORT
 			else
 				err = "Unknown code"
+				errno = ce.PROTO
 			end
-			return nil, string.format("SOCKS5 error %d: %s", num_code, err), errno
+			return nil, string.format("socks:negotiate: remote error %d: %s", num_code, err), errno
 		end
 	end
 	do
 		local byte, err, errno = self.socket:xread(1, "b", deadline and deadline-monotime())
 		if not byte then
 			if err == nil then
-				return nil, ce.strerror(ce.EPIPE), ce.EPIPE
+				return nil, "socks:negotiate: "..ce.strerror(ce.EPIPE), ce.EPIPE
 			end
 			return nil, err, errno
 		elseif byte ~= "\0" then
-			return nil, "Reserved field set to non-zero"
+			return nil, "socks:negotiate: reserved field set to non-zero", ce.EILSEQ
 		end
 	end
 	local dst_family, dst_host, dst_port do
 		local atype, err, errno = self.socket:xread(1, "b", deadline and deadline-monotime())
 		if not atype then
 			if err == nil then
-				return nil, ce.strerror(ce.EPIPE), ce.EPIPE
+				return nil, "socks:negotiate: "..ce.strerror(ce.EPIPE), ce.EPIPE
 			end
 			return nil, err, errno
 		end
@@ -302,7 +304,7 @@ function socks_methods:negotiate(host, port, timeout)
 			ipv4, err, errno = self.socket:xread(4, "b", deadline and deadline-monotime())
 			if not ipv4 or #ipv4 < 4 then
 				if err == nil then
-					return nil, ce.strerror(ce.EPIPE), ce.EPIPE
+					return nil, "socks:negotiate: "..ce.strerror(ce.EPIPE), ce.EPIPE
 				end
 				return nil, err, errno
 			end
@@ -313,7 +315,7 @@ function socks_methods:negotiate(host, port, timeout)
 			ipv6, err, errno = self.socket:xread(16, "b", deadline and deadline-monotime())
 			if not ipv6 or #ipv6 < 16 then
 				if err == nil then
-					return nil, ce.strerror(ce.EPIPE), ce.EPIPE
+					return nil, "socks:negotiate: "..ce.strerror(ce.EPIPE), ce.EPIPE
 				end
 				return nil, err, errno
 			end
@@ -325,7 +327,7 @@ function socks_methods:negotiate(host, port, timeout)
 			len, err, errno = self.socket:xread(1, "b", deadline and deadline-monotime())
 			if not len then
 				if err == nil then
-					return nil, ce.strerror(ce.EPIPE), ce.EPIPE
+					return nil, "socks:negotiate: "..ce.strerror(ce.EPIPE), ce.EPIPE
 				end
 				return nil, err, errno
 			end
@@ -334,12 +336,12 @@ function socks_methods:negotiate(host, port, timeout)
 			dst_host, err, errno = self.socket:xread(len, "b", deadline and deadline-monotime())
 			if not dst_host or #dst_host < len then
 				if err == nil then
-					return nil, ce.strerror(ce.EPIPE), ce.EPIPE
+					return nil, "socks:negotiate: "..ce.strerror(ce.EPIPE), ce.EPIPE
 				end
 				return nil, err, errno
 			end
 		else
-			return nil, "Unknown address type", ce.EAFNOSUPPORT
+			return nil, "socks:negotiate: unknown address type", ce.EAFNOSUPPORT
 		end
 	end
 	do
@@ -353,6 +355,12 @@ function socks_methods:negotiate(host, port, timeout)
 	self.dst_host = dst_host
 	self.dst_port = dst_port
 	return true
+end
+
+function socks_methods:close()
+	if self.socket then
+		self.socket:close()
+	end
 end
 
 function socks_methods:take_socket()

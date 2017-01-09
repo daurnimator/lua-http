@@ -1,13 +1,18 @@
 local cqueues = require "cqueues"
 local monotime = cqueues.monotime
-local cs = require "cqueues.socket"
+local ca = require "cqueues.auxlib"
 local cc = require "cqueues.condition"
 local ce = require "cqueues.errno"
+local cs = require "cqueues.socket"
+local connection_common = require "http.connection_common"
+local onerror = connection_common.onerror
 local h1_connection = require "http.h1_connection"
 local h2_connection = require "http.h2_connection"
 local http_tls = require "http.tls"
 local http_util = require "http.util"
+local openssl_bignum = require "openssl.bignum"
 local pkey = require "openssl.pkey"
+local openssl_rand = require "openssl.rand"
 local openssl_ssl = require "openssl.ssl"
 local openssl_ctx = require "openssl.ssl.context"
 local x509 = require "openssl.x509"
@@ -15,10 +20,6 @@ local name = require "openssl.x509.name"
 local altname = require "openssl.x509.altname"
 
 local hang_timeout = 0.03
-
-local function onerror(socket, op, why, lvl) -- luacheck: ignore 212
-	return string.format("%s: %s", op, ce.strerror(why)), why
-end
 
 -- Sense for TLS or SSL client hello
 -- returns `true`, `false` or `nil, err`
@@ -30,7 +31,7 @@ local function is_tls_client_hello(socket, timeout)
 		return nil, err or ce.EPIPE, errno
 	end
 	local use_tls = not not (
-		first_bytes:match("^\22\3...\1") or -- TLS
+		first_bytes:match("^[\21\22]\3[\1\2\3]..\1") or -- TLS
 		first_bytes:match("^[\128-\255][\9-\255]\1") -- SSLv2
 	)
 	local ok
@@ -44,7 +45,8 @@ end
 -- Wrap a bare cqueues socket in an HTTP connection of a suitable version
 -- Starts TLS if necessary
 -- this function *should never throw*
-local function wrap_socket(self, socket, deadline)
+local function wrap_socket(self, socket, timeout)
+	local deadline = timeout and monotime()+timeout
 	socket:setmode("b", "b")
 	socket:onerror(onerror)
 	local version = self.version
@@ -69,7 +71,7 @@ local function wrap_socket(self, socket, deadline)
 			elseif (proto == "http/1.1") and (version == nil or version < 2) then
 				version = 1.1
 			elseif proto ~= nil then
-				return nil, "unexpected ALPN protocol: " .. proto, ce.EPROTONOSUPPORT
+				return nil, "unexpected ALPN protocol: " .. proto, ce.EILSEQNOSUPPORT
 			end
 		end
 	end
@@ -78,7 +80,7 @@ local function wrap_socket(self, socket, deadline)
 	if version == nil then
 		local is_h2, err, errno = h2_connection.socket_has_preface(socket, true, deadline and (deadline-monotime()))
 		if is_h2 == nil then
-			return nil, err, errno
+			return nil, err or ce.EPIPE, errno
 		end
 		version = is_h2 and 2 or 1.1
 	end
@@ -125,7 +127,7 @@ end
 
 local function handle_socket(self, socket)
 	local error_operation, error_context
-	local conn, err, errno = wrap_socket(self, socket)
+	local conn, err, errno = wrap_socket(self, socket, self.connection_setup_timeout)
 	if not conn then
 		socket:close()
 		if err ~= ce.EPIPE -- client closed connection
@@ -136,35 +138,42 @@ local function handle_socket(self, socket)
 		end
 	else
 		local cond = cc.new()
-		local n_streams = 0
+		local idle = true
+		local deadline
+		conn:onidle(function()
+			idle = true
+			deadline = self.intra_stream_timeout + monotime()
+			cond:signal(1)
+		end)
 		while true do
+			local timeout = deadline and deadline-monotime() or self.intra_stream_timeout
 			local stream
-			stream, err, errno = conn:get_next_incoming_stream()
+			stream, err, errno = conn:get_next_incoming_stream(timeout)
 			if stream == nil then
 				if (err ~= nil -- client closed connection
 					and errno ~= ce.ECONNRESET
-					and errno ~= ce.ENOTCONN)
-				  or (cs.type(conn.socket) == "socket" and conn.socket:pending() ~= 0) then
+					and errno ~= ce.ENOTCONN
+					and errno ~= ce.ETIMEDOUT) then
 					error_operation = "get_next_incoming_stream"
 					error_context = conn
+					break
+				elseif errno ~= ce.ETIMEDOUT or not idle or (deadline and deadline <= monotime()) then -- want to go around loop again if deadline not hit
+					break
 				end
-				break
+			else
+				idle = false
+				deadline = nil
+				self.cq:wrap(function()
+					local ok, err2 = http_util.yieldable_pcall(self.onstream, self, stream)
+					stream:shutdown()
+					if not ok then
+						self:onerror()(self, stream, "onstream", err2)
+					end
+				end)
 			end
-			n_streams = n_streams + 1
-			self.cq:wrap(function()
-				local ok, err2 = http_util.yieldable_pcall(self.onstream, self, stream)
-				stream:shutdown()
-				n_streams = n_streams - 1
-				if n_streams == 0 then
-					cond:signal()
-				end
-				if not ok then
-					self:onerror()(self, stream, "onstream", err2)
-				end
-			end)
 		end
 		-- wait for streams to complete
-		while n_streams > 0 do
+		if not idle then
 			cond:wait()
 		end
 		conn:close()
@@ -181,8 +190,7 @@ local function alpn_select_either(ssl, protos) -- luacheck: ignore 212
 	for _, proto in ipairs(protos) do
 		if proto == "h2" then
 			-- HTTP2 only allows >=TLSv1.2
-			if ssl:getVersion() >= openssl_ssl.TLS1_2_VERSION
-			  and not http_tls.banned_ciphers[ssl:getCipherInfo().name] then
+			if ssl:getVersion() >= openssl_ssl.TLS1_2_VERSION then
 				return proto
 			end
 		elseif proto == "http/1.1" then
@@ -226,12 +234,14 @@ local function new_ctx(host, version)
 		ctx:setOptions(openssl_ctx.OP_NO_TLSv1 + openssl_ctx.OP_NO_TLSv1_1)
 	end
 	local crt = x509.new()
+	crt:setVersion(3)
 	-- serial needs to be unique or browsers will show uninformative error messages
-	crt:setSerial(os.time())
+	crt:setSerial(openssl_bignum.fromBinary(openssl_rand.bytes(16)))
 	-- use the host we're listening on as canonical name
 	local dn = name.new()
 	dn:add("CN", host)
 	crt:setSubject(dn)
+	crt:setIssuer(dn) -- should match subject for a self-signed
 	local alt = altname.new()
 	alt:add("DNS", host)
 	crt:setSubjectAlt(alt)
@@ -241,7 +251,7 @@ local function new_ctx(host, version)
 	crt:setBasicConstraints{CA=false}
 	crt:setBasicConstraintsCritical(true)
 	-- generate a new private/public key pair
-	local key = pkey.new()
+	local key = pkey.new({bits=2048})
 	crt:setPublicKey(key)
 	crt:sign(key)
 	assert(ctx:setPrivateKey(key))
@@ -252,7 +262,8 @@ end
 local server_methods = {
 	version = nil;
 	max_concurrent = math.huge;
-	client_timeout = 10;
+	connection_setup_timeout = 10;
+	intra_stream_timeout = 10;
 }
 local server_mt = {
 	__name = "http.server";
@@ -268,8 +279,9 @@ end
 
 Takes a table of options:
   - `.cq` (optional): A cqueues controller to use
-  - `.socket`: A cqueues socket object
-  - `.onerror`: function that will be called when an error occurs (default: do nothing)
+  - `.socket` (optional): A cqueues socket object to accept() from
+  - `.onstream`: function to call back for each stream read
+  - `.onerror`: function that will be called when an error occurs (default: throw an error)
   - `.tls`: `nil`: allow both tls and non-tls connections
   -         `true`: allows tls connections only
   -         `false`: allows non-tls connections only
@@ -277,7 +289,8 @@ Takes a table of options:
   - `       `nil`: a self-signed context will be generated
   - `.version`: the http version to allow to connect (default: any)
   - `.max_concurrent`: Maximum number of connections to allow live at a time (default: infinity)
-  - `.client_timeout`: Timeout (in seconds) to wait for client to send first bytes and/or complete TLS handshake (default: 10)
+  - `.connection_setup_timeout`: Timeout (in seconds) to wait for client to send first bytes and/or complete TLS handshake (default: 10)
+  - `.intra_stream_timeout`: Timeout (in seoncds) to wait between start of client streams (default: 10)
 ]]
 local function new_server(tbl)
 	local cq = tbl.cq
@@ -286,17 +299,14 @@ local function new_server(tbl)
 	else
 		assert(cqueues.type(cq) == "controller", "optional cq field should be a cqueue controller")
 	end
-	local socket = assert(tbl.socket, "missing 'socket'")
+	local socket = tbl.socket
+	if socket ~= nil then
+		assert(cs.type(socket), "optional socket field should be a cqueues socket")
+	end
 	local onstream = assert(tbl.onstream, "missing 'onstream'")
-
 	if tbl.ctx == nil and tbl.tls ~= false then
 		error("OpenSSL context required if .tls isn't false")
 	end
-
-	-- Return errors rather than throwing
-	socket:onerror(function(s, op, why, lvl) -- luacheck: ignore 431 212
-		return why
-	end)
 
 	local self = setmetatable({
 		cq = cq;
@@ -311,10 +321,17 @@ local function new_server(tbl)
 		pause_cond = cc.new();
 		paused = false;
 		connection_done = cc.new(); -- signalled when connection has been closed
-		client_timeout = tbl.client_timeout;
+		connection_setup_timeout = tbl.connection_setup_timeout;
+		intra_stream_timeout = tbl.intra_stream_timeout;
 	}, server_mt)
 
-	cq:wrap(server_loop, self)
+	if socket then
+		-- Return errors rather than throwing
+		socket:onerror(function(socket, op, why, lvl) -- luacheck: ignore 431 212
+			return why
+		end)
+		cq:wrap(server_loop, self)
+	end
 
 	return self
 end
@@ -355,7 +372,7 @@ local function listen(tbl)
 			error("Custom OpenSSL context required when using a UNIX domain socket")
 		end
 	end
-	local s, errno = cs.listen {
+	local s, err, errno = ca.fileresult(cs.listen {
 		family = tbl.family;
 		host = host;
 		port = port;
@@ -366,9 +383,9 @@ local function listen(tbl)
 		reuseaddr = tbl.reuseaddr;
 		reuseport = tbl.reuseport;
 		v6only = tbl.v6only;
-	}
+	})
 	if not s then
-		return nil, ce.strerror(errno), errno
+		return nil, err, errno
 	end
 	return new_server {
 		cq = tbl.cq;
@@ -379,7 +396,8 @@ local function listen(tbl)
 		ctx = ctx;
 		version = tbl.version;
 		max_concurrent = tbl.max_concurrent;
-		client_timeout = tbl.client_timeout;
+		connection_setup_timeout = tbl.connection_setup_timeout;
+		intra_stream_timeout = tbl.intra_stream_timeout;
 	}
 end
 
@@ -402,11 +420,20 @@ end
 -- Actually wait for and *do* the binding
 -- Don't *need* to call this, as if not it will be done lazily
 function server_methods:listen(timeout)
-	return self.socket:listen(timeout)
+	if self.socket then
+		local ok, err, errno = ca.fileresult(self.socket:listen(timeout))
+		if not ok then
+			return nil, err, errno
+		end
+	end
+	return true
 end
 
 function server_methods:localname()
-	return self.socket:localname()
+	if self.socket == nil then
+		return
+	end
+	return ca.fileresult(self.socket:localname())
 end
 
 function server_methods:pause()

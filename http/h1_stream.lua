@@ -44,7 +44,9 @@ local function has_any(list, val, ...)
 	end
 end
 
-local stream_methods = {}
+local stream_methods = {
+	use_zlib = has_zlib;
+}
 for k,v in pairs(stream_common.methods) do
 	stream_methods[k] = v
 end
@@ -71,9 +73,12 @@ local function new_stream(connection)
 
 		req_method = nil; -- string
 		peer_version = nil; -- 1.0 or 1.1
+		has_main_headers = false;
+		headers_in_progress = nil;
 		headers_fifo = new_fifo();
 		headers_cond = cc.new();
-		body_buffer = nil;
+		chunk_fifo = new_fifo();
+		chunk_cond = cc.new();
 		body_write_type = nil; -- "closed", "chunked", "length" or "missing"
 		body_write_left = nil; -- integer: only set when body_write_type == "length"
 		body_write_deflate_encoding = nil;
@@ -98,99 +103,149 @@ function stream_methods:set_state(new)
 	if new_order <= valid_states[old] then
 		error("invalid state progression ('"..old.."' to '"..new.."')")
 	end
-	self.state = new
+	local have_lock, want_no_lock
+	local blocking_pipeline, notify_pipeline
 	if self.type == "server" then
-		-- If we have just finished reading the request
-		if (old == "idle" or old == "open" or old == "half closed (local)")
-			and (new == "half closed (remote)" or new == "closed") then
-			if self.close_when_done then
-				self.connection:shutdown("r")
-			end
-			-- remove our read lock
-			assert(self.connection.req_locked == self)
-			self.connection.req_locked = nil
-			self.connection.req_cond:signal(1)
-		end
+		-- If we have just finished reading the request then remove our read lock
+		have_lock = old == "idle" or old == "open" or old == "half closed (local)"
+		want_no_lock = new == "half closed (remote)" or new == "closed"
 		-- If we have just finished writing the response
-		if (old == "idle" or old == "open" or old == "half closed (remote)")
-			and (new == "half closed (local)" or new == "closed") then
-			-- remove ourselves from the write pipeline
-			assert(self.connection.pipeline:pop() == self)
-			if self.close_when_done then
-				self.connection:shutdown()
-			end
-			local next_stream = self.connection.pipeline:peek()
-			if next_stream then
-				next_stream.pipeline_cond:signal()
-			end
-		end
+		blocking_pipeline = old == "idle" or old == "open" or old == "half closed (remote)"
+		notify_pipeline = blocking_pipeline and (new == "half closed (local)" or new == "closed")
 	else -- client
-		-- If we have just finished writing the request
-		if (old == "open" or old == "half closed (remote)")
-			and (new == "half closed (local)" or new == "closed") then
-			-- NOTE: You cannot shutdown("w") the socket here.
-			-- many servers will close the connection if the client closes their write stream
-
-			-- remove our write lock
-			assert(self.connection.req_locked == self)
+		-- If we have just finished writing the request then remove our write lock
+		have_lock = old == "open" or old == "half closed (remote)"
+		want_no_lock = new == "half closed (local)" or new == "closed"
+		-- If we have just finished reading the response;
+		blocking_pipeline = old == "idle" or old == "open" or old == "half closed (local)"
+		notify_pipeline = blocking_pipeline and (new == "half closed (remote)" or new == "closed")
+	end
+	self.state = new
+	if have_lock then
+		assert(self.connection.req_locked == self)
+		if want_no_lock then
 			self.connection.req_locked = nil
 			self.connection.req_cond:signal(1)
 		end
-		-- If we have just finished reading the response;
-		if (old == "idle" or old == "open" or old == "half closed (local)")
-			and (new == "half closed (remote)" or new == "closed") then
-			-- remove ourselves from the read pipeline
-			assert(self.connection.pipeline:pop() == self)
-			if self.close_when_done then
-				self.connection:shutdown()
-			end
-			local next_stream = self.connection.pipeline:peek()
-			if next_stream then
-				next_stream.pipeline_cond:signal()
-			end
+	end
+	local pipeline_empty
+	if notify_pipeline then
+		assert(self.connection.pipeline:pop() == self)
+		local next_stream = self.connection.pipeline:peek()
+		if next_stream then
+			pipeline_empty = false
+			next_stream.pipeline_cond:signal()
+		else
+			pipeline_empty = true
 		end
+	else
+		pipeline_empty = not blocking_pipeline
+	end
+	if self.close_when_done then
+		if new == "half closed (remote)" then
+			self.connection:shutdown("r")
+		elseif new == "half closed (local)" and self.type == "server" then
+			-- NOTE: Do not shutdown("w") the socket when a client moves to
+			-- "half closed (local)", many servers will close a connection
+			-- immediately if a client closes their write stream
+			self.connection:shutdown("w")
+		elseif new == "closed" then
+			self.connection:shutdown()
+		end
+	end
+	if want_no_lock and pipeline_empty then
+		self.connection:onidle()(self.connection)
 	end
 end
 
+local bad_request_headers = new_headers()
+bad_request_headers:append(":status", "400")
 local server_error_headers = new_headers()
 server_error_headers:append(":status", "503")
 function stream_methods:shutdown()
-	if self.type == "server" and (self.state == "open" or self.state == "half closed (remote)") then
-		-- Make sure we're at the front of the pipeline
-		if self.connection.pipeline:peek() ~= self then
-			self.pipeline_cond:wait() -- wait without a timeout should never fail
-			assert(self.connection.pipeline:peek() == self)
-		end
-		if not self.body_write_type then
-			-- Can send server error response
-			self:write_headers(server_error_headers, true)
-		end
-	elseif self.state == "half closed (local)" then
-		-- we'd like to finishing reading any remaining response so that we get out of the way
-		local start = self.stats_recv
-		repeat
-			-- don't bother continuing if we're reading until connection is closed
-			if self.body_read_type == "close" then
-				break
-			end
-			if self:get_next_chunk(0) == nil then
-				break -- ignore errors
-			end
-		until (self.stats_recv - start) >= clean_shutdown_limit
-		-- state may still be "half closed (local)" (but hopefully moved on to "closed")
-	end
 	if self.state == "idle" then
 		self:set_state("closed")
-	elseif self.state ~= "closed" then
-		-- This is a bad situation: we are trying to shutdown a connection that has the body partially sent
-		-- Especially in the case of Connection: close, where closing indicates EOF,
-		-- this will result in a client only getting a partial response.
-		-- Could also end up here if a client sending headers fails.
-		if self.connection.socket then
-			self.connection.socket:shutdown()
+	else
+		if self.type == "server" and (self.state == "open" or self.state == "half closed (remote)") then
+			-- Make sure we're at the front of the pipeline
+			if self.connection.pipeline:peek() ~= self then
+				-- FIXME: shouldn't have time-taking operation here
+				self.pipeline_cond:wait() -- wait without a timeout should never fail
+				assert(self.connection.pipeline:peek() == self)
+			end
+			if not self.body_write_type then
+				-- Can send an automatic error response
+				local error_headers
+				if self.connection:error("r") == ce.EILSEQ then
+					error_headers = bad_request_headers
+				else
+					error_headers = server_error_headers
+				end
+				self:write_headers(error_headers, true, 0)
+			end
 		end
-		self:set_state("closed")
+		-- read any remaining available response and get out of the way
+		local start = self.stats_recv
+		while (self.state == "open" or self.state == "half closed (local)") and (self.stats_recv - start) < clean_shutdown_limit do
+			if not self:step(0) then
+				break
+			end
+		end
+
+		if self.state ~= "closed" then
+			-- This is a bad situation: we are trying to shutdown a connection that has the body partially sent
+			-- Especially in the case of Connection: close, where closing indicates EOF,
+			-- this will result in a client only getting a partial response.
+			-- Could also end up here if a client sending headers fails.
+			if self.connection.socket then
+				self.connection.socket:shutdown()
+			end
+			self:set_state("closed")
+		end
 	end
+	return true
+end
+
+function stream_methods:step(timeout)
+	if self.state == "open" or self.state == "half closed (local)" or (self.state == "idle" and self.type == "server") then
+		if self.connection.socket == nil then
+			return nil, ce.strerror(ce.EPIPE), ce.EPIPE
+		end
+		if not self.has_main_headers then
+			local headers, err, errno = self:read_headers(timeout)
+			if headers == nil then
+				return nil, err, errno
+			end
+			self.headers_fifo:push(headers)
+			self.headers_cond:signal(1)
+			return true
+		end
+		if self.body_read_left ~= 0 then
+			local chunk, err, errno = self:read_next_chunk(timeout)
+			if chunk == nil then
+				if err == nil then
+					return true
+				end
+				return nil, err, errno
+			end
+			self.chunk_fifo:push(chunk)
+			self.chunk_cond:signal()
+			return true
+		end
+		if self.body_read_type == "chunked" then
+			local trailers, err, errno = self:read_headers(timeout)
+			if trailers == nil then
+				return nil, err, errno
+			end
+			self.headers_fifo:push(trailers)
+			self.headers_cond:signal(1)
+			return true
+		end
+	end
+	if self.state == "half closed (remote)" then
+		return nil, ce.strerror(ce.EIO), ce.EIO
+	end
+	return true
 end
 
 -- read_headers may be called more than once for a stream
@@ -201,55 +256,80 @@ function stream_methods:read_headers(timeout)
 	if self.state == "closed" or self.state == "half closed (remote)" then
 		return nil
 	end
-	local headers = new_headers()
 	local status_code
 	local is_trailers = self.body_read_type == "chunked"
-	if is_trailers then -- luacheck: ignore 542
-	elseif self.type == "server" then
-		if self.state == "half closed (local)" then
-			return nil
-		end
-		local method, path, httpversion =
-			self.connection:read_request_line(deadline and (deadline-monotime()))
-		if method == nil then
-			return nil, path, httpversion
-		end
-		self.req_method = method
-		self.peer_version = httpversion
-		headers:append(":method", method)
-		if method == "CONNECT" then
-			headers:append(":authority", path)
-		else
-			headers:append(":path", path)
-		end
-		headers:append(":scheme", self:checktls() and "https" or "http")
-		self:set_state("open")
-	else -- client
-		-- Make sure we're at front of connection pipeline
-		if self.connection.pipeline:peek() ~= self then
-			if not self.pipeline_cond:wait(deadline and (deadline-monotime)) then
-				return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
+	local headers = self.headers_in_progress
+	if not headers then
+		headers = new_headers()
+		if is_trailers then -- luacheck: ignore 542
+		elseif self.type == "server" then
+			if self.state == "half closed (local)" then
+				return nil
 			end
-			assert(self.connection.pipeline:peek() == self)
-		end
-		local httpversion, reason_phrase
-		httpversion, status_code, reason_phrase =
-			self.connection:read_status_line(deadline and (deadline-monotime()))
-		if httpversion == nil then
-			if status_code == nil then
-				return nil, ce.strerror(ce.EPIPE), ce.EPIPE
+			local method, path, httpversion = self.connection:read_request_line(0)
+			if method == nil then
+				if httpversion == ce.ETIMEDOUT then
+					timeout = deadline and deadline-monotime()
+					if cqueues.poll(self.connection.socket, timeout) ~= timeout then
+						return self:read_headers(deadline and deadline-monotime())
+					end
+				end
+				return nil, path, httpversion
 			end
-			return nil, status_code, reason_phrase
+			self.req_method = method
+			self.peer_version = httpversion
+			headers:append(":method", method)
+			if method == "CONNECT" then
+				headers:append(":authority", path)
+			else
+				headers:append(":path", path)
+			end
+			headers:append(":scheme", self:checktls() and "https" or "http")
+			self:set_state("open")
+		else -- client
+			-- Make sure we're at front of connection pipeline
+			if self.connection.pipeline:peek() ~= self then
+				assert(cqueues.running(), "cannot wait for condition if not within a cqueues coroutine")
+				if cqueues.poll(self.pipeline_cond, timeout) == timeout then
+					return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
+				end
+				assert(self.connection.pipeline:peek() == self)
+			end
+			local httpversion, reason_phrase
+			httpversion, status_code, reason_phrase = self.connection:read_status_line(0)
+			if httpversion == nil then
+				if reason_phrase == ce.ETIMEDOUT then
+					timeout = deadline and deadline-monotime()
+					if cqueues.poll(self.connection.socket, timeout) ~= timeout then
+						return self:read_headers(deadline and deadline-monotime())
+					end
+				elseif status_code == nil then
+					return nil, ce.strerror(ce.EPIPE), ce.EPIPE
+				end
+				return nil, status_code, reason_phrase
+			end
+			self.peer_version = httpversion
+			headers:append(":status", status_code)
+			-- reason phase intentionally does not exist in HTTP2; discard for consistency
 		end
-		self.peer_version = httpversion
-		headers:append(":status", status_code)
-		-- reason phase intentionally does not exist in HTTP2; discard for consistency
+		self.headers_in_progress = headers
+	else
+		if not is_trailers and self.type == "client" then
+			status_code = headers:get(":status")
+		end
 	end
+
 	-- Use while loop for lua 5.1 compatibility
 	while true do
-		local k, v, errno = self.connection:read_header(deadline and (deadline-monotime()))
+		local k, v, errno = self.connection:read_header(0)
 		if k == nil then
 			if v ~= nil then
+				if errno == ce.ETIMEDOUT then
+					timeout = deadline and deadline-monotime()
+					if cqueues.poll(self.connection.socket, timeout) ~= timeout then
+						return self:read_headers(deadline and deadline-monotime())
+					end
+				end
 				return nil, v, errno
 			end
 			break -- Success: End of headers.
@@ -262,13 +342,20 @@ function stream_methods:read_headers(timeout)
 	end
 
 	do
-		local ok, err, errno = self.connection:read_headers_done(deadline and (deadline-monotime()))
+		local ok, err, errno = self.connection:read_headers_done(0)
 		if ok == nil then
-			if err == nil then
+			if errno == ce.ETIMEDOUT then
+				timeout = deadline and deadline-monotime()
+				if cqueues.poll(self.connection.socket, timeout) ~= timeout then
+					return self:read_headers(deadline and deadline-monotime())
+				end
+			elseif err == nil then
 				return nil, ce.strerror(ce.EPIPE), ce.EPIPE
 			end
 			return nil, err, errno
 		end
+		self.headers_in_progress = nil
+		self.has_main_headers = status_code == nil or status_code:sub(1,1) ~= "1" or status_code == "101"
 	end
 
 	do -- if client is sends `Connection: close`, server knows it can close at end of response
@@ -345,7 +432,7 @@ function stream_methods:read_headers(timeout)
 		no_body = false
 		self.body_read_type = "close"
 	end
-	if has_zlib and self.type == "server" and self.state == "open" and not is_trailers and headers:has("te") then
+	if self.use_zlib and self.type == "server" and self.state == "open" and not is_trailers and headers:has("te") then
 		local te = TE:match(headers:get_comma_separated("te"))
 		for _, v in ipairs(te) do
 			local tcoding = v[1]
@@ -370,24 +457,17 @@ end
 function stream_methods:get_headers(timeout)
 	if self.headers_fifo:length() > 0 then
 		return self.headers_fifo:pop()
+	else
+		if self.state == "closed" or self.state == "half closed (remote)" then
+			return nil
+		end
+		local deadline = timeout and monotime()+timeout
+		local ok, err, errno = self:step(timeout)
+		if not ok then
+			return nil, err, errno
+		end
+		return self:get_headers(deadline and deadline-monotime())
 	end
-	if self.body_read_type == "chunked" then
-		-- wait for signal from trailers
-		-- XXX: what if nothing is reading body?
-		local deadline = timeout and monotime() + timeout
-		repeat
-			if self.state == "closed" or self.state == "half closed (remote)" then
-				return nil
-			end
-			if not self.headers_cond:wait(timeout) then
-				return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
-			end
-			timeout = deadline and deadline-monotime()
-		until self.headers_fifo:length() > 0
-		return self.headers_fifo:pop()
-	end
-	-- TODO: locking?
-	return self:read_headers(timeout)
 end
 
 local ignore_fields = {
@@ -442,7 +522,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 	if self.body_write_type == "chunked" then
 		-- we are writing trailers; close off body
 		is_trailers = true
-		local ok, err, errno = self.connection:write_body_last_chunk(nil, deadline and deadline-monotime())
+		local ok, err, errno = self.connection:write_body_last_chunk(nil, 0)
 		if not ok then
 			return nil, err, errno
 		end
@@ -450,19 +530,26 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		if self.state == "idle" then
 			error("cannot write headers when stream is idle")
 		end
+		status_code = headers:get(":status")
+		-- RFC 7231 Section 6.2:
+		-- Since HTTP/1.0 did not define any 1xx status codes, a server MUST NOT send a 1xx response to an HTTP/1.0 client.
+		if status_code and status_code:sub(1,1) == "1" and self.peer_version < 1.1 then
+			error("a server MUST NOT send a 1xx response to an HTTP/1.0 client")
+		end
 		-- Make sure we're at the front of the pipeline
 		if self.connection.pipeline:peek() ~= self then
-			if not self.pipeline_cond:wait(deadline and (deadline-monotime)) then
+			assert(cqueues.running(), "cannot wait for condition if not within a cqueues coroutine")
+			headers = headers:clone() -- don't want user to edit it and send wrong headers
+			if cqueues.poll(self.pipeline_cond, timeout) == timeout then
 				return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 			end
 			assert(self.connection.pipeline:peek() == self)
 		end
-		status_code = headers:get(":status")
 		if status_code then
 			-- Should send status line
 			local reason_phrase = reason_phrases[status_code]
 			local version = math.min(self.connection.version, self.peer_version)
-			local ok, err, errno = self.connection:write_status_line(version, status_code, reason_phrase, deadline and deadline-monotime())
+			local ok, err, errno = self.connection:write_status_line(version, status_code, reason_phrase, 0)
 			if not ok then
 				return nil, err, errno
 			end
@@ -480,17 +567,19 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 				assert(self.connection.version < 1.1 or headers:has(":authority"), "missing authority")
 				path = assert(headers:get(":path"), "missing path")
 			end
-			if self.req_locked then
+			if self.connection.req_locked then
 				-- Wait until previous responses have been fully written
-				if not self.connection.req_cond:wait(deadline and (deadline-monotime())) then
+				assert(cqueues.running(), "cannot wait for condition if not within a cqueues coroutine")
+				headers = headers:clone() -- don't want user to edit it and send wrong headers
+				if cqueues.poll(self.connection.req_cond, timeout) == timeout then
 					return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 				end
-				assert(self.req_locked == nil)
+				assert(self.connection.req_locked == nil)
 			end
 			self.connection.pipeline:push(self)
 			self.connection.req_locked = self
 			-- write request line
-			local ok, err, errno = self.connection:write_request_line(method, path, self.connection.version, deadline and (deadline-monotime()))
+			local ok, err, errno = self.connection:write_request_line(method, path, self.connection.version, 0)
 			if not ok then
 				return nil, err, errno
 			end
@@ -602,7 +691,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		if self.close_when_done and not has(connection_header, "close") then
 			table.insert(connection_header, "close")
 		end
-		if has_zlib then
+		if self.use_zlib then
 			if self.type == "client" then
 				-- If we support zlib; add a "te" header indicating we support the gzip transfer-encoding
 				add_te_gzip = true
@@ -638,7 +727,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 
 	for name, value in headers:each() do
 		if not ignore_fields[name] then
-			local ok, err, errno = self.connection:write_header(name, value, deadline and (deadline-monotime()))
+			local ok, err, errno = self.connection:write_header(name, value, 0)
 			if not ok then
 				return nil, err, errno
 			end
@@ -646,7 +735,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 			-- for CONNECT requests, :authority is the path
 			if self.req_method ~= "CONNECT" then
 				-- otherwise it's the Host header
-				local ok, err, errno = self.connection:write_header("host", value, deadline and (deadline-monotime()))
+				local ok, err, errno = self.connection:write_header("host", value, 0)
 				if not ok then
 					return nil, err, errno
 				end
@@ -659,7 +748,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		if not has(connection_header, "te") then
 			table.insert(connection_header, "te")
 		end
-		local ok, err, errno = self.connection:write_header("te", "gzip, deflate", deadline and deadline-monotime())
+		local ok, err, errno = self.connection:write_header("te", "gzip, deflate", 0)
 		if not ok then
 			return nil, err, errno
 		end
@@ -681,19 +770,19 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 			value[i] = table.concat(params, ";")
 		end
 		value = table.concat(value, ",")
-		local ok, err, errno = self.connection:write_header("transfer-encoding", value, deadline and (deadline-monotime()))
+		local ok, err, errno = self.connection:write_header("transfer-encoding", value, 0)
 		if not ok then
 			return nil, err, errno
 		end
 	elseif cl then
-		local ok, err, errno = self.connection:write_header("content-length", cl, deadline and (deadline-monotime()))
+		local ok, err, errno = self.connection:write_header("content-length", cl, 0)
 		if not ok then
 			return nil, err, errno
 		end
 	end
 	if connection_header and connection_header[1] then
 		local value = table.concat(connection_header, ",")
-		local ok, err, errno = self.connection:write_header("connection", value, deadline and (deadline-monotime()))
+		local ok, err, errno = self.connection:write_header("connection", value, 0)
 		if not ok then
 			return nil, err, errno
 		end
@@ -724,30 +813,28 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 	return true
 end
 
-function stream_methods:get_next_chunk(timeout)
-	local chunk = self.body_buffer
-	if chunk then
-		self.body_buffer = nil
-		return chunk
-	end
+function stream_methods:read_next_chunk(timeout)
 	if self.state == "closed" or self.state == "half closed (remote)" then
 		return nil
 	end
 	local end_stream
-	local err, errno
+	local chunk, err, errno
 	if self.body_read_type == "chunked" then
 		local deadline = timeout and (monotime()+timeout)
-		chunk, err, errno = self.connection:read_body_chunk(timeout)
+		if self.body_read_left == 0 then
+			chunk = false
+		else
+			chunk, err, errno = self.connection:read_body_chunk(timeout)
+		end
 		if chunk == false then
-			-- read trailers
-			local trailers
-			trailers, err, errno = self:read_headers(deadline and (deadline-monotime()))
-			if not trailers then
+			-- last chunk, :read_headers should be called to get trailers
+			self.body_read_left = 0
+			-- for API compat: attempt to read trailers
+			local ok
+			ok, err, errno = self:step(deadline and deadline-monotime())
+			if not ok then
 				return nil, err, errno
 			end
-			self.headers_fifo:push(trailers)
-			self.headers_cond:signal(1)
-			-- :read_headers has already closed connection; return immediately
 			return nil
 		else
 			end_stream = false
@@ -805,13 +892,16 @@ function stream_methods:get_next_chunk(timeout)
 	return chunk, err, errno
 end
 
-function stream_methods:unget(str)
-	local chunk = self.body_buffer
-	if chunk then
-		self.body_buffer = str .. chunk
-	else
-		self.body_buffer = str
+function stream_methods:get_next_chunk(timeout)
+	if self.chunk_fifo:length() > 0 then
+		return self.chunk_fifo:pop()
 	end
+	return self:read_next_chunk(timeout)
+end
+
+function stream_methods:unget(str)
+	self.chunk_fifo:insert(1, str)
+	self.chunk_cond:signal()
 	return true
 end
 
@@ -821,6 +911,8 @@ function stream_methods:write_chunk(chunk, end_stream, timeout)
 		error("cannot write chunk when stream is " .. self.state)
 	elseif self.state == "closed" or self.state == "half closed (local)" or self.connection.socket == nil then
 		return nil, ce.strerror(ce.EPIPE), ce.EPIPE
+	elseif self.body_write_type == nil then
+		error("cannot write body before headers")
 	end
 	if self.type == "client" then
 		assert(self.connection.req_locked == self)

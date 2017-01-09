@@ -4,7 +4,7 @@ version = "scm-0"
 description = {
 	summary = "HTTP library for Lua";
 	homepage = "https://github.com/daurnimator/lua-http";
-	license = "MIT/X11";
+	license = "MIT";
 }
 
 source = {
@@ -15,8 +15,8 @@ dependencies = {
 	"lua >= 5.1";
 	"compat53 >= 0.3"; -- Only if lua < 5.3
 	"bit32"; -- Only if lua == 5.1
-	"cqueues >= 20160808";
-	"luaossl >= 20150727";
+	"cqueues >= 20161214";
+	"luaossl >= 20161208";
 	"basexx >= 0.2.0";
 	"lpeg";
 	"lpeg_patterns >= 0.3";
@@ -28,6 +28,7 @@ build = {
 	modules = {
 		["http.bit"] = "http/bit.lua";
 		["http.client"] = "http/client.lua";
+		["http.connection_common"] = "http/connection_common.lua";
 		["http.h1_connection"] = "http/h1_connection.lua";
 		["http.h1_reason_phrases"] = "http/h1_reason_phrases.lua";
 		["http.h1_stream"] = "http/h1_stream.lua";

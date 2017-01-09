@@ -1,9 +1,12 @@
 local openssl_ctx = require "openssl.ssl.context"
 local openssl_pkey = require "openssl.pkey"
-local openssl_store = require "openssl.x509.store"
+local openssl_verify_param = require "openssl.x509.verify_param"
 
 -- Detect if openssl was compiled with ALPN enabled
 local has_alpn = openssl_ctx.new().setAlpnSelect ~= nil
+
+-- OpenSSL did not always have hostname validation.
+local has_hostname_validation = openssl_verify_param.new().setHost ~= nil
 
 -- Creates a cipher list suitable for passing to `setCipherList`
 local function cipher_list(arr)
@@ -695,28 +698,36 @@ local default_tls_options = openssl_ctx.OP_NO_COMPRESSION
 	+ openssl_ctx.OP_NO_SSLv2
 	+ openssl_ctx.OP_NO_SSLv3
 
+local client_params = openssl_verify_param.new()
+client_params:setPurpose("sslserver") -- the purpose the peer has to present
+
 local function new_client_context()
 	local ctx = openssl_ctx.new("TLS", false)
 	ctx:setCipherList(intermediate_cipher_list)
 	ctx:setOptions(default_tls_options)
+	ctx:setParam(client_params)
 	ctx:setEphemeralKey(openssl_pkey.new{ type = "EC", curve = "prime256v1" })
-	local store = openssl_store.new()
-	store:add("/etc/ssl/certs/") -- reasonable default until https://github.com/wahern/luaossl/issues/67 is fixed
-	ctx:setStore(store)
+	local store = ctx:getStore()
+	store:addDefaults()
 	ctx:setVerify(openssl_ctx.VERIFY_PEER)
 	return ctx
 end
+
+local server_params = openssl_verify_param.new()
+server_params:setPurpose("sslclient") -- the purpose the peer has to present
 
 local function new_server_context()
 	local ctx = openssl_ctx.new("TLS", true)
 	ctx:setCipherList(intermediate_cipher_list)
 	ctx:setOptions(default_tls_options)
+	ctx:setParam(server_params)
 	ctx:setEphemeralKey(openssl_pkey.new{ type = "EC", curve = "prime256v1" })
 	return ctx
 end
 
 return {
 	has_alpn = has_alpn;
+	has_hostname_validation = has_hostname_validation;
 	modern_cipher_list = modern_cipher_list;
 	intermediate_cipher_list = intermediate_cipher_list;
 	banned_ciphers = banned_ciphers;

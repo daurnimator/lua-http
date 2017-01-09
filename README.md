@@ -19,25 +19,21 @@ Can be found at [https://daurnimator.github.io/lua-http/](https://daurnimator.gi
 [![Build Status](https://travis-ci.org/daurnimator/lua-http.svg)](https://travis-ci.org/daurnimator/lua-http)
 [![Coverage Status](https://coveralls.io/repos/daurnimator/lua-http/badge.svg?branch=master&service=github)](https://coveralls.io/github/daurnimator/lua-http?branch=master)
 
-  - First release impending!
-  - HTTP request API is mostly stable
-  - The HTTP server API is reaching stability
-
 
 # Installation
 
 It's recommended to install lua-http by using [luarocks](https://luarocks.org/).
 This will automatically install run-time lua dependencies for you.
 
-    $ luarocks install --server=http://luarocks.org/dev http
+    $ luarocks install http
 
 ## Dependencies
 
-  - [cqueues](http://25thandclement.com/~william/projects/cqueues.html) >= 20160808
-  - [luaossl](http://25thandclement.com/~william/projects/luaossl.html) >= 20150727
+  - [cqueues](http://25thandclement.com/~william/projects/cqueues.html) >= 20161214
+  - [luaossl](http://25thandclement.com/~william/projects/luaossl.html) >= 20161208
   - [basexx](https://github.com/aiq/basexx/) >= 0.2.0
   - [lpeg](http://www.inf.puc-rio.br/~roberto/lpeg/lpeg.html)
-  - [lpeg_patterns](https://github.com/daurnimator/lpeg_patterns) >= 0.2
+  - [lpeg_patterns](https://github.com/daurnimator/lpeg_patterns) >= 0.3
   - [fifo](https://github.com/daurnimator/fifo.lua)
 
 To use gzip compression you need **one** of:
@@ -93,14 +89,4 @@ If using lua 5.1 you will need
 
 ## Generating documentation
 
-Documentation is written in markdown and intended to be consumed by [pandoc](http://pandoc.org/)
-
-  - To generate self-contained HTML documentation:
-    ```
-    $ pandoc -t html5 --template=doc/template.html --section-divs --self-contained --toc -c doc/site.css doc/index.md doc/metadata.yaml
-    ```
-
-  - To generate a pdf manual:
-    ```
-    $ pandoc -s -t latex -V documentclass=article -V classoption=oneside -V links-as-notes -V geometry=a4paper,includeheadfoot,margin=2.54cm doc/index.md doc/metadata.yaml -o lua-http.pdf
-    ```
+Documentation is written in markdown and intended to be consumed by [pandoc](http://pandoc.org/). See the `doc/` directory for more information.

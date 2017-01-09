@@ -1,3 +1,4 @@
+#!/usr/bin/env lua
 --[[
 Verbosely fetches an HTTP resource
 If a body is given, use a POST request
@@ -41,6 +42,10 @@ for k, v in headers:each() do
 end
 print()
 print("## BODY")
-local body = stream:get_body_as_string()
+local body, err = stream:get_body_as_string()
+if not body and err then
+	io.stderr:write(tostring(err), "\n")
+	os.exit(1)
+end
 print(body)
 print()

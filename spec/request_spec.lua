@@ -346,6 +346,14 @@ describe("http.request module", function()
 			orig_headers:append("location", "this isn't valid")
 			assert.same({nil, "invalid URI in location header", ce.EINVAL}, {orig_req:handle_redirect(orig_headers)})
 		end)
+		it("fails on unknown scheme", function()
+			local ce = require "cqueues.errno"
+			local orig_req = request.new_from_uri("http://example.com")
+			local orig_headers = headers.new()
+			orig_headers:append(":status", "302")
+			orig_headers:append("location", "mycoolscheme://blah.com:1234/example")
+			assert.same({nil, "unknown scheme", ce.EINVAL}, {orig_req:handle_redirect(orig_headers)})
+		end)
 		it("detects POST => GET transformation", function()
 			local orig_req = request.new_from_uri("http://example.com")
 			orig_req.headers:upsert(":method", "POST")
@@ -467,7 +475,7 @@ describe("http.request module", function()
 		non_verifying_tls_context:setVerify(openssl_ctx.VERIFY_NONE)
 		local function test(server_cb, client_cb)
 			local cq = cqueues.new()
-			local s = server.listen {
+			local s = assert(server.listen {
 				host = "localhost";
 				port = 0;
 				onstream = function(s, stream)
@@ -478,7 +486,7 @@ describe("http.request module", function()
 						s:close()
 					end
 				end;
-			}
+			})
 			assert(s:listen())
 			local _, host, port = s:localname()
 			cq:wrap(function()
@@ -564,7 +572,7 @@ describe("http.request module", function()
 			end)
 		end)
 		it("works with file body", function()
-			local file = io.tmpfile()
+			local file = assert(io.tmpfile())
 			assert(file:write("hello world"))
 			test(function(stream)
 				assert(stream:get_headers())
@@ -758,16 +766,17 @@ describe("http.request module", function()
 			end)
 		end)
 		it("can make request via SOCKS proxy", function()
+			local ca = require "cqueues.auxlib"
 			local cs = require "cqueues.socket"
-			local socks_server = cs.listen {
+			local socks_server = ca.assert(cs.listen {
 				family = cs.AF_INET;
 				host = "localhost";
 				port = 0;
-			}
+			})
 			assert(socks_server:listen())
 			local _, socks_host, socks_port = socks_server:localname()
 
-			local s = server.listen {
+			local s = assert(server.listen {
 				host = "localhost";
 				port = 0;
 				onstream = function(s, stream)
@@ -780,7 +789,7 @@ describe("http.request module", function()
 					stream.connection:shutdown()
 					s:close()
 				end;
-			}
+			})
 			assert(s:listen())
 			local _, host, port = s:localname()
 
@@ -807,6 +816,7 @@ describe("http.request module", function()
 			end)
 			cq:wrap(function() -- SOCKS server
 				local sock = socks_server:accept()
+				sock:setmode("b", "b")
 				assert.same("\5", sock:read(1))
 				local n = assert(sock:read(1)):byte()
 				local available_auth = assert(sock:read(n))
@@ -824,7 +834,7 @@ describe("http.request module", function()
 		it("pays attention to HSTS", function()
 			local cq = cqueues.new()
 			local n = 0
-			local s = server.listen {
+			local s = assert(server.listen {
 				host = "localhost";
 				port = 0;
 				onstream = function(s, stream)
@@ -832,7 +842,6 @@ describe("http.request module", function()
 					n = n + 1
 					local resp_headers = new_headers()
 					resp_headers:append(":status", "200")
-					resp_headers:append("connection", "close")
 					if n < 3 then
 						resp_headers:append("strict-transport-security", "max-age=10")
 					else
@@ -845,7 +854,7 @@ describe("http.request module", function()
 						s:close()
 					end
 				end;
-			}
+			})
 			assert(s:listen())
 			local _, _, port = s:localname()
 			cq:wrap(function()
@@ -854,7 +863,7 @@ describe("http.request module", function()
 			cq:wrap(function()
 				-- new store so we don't test with the default one (which will outlive tests)
 				local hsts_store = require "http.hsts".new_store()
-				do -- first a http request that *shouldn't* fill in the store
+				do -- first an http request that *shouldn't* fill in the store
 					local req = request.new_from_uri {
 						scheme = "http";
 						host = "localhost";
@@ -869,7 +878,7 @@ describe("http.request module", function()
 					assert.falsy(hsts_store:check("localhost"))
 					stream:shutdown()
 				end
-				do -- now a https request that *will* fill in the store
+				do -- now an https request that *will* fill in the store
 					local req = request.new_from_uri {
 						scheme = "https";
 						host = "localhost";
@@ -908,7 +917,6 @@ describe("http.request module", function()
 				assert(stream:get_headers())
 				local resp_headers = new_headers()
 				resp_headers:append(":status", "200")
-				resp_headers:append("connection", "close")
 				resp_headers:append("strict-transport-security", "max-age")
 				assert(stream:write_headers(resp_headers, false))
 				assert(stream:write_chunk("hello world", true))
@@ -928,7 +936,6 @@ describe("http.request module", function()
 				assert(stream:get_headers())
 				local resp_headers = new_headers()
 				resp_headers:append(":status", "200")
-				resp_headers:append("connection", "close")
 				resp_headers:append("strict-transport-security", "max-age=")
 				assert(stream:write_headers(resp_headers, false))
 				assert(stream:write_chunk("hello world", true))
@@ -950,7 +957,6 @@ describe("http.request module", function()
 				assert(stream:get_headers())
 				local resp_headers = new_headers()
 				resp_headers:append(":status", "200")
-				resp_headers:append("connection", "close")
 				resp_headers:append("strict-transport-security", "max-age=10; preload")
 				assert(stream:write_headers(resp_headers, false))
 				assert(stream:write_chunk("hello world", true))
