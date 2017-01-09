@@ -145,7 +145,7 @@ local function split_authority(authority, scheme)
 			return nil, "unknown scheme"
 		end
 	end
-	local ipv6 = authority:match("%[([:%x]+)%]")
+	local ipv6 = authority:match("^%[([:%x]+)%]$")
 	if ipv6 then
 		host = ipv6
 	else
