@@ -89,6 +89,7 @@ local function connect(options, timeout)
 		host = options.host;
 		port = options.port;
 		path = options.path;
+		bind = options.bind;
 		sendname = false;
 		v6only = options.v6only;
 		nodelay = true;
