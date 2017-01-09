@@ -138,7 +138,7 @@ local function split_authority(authority, scheme)
 	local h, p = authority:match("^ *(.-):(%d+) *$")
 	if p then
 		authority = h
-		port = tonumber(p)
+		port = tonumber(p, 10)
 	else -- when port missing from host header, it defaults to the default for that scheme
 		port = scheme_to_port[scheme]
 		if port == nil then
