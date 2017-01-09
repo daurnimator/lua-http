@@ -1,3 +1,4 @@
+local cqueues = require "cqueues"
 local ca = require "cqueues.auxlib"
 local ce = require "cqueues.errno"
 
@@ -41,9 +42,31 @@ local function new_connection(socket, conn_type)
 		-- A function that will be called if the connection becomes idle
 		onidle_ = nil;
 	}, connection_mt)
+	socket:setvbuf("full", math.huge) -- 'infinite' buffering; no write locks needed
 	socket:setmode("b", "bf")
 	socket:onerror(onerror)
 	return self
+end
+
+function connection_methods:pollfd()
+	if self.socket == nil then
+		return nil
+	end
+	return self.socket:pollfd()
+end
+
+function connection_methods:events()
+	if self.socket == nil then
+		return nil
+	end
+	return self.socket:events()
+end
+
+function connection_methods:timeout()
+	if self.socket == nil then
+		return nil
+	end
+	return self.socket:timeout()
 end
 
 function connection_methods:onidle_() -- luacheck: ignore 212
@@ -98,6 +121,21 @@ function connection_methods:peername()
 		return nil
 	end
 	return ca.fileresult(self.socket:peername())
+end
+
+-- Primarily used for testing
+function connection_methods:flush(timeout)
+	return self.socket:flush("n", timeout)
+end
+
+function connection_methods:close()
+	self:shutdown()
+	if self.socket then
+		cqueues.poll()
+		cqueues.poll()
+		self.socket:close()
+	end
+	return true
 end
 
 return {

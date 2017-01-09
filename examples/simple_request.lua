@@ -1,3 +1,4 @@
+#!/usr/bin/env lua
 --[[
 Verbosely fetches an HTTP resource
 If a body is given, use a POST request

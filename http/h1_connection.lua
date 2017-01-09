@@ -2,6 +2,7 @@
 
 local cqueues = require "cqueues"
 local monotime = cqueues.monotime
+local ca = require "cqueues.auxlib"
 local cc = require "cqueues.condition"
 local ce = require "cqueues.errno"
 local connection_common = require "http.connection_common"
@@ -82,16 +83,9 @@ function connection_methods:shutdown(dir)
 		end
 	end
 	if self.socket then
-		self.socket:shutdown(dir)
-	end
-end
-
-function connection_methods:close()
-	self:shutdown()
-	if self.socket then
-		cqueues.poll()
-		cqueues.poll()
-		self.socket:close()
+		return ca.fileresult(self.socket:shutdown(dir))
+	else
+		return true
 	end
 end
 
@@ -107,34 +101,34 @@ end
 -- this function *should never throw*
 function connection_methods:get_next_incoming_stream(timeout)
 	assert(self.type == "server")
-	local deadline = timeout and (monotime()+timeout)
 	-- Make sure we don't try and read before the previous request has been fully read
-	repeat
-		-- Wait until previous requests have been fully read
-		if self.req_locked then
-			if not self.req_cond:wait(deadline and deadline - monotime()) then
-				return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
+	if self.req_locked then
+		local deadline = timeout and monotime()+timeout
+		assert(cqueues.running(), "cannot wait for condition if not within a cqueues coroutine")
+		if cqueues.poll(self.req_cond, timeout) == timeout then
+			return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
+		end
+		timeout = deadline and deadline-monotime()
+		assert(self.req_locked == nil)
+	end
+	if self.socket == nil then
+		return nil
+	end
+	-- Wait for at least one byte
+	local ok, err, errno = self.socket:fill(1, 0)
+	if not ok then
+		if errno == ce.ETIMEDOUT then
+			local deadline = timeout and monotime()+timeout
+			if cqueues.poll(self.socket, timeout) ~= timeout then
+				return self:get_next_incoming_stream(deadline and deadline-monotime())
 			end
-			assert(self.req_locked == nil)
 		end
-		if self.socket == nil then
-			return nil
-		end
-		-- Wait for at least one byte
-		local ok, err, errno = self.socket:fill(1, deadline and deadline-monotime())
-		if not ok then
-			return nil, err, errno
-		end
-	until not self.req_locked
+		return nil, err, errno
+	end
 	local stream = h1_stream.new(self)
 	self.pipeline:push(stream)
 	self.req_locked = stream
 	return stream
-end
-
--- Primarily used for testing
-function connection_methods:flush(...)
-	return self.socket:flush(...)
 end
 
 function connection_methods:read_request_line(timeout)
@@ -148,21 +142,17 @@ function connection_methods:read_request_line(timeout)
 		line, err, errno = self.socket:xread("*L", deadline and (deadline-monotime()))
 	end
 	if line == nil then
-		if err == nil and self.socket:pending() > 0 then
-			self.socket:seterror("r", ce.EPROTO)
-			if preline then
-				local ok, errno2 = self.socket:unget(preline)
-				if not ok then
-					return nil, onerror(self.socket, "unget", errno2)
-				end
+		if preline then
+			local ok, errno2 = self.socket:unget(preline)
+			if not ok then
+				return nil, onerror(self.socket, "unget", errno2)
 			end
-			return nil, onerror(self.socket, "read_request_line", ce.EPROTO)
 		end
 		return nil, err, errno
 	end
 	local method, path, httpversion = line:match("^(%w+) (%S+) HTTP/(1%.[01])\r\n$")
 	if not method then
-		self.socket:seterror("r", ce.EPROTO)
+		self.socket:seterror("r", ce.EILSEQ)
 		local ok, errno2 = self.socket:unget(line)
 		if not ok then
 			return nil, onerror(self.socket, "unget", errno2)
@@ -173,7 +163,7 @@ function connection_methods:read_request_line(timeout)
 				return nil, onerror(self.socket, "unget", errno2)
 			end
 		end
-		return nil, onerror(self.socket, "read_request_line", ce.EPROTO)
+		return nil, onerror(self.socket, "read_request_line", ce.EILSEQ)
 	end
 	httpversion = httpversion == "1.0" and 1.0 or 1.1 -- Avoid tonumber() due to locale issues
 	return method, path, httpversion
@@ -182,20 +172,16 @@ end
 function connection_methods:read_status_line(timeout)
 	local line, err, errno = self.socket:xread("*L", timeout)
 	if line == nil then
-		if err == nil and self.socket:pending() > 0 then
-			self.socket:seterror("r", ce.EPROTO)
-			return nil, onerror(self.socket, "read_status_line", ce.EPROTO)
-		end
 		return nil, err, errno
 	end
 	local httpversion, status_code, reason_phrase = line:match("^HTTP/(1%.[01]) (%d%d%d) (.*)\r\n$")
 	if not httpversion then
-		self.socket:seterror("r", ce.EPROTO)
+		self.socket:seterror("r", ce.EILSEQ)
 		local ok, errno2 = self.socket:unget(line)
 		if not ok then
 			return nil, onerror(self.socket, "unget", errno2)
 		end
-		return nil, onerror(self.socket, "read_status_line", ce.EPROTO)
+		return nil, onerror(self.socket, "read_status_line", ce.EILSEQ)
 	end
 	httpversion = httpversion == "1.0" and 1.0 or 1.1 -- Avoid tonumber() due to locale issues
 	return httpversion, status_code, reason_phrase
@@ -219,8 +205,8 @@ function connection_methods:read_header(timeout)
 				end
 			end
 			if pending_bytes > 0 then
-				self.socket:seterror("r", ce.EPROTO)
-				return nil, onerror(self.socket, "read_header", ce.EPROTO)
+				self.socket:seterror("r", ce.EILSEQ)
+				return nil, onerror(self.socket, "read_header", ce.EILSEQ)
 			end
 		end
 		return nil, err, errno
@@ -235,12 +221,12 @@ function connection_methods:read_header(timeout)
 	message before forwarding the message downstream.]]
 	local key, val = line:match("^([^%s:]+):[ \t]*(.-)[ \t]*$")
 	if not key then
-		self.socket:seterror("r", ce.EPROTO)
+		self.socket:seterror("r", ce.EILSEQ)
 		local ok, errno2 = self.socket:unget(line)
 		if not ok then
 			return nil, onerror(self.socket, "unget", errno2)
 		end
-		return nil, onerror(self.socket, "read_header", ce.EPROTO)
+		return nil, onerror(self.socket, "read_header", ce.EILSEQ)
 	end
 	return key, val
 end
@@ -250,14 +236,14 @@ function connection_methods:read_headers_done(timeout)
 	if crlf == "\r\n" then
 		return true
 	elseif crlf ~= nil or (err == nil and self.socket:pending() > 0) then
-		self.socket:seterror("r", ce.EPROTO)
+		self.socket:seterror("r", ce.EILSEQ)
 		if crlf then
 			local ok, errno2 = self.socket:unget(crlf)
 			if not ok then
 				return nil, onerror(self.socket, "unget", errno2)
 			end
 		end
-		return nil, onerror(self.socket, "read_headers_done", ce.EPROTO)
+		return nil, onerror(self.socket, "read_headers_done", ce.EILSEQ)
 	else
 		return nil, err, errno
 	end
@@ -277,20 +263,16 @@ function connection_methods:read_body_chunk(timeout)
 	local deadline = timeout and (monotime()+timeout)
 	local chunk_header, err, errno = self.socket:xread("*L", timeout)
 	if chunk_header == nil then
-		if err == nil and self.socket:pending() > 0 then
-			self.socket:seterror("r", ce.EPROTO)
-			return nil, onerror(self.socket, "read_body_chunk", ce.EPROTO)
-		end
 		return nil, err, errno
 	end
 	local chunk_size, chunk_ext = chunk_header:match("^(%x+) *(.-)\r\n")
 	if chunk_size == nil then
-		self.socket:seterror("r", ce.EPROTO)
+		self.socket:seterror("r", ce.EILSEQ)
 		local unget_ok1, unget_errno1 = self.socket:unget(chunk_header)
 		if not unget_ok1 then
 			return nil, onerror(self.socket, "unget", unget_errno1)
 		end
-		return nil, onerror(self.socket, "read_body_chunk", ce.EPROTO)
+		return nil, onerror(self.socket, "read_body_chunk", ce.EILSEQ)
 	elseif #chunk_size > 8 then
 		self.socket:seterror("r", ce.E2BIG)
 		return nil, onerror(self.socket, "read_body_chunk", ce.E2BIG)
@@ -303,11 +285,21 @@ function connection_methods:read_body_chunk(timeout)
 		-- you MUST read trailers after this!
 		return false, chunk_ext
 	else
-		local ok, err2, errno2 = self.socket:fill(chunk_size+2, deadline and deadline-monotime())
+		local ok, err2, errno2 = self.socket:fill(chunk_size+2, 0)
 		if not ok then
 			local unget_ok1, unget_errno1 = self.socket:unget(chunk_header)
 			if not unget_ok1 then
 				return nil, onerror(self.socket, "unget", unget_errno1)
+			end
+			if errno2 == ce.ETIMEDOUT then
+				timeout = deadline and deadline-monotime()
+				if cqueues.poll(self.socket, timeout) ~= timeout then
+					-- retry
+					return self:read_body_chunk(deadline and deadline-monotime())
+				end
+			elseif err2 == nil then
+				self.socket:seterror("r", ce.EILSEQ)
+				return nil, onerror(self.socket, "read_body_chunk", ce.EILSEQ)
 			end
 			return nil, err2, errno2
 		end
@@ -315,7 +307,7 @@ function connection_methods:read_body_chunk(timeout)
 		local chunk_data = assert(self.socket:xread(chunk_size, "b", 0))
 		local crlf = assert(self.socket:xread(2, "b", 0))
 		if crlf ~= "\r\n" then
-			self.socket:seterror("r", ce.EPROTO)
+			self.socket:seterror("r", ce.EILSEQ)
 			local unget_ok3, unget_errno3 = self.socket:unget(crlf)
 			if not unget_ok3 then
 				return nil, onerror(self.socket, "unget", unget_errno3)
@@ -328,7 +320,7 @@ function connection_methods:read_body_chunk(timeout)
 			if not unget_ok1 then
 				return nil, onerror(self.socket, "unget", unget_errno1)
 			end
-			return nil, onerror(self.socket, "read_body_chunk", ce.EPROTO)
+			return nil, onerror(self.socket, "read_body_chunk", ce.EILSEQ)
 		end
 		-- Success!
 		return chunk_data, chunk_ext

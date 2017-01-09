@@ -1,4 +1,10 @@
--- Methods common to both http 1 and http 2 streams
+--[[
+This module provides common functions for HTTP streams
+no matter the underlying protocol version.
+
+This is usually an internal module, and should be used by adding the
+`methods` exposed to your own HTTP stream objects.
+]]
 
 local cqueues = require "cqueues"
 local monotime = cqueues.monotime

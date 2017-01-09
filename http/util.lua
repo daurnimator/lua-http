@@ -135,17 +135,17 @@ local scheme_to_port = {
 -- Splits a :authority header (same as Host) into host and port
 local function split_authority(authority, scheme)
 	local host, port
-	local h, p = authority:match("^ *(.-):(%d+) *$")
+	local h, p = authority:match("^[ \t]*(.-):(%d+)[ \t]*$")
 	if p then
 		authority = h
-		port = tonumber(p)
+		port = tonumber(p, 10)
 	else -- when port missing from host header, it defaults to the default for that scheme
 		port = scheme_to_port[scheme]
 		if port == nil then
 			return nil, "unknown scheme"
 		end
 	end
-	local ipv6 = authority:match("%[([:%x]+)%]")
+	local ipv6 = authority:match("^%[([:%x]+)%]$")
 	if ipv6 then
 		host = ipv6
 	else

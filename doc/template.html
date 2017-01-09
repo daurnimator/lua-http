@@ -68,22 +68,27 @@ $for(include-after)$
 $include-after$
 $endfor$
 <style type="text/css">
-li.collapsible {
-  color: #212121;
-  cursor: pointer;
-  list-style-type: none;
-}
-li.collapsible:before {
-  margin-left: -1rem; /* undo ul's padding-left */
-  width: 1rem;
-  display: inline-block;
-  content: '- ';
-}
-li.collapsible[state="collapsed"]:before {
-  content: '+ ';
-}
-li.collapsible[state="collapsed"] > ul {
+li.collapsible > ul {
   display: none;
+}
+@media screen {
+  li.collapsible {
+    cursor: pointer;
+    list-style-type: none;
+  }
+  li.collapsible:before {
+    margin-left: -1rem; /* undo ul's padding-left */
+    width: 1rem;
+    display: inline-block;
+    text-align: center;
+    content: '-';
+  }
+  li.collapsible[state="collapsed"]:before {
+    content: '+';
+  }
+  li.collapsible:not([state="collapsed"]) > ul {
+    display: block;
+  }
 }
 </style>
 <script type="text/javascript">
@@ -93,7 +98,7 @@ li.collapsible[state="collapsed"] > ul {
     element.onclick = function(event) {
       if (event.toElement != this) return;
       if (this.getAttribute('state') == 'collapsed') {
-        this.setAttribute('state', void 0);
+        this.removeAttribute('state');
       } else {
         this.setAttribute('state', 'collapsed');
       }

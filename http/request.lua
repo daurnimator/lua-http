@@ -16,6 +16,10 @@ local default_user_agent = string.format("%s/%s", http_version.name, http_versio
 local default_hsts_store = http_hsts.new_store()
 local default_proxies = http_proxies.new():update()
 
+local default_h2_settings = {
+	ENABLE_PUSH = false;
+}
+
 local request_methods = {
 	hsts = default_hsts_store;
 	proxies = default_proxies;
@@ -386,9 +390,6 @@ function request_methods:go(timeout)
 				if tls then
 					if connect_request.tls then
 						error("NYI: TLS over TLS")
-					else
-						-- Hack until https://github.com/wahern/cqueues/issues/137 is fixed
-						connect_request.sendname = self.sendname
 					end
 				end
 				-- Perform CONNECT request
@@ -409,7 +410,9 @@ function request_methods:go(timeout)
 				connection, err, errno2 = client.negotiate(sock, {
 					tls = tls;
 					ctx = self.ctx;
+					sendname = self.sendname ~= nil and self.sendname or host;
 					version = self.version;
+					h2_settings = default_h2_settings;
 				}, deadline and deadline-monotime())
 				if connection == nil then
 					sock:close()
@@ -437,8 +440,6 @@ function request_methods:go(timeout)
 				end
 			end
 		elseif proxy.scheme:match "^socks" then
-			-- https://github.com/wahern/cqueues/issues/137
-			assert(self.sendname == nil or self.sendname == host, "NYI: custom SNI over SOCKS")
 			local socks = http_socks.connect(proxy)
 			local ok, err, errno = socks:negotiate(host, port, deadline and deadline-monotime())
 			if not ok then
@@ -448,7 +449,9 @@ function request_methods:go(timeout)
 			connection, err, errno = client.negotiate(sock, {
 				tls = tls;
 				ctx = self.ctx;
+				sendname = self.sendname ~= nil and self.sendname or host;
 				version = self.version;
+				h2_settings = default_h2_settings;
 			}, deadline and deadline-monotime())
 			if connection == nil then
 				sock:close()
@@ -468,6 +471,7 @@ function request_methods:go(timeout)
 			ctx = self.ctx;
 			sendname = self.sendname;
 			version = self.version;
+			h2_settings = default_h2_settings;
 		}, deadline and deadline-monotime())
 		if connection == nil then
 			return nil, err, errno

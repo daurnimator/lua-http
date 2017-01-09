@@ -592,6 +592,7 @@ end
 
 function methods:clear_data()
 	self.data = {}
+	return true
 end
 
 -- Returns a boolean indicating if an entry was successfully removed
@@ -642,27 +643,32 @@ end
 
 function methods:set_max_dynamic_table_size(SETTINGS_HEADER_TABLE_SIZE)
 	self.total_max = SETTINGS_HEADER_TABLE_SIZE
+	return true
 end
 
 function methods:encode_max_size(val)
 	self:append_data(encode_max_size(val))
+	return true
 end
 
 -- Section 4.3
 function methods:resize_dynamic_table(new_size)
 	assert(new_size >= 0)
 	if new_size > self.total_max then
-		h2_errors.COMPRESSION_ERROR("Dynamic Table size update new maximum size MUST be lower than or equal to the limit")
+		return nil, h2_errors.COMPRESSION_ERROR:new_traceback("Dynamic Table size update new maximum size MUST be lower than or equal to the limit")
 	end
 	while new_size < self.dynamic_current_size do
 		assert(self:evict_from_dynamic_table())
 	end
 	self.dynamic_max = new_size
+	return true
 end
 
 function methods:add_to_dynamic_table(name, value, k) -- luacheck: ignore 212
 	-- Early exit if we can't fit into dynamic table
-	if self.dynamic_max == 0 then return end
+	if self.dynamic_max == 0 then
+		return true
+	end
 	local new_entry_size = dynamic_table_entry_size(k)
 	-- Evict old entries until we can fit, Section 4.4
 	while self.dynamic_current_size + new_entry_size > self.dynamic_max do
@@ -670,7 +676,7 @@ function methods:add_to_dynamic_table(name, value, k) -- luacheck: ignore 212
 			--[[It is not an error to attempt to add an entry that is larger than the maximum size;
 			an attempt to add an entry larger than the maximum size causes the table to be emptied
 			of all existing entries, and results in an empty table.]]
-			return
+			return true
 		end
 	end
 	-- Increment current index
@@ -685,6 +691,7 @@ function methods:add_to_dynamic_table(name, value, k) -- luacheck: ignore 212
 		self.dynamic_names_to_indexes[name] = index -- This intentionally overwrites to keep up to date
 	end
 	self.dynamic_current_size = self.dynamic_current_size + new_entry_size
+	return true
 end
 
 function methods:dynamic_table_id_to_index(id)
@@ -776,27 +783,36 @@ function methods:encode_headers(headers)
 			self:add_header_indexed(name, value)
 		end
 	end
+	return true
 end
 
 local function decode_header_helper(self, payload, prefix_len, pos)
 	local index, name, value
 	index, pos = decode_integer(payload, prefix_len, pos)
-	if index == nil then return end
+	if index == nil then
+		return index, pos
+	end
 	if index == 0 then
 		name, pos = decode_string(payload, pos)
-		if name == nil then return end
+		if name == nil then
+			return name, pos
+		end
 		if name:match("%u") then
-			h2_errors.PROTOCOL_ERROR("malformed: header fields must not be uppercase")
+			return nil, h2_errors.PROTOCOL_ERROR:new_traceback("malformed: header fields must not be uppercase")
 		end
 		value, pos = decode_string(payload, pos)
-		if value == nil then return end
+		if value == nil then
+			return value, pos
+		end
 	else
 		name = self:lookup_index(index, true)
 		if name == nil then
-			h2_errors.COMPRESSION_ERROR(string.format("index %d not found in table", index))
+			return nil, h2_errors.COMPRESSION_ERROR:new_traceback(string.format("index %d not found in table", index))
 		end
 		value, pos = decode_string(payload, pos)
-		if value == nil then return end
+		if value == nil then
+			return value, pos
+		end
 	end
 	return name, value, pos
 end
@@ -812,29 +828,44 @@ function methods:decode_headers(payload, header_list, pos)
 			pos = newpos
 			local name, value = self:lookup_index(index, false)
 			if name == nil then
-				h2_errors.COMPRESSION_ERROR(string.format("index %d not found in table", index))
+				return nil, h2_errors.COMPRESSION_ERROR:new_traceback(string.format("index %d not found in table", index))
 			end
 			header_list:append(name, value, false)
 		elseif band(first_byte, 0x40) ~= 0 then -- Section 6.2.1
 			local name, value, newpos = decode_header_helper(self, payload, 6, pos)
-			if name == nil then break end
+			if name == nil then
+				if value == nil then
+					break -- EOF
+				end
+				return nil, value
+			end
 			pos = newpos
 			self:add_to_dynamic_table(name, value, compound_key(name, value))
 			header_list:append(name, value, false)
 		elseif band(first_byte, 0x20) ~= 0 then -- Section 6.3
-			local size, newpos = decode_integer(payload, 5, pos)
-			if size == nil then break end
 			--[[ Section 4.2
 			This dynamic table size update MUST occur at the beginning of the
 			first header block following the change to the dynamic table size.
 			In HTTP/2, this follows a settings acknowledgment.]]
-			-- TODO!
+			if header_list:len() > 0 then
+				return nil, h2_errors.COMPRESSION_ERROR:new_traceback("dynamic table size update MUST occur at the beginning of a header block")
+			end
+			local size, newpos = decode_integer(payload, 5, pos)
+			if size == nil then break end
 			pos = newpos
-			self:resize_dynamic_table(size)
+			local ok, err = self:resize_dynamic_table(size)
+			if not ok then
+				return nil, err
+			end
 		else -- Section 6.2.2 and 6.2.3
 			local never_index = band(first_byte, 0x10) ~= 0
 			local name, value, newpos = decode_header_helper(self, payload, 4, pos)
-			if name == nil then break end
+			if name == nil then
+				if value == nil then
+					break -- EOF
+				end
+				return nil, value
+			end
 			pos = newpos
 			header_list:append(name, value, never_index)
 		end

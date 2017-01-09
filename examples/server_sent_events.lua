@@ -1,3 +1,4 @@
+#!/usr/bin/env lua
 --[[
 A server that responds with an infinite server-side-events format.
 https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events#Event_stream_format
@@ -21,6 +22,11 @@ local myserver = assert(http_server.listen {
 
 		-- Build response headers
 		local res_headers = http_headers.new()
+		if req_method ~= "GET" and req_method ~= "HEAD" then
+			res_headers:upsert(":status", "405")
+			assert(stream:write_headers(res_headers, true))
+			return
+		end
 		if req_headers:get ":path" == "/" then
 			res_headers:append(":status", "200")
 			res_headers:append("content-type", "text/html")

@@ -9,6 +9,7 @@ local connection_common = require "http.connection_common"
 local onerror = connection_common.onerror
 local h2_error = require "http.h2_error"
 local h2_stream = require "http.h2_stream"
+local known_settings = h2_stream.known_settings
 local hpack = require "http.hpack"
 local h2_banned_ciphers = require "http.tls".banned_ciphers
 local spack = string.pack or require "compat53.string".pack
@@ -26,23 +27,21 @@ end
 local preface = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"
 
 local default_settings = {
-	[0x1] = 4096; -- HEADER_TABLE_SIZE
-	[0x2] = true; -- ENABLE_PUSH
-	[0x3] = math.huge; -- MAX_CONCURRENT_STREAMS
-	[0x4] = 65535; -- INITIAL_WINDOW_SIZE
-	[0x5] = 16384; -- MAX_FRAME_SIZE
-	[0x6] = math.huge;  -- MAX_HEADER_LIST_SIZE
+	[known_settings.HEADER_TABLE_SIZE] = 4096;
+	[known_settings.ENABLE_PUSH] = true;
+	[known_settings.MAX_CONCURRENT_STREAMS] = math.huge;
+	[known_settings.INITIAL_WINDOW_SIZE] = 65535;
+	[known_settings.MAX_FRAME_SIZE] = 16384;
+	[known_settings.MAX_HEADER_LIST_SIZE] = math.huge;
 }
 
-local function merge_settings(new, old)
-	return {
-		[0x1] = new[0x1] or old[0x1];
-		[0x2] = new[0x2] or old[0x2];
-		[0x3] = new[0x3] or old[0x3];
-		[0x4] = new[0x4] or old[0x4];
-		[0x5] = new[0x5] or old[0x5];
-		[0x6] = new[0x6] or old[0x6];
-	}
+local function merge_settings(tbl, new)
+	for i=0x1, 0x6 do
+		local v = new[i]
+		if v ~= nil then
+			tbl[i] = v
+		end
+	end
 end
 
 local connection_methods = {}
@@ -59,8 +58,6 @@ function connection_mt:__tostring()
 		self.type)
 end
 
-local connection_main_loop
-
 -- Read bytes from the given socket looking for the http2 connection preface
 -- optionally ungets the bytes in case of failure
 local function socket_has_preface(socket, unget, timeout)
@@ -72,6 +69,10 @@ local function socket_has_preface(socket, unget, timeout)
 		local ok, err, errno = socket:xread(#bytes-#preface, deadline and (deadline-monotime()))
 		if ok == nil then
 			if err == nil then
+				if #bytes == 0 then
+					-- client immediately closed
+					return
+				end
 				is_h2 = false
 				break
 			else
@@ -94,15 +95,6 @@ local function socket_has_preface(socket, unget, timeout)
 end
 
 local function new_from_common(self, settings)
-	local cq do -- Allocate cqueue first up, as it can throw when out of files
-		local ok, err = pcall(cqueues.new)
-		if not ok then
-			local errno = ce.EMFILE
-			return nil, ce.strerror(errno), errno
-		end
-		cq = err
-	end
-
 	local ssl = self.socket:checktls()
 	if ssl then
 		local cipher = ssl:getCipherInfo()
@@ -111,43 +103,44 @@ local function new_from_common(self, settings)
 		end
 	end
 
-	self.socket:setvbuf("full", math.huge) -- 'infinite' buffering; no write locks needed
-
 	self.version = 2 -- for compat with h1_connection
 	self.streams = setmetatable({}, {__mode="kv"})
 	self.n_active_streams = 0
-	self.cq = cq
-	self.close_me = false -- to indicate that :close() should be called after exiting the current :step()
+	self.has_confirmed_preface = false
+	self.has_first_settings = false
+	self.had_eagain = false
 	self.highest_odd_stream = -1
+	self.highest_odd_non_priority_stream = -1
 	self.highest_even_stream = -2
+	self.highest_even_non_priority_stream = -2
 	-- self.send_goaway_lowest = nil
 	-- self.recv_goaway_lowest = nil
 	self.recv_goaway = cc.new()
 	self.new_streams = new_fifo()
 	self.new_streams_cond = cc.new()
-	self.peer_settings = default_settings
+	self.peer_settings = {}
+	merge_settings(self.peer_settings, default_settings)
 	self.peer_settings_cond = cc.new() -- signaled when the peer has changed their settings
-	self.acked_settings = default_settings
+	self.acked_settings = {}
+	merge_settings(self.acked_settings, default_settings)
 	self.send_settings = {n = 0}
 	self.send_settings_ack_cond = cc.new() -- for when server ACKs our settings
 	self.send_settings_acked = 0
 	self.peer_flow_credits = 65535 -- 5.2.1
 	self.peer_flow_credits_increase = cc.new()
-	self.encoding_context = hpack.new(default_settings[0x1])
-	self.decoding_context = hpack.new(default_settings[0x1])
+	self.encoding_context = hpack.new(default_settings[known_settings.HEADER_TABLE_SIZE])
+	self.decoding_context = hpack.new(default_settings[known_settings.HEADER_TABLE_SIZE])
 	self.pongs = {} -- pending pings we've sent. keyed by opaque 8 byte payload
 
 	setmetatable(self, connection_mt)
 
 	self:new_stream(0) -- sets self.stream0 as a strong reference
-	self.cq:wrap(connection_main_loop, self)
 
+	self.socket:setmode("b", "bna") -- writes that don't explicitly buffer will now flush the buffer. autoflush on
 	if self.type == "client" then
-		-- fully buffered write; will be flushed along with settings
 		assert(self.socket:xwrite(preface, "f", 0))
 	end
-	assert(self.stream0:write_settings_frame(false, settings or {}, 0))
-	self.socket:setmode("b", "bn") -- writes that don't explicitly buffer will now flush the buffer
+	assert(self.stream0:write_settings_frame(false, settings or {}, 0, "f"))
 	-- note that the buffer is *not* flushed right now
 
 	return self
@@ -158,19 +151,17 @@ local function new_connection(socket, conn_type, settings)
 	return new_from_common(self, settings)
 end
 
-function connection_methods:pollfd()
-	return self.cq:pollfd()
-end
-
-function connection_methods:events()
-	return self.cq:events()
-end
-
 function connection_methods:timeout()
-	return self.cq:timeout()
+	if not self.had_eagain then
+		return 0
+	end
+	return connection_common.methods.timeout(self)
 end
 
-local function handle_frame(self, typ, flag, streamid, payload)
+local function handle_frame(self, typ, flag, streamid, payload, deadline)
+	if self.need_continuation and (typ ~= 0x9 or self.need_continuation.id ~= streamid) then
+		return nil, h2_error.errors.PROTOCOL_ERROR:new_traceback("CONTINUATION frame expected"), ce.EILSEQ
+	end
 	local handler = h2_stream.frame_handlers[typ]
 	-- http2 spec section 4.1:
 	-- Implementations MUST ignore and discard any frame that has a type that is unknown.
@@ -178,126 +169,91 @@ local function handle_frame(self, typ, flag, streamid, payload)
 		local stream = self.streams[streamid]
 		if stream == nil and (not self.recv_goaway_lowest or streamid < self.recv_goaway_lowest) then
 			if xor(streamid % 2 == 1, self.type == "client") then
-				return nil, h2_error.errors.PROTOCOL_ERROR:new_traceback("Streams initiated by a client MUST use odd-numbered stream identifiers; those initiated by the server MUST use even-numbered stream identifiers")
+				return nil, h2_error.errors.PROTOCOL_ERROR:new_traceback("Streams initiated by a client MUST use odd-numbered stream identifiers; those initiated by the server MUST use even-numbered stream identifiers"), ce.EILSEQ
 			end
 			-- TODO: check MAX_CONCURRENT_STREAMS
 			stream = self:new_stream(streamid)
 			self.new_streams:push(stream)
 			self.new_streams_cond:signal(1)
 		end
-		local ok, err = handler(stream, flag, payload)
+		local ok, err, errno = handler(stream, flag, payload, deadline)
 		if not ok then
-			if h2_error.is(err) and err.stream_error then
-				local ok2, err2 = stream:write_rst_stream(err.code)
+			if h2_error.is(err) and err.stream_error and streamid ~= 0 and stream.state ~= "idle" then
+				local ok2, err2, errno2 = stream:rst_stream(err, deadline and deadline-monotime())
 				if not ok2 then
-					return nil, err2
+					return nil, err2, errno2
 				end
 			else -- connection error or unknown error
-				return nil, err
+				return nil, err, errno
 			end
 		end
 	end
 	return true
 end
 
-function connection_main_loop(self)
-	if self.type == "server" then
-		local ok, err = socket_has_preface(self.socket, false)
+function connection_methods:step(timeout)
+	local deadline = timeout and monotime()+timeout
+	if not self.has_confirmed_preface and self.type == "server" then
+		local ok, err, errno = socket_has_preface(self.socket, false, timeout)
 		if ok == nil then
-			error(err)
+			if errno == ce.ETIMEDOUT then
+				return true
+			end
+			return nil, err, errno
 		end
 		if not ok then
-			h2_error.errors.PROTOCOL_ERROR("invalid connection preface. not an http2 client?")
+			return nil, h2_error.errors.PROTOCOL_ERROR:new_traceback("invalid connection preface. not an http2 client?"), ce.EILSEQ
+		end
+		self.has_confirmed_preface = true
+	end
+
+	local ok, connection_error, errno
+	local typ, flag, streamid, payload = self:read_http2_frame(deadline and deadline-monotime())
+	if typ == nil then
+		-- flag might be `nil` on EOF
+		ok, connection_error, errno = nil, flag, streamid
+	elseif not self.has_first_settings and typ ~= 0x4 then -- XXX: Should this be more strict? e.g. what if it's an ACK?
+		ok, connection_error, errno = false, h2_error.errors.PROTOCOL_ERROR:new_traceback("A SETTINGS frame MUST be the first frame sent in an HTTP/2 connection"), ce.EILSEQ
+	else
+		ok, connection_error, errno = handle_frame(self, typ, flag, streamid, payload, deadline)
+		if ok then
+			self.has_first_settings = true
 		end
 	end
 
-	-- create a thread that flushes
-	cqueues.running():wrap(function(socket)
-		local ok, err, errno = socket:flush("n")
-		if not ok and errno ~= ce.EPIPE then
-			error(err)
-		end
-	end, self.socket)
-
-	local ok, connection_error
-
-	do
-		local typ, flag, streamid, payload = self:read_http2_frame()
-		if typ == nil then
-			-- flag might be `nil` on EOF
-			ok, connection_error = nil, flag
-		elseif typ ~= 0x4 then -- XXX: Should this be more strict? e.g. what if it's an ACK?
-			ok, connection_error = false, h2_error.errors.PROTOCOL_ERROR:new_traceback("A SETTINGS frame MUST be the first frame sent in an HTTP/2 connection")
-		else
-			ok, connection_error = handle_frame(self, typ, flag, streamid, payload)
-		end
-	end
-
-	while ok do
-		local typ, flag, streamid, payload = self:read_http2_frame()
-		if typ == nil then
-			-- flag might be `nil` on EOF
-			ok, connection_error = nil, flag
-		else
-			ok, connection_error = handle_frame(self, typ, flag, streamid, payload)
-		end
-	end
-
-	if connection_error then
-		if h2_error.is(connection_error) then
-			self:write_goaway_frame(nil, connection_error.code, connection_error.message) -- ignore failure
-		else
-			self:write_goaway_frame(nil, h2_error.errors.PROTOCOL_ERROR.code) -- ignore failure
-		end
-		error(connection_error)
-	end
-
-	return true
-end
-
-local function handle_step_return(self, step_ok, last_err, errno)
-	if self.close_me then
-		self:close()
-	end
-	if step_ok then
-		return true
-	elseif not self.close_me then
+	if not ok and connection_error and errno ~= ce.ETIMEDOUT then
 		if not self.socket:eof("w") then
 			local code, message
-			if step_ok then
-				code = h2_error.errors.NO_ERROR.code
-			elseif h2_error.is(last_err) then
-				code = last_err.code
-				message = last_err.message
+			if h2_error.is(connection_error) then
+				code, message = connection_error.code, connection_error.message
 			else
 				code = h2_error.errors.INTERNAL_ERROR.code
 			end
 			-- ignore write failure here; there's nothing that can be done
-			self:write_goaway_frame(nil, code, message)
+			self:write_goaway_frame(nil, code, message, deadline and deadline-monotime())
 		end
-		self:shutdown()
-		return nil, last_err, errno
+		if errno == nil and h2_error.is(connection_error) and connection_error.code == h2_error.errors.PROTOCOL_ERROR.code then
+			errno = ce.EILSEQ
+		end
+		return nil, connection_error, errno
 	end
+
+	return true
 end
 
 function connection_methods:empty()
-	return self.cq:empty()
-end
-
-function connection_methods:step(timeout)
-	if self:empty() then
-		return handle_step_return(self, false, nil, nil)
-	else
-		return handle_step_return(self, self.cq:step(timeout))
-	end
+	return self.socket:eof("r")
 end
 
 function connection_methods:loop(timeout)
-	if self:empty() then
-		return handle_step_return(self, false, nil, nil)
-	else
-		return handle_step_return(self, self.cq:loop(timeout))
+	local deadline = timeout and monotime()+timeout
+	while not self:empty() do
+		local ok, err, errno = self:step(deadline and deadline-monotime())
+		if not ok then
+			return nil, err, errno
+		end
 	end
+	return true
 end
 
 function connection_methods:shutdown()
@@ -305,7 +261,7 @@ function connection_methods:shutdown()
 	if self.send_goaway_lowest then
 		ok = true
 	else
-		ok, err, errno = self:write_goaway_frame(nil, h2_error.errors.NO_ERROR.code, "connection closed")
+		ok, err, errno = self:write_goaway_frame(nil, h2_error.errors.NO_ERROR.code, "connection closed", 0)
 		if not ok and errno == ce.EPIPE then
 			-- other end already closed
 			ok, err, errno = true, nil, nil
@@ -318,52 +274,14 @@ function connection_methods:shutdown()
 	return ok, err, errno
 end
 
-function connection_methods:close()
-	local ok, err = self:shutdown()
-	if cqueues.running() == self.cq then
-		self.close_me = true
-		cqueues.poll()
-	else
-		cqueues.poll()
-		cqueues.poll()
-		self.socket:close()
-	end
-	return ok, err
-end
-
 function connection_methods:new_stream(id)
+	if id and self.streams[id] ~= nil then
+		error("stream id already in use")
+	end
+	local stream = h2_stream.new(self)
 	if id then
-		assert(id % 1 == 0)
-	else
-		if self.recv_goaway_lowest then
-			h2_error.errors.PROTOCOL_ERROR("Receivers of a GOAWAY frame MUST NOT open additional streams on the connection")
-		end
-		if self.type == "client" then
-			-- Pick next free odd number
-			id = self.highest_odd_stream + 2
-		else
-			-- Pick next free odd number
-			id = self.highest_even_stream + 2
-		end
-		-- TODO: check MAX_CONCURRENT_STREAMS
+		stream:pick_id(id)
 	end
-	assert(self.streams[id] == nil, "stream id already in use")
-	assert(id < 2^32, "stream id too large")
-	if id % 2 == 0 then
-		assert(id > self.highest_even_stream, "stream id too small")
-		self.highest_even_stream = id
-	else
-		assert(id > self.highest_odd_stream, "stream id too small")
-		self.highest_odd_stream = id
-	end
-	local stream = h2_stream.new(self, id)
-	if id == 0 then
-		self.stream0 = stream
-	else
-		-- Add dependency on stream 0. http2 spec, 5.3.1
-		self.stream0:reprioritise(stream)
-	end
-	self.streams[id] = stream
 	return stream
 end
 
@@ -371,13 +289,13 @@ end
 function connection_methods:get_next_incoming_stream(timeout)
 	local deadline = timeout and (monotime()+timeout)
 	while self.new_streams:length() == 0 do
-		if self.recv_goaway_lowest then
+		if self.recv_goaway_lowest or self.socket:eof("r") then
 			-- TODO? clarification required: can the sender of a GOAWAY subsequently start streams?
 			-- (with a lower stream id than they sent in the GOAWAY)
 			-- For now, assume not.
 			return nil
 		end
-		local which = cqueues.poll(self, self.new_streams_cond, self.recv_goaway, timeout)
+		local which = cqueues.poll(self.new_streams_cond, self.recv_goaway, self, timeout)
 		if which == self then
 			local ok, err, errno = self:step(0)
 			if not ok then
@@ -399,13 +317,15 @@ end
 function connection_methods:read_http2_frame(timeout)
 	local deadline = timeout and (monotime()+timeout)
 	local frame_header, err, errno = self.socket:xread(9, timeout)
+	self.had_eagain = false
 	if frame_header == nil then
 		if errno == ce.ETIMEDOUT then
+			self.had_eagain = true
 			return nil, err, errno
 		elseif err == nil then
 			if self.socket:pending() > 0 then
-				self.socket:seterror("r", ce.EPROTO)
-				return nil, onerror(self.socket, "read_http2_frame", ce.EPROTO)
+				self.socket:seterror("r", ce.EILSEQ)
+				return nil, onerror(self.socket, "read_http2_frame", ce.EILSEQ)
 			end
 			return nil
 		else
@@ -413,10 +333,15 @@ function connection_methods:read_http2_frame(timeout)
 		end
 	end
 	local size, typ, flags, streamid = sunpack(">I3 B B I4", frame_header)
-	if size > self.acked_settings[0x5] then
-		return nil, h2_error.errors.FRAME_SIZE_ERROR:new_traceback("frame too large")
+	if size > self.acked_settings[known_settings.MAX_FRAME_SIZE] then
+		local ok, errno2 = self.socket:unget(frame_header)
+		if not ok then
+			return nil, onerror(self.socket, "unget", errno2, 2)
+		end
+		return nil, h2_error.errors.FRAME_SIZE_ERROR:new_traceback("frame too large"), ce.E2BIG
 	end
-	local payload, err2, errno2 = self.socket:xread(size, deadline and (deadline-monotime()))
+	local payload, err2, errno2 = self.socket:xread(size, 0)
+	self.had_eagain = false
 	if payload and #payload < size then -- hit EOF
 		local ok, errno4 = self.socket:unget(payload)
 		if not ok then
@@ -430,9 +355,15 @@ function connection_methods:read_http2_frame(timeout)
 		if not ok then
 			return nil, onerror(self.socket, "unget", errno3, 2)
 		end
-		if err2 == nil then
-			self.socket:seterror("r", ce.EPROTO)
-			return nil, onerror(self.socket, "read_http2_frame", ce.EPROTO)
+		if errno2 == ce.ETIMEDOUT then
+			self.had_eagain = true
+			timeout = deadline and deadline-monotime()
+			if cqueues.poll(self.socket, timeout) ~= timeout then
+				return self:read_http2_frame(deadline and deadline-monotime())
+			end
+		elseif err2 == nil then
+			self.socket:seterror("r", ce.EILSEQ)
+			return nil, onerror(self.socket, "read_http2_frame", ce.EILSEQ)
 		end
 		return nil, err2, errno2
 	end
@@ -444,17 +375,16 @@ end
 -- If this times out, it was the flushing; not the write itself
 -- hence it's not always total failure.
 -- It's up to the caller to take some action (e.g. closing) rather than doing it here
-function connection_methods:write_http2_frame(typ, flags, streamid, payload, timeout)
-	local deadline = timeout and monotime()+timeout
-	if #payload > self.peer_settings[0x5] then
-		return nil, h2_error.errors.FRAME_SIZE_ERROR:new_traceback("frame too large")
+function connection_methods:write_http2_frame(typ, flags, streamid, payload, timeout, flush)
+	if #payload > self.peer_settings[known_settings.MAX_FRAME_SIZE] then
+		return nil, h2_error.errors.FRAME_SIZE_ERROR:new_traceback("frame too large"), ce.E2BIG
 	end
 	local header = spack(">I3 B B I4", #payload, typ, flags, streamid)
-	local ok, err, errno = self.socket:xwrite(header, "f", timeout)
+	local ok, err, errno = self.socket:xwrite(header, "f", 0)
 	if not ok then
 		return nil, err, errno
 	end
-	return self.socket:xwrite(payload, deadline and deadline-monotime())
+	return self.socket:xwrite(payload, flush, timeout)
 end
 
 function connection_methods:ping(timeout)
@@ -469,7 +399,7 @@ function connection_methods:ping(timeout)
 	assert(self.stream0:write_ping_frame(false, payload, timeout))
 	while self.pongs[payload] do
 		timeout = deadline and (deadline-monotime())
-		local which = cqueues.poll(self, cond, timeout)
+		local which = cqueues.poll(cond, self, timeout)
 		if which == self then
 			local ok, err, errno = self:step(0)
 			if not ok then
@@ -486,15 +416,15 @@ function connection_methods:write_window_update(...)
 	return self.stream0:write_window_update(...)
 end
 
-function connection_methods:write_goaway_frame(last_stream_id, err_code, debug_msg)
+function connection_methods:write_goaway_frame(last_stream_id, err_code, debug_msg, timeout)
 	if last_stream_id == nil then
 		last_stream_id = math.max(self.highest_odd_stream, self.highest_even_stream)
 	end
-	return self.stream0:write_goaway_frame(last_stream_id, err_code, debug_msg)
+	return self.stream0:write_goaway_frame(last_stream_id, err_code, debug_msg, timeout)
 end
 
 function connection_methods:set_peer_settings(peer_settings)
-	self.peer_settings = merge_settings(peer_settings, self.peer_settings)
+	merge_settings(self.peer_settings, peer_settings)
 	self.peer_settings_cond:signal()
 end
 
@@ -504,7 +434,7 @@ function connection_methods:ack_settings()
 	local acked_settings = self.send_settings[n]
 	if acked_settings then
 		self.send_settings[n] = nil
-		self.acked_settings = merge_settings(acked_settings, self.acked_settings)
+		merge_settings(self.acked_settings, acked_settings)
 	end
 	self.send_settings_ack_cond:signal()
 end
@@ -518,14 +448,14 @@ function connection_methods:settings(tbl, timeout)
 	-- Now wait for ACK
 	while self.send_settings_acked < n do
 		timeout = deadline and (deadline-monotime())
-		local which = cqueues.poll(self, self.send_settings_ack_cond, timeout)
+		local which = cqueues.poll(self.send_settings_ack_cond, self, timeout)
 		if which == self then
 			local ok2, err2, errno2 = self:step(0)
 			if not ok2 then
 				return nil, err2, errno2
 			end
-		elseif which ~= self.send_settings_ack_cond then
-			self:write_goaway_frame(nil, h2_error.errors.SETTINGS_TIMEOUT.code, "timeout exceeded")
+		elseif which == timeout then
+			self:write_goaway_frame(nil, h2_error.errors.SETTINGS_TIMEOUT.code, "timeout exceeded", 0)
 			return nil, onerror(self.socket, "settings", ce.ETIMEDOUT)
 		end
 	end
