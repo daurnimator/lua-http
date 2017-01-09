@@ -94,12 +94,8 @@ local function socket_has_preface(socket, unget, timeout)
 	return is_h2
 end
 
-local function new_connection(socket, conn_type, settings)
-	if conn_type ~= "client" and conn_type ~= "server" then
-		error('invalid connection type. must be "client" or "server"')
-	end
-
-	local ssl = socket:checktls()
+local function new_from_common(self, settings)
+	local ssl = self.socket:checktls()
 	if ssl then
 		local cipher = ssl:getCipherInfo()
 		if h2_banned_ciphers[cipher.name] then
@@ -107,66 +103,52 @@ local function new_connection(socket, conn_type, settings)
 		end
 	end
 
-	local self = setmetatable({
-		socket = socket;
-		type = conn_type;
-		version = 2; -- for compat with h1_connection
-
-		streams = setmetatable({}, {__mode="kv"});
-		n_active_streams = 0;
-		onidle_ = nil;
-		stream0 = nil; -- store separately with a strong reference
-
-		has_confirmed_preface = false;
-		has_first_settings = false;
-		had_eagain = false;
-
-		-- For continuations
-		need_continuation = nil; -- stream
-		promised_stream = nil; -- stream
-		recv_headers_buffer = nil;
-		recv_headers_buffer_pos = nil;
-		recv_headers_buffer_pad_len = nil;
-		recv_headers_buffer_items = nil;
-		recv_headers_buffer_length = nil;
-
-		highest_odd_stream = -1;
-		highest_odd_non_priority_stream = -1;
-		highest_even_stream = -2;
-		highest_even_non_priority_stream = -2;
-		send_goaway_lowest = nil;
-		recv_goaway_lowest = nil;
-		recv_goaway = cc.new();
-		new_streams = new_fifo();
-		new_streams_cond = cc.new();
-		peer_settings = {};
-		peer_settings_cond = cc.new(); -- signaled when the peer has changed their settings
-		acked_settings = {};
-		send_settings = {n = 0};
-		send_settings_ack_cond = cc.new(); -- for when server ACKs our settings
-		send_settings_acked = 0;
-		peer_flow_credits = 65535; -- 5.2.1
-		peer_flow_credits_increase = cc.new();
-		encoding_context = nil;
-		decoding_context = nil;
-		pongs = {}; -- pending pings we've sent. keyed by opaque 8 byte payload
-	}, connection_mt)
-	self:new_stream(0)
+	self.version = 2 -- for compat with h1_connection
+	self.streams = setmetatable({}, {__mode="kv"})
+	self.n_active_streams = 0
+	self.has_confirmed_preface = false
+	self.has_first_settings = false
+	self.had_eagain = false
+	self.highest_odd_stream = -1
+	self.highest_odd_non_priority_stream = -1
+	self.highest_even_stream = -2
+	self.highest_even_non_priority_stream = -2
+	-- self.send_goaway_lowest = nil
+	-- self.recv_goaway_lowest = nil
+	self.recv_goaway = cc.new()
+	self.new_streams = new_fifo()
+	self.new_streams_cond = cc.new()
+	self.peer_settings = {}
 	merge_settings(self.peer_settings, default_settings)
+	self.peer_settings_cond = cc.new() -- signaled when the peer has changed their settings
+	self.acked_settings = {}
 	merge_settings(self.acked_settings, default_settings)
+	self.send_settings = {n = 0}
+	self.send_settings_ack_cond = cc.new() -- for when server ACKs our settings
+	self.send_settings_acked = 0
+	self.peer_flow_credits = 65535 -- 5.2.1
+	self.peer_flow_credits_increase = cc.new()
 	self.encoding_context = hpack.new(default_settings[known_settings.HEADER_TABLE_SIZE])
 	self.decoding_context = hpack.new(default_settings[known_settings.HEADER_TABLE_SIZE])
+	self.pongs = {} -- pending pings we've sent. keyed by opaque 8 byte payload
 
-	socket:setvbuf("full", math.huge) -- 'infinite' buffering; no write locks needed
-	socket:setmode("b", "bna") -- writes that don't explicitly buffer will now flush the buffer. autoflush on
-	socket:onerror(onerror)
+	setmetatable(self, connection_mt)
+
+	self:new_stream(0) -- sets self.stream0 as a strong reference
+
+	self.socket:setmode("b", "bna") -- writes that don't explicitly buffer will now flush the buffer. autoflush on
 	if self.type == "client" then
-		assert(socket:xwrite(preface, "f", 0))
+		assert(self.socket:xwrite(preface, "f", 0))
 	end
 	assert(self.stream0:write_settings_frame(false, settings or {}, 0, "f"))
 	-- note that the buffer is *not* flushed right now
 
 	return self
+end
+
+local function new_connection(socket, conn_type, settings)
+	local self = connection_common.new(socket, conn_type)
+	return new_from_common(self, settings)
 end
 
 function connection_methods:timeout()
@@ -483,6 +465,7 @@ end
 return {
 	preface = preface;
 	socket_has_preface = socket_has_preface;
+	new_from_common = new_from_common;
 	new = new_connection;
 	methods = connection_methods;
 	mt = connection_mt;

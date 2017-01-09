@@ -31,9 +31,14 @@ The HTTP version number of the connection as a number.
 Completes the connection to the remote server using the address specified, HTTP version and any options specified in the `connection.new` constructor. The `connect` function will yield until the connection attempt finishes (success or failure) or until `timeout` is exceeded. Connecting may include DNS lookups, TLS negotiation and HTTP2 settings exchange. Returns `true` on success. On error, returns `nil`, an error message and an error number.
 
 
+### `connection:starttls(ctx, timeout)` <!-- --> {#connection:starttls}
+
+Starts a TLS (Transport Layer Security) negotiation with the remote server. `ctx` should be a luaossl SSL context or a luasec SSL context. Returns `true` on success. On error, returns `nil` an error message and an error number.
+
+
 ### `connection:checktls()` <!-- --> {#connection:checktls}
 
-Checks the socket for a valid Transport Layer Security connection. Returns the luaossl ssl object if the connection is secured. Returns `nil` and an error message if there is no active TLS session. Please see the [luaossl website](http://25thandclement.com/~william/projects/luaossl.html) for more information about the ssl object.
+Checks the socket for a valid TLS (Transport Layer Security) connection. Returns the luaossl ssl object if the connection is secured. Returns `nil` and an error message if there is no active TLS session. Please see the [luaossl website](http://25thandclement.com/~william/projects/luaossl.html) for more information about the ssl object.
 
 
 ### `connection:localname()` <!-- --> {#connection:localname}
