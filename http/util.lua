@@ -135,7 +135,7 @@ local scheme_to_port = {
 -- Splits a :authority header (same as Host) into host and port
 local function split_authority(authority, scheme)
 	local host, port
-	local h, p = authority:match("^ *(.-):(%d+) *$")
+	local h, p = authority:match("^[ \t]*(.-):(%d+)[ \t]*$")
 	if p then
 		authority = h
 		port = tonumber(p, 10)
