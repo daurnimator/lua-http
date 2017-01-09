@@ -355,6 +355,12 @@ local valid_pseudo_headers = {
 	[":status"] = false;
 }
 local function validate_headers(headers, is_request, nth_header, ended_stream)
+	-- Section 8.1.2: A request or response containing uppercase header field names MUST be treated as malformed
+	for name in headers:each() do
+		if name:lower() ~= name then
+			return nil, h2_errors.PROTOCOL_ERROR:new_traceback("header field names MUST be lowercase", true), ce.EINVAL
+		end
+	end
 	do -- Section 8.1.2.1: Validate that all colon fields are before other ones
 		local seen_non_colon = false
 		for name, value in headers:each() do
