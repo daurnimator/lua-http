@@ -13,6 +13,55 @@ local sane_cookie_date = http_patts.IMF_fixdate * EOF
 local Cookie = http_patts.Cookie * EOF
 local Set_Cookie = http_patts.Set_Cookie * EOF
 
+local function bake(name, value, expiry_time, domain, path, secure_only, http_only, same_site)
+	-- This function is optimised to only do one concat operation at the end
+	local cookie = { name, "=", value }
+	local n = 3
+	if expiry_time and expiry_time ~= (1e999) then
+		-- Prefer Expires over Max-age unless it is a deletion request
+		if expiry_time == (-1e999) then
+			n = n + 1
+			cookie[n] = "; Max-Age=0"
+		else
+			n = n + 2
+			cookie[n-1] = "; Expires="
+			cookie[n] = http_util.imf_date(expiry_time)
+		end
+	end
+	if domain then
+		n = n + 2
+		cookie[n-1] = "; Domain="
+		cookie[n] = domain
+	end
+	if path then
+		n = n + 2
+		cookie[n-1] = "; Path="
+		cookie[n] = http_util.encodeURI(path)
+	end
+	if secure_only then
+		n = n + 1
+		cookie[n] = "; Secure"
+	end
+	if http_only then
+		n = n + 1
+		cookie[n] = "; HttpOnly"
+	end
+	-- https://tools.ietf.org/html/draft-ietf-httpbis-rfc6265bis-02#section-5.2
+	if same_site then
+		local v
+		if same_site == "strict" then
+			v = "; SameSite=Strict"
+		elseif same_site == "lax" then
+			v = "; SameSite=Lax"
+		else
+			error('invalid value for same_site, expected "strict" or "lax"')
+		end
+		n = n + 1
+		cookie[n] = v
+	end
+	return table.concat(cookie, "", 1, n)
+end
+
 local function parse_cookie(cookie_header)
 	return Cookie:match(cookie_header)
 end
@@ -90,6 +139,7 @@ function cookie_methods:netscape_format()
 		self.name,
 		self.value)
 end
+
 
 local default_psl
 if has_psl and psl.latest then
@@ -639,6 +689,8 @@ function store_methods:save_to_file(file)
 end
 
 return {
+	bake = bake;
+
 	parse_cookie = parse_cookie;
 	parse_setcookie = parse_setcookie;
 
