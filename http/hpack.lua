@@ -353,6 +353,7 @@ do
 		end
 		byte_to_bitstring[string.char(i)] = val
 	end
+	local EOS_length = #huffman_codes.EOS
 	huffman_decode = function(s)
 		local bitstring = s:gsub(".", byte_to_bitstring)
 		local node = huffman_tree
@@ -375,11 +376,20 @@ do
 		--[[ Ensure that any left over bits are all one.
 		Section 5.2: A padding not corresponding to the most significant bits
 		of the code for the EOS symbol MUST be treated as a decoding error]]
-		while type(node) == "table" do
-			node = node["1"]
-		end
-		if node ~= "EOS" then
-			return nil, h2_errors.COMPRESSION_ERROR:new_traceback("invalid huffman padding")
+		if node ~= huffman_tree then
+			-- We check this by continuing through on the '1' branch and ensure that we end up at EOS
+			local n_padding = EOS_length
+			while type(node) == "table" do
+				node = node["1"]
+				n_padding = n_padding - 1
+			end
+			if node ~= "EOS" then
+				return nil, h2_errors.COMPRESSION_ERROR:new_traceback("invalid huffman padding: expected most significant bits to match EOS")
+			end
+			-- Section 5.2: A padding strictly longer than 7 bits MUST be treated as a decoding error
+			if n_padding < 0 or n_padding >= 8 then
+				return nil, h2_errors.COMPRESSION_ERROR:new_traceback("invalid huffman padding: too much padding")
+			end
 		end
 
 		return string.char(unpack(output))
