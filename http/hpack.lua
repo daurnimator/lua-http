@@ -366,9 +366,7 @@ do
 				node = huffman_tree
 			elseif node == "EOS" then
 				-- 5.2: A Huffman encoded string literal containing the EOS symbol MUST be treated as a decoding error.
-				if node == 256 then
-					return nil, h2_errors.COMPRESSION_ERROR:new_traceback("invalid huffman code (EOS)")
-				end
+				return nil, h2_errors.COMPRESSION_ERROR:new_traceback("invalid huffman code (EOS)")
 			elseif nt ~= "table" then
 				return nil, h2_errors.COMPRESSION_ERROR:new_traceback("invalid huffman code")
 			end
