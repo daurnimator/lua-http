@@ -632,12 +632,17 @@ frame_handlers[frame_types.PRIORITY] = function(stream, flags, payload) -- luach
 	exclusive = band(tmp, 0x80000000) ~= 0
 	stream_dep = band(tmp, 0x7fffffff)
 
+	-- 5.3.1. Stream Dependencies
+	-- A dependency on a stream that is not currently in the tree
+	-- results in that stream being given a default priority
 	local new_parent = stream.connection.streams[stream_dep]
-	local ok, err, errno = new_parent:reprioritise(stream, exclusive)
-	if not ok then
-		return nil, err, errno
+	if new_parent then
+		local ok, err, errno = new_parent:reprioritise(stream, exclusive)
+		if not ok then
+			return nil, err, errno
+		end
+		stream.weight = weight
 	end
-	stream.weight = weight
 
 	return true
 end
