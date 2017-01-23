@@ -797,9 +797,6 @@ local function decode_header_helper(self, payload, prefix_len, pos)
 		if name == nil then
 			return name, pos
 		end
-		if name:match("%u") then
-			return nil, h2_errors.PROTOCOL_ERROR:new_traceback("malformed: header fields must not be uppercase")
-		end
 		value, pos = decode_string(payload, pos)
 		if value == nil then
 			return value, pos
