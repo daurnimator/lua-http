@@ -1038,7 +1038,6 @@ function stream_methods:write_goaway_frame(last_streamid, err_code, debug_msg, t
 	if self.connection.send_goaway_lowest and last_streamid > self.connection.send_goaway_lowest then
 		h2_errors.PROTOCOL_ERROR("Endpoints MUST NOT increase the value they send in the last stream identifier")
 	end
-	assert(last_streamid)
 	local flags = 0
 	local payload = spack(">I4 I4", last_streamid, err_code)
 	if debug_msg then
