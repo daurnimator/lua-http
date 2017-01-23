@@ -84,12 +84,30 @@ local function negotiate(s, options, timeout)
 end
 
 local function connect(options, timeout)
+	local bind = options.bind
+	if bind ~= nil then
+		assert(type(bind) == "string")
+		local bind_address, bind_port = bind:match("^(.-):(%d+)$")
+		if bind_address then
+			bind_port = tonumber(bind_port, 10)
+		else
+			bind_address = bind
+		end
+		local ipv6 = bind_address:match("^%[([:%x]+)%]$")
+		if ipv6 then
+			bind_address = ipv6
+		end
+		bind = {
+			address = bind_address;
+			port = bind_port;
+		}
+	end
 	local s, err, errno = ca.fileresult(cs.connect {
 		family = options.family;
 		host = options.host;
 		port = options.port;
 		path = options.path;
-		bind = options.bind;
+		bind = bind;
 		sendname = false;
 		v6only = options.v6only;
 		nodelay = true;
