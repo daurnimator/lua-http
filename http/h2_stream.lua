@@ -1035,6 +1035,9 @@ function stream_methods:write_goaway_frame(last_streamid, err_code, debug_msg, t
 	if self.id ~= 0 then
 		h2_errors.PROTOCOL_ERROR("'GOAWAY' frames MUST be on stream 0")
 	end
+	if self.connection.send_goaway_lowest and last_streamid > self.connection.send_goaway_lowest then
+		h2_errors.PROTOCOL_ERROR("Endpoints MUST NOT increase the value they send in the last stream identifier")
+	end
 	assert(last_streamid)
 	local flags = 0
 	local payload = spack(">I4 I4", last_streamid, err_code)
@@ -1045,7 +1048,7 @@ function stream_methods:write_goaway_frame(last_streamid, err_code, debug_msg, t
 	if not ok then
 		return nil, err, errno
 	end
-	self.connection.send_goaway_lowest = math.min(last_streamid, self.connection.send_goaway_lowest or math.huge)
+	self.connection.send_goaway_lowest = last_streamid
 	if flush ~= "f" then
 		return self.connection:flush(timeout)
 	else
