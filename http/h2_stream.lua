@@ -128,7 +128,7 @@ function stream_methods:pick_id(id)
 				self.connection.highest_even_stream = id
 			end
 			-- stream 'already' existed but was possibly collected. see http2 spec 5.1.1
-			if id <= self.connection.highest_even_non_priority_stream then
+			if id <= self.connection.highest_even_non_idle_stream then
 				self:set_state("closed")
 			end
 		else
@@ -136,7 +136,7 @@ function stream_methods:pick_id(id)
 				self.connection.highest_odd_stream = id
 			end
 			-- stream 'already' existed but was possibly collected. see http2 spec 5.1.1
-			if id <= self.connection.highest_odd_non_priority_stream then
+			if id <= self.connection.highest_odd_non_idle_stream then
 				self:set_state("closed")
 			end
 		end
@@ -176,6 +176,17 @@ function stream_methods:set_state(new)
 	if new == "closed" or new == "half closed (remote)" then
 		self.recv_headers_cond:signal()
 		self.chunk_cond:signal()
+	end
+	if old == "idle" then
+		if self.id % 2 == 0 then
+			if self.id > self.connection.highest_even_non_idle_stream then
+				self.connection.highest_even_non_idle_stream = self.id
+			end
+		else
+			if self.id > self.connection.highest_odd_non_idle_stream then
+				self.connection.highest_odd_non_idle_stream = self.id
+			end
+		end
 	end
 	if old == "idle" and new ~= "closed" then
 		self.connection.n_active_streams = self.connection.n_active_streams + 1
@@ -591,15 +602,6 @@ function stream_methods:write_headers_frame(payload, end_stream, end_headers, pa
 		return nil, err, errno
 	end
 	self.stats_sent_headers = self.stats_sent_headers + 1
-	if self.id % 2 == 0 then
-		if self.id > self.connection.highest_even_non_priority_stream then
-			self.connection.highest_even_non_priority_stream = self.id
-		end
-	else
-		if self.id > self.connection.highest_odd_non_priority_stream then
-			self.connection.highest_odd_non_priority_stream = self.id
-		end
-	end
 	if not end_headers then
 		self.end_stream_after_continuation = end_stream
 	end
@@ -958,9 +960,6 @@ function stream_methods:write_push_promise_frame(promised_stream_id, payload, en
 	local ok, err, errno = self:write_http2_frame(frame_types.PUSH_PROMISE, flags, payload, 0, "f")
 	if ok == nil then
 		return nil, err, errno
-	end
-	if promised_stream.id > self.connection.highest_odd_non_priority_stream then
-		self.connection.highest_odd_non_priority_stream = promised_stream.id
 	end
 	if not end_headers then
 		promised_stream.end_stream_after_continuation = false
