@@ -39,7 +39,7 @@
 ### `hpack_context:lookup_name_index(name)` <!-- --> {#http.hpack:lookup_name_index}
 
 
-### `hpack_context:lookup_index(index, allow_single)` <!-- --> {#http.hpack:lookup_index}
+### `hpack_context:lookup_index(index)` <!-- --> {#http.hpack:lookup_index}
 
 
 ### `hpack_context:add_header_indexed(name, value, huffman)` <!-- --> {#http.hpack:add_header_indexed}
