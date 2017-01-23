@@ -445,24 +445,19 @@ local function dynamic_table_entry_size(k)
 	return 32 - 8 + #k -- 8 is number of bytes of overhead introduced by compound_key
 end
 local static_names_to_index = {}
-local static_index_to_names = {}
-local static_pairs = {} -- Duplicate writes are okay
+local static_pairs = {}
 local max_static_index
 do
 	-- We prefer earlier indexes as examples in spec are like that
-	local function s(i, name)
+	local function p(i, name, value)
 		if not static_names_to_index[name] then
 			static_names_to_index[name] = i
-			static_index_to_names[i] = name
 		end
-	end
-	local function p(i, name, value)
-		s(i, name)
-		local k = compound_key(name, value)
+		local k = compound_key(name, value or "")
 		static_pairs[k] = i
 		static_pairs[i] = k
 	end
-	s( 1, ":authority")
+	p( 1, ":authority")
 	p( 2, ":method", "GET")
 	p( 3, ":method", "POST")
 	p( 4, ":path", "/")
@@ -476,53 +471,53 @@ do
 	p(12, ":status", "400")
 	p(13, ":status", "404")
 	p(14, ":status", "500")
-	s(15, "accept-charset")
+	p(15, "accept-charset")
 	p(16, "accept-encoding", "gzip, deflate")
-	s(17, "accept-language")
-	s(18, "accept-ranges")
-	s(19, "accept")
-	s(20, "access-control-allow-origin")
-	s(21, "age")
-	s(22, "allow")
-	s(23, "authorization")
-	s(24, "cache-control")
-	s(25, "content-disposition")
-	s(26, "content-encoding")
-	s(27, "content-language")
-	s(28, "content-length")
-	s(29, "content-location")
-	s(30, "content-range")
-	s(31, "content-type")
-	s(32, "cookie")
-	s(33, "date")
-	s(34, "etag")
-	s(35, "expect")
-	s(36, "expires")
-	s(37, "from")
-	s(38, "host")
-	s(39, "if-match")
-	s(40, "if-modified-since")
-	s(41, "if-none-match")
-	s(42, "if-range")
-	s(43, "if-unmodified-since")
-	s(44, "last-modified")
-	s(45, "link")
-	s(46, "location")
-	s(47, "max-forwards")
-	s(48, "proxy-authenticate")
-	s(49, "proxy-authorization")
-	s(50, "range")
-	s(51, "referer")
-	s(52, "refresh")
-	s(53, "retry-after")
-	s(54, "server")
-	s(55, "set-cookie")
-	s(56, "strict-transport-security")
-	s(57, "transfer-encoding")
-	s(58, "user-agent")
-	s(59, "vary")
-	s(60, "via")
-	s(61, "www-authenticate")
+	p(17, "accept-language")
+	p(18, "accept-ranges")
+	p(19, "accept")
+	p(20, "access-control-allow-origin")
+	p(21, "age")
+	p(22, "allow")
+	p(23, "authorization")
+	p(24, "cache-control")
+	p(25, "content-disposition")
+	p(26, "content-encoding")
+	p(27, "content-language")
+	p(28, "content-length")
+	p(29, "content-location")
+	p(30, "content-range")
+	p(31, "content-type")
+	p(32, "cookie")
+	p(33, "date")
+	p(34, "etag")
+	p(35, "expect")
+	p(36, "expires")
+	p(37, "from")
+	p(38, "host")
+	p(39, "if-match")
+	p(40, "if-modified-since")
+	p(41, "if-none-match")
+	p(42, "if-range")
+	p(43, "if-unmodified-since")
+	p(44, "last-modified")
+	p(45, "link")
+	p(46, "location")
+	p(47, "max-forwards")
+	p(48, "proxy-authenticate")
+	p(49, "proxy-authorization")
+	p(50, "range")
+	p(51, "referer")
+	p(52, "refresh")
+	p(53, "retry-after")
+	p(54, "server")
+	p(55, "set-cookie")
+	p(56, "strict-transport-security")
+	p(57, "transfer-encoding")
+	p(58, "user-agent")
+	p(59, "vary")
+	p(60, "via")
+	p(61, "www-authenticate")
 	max_static_index = 61
 end
 
@@ -738,17 +733,11 @@ function methods:lookup_name_index(name)
 	return nil
 end
 
-function methods:lookup_index(index, allow_single)
+function methods:lookup_index(index)
 	if index <= max_static_index then
 		local k = static_pairs[index]
 		if k then
 			return uncompound_key(k)
-		end
-		if allow_single then
-			local name = static_index_to_names[index]
-			if name then
-				return name, nil
-			end
 		end
 	else -- Dynamic?
 		local id = self:dynamic_index_to_table_id(index)
@@ -817,7 +806,7 @@ local function decode_header_helper(self, payload, prefix_len, pos)
 			return value, pos
 		end
 	else
-		name = self:lookup_index(index, true)
+		name = self:lookup_index(index)
 		if name == nil then
 			return nil, h2_errors.COMPRESSION_ERROR:new_traceback(string.format("index %d not found in table", index))
 		end
@@ -838,7 +827,7 @@ function methods:decode_headers(payload, header_list, pos)
 			local index, newpos = decode_integer(payload, 7, pos)
 			if index == nil then break end
 			pos = newpos
-			local name, value = self:lookup_index(index, false)
+			local name, value = self:lookup_index(index)
 			if name == nil then
 				return nil, h2_errors.COMPRESSION_ERROR:new_traceback(string.format("index %d not found in table", index))
 			end
