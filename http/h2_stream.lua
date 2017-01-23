@@ -264,7 +264,7 @@ frame_handlers[frame_types.DATA] = function(stream, flags, payload, deadline) --
 	if stream.state == "idle" or stream.state == "reserved (remote)" then
 		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("'DATA' frames not allowed in 'idle' state"), ce.EILSEQ
 	elseif stream.state ~= "open" and stream.state ~= "half closed (local)" then
-		return nil, h2_errors.STREAM_CLOSED:new_traceback("'DATA' frames not allowed in '" .. stream.state .. "' state", true), ce.EILSEQ
+		return nil, h2_errors.STREAM_CLOSED:new_traceback("'DATA' frames not allowed in '" .. stream.state .. "' state"), ce.EILSEQ
 	end
 
 	local end_stream = band(flags, 0x1) ~= 0
@@ -311,7 +311,7 @@ function stream_methods:write_data_frame(payload, end_stream, padded, timeout, f
 		h2_errors.PROTOCOL_ERROR("'DATA' frames MUST be associated with a stream")
 	end
 	if self.state ~= "open" and self.state ~= "half closed (remote)" then
-		h2_errors.STREAM_CLOSED("'DATA' frame not allowed in '" .. self.state .. "' state", true)
+		h2_errors.STREAM_CLOSED("'DATA' frame not allowed in '" .. self.state .. "' state")
 	end
 	local pad_len, padding = "", ""
 	local flags = 0
@@ -497,7 +497,7 @@ frame_handlers[frame_types.HEADERS] = function(stream, flags, payload, deadline)
 		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("'HEADERS' frames MUST be associated with a stream"), ce.EILSEQ
 	end
 	if stream.state ~= "idle" and stream.state ~= "open" and stream.state ~= "half closed (local)" and stream.state ~= "reserved (remote)" then
-		return nil, h2_errors.STREAM_CLOSED:new_traceback("'HEADERS' frame not allowed in '" .. stream.state .. "' state", true), ce.EILSEQ
+		return nil, h2_errors.STREAM_CLOSED:new_traceback("'HEADERS' frame not allowed in '" .. stream.state .. "' state"), ce.EILSEQ
 	end
 
 	local end_stream = band(flags, 0x1) ~= 0
