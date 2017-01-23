@@ -191,8 +191,27 @@ local function handle_frame(self, typ, flag, streamid, payload, deadline)
 			end
 			-- TODO: check MAX_CONCURRENT_STREAMS
 			stream = self:new_stream(streamid)
-			self.new_streams:push(stream)
-			self.new_streams_cond:signal(1)
+			--[[ http2 spec section 6.8
+			the sender will ignore frames sent on streams initiated by
+			the receiver if the stream has an identifier higher than the included
+			last stream identifier
+			...
+			After sending a GOAWAY frame, the sender can discard frames for
+			streams initiated by the receiver with identifiers higher than the
+			identified last stream.  However, any frames that alter connection
+			state cannot be completely ignored.  For instance, HEADERS,
+			PUSH_PROMISE, and CONTINUATION frames MUST be minimally processed to
+			ensure the state maintained for header compression is consistent (see
+			Section 4.3); similarly, DATA frames MUST be counted toward the
+			connection flow-control window.  Failure to process these frames can
+			cause flow control or header compression state to become
+			unsynchronized.]]
+			-- If we haven't seen this stream before, and we should be discarding frames from it,
+			-- then don't push it into the new_streams fifo
+			if self.send_goaway_lowest == nil or streamid <= self.send_goaway_lowest then
+				self.new_streams:push(stream)
+				self.new_streams_cond:signal(1)
+			end
 		end
 		local ok, err, errno = handler(stream, flag, payload, deadline)
 		if not ok then

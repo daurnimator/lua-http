@@ -500,8 +500,13 @@ local function process_end_headers(stream, end_stream, pad_len, pos, promised_st
 
 		promised_stream:set_state("reserved (remote)")
 		promised_stream.recv_headers_fifo:push(headers)
-		stream.connection.new_streams:push(promised_stream)
-		stream.connection.new_streams_cond:signal(1)
+
+		-- If we have sent a haven't seen this stream before, and we should be discarding frames from it,
+		-- then don't push it into the new_streams fifo
+		if stream.connection.send_goaway_lowest == nil or promised_stream.id <= stream.connection.send_goaway_lowest then
+			stream.connection.new_streams:push(promised_stream)
+			stream.connection.new_streams_cond:signal(1)
+		end
 	end
 	return true
 end
