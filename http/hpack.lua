@@ -365,9 +365,11 @@ do
 				node = huffman_tree
 			elseif node == "EOS" then
 				-- 5.2: A Huffman encoded string literal containing the EOS symbol MUST be treated as a decoding error.
-				assert(node ~= 256, "invalid huffman code (EOS)")
+				if node == 256 then
+					return nil, h2_errors.COMPRESSION_ERROR:new_traceback("invalid huffman code (EOS)")
+				end
 			elseif nt ~= "table" then
-				error("invalid huffman code")
+				return nil, h2_errors.COMPRESSION_ERROR:new_traceback("invalid huffman code")
 			end
 		end
 		--[[ Ensure that any left over bits are all one.
@@ -376,7 +378,9 @@ do
 		while type(node) == "table" do
 			node = node["1"]
 		end
-		assert(node == "EOS", "invalid huffman padding")
+		if node ~= "EOS" then
+			return nil, h2_errors.COMPRESSION_ERROR:new_traceback("invalid huffman padding")
+		end
 
 		return string.char(unpack(output))
 	end
@@ -413,10 +417,13 @@ local function decode_string(str, pos)
 	if newpos > #str+1 then return end
 	local val = str:sub(pos, newpos-1)
 	if huffman then
-		return huffman_decode(val), newpos
-	else
-		return val, newpos
+		local err
+		val, err = huffman_decode(val)
+		if not val then
+			return nil, err
+		end
 	end
+	return val, newpos
 end
 
 local function compound_key(name, value)
