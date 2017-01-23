@@ -181,12 +181,12 @@ describe("http2 connection", function()
 			cq:wrap(function()
 				ok = ok + 1
 				if ok == 2 then cond:signal() end
-				assert(c.peer_flow_credits_increase:wait(TEST_TIMEOUT/2), "no connection credits")
+				assert(c.peer_flow_credits_change:wait(TEST_TIMEOUT/2), "no connection credits")
 			end)
 			cq:wrap(function()
 				ok = ok + 1
 				if ok == 2 then cond:signal() end
-				assert(client_stream.peer_flow_credits_increase:wait(TEST_TIMEOUT/2), "no stream credits")
+				assert(client_stream.peer_flow_credits_change:wait(TEST_TIMEOUT/2), "no stream credits")
 			end)
 			cond:wait() -- wait for above threads to get scheduled
 			assert(client_stream:write_chunk(("really long string"):rep(1e4), true))

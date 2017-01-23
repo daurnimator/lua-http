@@ -79,7 +79,7 @@ local function new_stream(connection)
 
 		id = nil;
 		peer_flow_credits = 0;
-		peer_flow_credits_increase = cc.new();
+		peer_flow_credits_change = cc.new();
 		parent = nil;
 		dependees = setmetatable({}, {__mode="kv"});
 		weight = 16; -- http2 spec, section 5.3.5
@@ -147,7 +147,7 @@ function stream_methods:pick_id(id)
 		self.connection.stream0 = self
 	else
 		self.peer_flow_credits = self.connection.peer_settings[known_settings.INITIAL_WINDOW_SIZE]
-		self.peer_flow_credits_increase:signal()
+		self.peer_flow_credits_change:signal()
 		-- Add dependency on stream 0. http2 spec, 5.3.1
 		self.connection.stream0:reprioritise(self)
 	end
@@ -1073,7 +1073,7 @@ frame_handlers[frame_types.WINDOW_UPDATE] = function(stream, flags, payload, dea
 		return nil, h2_errors.FLOW_CONTROL_ERROR:new_traceback("A sender MUST NOT allow a flow-control window to exceed 2^31-1 octets", stream.id ~= 0), ce.EILSEQ
 	end
 	ob.peer_flow_credits = newval
-	ob.peer_flow_credits_increase:signal()
+	ob.peer_flow_credits_change:signal()
 
 	return true
 end
@@ -1325,8 +1325,8 @@ function stream_methods:write_chunk(payload, end_stream, timeout)
 	local deadline = timeout and (monotime()+timeout)
 	local sent = 0
 	while true do
-		while self.peer_flow_credits == 0 do
-			local which = cqueues.poll(self.peer_flow_credits_increase, self.connection, timeout)
+		while self.peer_flow_credits <= 0 do
+			local which = cqueues.poll(self.peer_flow_credits_change, self.connection, timeout)
 			if which == self.connection then
 				local ok, err, errno = self.connection:step(0)
 				if not ok then
@@ -1337,8 +1337,8 @@ function stream_methods:write_chunk(payload, end_stream, timeout)
 			end
 			timeout = deadline and (deadline-monotime())
 		end
-		while self.connection.peer_flow_credits == 0 do
-			local which = cqueues.poll(self.connection.peer_flow_credits_increase, self.connection, timeout)
+		while self.connection.peer_flow_credits <= 0 do
+			local which = cqueues.poll(self.connection.peer_flow_credits_change, self.connection, timeout)
 			if which == self.connection then
 				local ok, err, errno = self.connection:step(0)
 				if not ok then

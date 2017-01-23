@@ -146,7 +146,7 @@ local function new_connection(socket, conn_type, settings)
 		send_settings_ack_cond = cc.new(); -- for when server ACKs our settings
 		send_settings_acked = 0;
 		peer_flow_credits = 65535; -- 5.2.1
-		peer_flow_credits_increase = cc.new();
+		peer_flow_credits_change = cc.new();
 		encoding_context = nil;
 		decoding_context = nil;
 		pongs = {}; -- pending pings we've sent. keyed by opaque 8 byte payload
@@ -442,6 +442,32 @@ function connection_methods:write_goaway_frame(last_stream_id, err_code, debug_m
 end
 
 function connection_methods:set_peer_settings(peer_settings)
+	--[[ 6.9.2:
+	In addition to changing the flow-control window for streams that are
+	not yet active, a SETTINGS frame can alter the initial flow-control
+	window size for streams with active flow-control windows (that is,
+	streams in the "open" or "half-closed (remote)" state).  When the
+	value of SETTINGS_INITIAL_WINDOW_SIZE changes, a receiver MUST adjust
+	the size of all stream flow-control windows that it maintains by the
+	difference between the new value and the old value.
+
+	A change to SETTINGS_INITIAL_WINDOW_SIZE can cause the available
+	space in a flow-control window to become negative.  A sender MUST
+	track the negative flow-control window and MUST NOT send new flow-
+	controlled frames until it receives WINDOW_UPDATE frames that cause
+	the flow-control window to become positive.]]
+	local new_window_size = peer_settings[known_settings.INITIAL_WINDOW_SIZE]
+	if new_window_size then
+		local old_windows_size = self.peer_settings[known_settings.INITIAL_WINDOW_SIZE]
+		local delta = new_window_size - old_windows_size
+		if delta ~= 0 then
+			for _, stream in pairs(self.streams) do
+				stream.peer_flow_credits = stream.peer_flow_credits + delta
+				stream.peer_flow_credits_change:signal()
+			end
+		end
+	end
+
 	merge_settings(self.peer_settings, peer_settings)
 	self.peer_settings_cond:signal()
 end
