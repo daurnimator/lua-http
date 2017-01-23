@@ -106,7 +106,7 @@ end
 function stream_methods:pick_id(id)
 	assert(self.id == nil)
 	if id == nil then
-		if self.recv_goaway_lowest then
+		if self.connection.recv_goaway_lowest then
 			h2_error.errors.PROTOCOL_ERROR("Receivers of a GOAWAY frame MUST NOT open additional streams on the connection")
 		end
 		if self.type == "client" then
