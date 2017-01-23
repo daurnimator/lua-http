@@ -455,7 +455,7 @@ local function process_end_headers(stream, end_stream, pad_len, pos, promised_st
 
 	if not promised_stream then
 		stream.stats_recv_headers = stream.stats_recv_headers + 1
-		local validate_ok, validate_err, errno2 = validate_headers(headers, stream.type ~= "client", stream.stats_recv_headers, stream.state == "half closed (remote)" or stream.state == "closed")
+		local validate_ok, validate_err, errno2 = validate_headers(headers, stream.type ~= "client", stream.stats_recv_headers, end_stream)
 		if not validate_ok then
 			return nil, validate_err, errno2
 		end
