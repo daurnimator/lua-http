@@ -288,6 +288,7 @@ frame_handlers[frame_types.DATA] = function(stream, flags, payload, deadline) --
 		if pad_len >= #payload then -- >= will take care of the pad_len itself
 			return nil, h2_errors.PROTOCOL_ERROR:new_traceback("length of the padding is the length of the frame payload or greater"), ce.EILSEQ
 		elseif payload:match("[^%z]", -pad_len) then
+			-- 6.1: A receiver is not obligated to verify padding but MAY treat non-zero padding as a connection error of type PROTOCOL_ERROR.
 			return nil, h2_errors.PROTOCOL_ERROR:new_traceback("padding not null bytes"), ce.EILSEQ
 		end
 		payload = payload:sub(2, -pad_len-1)
@@ -451,6 +452,8 @@ local function process_end_headers(stream, end_stream, pad_len, pos, promised_st
 		if pad_len + pos - 1 > #payload then
 			return nil, h2_errors.PROTOCOL_ERROR:new_traceback("length of the padding is the length of the frame payload or greater"), ce.EILSEQ
 		elseif payload:match("[^%z]", -pad_len) then
+			-- 6.2: Padding fields and flags are identical to those defined for DATA frames
+			-- 6.1: A receiver is not obligated to verify padding but MAY treat non-zero padding as a connection error of type PROTOCOL_ERROR.
 			return nil, h2_errors.PROTOCOL_ERROR:new_traceback("padding not null bytes"), ce.EILSEQ
 		end
 		payload = payload:sub(1, -pad_len-1)
