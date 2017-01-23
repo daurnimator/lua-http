@@ -2,8 +2,10 @@ UNRELEASED
 
   - Remove broken http.server `.client_timeout` option (replaced with `.connection_setup_timeout`)
   - Fix http1 pipelining locks
-  - Fix sending http2 continuations
+  - Miscellaneous http2 fixes
   - HTTP 2 streams no longer have to be used in order of creation
+  - No longer raise decode errors in hpack module
+  - Fix `hpack:lookup_index()` to treat static entries without values as empty string
 
 
 0.1 - 2016-12-17
