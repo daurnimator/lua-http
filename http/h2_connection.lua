@@ -185,7 +185,7 @@ local function handle_frame(self, typ, flag, streamid, payload, deadline)
 	-- Implementations MUST ignore and discard any frame that has a type that is unknown.
 	if handler then
 		local stream = self.streams[streamid]
-		if stream == nil and (not self.recv_goaway_lowest or streamid < self.recv_goaway_lowest) then
+		if stream == nil then
 			if xor(streamid % 2 == 1, self.type == "client") then
 				return nil, h2_error.errors.PROTOCOL_ERROR:new_traceback("Streams initiated by a client MUST use odd-numbered stream identifiers; those initiated by the server MUST use even-numbered stream identifiers"), ce.EILSEQ
 			end
