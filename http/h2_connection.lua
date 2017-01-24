@@ -124,6 +124,7 @@ local function new_connection(socket, conn_type, settings)
 		-- For continuations
 		need_continuation = nil; -- stream
 		promised_stream = nil; -- stream
+		recv_headers_end_stream = nil;
 		recv_headers_buffer = nil;
 		recv_headers_buffer_pos = nil;
 		recv_headers_buffer_pad_len = nil;

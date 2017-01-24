@@ -567,6 +567,7 @@ frame_handlers[frame_types.HEADERS] = function(stream, flags, payload, deadline)
 		return process_end_headers(stream, end_stream, pad_len, pos, nil, payload)
 	else
 		stream.connection.need_continuation = stream
+		stream.connection.recv_headers_end_stream = end_stream
 		stream.connection.recv_headers_buffer = { payload }
 		stream.connection.recv_headers_buffer_pos = pos
 		stream.connection.recv_headers_buffer_pad_len = pad_len
@@ -937,6 +938,7 @@ frame_handlers[frame_types.PUSH_PROMISE] = function(stream, flags, payload, dead
 	else
 		stream.connection.need_continuation = stream
 		stream.connection.promised_stream = promised_stream
+		stream.connection.recv_headers_end_stream = false
 		stream.connection.recv_headers_buffer = { payload }
 		stream.connection.recv_headers_buffer_pos = pos
 		stream.connection.recv_headers_buffer_pad_len = pad_len
@@ -1132,7 +1134,9 @@ frame_handlers[frame_types.CONTINUATION] = function(stream, flags, payload, dead
 		local promised_stream = stream.connection.promised_stream
 		local pad_len = stream.connection.recv_headers_buffer_pad_len
 		local pos = stream.connection.recv_headers_buffer_pos
+		local end_stream = stream.connection.recv_headers_end_stream
 		payload = table.concat(stream.connection.recv_headers_buffer, "", 1, stream.connection.recv_headers_buffer_items)
+		stream.connection.recv_headers_end_stream = nil
 		stream.connection.recv_headers_buffer = nil
 		stream.connection.recv_headers_buffer_pos = nil
 		stream.connection.recv_headers_buffer_pad_len = nil
@@ -1140,7 +1144,7 @@ frame_handlers[frame_types.CONTINUATION] = function(stream, flags, payload, dead
 		stream.connection.recv_headers_buffer_length = nil
 		stream.connection.promised_stream = nil
 		stream.connection.need_continuation = nil
-		return process_end_headers(stream, false, pad_len, pos, promised_stream, payload)
+		return process_end_headers(stream, end_stream, pad_len, pos, promised_stream, payload)
 	else
 		return true
 	end
