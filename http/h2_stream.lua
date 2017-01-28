@@ -1325,7 +1325,7 @@ function stream_methods:push_promise(headers, timeout)
 	assert(self.type == "server")
 	assert(headers, "missing argument: headers")
 	assert(validate_headers(headers, true, 1, false))
-	assert(headers:has(":authority"))
+	assert(headers:has(":authority"), "PUSH_PROMISE must have an :authority")
 
 	local promised_stream = self.connection:new_stream()
 	promised_stream:pick_id()
