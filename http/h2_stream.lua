@@ -1338,6 +1338,8 @@ function stream_methods:push_promise(headers, timeout)
 	if not ok then
 		return nil, err, errno
 	end
+	promised_stream.recv_headers_fifo:push(headers)
+	promised_stream.recv_headers_cond:signal()
 
 	return promised_stream
 end
