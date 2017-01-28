@@ -163,13 +163,7 @@ local function handle_socket(self, socket)
 			else
 				idle = false
 				deadline = nil
-				self.cq:wrap(function()
-					local ok, err2 = http_util.yieldable_pcall(self.onstream, self, stream)
-					stream:shutdown()
-					if not ok then
-						self:onerror()(self, stream, "onstream", err2)
-					end
-				end)
+				self:add_stream(stream)
 			end
 		end
 		-- wait for streams to complete
@@ -182,6 +176,14 @@ local function handle_socket(self, socket)
 	self.connection_done:signal(1)
 	if error_operation then
 		self:onerror()(self, error_context, error_operation, err, errno)
+	end
+end
+
+local function handle_stream(self, stream)
+	local ok, err = http_util.yieldable_pcall(self.onstream, self, stream)
+	stream:shutdown()
+	if not ok then
+		self:onerror()(self, stream, "onstream", err)
 	end
 end
 
@@ -491,6 +493,11 @@ end
 function server_methods:add_socket(socket)
 	self.n_connections = self.n_connections + 1
 	self.cq:wrap(handle_socket, self, socket)
+	return true
+end
+
+function server_methods:add_stream(stream)
+	self.cq:wrap(handle_stream, self, stream)
 	return true
 end
 
