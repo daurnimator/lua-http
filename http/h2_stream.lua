@@ -611,19 +611,22 @@ function stream_methods:write_headers_frame(payload, end_stream, end_headers, pa
 		return nil, err, errno
 	end
 	self.stats_sent_headers = self.stats_sent_headers + 1
-	if not end_headers then
-		self.end_stream_after_continuation = end_stream
-	end
-	if end_stream and end_headers then
-		if self.state == "half closed (remote)" then
-			self:set_state("closed")
+	if end_headers then
+		if end_stream then
+			if self.state == "half closed (remote)" or self.state == "reserved (local)" then
+				self:set_state("closed")
+			else
+				self:set_state("half closed (local)")
+			end
 		else
-			self:set_state("half closed (local)")
+			if self.state == "idle" then
+				self:set_state("open")
+			elseif self.state == "reserved (local)" then
+				self:set_state("half closed (remote)")
+			end
 		end
 	else
-		if self.state == "idle" or self.state == "reserved (local)" then
-			self:set_state("open")
-		end
+		self.end_stream_after_continuation = end_stream
 	end
 	return ok
 end
@@ -971,10 +974,11 @@ function stream_methods:write_push_promise_frame(promised_stream_id, payload, en
 	if ok == nil then
 		return nil, err, errno
 	end
-	if not end_headers then
+	if end_headers then
+		promised_stream:set_state("reserved (local)")
+	else
 		promised_stream.end_stream_after_continuation = false
 	end
-	promised_stream:set_state("reserved (local)")
 	if flush ~= "f" then
 		return self.connection:flush(timeout)
 	else
@@ -1151,7 +1155,7 @@ frame_handlers[frame_types.CONTINUATION] = function(stream, flags, payload, dead
 end
 
 function stream_methods:write_continuation_frame(payload, end_headers, timeout, flush)
-	assert(self.state == "open" or self.state == "half closed (remote)" or self.state == "reserved (local)")
+	assert(self.state ~= "closed" and self.state ~= "half closed (local)")
 	local flags = 0
 	if end_headers then
 		flags = bor(flags, 0x4)
@@ -1160,18 +1164,21 @@ function stream_methods:write_continuation_frame(payload, end_headers, timeout, 
 	if ok == nil then
 		return nil, err, errno
 	end
-	if self.end_stream_after_continuation and end_headers then
-		if self.state == "half closed (remote)" then
-			self:set_state("closed")
+	if end_headers then
+		if self.end_stream_after_continuation then
+			if self.state == "half closed (remote)" or self.state == "reserved (local)" then
+				self:set_state("closed")
+			else
+				self:set_state("half closed (local)")
+			end
 		else
-			self:set_state("half closed (local)")
+			if self.state == "idle" then
+				self:set_state("open")
+			elseif self.state == "reserved (local)" then
+				self:set_state("half closed (remote)")
+			end
 		end
 	else
-		if self.state == "idle" then
-			self:set_state("open")
-		end
-	end
-	if end_headers then
 		self.end_stream_after_continuation = nil
 	end
 	return ok
