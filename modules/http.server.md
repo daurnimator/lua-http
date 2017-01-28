@@ -117,3 +117,8 @@ Add a new connection socket to the server for processing. The server will use th
   - Another cqueues thread with some other master socket.
   - From inetd for start on demand daemons.
   - A Unix socket with `SCM_RIGHTS`.
+
+
+### `server:add_stream(stream)` <!-- --> {#http.server:add_stream}
+
+Add an existing stream to the server for processing.
