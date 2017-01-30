@@ -500,6 +500,7 @@ local function process_end_headers(stream, end_stream, pad_len, pos, promised_st
 
 		promised_stream:set_state("reserved (remote)")
 		promised_stream.recv_headers_fifo:push(headers)
+		promised_stream.recv_headers_cond:signal()
 
 		-- If we have sent a haven't seen this stream before, and we should be discarding frames from it,
 		-- then don't push it into the new_streams fifo
