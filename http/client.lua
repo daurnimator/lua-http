@@ -44,13 +44,9 @@ local function negotiate(s, options, timeout)
 		if version == 2 then
 			ssl:setOptions(openssl_ctx.OP_NO_TLSv1 + openssl_ctx.OP_NO_TLSv1_1)
 		end
-		if options.host and http_tls.has_hostname_validation then
+		if options.host and http_tls.has_hostname_validation and not ip then
 			local params = openssl_verify_param.new()
-			if ip then
-				params:setIP(options.host)
-			else
-				params:setHost(options.host)
-			end
+			params:setHost(options.host)
 			-- Allow user defined params to override
 			local old = ssl:getParam()
 			old:inherit(params)
