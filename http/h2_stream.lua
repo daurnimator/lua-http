@@ -8,9 +8,9 @@ local bor = require "http.bit".bor
 local h2_error = require "http.h2_error"
 local h2_errors = h2_error.errors
 local stream_common = require "http.stream_common"
-local spack = string.pack or require "compat53.string".pack
-local sunpack = string.unpack or require "compat53.string".unpack
-local unpack = table.unpack or unpack -- luacheck: ignore 113
+local spack = string.pack or require "compat53.string".pack -- luacheck: ignore 143
+local sunpack = string.unpack or require "compat53.string".unpack -- luacheck: ignore 143
+local unpack = table.unpack or unpack -- luacheck: ignore 113 143
 
 local assert = assert
 if _VERSION:match("%d+%.?%d*") < "5.3" then

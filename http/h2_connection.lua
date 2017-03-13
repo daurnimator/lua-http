@@ -12,8 +12,8 @@ local h2_stream = require "http.h2_stream"
 local known_settings = h2_stream.known_settings
 local hpack = require "http.hpack"
 local h2_banned_ciphers = require "http.tls".banned_ciphers
-local spack = string.pack or require "compat53.string".pack
-local sunpack = string.unpack or require "compat53.string".unpack
+local spack = string.pack or require "compat53.string".pack -- luacheck: ignore 143
+local sunpack = string.unpack or require "compat53.string".unpack -- luacheck: ignore 143
 
 local assert = assert
 if _VERSION:match("%d+%.?%d*") < "5.3" then

@@ -6,3 +6,4 @@ files["spec"] = {
 		"assert_loop";
 	};
 }
+max_line_length = false

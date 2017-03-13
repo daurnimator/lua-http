@@ -152,7 +152,8 @@ local function reply(myserver, stream) -- luacheck: ignore 212
 		</tr></thead>
 		<tbody>
 ]], xml_escape(path), xml_escape(path)), false))
-			-- lfs doesn't provide a way to get an errno for attempting to open a directory https://github.com/keplerproject/luafilesystem/issues/87
+			-- lfs doesn't provide a way to get an errno for attempting to open a directory
+			-- See https://github.com/keplerproject/luafilesystem/issues/87
 			for filename in lfs.dir(real_path) do
 				if not (filename == ".." and path == "/") then -- Exclude parent directory entry listing from top level
 					local stats = lfs.attributes(real_path .. "/" .. filename)

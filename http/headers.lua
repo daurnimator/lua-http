@@ -12,7 +12,7 @@ I chose to implement headers as an array of entries.
 An index of field name => array indices is kept.
 ]]
 
-local unpack = table.unpack or unpack -- luacheck: ignore 113
+local unpack = table.unpack or unpack -- luacheck: ignore 113 143
 
 local entry_methods = {}
 local entry_mt = {

@@ -23,9 +23,9 @@ If the peer is sending *anything*, then you know they are still connected.
 ]]
 
 local basexx = require "basexx"
-local spack = string.pack or require "compat53.string".pack
-local sunpack = string.unpack or require "compat53.string".unpack
-local unpack = table.unpack or unpack -- luacheck: ignore 113
+local spack = string.pack or require "compat53.string".pack -- luacheck: ignore 143
+local sunpack = string.unpack or require "compat53.string".unpack -- luacheck: ignore 143
+local unpack = table.unpack or unpack -- luacheck: ignore 113 143
 local utf8 = utf8 or require "compat53.utf8" -- luacheck: ignore 113
 local cqueues = require "cqueues"
 local monotime = cqueues.monotime

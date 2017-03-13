@@ -1,5 +1,5 @@
 describe("http.util module", function()
-	local unpack = table.unpack or unpack -- luacheck: ignore 113
+	local unpack = table.unpack or unpack -- luacheck: ignore 113 143
 	local util = require "http.util"
 	it("decodeURI works", function()
 		assert.same("Encoded string", util.decodeURI("Encoded%20string"))

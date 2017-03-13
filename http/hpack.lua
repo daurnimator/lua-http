@@ -2,12 +2,12 @@
 -- Reference documentation: https://http2.github.io/http2-spec/compression.html
 
 local schar = string.char
-local spack = string.pack or require "compat53.string".pack
-local sunpack = string.unpack or require "compat53.string".unpack
+local spack = string.pack or require "compat53.string".pack -- luacheck: ignore 143
+local sunpack = string.unpack or require "compat53.string".unpack -- luacheck: ignore 143
 local band = require "http.bit".band
 local bor = require "http.bit".bor
 local new_headers = require "http.headers".new
-local unpack = table.unpack or unpack -- luacheck: ignore 113
+local unpack = table.unpack or unpack -- luacheck: ignore 113 143
 local h2_errors = require "http.h2_error".errors
 
 -- Section 5.1

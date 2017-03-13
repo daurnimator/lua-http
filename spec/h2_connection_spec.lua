@@ -55,7 +55,7 @@ describe("http2 connection", function()
 		test_preface(("long string"):rep(1000))
 	end)
 	it("read_http2_frame fails with EILSEQ on corrupt frame", function()
-		local spack = string.pack or require "compat53.string".pack
+		local spack = string.pack or require "compat53.string".pack -- luacheck: ignore 143
 		local s, c = ca.assert(cs.pair())
 		local cq = cqueues.new()
 		cq:wrap(function()
@@ -72,7 +72,7 @@ describe("http2 connection", function()
 		assert.truthy(cq:empty())
 	end)
 	it("read_http2_frame is cqueues thread-safe", function()
-		local spack = string.pack or require "compat53.string".pack
+		local spack = string.pack or require "compat53.string".pack -- luacheck: ignore 143
 		local s, c = ca.assert(cs.pair())
 		c = assert(h2_connection.new(c, "client"))
 		local cq = cqueues.new()
