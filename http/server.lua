@@ -188,32 +188,15 @@ local function handle_stream(self, stream)
 end
 
 -- Prefer whichever comes first
-local function alpn_select_either(ssl, protos) -- luacheck: ignore 212
+local function alpn_select(ssl, protos, version)
 	for _, proto in ipairs(protos) do
-		if proto == "h2" then
-			-- HTTP2 only allows >=TLSv1.2
-			if ssl:getVersion() >= openssl_ssl.TLS1_2_VERSION then
+		if proto == "h2" and (version == nil or version == 2) then
+			-- HTTP2 only allows >= TLSv1.2
+			-- allow override via version
+			if ssl:getVersion() >= openssl_ssl.TLS1_2_VERSION or version == 2 then
 				return proto
 			end
-		elseif proto == "http/1.1" then
-			return proto
-		end
-	end
-	return nil
-end
-
-local function alpn_select_h2(ssl, protos) -- luacheck: ignore 212
-	for _, proto in ipairs(protos) do
-		if proto == "h2" then
-			return proto
-		end
-	end
-	return nil
-end
-
-local function alpn_select_h1(ssl, protos) -- luacheck: ignore 212
-	for _, proto in ipairs(protos) do
-		if proto == "http/1.1" then
+		elseif proto == "http/1.1" and (version == nil or version == 1.1) then
 			return proto
 		end
 	end
@@ -224,13 +207,7 @@ end
 local function new_ctx(host, version)
 	local ctx = http_tls.new_server_context()
 	if http_tls.has_alpn then
-		if version == nil then
-			ctx:setAlpnSelect(alpn_select_either)
-		elseif version == 2 then
-			ctx:setAlpnSelect(alpn_select_h2)
-		elseif version == 1.1 then
-			ctx:setAlpnSelect(alpn_select_h1)
-		end
+		ctx:setAlpnSelect(alpn_select, version)
 	end
 	if version == 2 then
 		ctx:setOptions(openssl_ctx.OP_NO_TLSv1 + openssl_ctx.OP_NO_TLSv1_1)
