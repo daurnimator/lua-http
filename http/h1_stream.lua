@@ -603,7 +603,8 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		end
 	elseif self.type == "server" and status_code and status_code:sub(1, 1) == "1" then
 		assert(not end_stream, "cannot end stream directly after 1xx status code")
-		-- A server MUST NOT send a Content-Length header field in any response with a status code of 1xx (Informational) or 204 (No Content)
+		-- A server MUST NOT send a Content-Length header field in any response
+		-- with a status code of 1xx (Informational) or 204 (No Content)
 		if cl then
 			error("Content-Length not allowed in response with 1xx status code")
 		end
@@ -620,11 +621,13 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		end
 		if cl then
 			-- RFC 7230 Section 3.3.2:
-			-- A sender MUST NOT send a Content-Length header field in any message that contains a Transfer-Encoding header field.
+			-- A sender MUST NOT send a Content-Length header field in any
+			-- message that contains a Transfer-Encoding header field.
 			if transfer_encoding_header then
 				error("Content-Length not allowed in message with a transfer-encoding")
 			elseif self.type == "server" then
-				-- A server MUST NOT send a Content-Length header field in any response with a status code of 1xx (Informational) or 204 (No Content)
+				-- A server MUST NOT send a Content-Length header field in any response
+				-- with a status code of 1xx (Informational) or 204 (No Content)
 				if status_code == "204" then
 					error("Content-Length not allowed in response with 204 status code")
 				end
