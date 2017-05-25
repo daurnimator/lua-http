@@ -19,3 +19,13 @@ if has_luacov then
 		return wrap(self, func, ...)
 	end)
 end
+
+-- Allow tests to pick up configured locale
+local locale = os.getenv("LOCALE")
+if locale then
+	os.setlocale(locale)
+	if locale ~= os.setlocale(locale) then
+		print("Locale " .. locale .. " is not available.")
+		os.exit(1) -- busted doesn't fail if helper script throws errors: https://github.com/Olivine-Labs/busted/issues/549
+	end
+end
