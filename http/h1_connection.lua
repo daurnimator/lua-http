@@ -340,7 +340,7 @@ function connection_methods:write_request_line(method, path, httpversion, timeou
 	assert(method:match("^[^ \r\n]+$"))
 	assert(path:match("^[^ \r\n]+$"))
 	assert(httpversion == 1.0 or httpversion == 1.1)
-	local line = string.format("%s %s HTTP/%1.1f\r\n", method, path, httpversion)
+	local line = string.format("%s %s HTTP/%s\r\n", method, path, httpversion == 1.0 and "1.0" or "1.1")
 	local ok, err, errno = self.socket:xwrite(line, "f", timeout)
 	if not ok then
 		return nil, err, errno
@@ -352,7 +352,7 @@ function connection_methods:write_status_line(httpversion, status_code, reason_p
 	assert(httpversion == 1.0 or httpversion == 1.1)
 	assert(status_code:match("^[1-9]%d%d$"), "invalid status code")
 	assert(type(reason_phrase) == "string" and reason_phrase:match("^[^\r\n]*$"), "invalid reason phrase")
-	local line = string.format("HTTP/%1.1f %s %s\r\n", httpversion, status_code, reason_phrase)
+	local line = string.format("HTTP/%s %s %s\r\n", httpversion == 1.0 and "1.0" or "1.1", status_code, reason_phrase)
 	local ok, err, errno = self.socket:xwrite(line, "f", timeout)
 	if not ok then
 		return nil, err, errno
