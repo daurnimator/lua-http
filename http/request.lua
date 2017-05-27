@@ -107,6 +107,7 @@ function request_methods:clone()
 	return setmetatable({
 		host = self.host;
 		port = self.port;
+		bind = self.bind;
 		tls = self.tls;
 		ctx = self.ctx;
 		sendname = self.sendname;
@@ -467,6 +468,7 @@ function request_methods:go(timeout)
 		connection, err, errno = client.connect({
 			host = host;
 			port = port;
+			bind = self.bind;
 			tls = tls;
 			ctx = self.ctx;
 			sendname = self.sendname;
