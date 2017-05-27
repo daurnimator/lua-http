@@ -46,6 +46,7 @@ end
 
 local stream_methods = {
 	use_zlib = has_zlib;
+	max_header_lines = 100;
 }
 for k,v in pairs(stream_common.methods) do
 	stream_methods[k] = v
@@ -321,6 +322,9 @@ function stream_methods:read_headers(timeout)
 
 	-- Use while loop for lua 5.1 compatibility
 	while true do
+		if headers:len() >= self.max_header_lines then
+			return nil, ce.strerror(ce.E2BIG), ce.E2BIG
+		end
 		local k, v, errno = self.connection:read_header(0)
 		if k == nil then
 			if v ~= nil then

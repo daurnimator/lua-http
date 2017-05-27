@@ -9,6 +9,11 @@ The gzip transfer encoding is supported transparently.
 See [`stream.connection`](#stream.connection)
 
 
+### `h1_stream.max_header_lines` <!-- --> {#http.h1_stream.max_header_lines}
+
+The maximum number of header lines to read. Default is `100`.
+
+
 ### `h1_stream:checktls()` <!-- --> {#http.h1_stream:checktls}
 
 See [`stream:checktls()`](#stream:checktls)
