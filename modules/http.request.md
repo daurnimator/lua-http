@@ -22,6 +22,15 @@ The host this request should be sent to.
 The port this request should be sent to.
 
 
+### `request.bind` <!-- --> {#http.request.bind}
+
+The local outgoing address and optionally port to bind in the form of `"address[:port]"`. Default is to allow the kernel to choose an address+port.
+
+IPv6 addresses may be specified via square bracket notation. e.g. `"127.0.0.1"`, `"127.0.0.1:50000"`, `"[::1]:30000"`.
+
+This option is rarely needed. Supplying an address can be used to manually select the network interface to make the request from, while supplying a port is only really used to interoperate with firewalls or devices that demand use of a certain port.
+
+
 ### `request.tls` <!-- --> {#http.request.tls}
 
 A boolean indicating if TLS should be used.
