@@ -37,6 +37,7 @@ This function returns a new connection to an HTTP server. Once a connection has 
 		e.g. `"80"` or `80`
 	  - `path` (string): path to connect to (UNIX sockets)
 	  - `v6only` (boolean, optional): if the `IPV6_V6ONLY` flag should be set on the underlying socket.
+	  - `bind` (string, optional): the local outgoing address and optionally port to bind in the form of `"address[:port]"`, IPv6 addresses may be specified via square bracket notation. e.g. `"127.0.0.1"`, `"127.0.0.1:50000"`, `"[::1]:30000"`.
   - `timeout` (optional) is the maximum amount of time (in seconds) to allow for connection to be established.  
 	This includes time for DNS lookup, connection, TLS negotiation (if TLS enabled) and in the case of HTTP 2: settings exchange.
 
