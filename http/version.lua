@@ -5,5 +5,5 @@ It should be updated as part of the release process
 
 return {
 	name = "lua-http";
-	version = "0.1";
+	version = "0.2";
 }
