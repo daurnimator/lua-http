@@ -8,7 +8,7 @@ describe("http.compat.socket module", function()
 		-- in the luasocket example they use 'wrong.host', but 'host' is now a valid TLD.
 		-- use 'wrong.invalid' instead for this test.
 		local r, e = http.request("http://wrong.invalid/")
-		assert.same(r, nil)
+		assert.same(nil, r)
 		-- in luasocket, the error is documented as "host not found", but we allow something else
 		assert.same("string", type(e))
 	end)
