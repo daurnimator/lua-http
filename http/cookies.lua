@@ -3,11 +3,10 @@ local util = require "http.util"
 local psl = require "psl"
 
 local function parse_set_cookie(text_cookie, request, time)
+	assert(time, "missing time value for cookie parsing")
 	local domain = request.headers:get("host")
 	local key, value, matched_cookie = assert(http_patts.Set_Cookie:match(
 		text_cookie))
-	-- allow custom time for specs to not error
-	time = time or os.time()
 	local cookie = {
 		creation = time;
 		last_access = time;
