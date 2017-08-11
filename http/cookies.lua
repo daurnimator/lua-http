@@ -2,75 +2,74 @@ local http_patts = require "lpeg_patterns.http"
 local util = require "http.util"
 local psl = require "psl"
 
-local function parse_set_cookie(text_cookie, request, time)
+local function parse_set_cookie(text_cookie, host, path, time)
 	assert(time, "missing time value for cookie parsing")
-	local domain = request.headers:get("host")
-	local key, value, matched_cookie = assert(http_patts.Set_Cookie:match(
-		text_cookie))
+	local key, value, matched_cookie = assert(http_patts.Set_Cookie:match(text_cookie, 1))
 	local cookie = {
 		creation = time;
 		last_access = time;
-		persistent =
-			not not (matched_cookie.expires or matched_cookie["max-age"]);
-		domain = matched_cookie.domain or domain;
-		path = matched_cookie.path or request.headers:get(":path");
+		persistent = not not (matched_cookie.expires or matched_cookie["max-age"]);
+		domain = matched_cookie.domain or host;
+		path = matched_cookie.path or path;
 		secure = matched_cookie.secure or false;
 		http_only = matched_cookie.httponly or false;
 		key = key;
 		value = value;
-		host_only = not not matched_cookie.domain
+		host_only = not not matched_cookie.domain;
+		same_site = matched_cookie.same_site;
 	}
-	cookie.indexname = cookie.domain .."|".. cookie.path .."|".. cookie.key
 	if matched_cookie["max-age"] then
 		cookie.expires = time + tonumber(matched_cookie["max-age"])
 	else -- luacheck: ignore
 		-- ::TODO:: make use of `expires` cookie value
 	end
-	local same_site do
-		if matched_cookie.samesite == true then
-			same_site = "lax"
-		else
-			same_site = matched_cookie.samesite
-		end
-	end
-	cookie.same_site = same_site
 	return cookie
 end
 
 local function bake_cookie(data)
 	assert(data.key, "cookie must contain a `key` field")
+	assert(type(data.key) == "string", "`key` field for cookie must be string")
 	assert(data.value, "cookie must contain a `value` field")
-	local cookie = {tostring(data.key) .. "=" .. tostring(data.value)}
+	assert(type(data.value) == "string", "`value` field for cookie must be string")
+	local cookie = {data.key .. "=" .. data.value}
 	if data.expires then
-		cookie[#cookie + 1] = "Expires=" .. util.imf_date(data.expires)
+		cookie[#cookie + 1] = "; Expires=" .. util.imf_date(data.expires)
 	end
 	if data.max_age then
-		cookie[#cookie + 1] = "Max-Age=" .. tostring(math.floor(data.max_age))
+		cookie[#cookie + 1] = "; Max-Age=" .. string.format("%d", data.max_age)
 	end
 	if data.domain then
-		cookie[#cookie + 1] = "Domain=" .. data.domain
+		cookie[#cookie + 1] = "; Domain=" .. data.domain
 	end
 	if data.path then
-		cookie[#cookie + 1] = "Path=" .. data.path
+		cookie[#cookie + 1] = "; Path=" .. util.encodeURI(data.path)
 	end
 	if data.secure then
-		cookie[#cookie + 1] = "Secure"
+		cookie[#cookie + 1] = "; Secure"
 	end
 	if data.http_only then
-		cookie[#cookie + 1] = "HttpOnly"
+		cookie[#cookie + 1] = "; HttpOnly"
 	end
+	-- This component is not a part of the RFC 6265 specification for the
+	-- headers, but is instead from a draft of another RFC that builds on the
+	-- original one.
+	-- https://tools.ietf.org/html/draft-ietf-httpbis-cookie-same-site-00#section-4.1
 	if data.same_site then
-		if data.same_site == true then
-			data.same_site = "Strict"
+		local v
+		if data.same_site:lower() == "strict" then
+			v = "; SameSite=Strict"
+		elseif data.same_site == "Lax" then
+			v = "; SameSite=Lax"
+		else
+			error('invalid value for same_site, expected "Strict" or "Lax"')
 		end
-		cookie[#cookie + 1] = "SameSite=" .. data.same_site:gsub("^.",
-			string.upper)
+		cookie[#cookie + 1] = v
 	end
-	return table.concat(cookie, "; ")
+	return table.concat(cookie)
 end
 
 local function iterate_cookies(cookie)
-	return pairs(assert(http_patts.Cookie:match(cookie)))
+	return pairs(assert(http_patts.Cookie:match(cookie, 1)))
 end
 
 local function parse_cookies(cookie)
@@ -86,15 +85,22 @@ local function parse_cookies(cookie)
 end
 
 local cookiejar_methods = {}
-local cookiejar_mt = {__index = cookiejar_methods}
+if psl.latest then
+	cookiejar_methods.psl_object = psl.latest()
+else
+	cookiejar_methods.psl_object = psl.builtin()
+end
+local cookiejar_mt = {
+	__name = "http.cookies.cookiejar";
+	__index = cookiejar_methods;
+}
 
 local function new_cookiejar(psl_object)
-	psl_object = psl_object or psl.builtin()
-	return setmetatable({cookies={}, psl = psl_object}, cookiejar_mt)
+	return setmetatable({cookies={}, psl_object = psl_object}, cookiejar_mt)
 end
 
-function cookiejar_methods:add(cookie)
-	cookie.last_access = os.time()
+function cookiejar_methods:add(cookie, time)
+	cookie.last_access = time or os.time()
 	local domain, path, key = cookie.domain, cookie.path, cookie.key
 	local cookies = self.cookies
 	if cookies[domain] and cookies[domain][path] then
@@ -104,7 +110,7 @@ function cookiejar_methods:add(cookie)
 		end
 	end
 
-	local old_cookie = self:get_by_indexname(cookie.indexname)
+	local old_cookie = self:get(cookie.domain, cookie.path, cookie.key)
 	if old_cookie then
 		self:remove_cookie(old_cookie)
 	end
@@ -126,19 +132,17 @@ function cookiejar_methods:add(cookie)
 		table.insert(cookies, 1, cookie)
 	end
 
-	if not cookies[domain] then
-		cookies[domain] = {
-			[path] = {
-				[key] = cookie
-			}
-		}
-	elseif not cookies[domain][path] then
-		cookies[domain][path] = {
-			[key] = cookie
-		}
-	else
-		cookies[domain][path][key] = cookie
+	local by_domain = cookies[domain]
+	if not by_domain then
+		by_domain = {}
+		cookies[domain] = by_domain
 	end
+	local by_path = by_domain[path]
+	if not by_path then
+		by_path = {}
+		by_domain[path] = by_path
+	end
+	by_path[key] = cookie
 end
 
 function cookiejar_methods:get_expired(time)
@@ -155,14 +159,12 @@ function cookiejar_methods:get_expired(time)
 	return returned_cookies
 end
 
-function cookiejar_methods:get_by_indexname(name)
-	assert(name:match(".+|.+|.+"), "Bad indexname")
-	local a, b, c = name:match("(.+)|(.+)|(.+)")
+function cookiejar_methods:get(domain, path, key)
 	local cookies = self.cookies
-	if cookies[a] then
-		if cookies[a][b] then
-			if cookies[a][b][c] then
-				return cookies[a][b][c]
+	if cookies[domain] then
+		if cookies[domain][path] then
+			if cookies[domain][path][key] then
+				return cookies[domain][path][key]
 			end
 		end
 	end
@@ -261,8 +263,8 @@ function cookiejar_methods:serialize_cookies_for(domain, path, secure)
 	end
 
 	-- check all paths and flatten into a list of sets
-	for _path, set in pairs(self.cookies[domain]) do
-		if _path:sub(1, #path) == path then
+	for stored_, set in pairs(self.cookies[domain]) do
+		if stored_:sub(1, #path) == path then
 			for _, cookie in pairs(set) do
 				sets[#sets + 1] = cookie
 			end
@@ -282,7 +284,7 @@ function cookiejar_methods:serialize_cookies_for(domain, path, secure)
 	-- populate cookie list
 	for _, cookie in pairs(sets) do
 		if not cookie.host_only then
-			if self.psl:is_cookie_domain_acceptable(domain,
+			if self.psl_object:is_cookie_domain_acceptable(domain,
 				cookie.domain) then
 				cookies[#cookies + 1] = cookie
 			end
