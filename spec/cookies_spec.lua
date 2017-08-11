@@ -1,18 +1,12 @@
 describe("http.cookies moudle", function()
-	local cookies, headers, time
+	local cookies, time
 	setup(function()
 		cookies = require "http.cookies"
-		headers = require "http.headers"
 		time = os.time()
 	end)
 
 	it("Set-Cookie headers can be properly parsed", function()
-		local req_headers = headers.new()
-		req_headers:upsert("host", "example.com")
-		req_headers:upsert(":path", "/")
-		local mock_request = {
-			headers = req_headers
-		}
+		local host, path = "example.com", "/"
 		local expected = {
 			last_access = time,
 			path = "/",
@@ -21,15 +15,13 @@ describe("http.cookies moudle", function()
 			expires = time + 10000,
 			domain = "example.com",
 			host_only = false,
-			indexname = "example.com|/|id",
 			persistent = true,
 			key = "id",
 			http_only = true,
 			creation = time
 		}
 		local line = "id=a3fWa; Max-Age=10000; Secure; HttpOnly"
-		assert.same(expected, cookies.parse_set_cookie(line, mock_request,
-			time))
+		assert.same(expected, cookies.parse_set_cookie(line, host, path, time))
 		expected = {
 			last_access = time,
 			path = "/random/path",
@@ -37,7 +29,6 @@ describe("http.cookies moudle", function()
 			value = "potatocakes",
 			domain = "test.domain.example.com",
 			host_only = true,
-			indexname = "test.domain.example.com|/random/path|name",
 			persistent = false,
 			key = "name",
 			http_only = false,
@@ -45,8 +36,7 @@ describe("http.cookies moudle", function()
 		}
 		line = "name=potatocakes; Domain=test.domain.example.com; " ..
 			"Path=/random/path"
-		assert.same(expected, cookies.parse_set_cookie(line, mock_request,
-			time))
+		assert.same(expected, cookies.parse_set_cookie(line, host, path, time))
 	end)
 
 	it("Set-Cookie headers are properly created", function()
@@ -96,7 +86,6 @@ describe("http.cookies moudle", function()
 					value = "potatocakes";
 					domain = "test.domain.example.com";
 					host_only = true;
-					indexname = "test.domain.example.com|/random/path|name";
 					persistent = true;
 					key = "name";
 					http_only = false;
@@ -110,7 +99,6 @@ describe("http.cookies moudle", function()
 					value = "example_value";
 					domain = "potato.com";
 					host_only = false;
-					indexname = "potato.com|/whatever|nonpersistent";
 					persistent = false;
 					key = "nonpersistent";
 					http_only = false;
@@ -124,7 +112,6 @@ describe("http.cookies moudle", function()
 					value = "this_is_an_example";
 					domain = "test.domain.example.com";
 					host_only = false;
-					indexname = "test.domain.example.com|/random/path_two|key";
 					persistent = true;
 					key = "key";
 					http_only = true;
