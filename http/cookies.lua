@@ -18,8 +18,17 @@ local function parse_set_cookie(text_cookie, host, path, time)
 		host_only = not not matched_cookie.domain;
 		same_site = matched_cookie.same_site;
 	}
-	if matched_cookie["max-age"] then
-		cookie.expires = time + tonumber(matched_cookie["max-age"])
+	local age = matched_cookie["max-age"]
+	if age then
+		local negative = age:match("^-")
+		if negative then
+			-- RFC 6265 section 5.2.2 - if the value when converted to an
+			-- integer is negative, the expiration should be the earliest
+			-- representable expiration time.
+			cookie.expires = 0
+		else
+			cookie.expires = time + tonumber(age)
+		end
 	else -- luacheck: ignore
 		-- ::TODO:: make use of `expires` cookie value
 	end
@@ -27,9 +36,7 @@ local function parse_set_cookie(text_cookie, host, path, time)
 end
 
 local function bake_cookie(data)
-	assert(data.key, "cookie must contain a `key` field")
 	assert(type(data.key) == "string", "`key` field for cookie must be string")
-	assert(data.value, "cookie must contain a `value` field")
 	assert(type(data.value) == "string", "`value` field for cookie must be string")
 	local cookie = {data.key .. "=" .. data.value}
 	if data.expires then
@@ -58,7 +65,7 @@ local function bake_cookie(data)
 		local v
 		if data.same_site:lower() == "strict" then
 			v = "; SameSite=Strict"
-		elseif data.same_site == "Lax" then
+		elseif data.same_site:lower() == "lax" then
 			v = "; SameSite=Lax"
 		else
 			error('invalid value for same_site, expected "Strict" or "Lax"')
@@ -69,7 +76,7 @@ local function bake_cookie(data)
 end
 
 local function iterate_cookies(cookie)
-	return pairs(assert(http_patts.Cookie:match(cookie, 1)))
+	return pairs(assert(http_patts.Cookie:match(cookie, 1), "improper Cookie header format"))
 end
 
 local function parse_cookies(cookie)
@@ -95,8 +102,8 @@ local cookiejar_mt = {
 	__index = cookiejar_methods;
 }
 
-local function new_cookiejar(psl_object)
-	return setmetatable({cookies={}, psl_object = psl_object}, cookiejar_mt)
+local function new_cookiejar()
+	return setmetatable({cookies={}}, cookiejar_mt)
 end
 
 function cookiejar_methods:add(cookie, time)
@@ -161,13 +168,15 @@ end
 
 function cookiejar_methods:get(domain, path, key)
 	local cookies = self.cookies
-	if cookies[domain] then
-		if cookies[domain][path] then
-			if cookies[domain][path][key] then
-				return cookies[domain][path][key]
-			end
-		end
+	local by_domain = cookies[domain]
+	if not by_domain then
+		return
 	end
+	local by_path = by_domain[path]
+	if not by_path then
+		return
+	end
+	return by_path[key]
 end
 
 local function clear_holes(tbl, n)
@@ -205,10 +214,12 @@ function cookiejar_methods:remove_cookies(cookies)
 	for index, value in pairs(s_cookies) do
 		if cookie_hashes[value] then
 			s_cookies[index] = nil
-			s_cookies[value.domain][value.path][value.key] = nil
-			if not next(s_cookies[value.domain][value.path]) then
-				s_cookies[value.domain][value.path] = nil
-				if not next(s_cookies[value.domain]) then
+			local by_domain = s_cookies[value.domain]
+			local by_path = by_domain[value.path]
+			by_path[value.key] = nil
+			if not next(by_path) then
+				by_domain[value.path] = nil
+				if not next(by_domain) then
 					s_cookies[value.domain] = nil
 				end
 			end
@@ -251,8 +262,6 @@ end
 function cookiejar_methods:serialize_cookies_for(domain, path, secure)
 	-- explicitly check for secure; the other two will fail if given bad args
 	assert(type(secure) == "boolean", "expected boolean for `secure`")
-	local cookies = {}
-	local sets = {}
 
 	-- clear out expired cookies
 	self:remove_expired()
@@ -263,6 +272,7 @@ function cookiejar_methods:serialize_cookies_for(domain, path, secure)
 	end
 
 	-- check all paths and flatten into a list of sets
+	local sets = {}
 	for stored_, set in pairs(self.cookies[domain]) do
 		if stored_:sub(1, #path) == path then
 			for _, cookie in pairs(set) do
@@ -282,10 +292,10 @@ function cookiejar_methods:serialize_cookies_for(domain, path, secure)
 	end)
 
 	-- populate cookie list
+	local cookies = {}
 	for _, cookie in pairs(sets) do
 		if not cookie.host_only then
-			if self.psl_object:is_cookie_domain_acceptable(domain,
-				cookie.domain) then
+			if self.psl_object:is_cookie_domain_acceptable(domain, cookie.domain) then
 				cookies[#cookies + 1] = cookie
 			end
 		elseif cookie.domain == domain then
