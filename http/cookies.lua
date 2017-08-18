@@ -240,10 +240,12 @@ function cookiejar_methods:trim(size)
 		for i=#cookies, size + 1, -1 do
 			local cookie = cookies[i]
 			cookies[i] = nil
-			cookies[cookie.domain][cookie.path][cookie.key] = nil
-			if not next(cookies[cookie.domain][cookie.path]) then
-				cookies[cookie.domain][cookie.path] = nil
-				if not next(cookies[cookie.domain]) then
+			local by_domain = cookies[cookie.domain]
+			local by_path = by_domain[cookie.path]
+			by_path[cookie.key] = nil
+			if not next(by_path) then
+				by_domain[cookie.path] = nil
+				if not next(by_domain) then
 					cookies[cookie.domain] = nil
 				end
 			end
