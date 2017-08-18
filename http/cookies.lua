@@ -20,15 +20,15 @@ local function parse_set_cookie(text_cookie, host, path, time)
 	}
 	local age = matched_cookie["max-age"]
 	if age then
+		assert(age:match("^-?%d+$"), "expected [-]DIGIT* for max-age field")
 		local negative = age:match("^-")
 		if negative then
 			-- RFC 6265 section 5.2.2 - if the value when converted to an
 			-- integer is negative, the expiration should be the earliest
 			-- representable expiration time.
-			assert(tonumber(age:sub(2)), "expected [-]DIGIT* for max-age field")
 			cookie.expires = 0
 		else
-			cookie.expires = time + assert(tonumber(age), "expected [-]DIGIT* for max-age field")
+			cookie.expires = time + tonumber(age)
 		end
 	else -- luacheck: ignore
 		-- ::TODO:: make use of `expires` cookie value
