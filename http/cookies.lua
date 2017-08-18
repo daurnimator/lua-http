@@ -25,9 +25,10 @@ local function parse_set_cookie(text_cookie, host, path, time)
 			-- RFC 6265 section 5.2.2 - if the value when converted to an
 			-- integer is negative, the expiration should be the earliest
 			-- representable expiration time.
+			assert(tonumber(age:sub(2)), "expected [-]DIGIT* for max-age field")
 			cookie.expires = 0
 		else
-			cookie.expires = time + tonumber(age)
+			cookie.expires = time + assert(tonumber(age), "expected [-]DIGIT* for max-age field")
 		end
 	else -- luacheck: ignore
 		-- ::TODO:: make use of `expires` cookie value
@@ -75,14 +76,13 @@ local function bake_cookie(data)
 	return table.concat(cookie)
 end
 
-local function iterate_cookies(cookie)
-	return pairs(assert(http_patts.Cookie:match(cookie, 1), "improper Cookie header format"))
+local function match_cookies(cookie)
+	return assert(http_patts.Cookie:match(cookie, 1), "improper Cookie header format")
 end
 
 local function parse_cookies(cookie)
-	local cookies = {}
-	for k, v in iterate_cookies(cookie) do
-		cookies[k] = v
+	local cookies = match_cookies(cookie)
+	for k, v in pairs(cookies) do
 		cookies[#cookies + 1] = {k, v}
 	end
 	table.sort(cookies, function(t1, t2)
@@ -275,8 +275,8 @@ function cookiejar_methods:serialize_cookies_for(domain, path, secure)
 
 	-- check all paths and flatten into a list of sets
 	local sets = {}
-	for stored_, set in pairs(self.cookies[domain]) do
-		if stored_:sub(1, #path) == path then
+	for stored, set in pairs(self.cookies[domain]) do
+		if stored:sub(1, #path) == path then
 			for _, cookie in pairs(set) do
 				sets[#sets + 1] = cookie
 			end
@@ -324,7 +324,7 @@ function cookiejar_methods:serialize_cookies_for(domain, path, secure)
 end
 
 return {
-	iterate_cookies = iterate_cookies;
+	match_cookies = match_cookies;
 	parse_set_cookie = parse_set_cookie;
 	bake_cookie = bake_cookie;
 	parse_cookies = parse_cookies;
