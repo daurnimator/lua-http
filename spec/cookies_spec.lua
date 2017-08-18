@@ -64,7 +64,7 @@ describe("http.cookies moudle", function()
 			key2 = "value2";
 		}
 		local cookie_string = "key1=value1; key2=value2"
-		for key, value in cookies.iterate_cookies(cookie_string) do
+		for key, value in pairs(cookies.match_cookies(cookie_string)) do
 			assert.same(test_cookies[key], value)
 		end
 	end)
