@@ -27,8 +27,8 @@ local function parse_set_cookie(text_cookie, host, path, time)
 	}
 	local age = matched_cookie["max-age"]
 	if age then
-		local is_negative, match = age:match("^(-?)(%d+)$")
-		if is_negative then
+		local is_negative, match = age:match("^(%-?)(%d+)$")
+		if is_negative ~= "" then
 			-- RFC 6265 section 5.2.2 - if the value when converted to an
 			-- integer is negative, the expiration should be the earliest
 			-- representable expiration time.
@@ -101,8 +101,9 @@ local function parse_cookies(cookie)
 	for k, v in pairs(cookies) do
 		to_add[#to_add + 1] = {k, v}
 	end
-	for _, v in ipairs(to_add) do
-		cookies[#cookies + 1] = v
+	local len = #cookies
+	for i, v in ipairs(to_add) do
+		cookies[len + i] = v
 	end
 	table.sort(cookies, function(t1, t2)
 		return t1[1] < t2[1]
@@ -170,17 +171,17 @@ function cookiejar_methods:add(cookie, time)
 		by_domain[path] = by_path
 	end
 	by_path[key] = cookie
+	return true
 end
 
 function cookiejar_methods:get(domain, path, key)
-	local cookies = self.cookies
-	local by_domain = cookies[domain]
+	local by_domain = self.cookies[domain]
 	if not by_domain then
-		return
+		return nil
 	end
 	local by_path = by_domain[path]
 	if not by_path then
-		return
+		return nil
 	end
 	return by_path[key]
 end
@@ -318,18 +319,16 @@ function cookiejar_methods:serialize_cookies_for(domain, path, secure)
 	for _, cookie in pairs(sets) do
 		if not cookie.host_only then
 			if self.psl_object:is_cookie_domain_acceptable(domain, cookie.domain) then
-				cookies[#cookies + 1] = cookie
+				local is_cookie_secure = cookie.secure
+				if is_cookie_secure and secure or not is_cookie_secure then
+					cookies[#cookies + 1] = cookie
+				end
 			end
 		elseif cookie.domain == domain then
-			cookies[#cookies + 1] = cookie
-		end
-	end
-
-	local n = #cookies
-	-- remove cookies requiring secure connections on insecure connections
-	for index, cookie in pairs(cookies) do
-		if cookie.secure and not secure then
-			cookies[index] = nil
+			local is_cookie_secure = cookie.secure
+			if is_cookie_secure and secure or not is_cookie_secure then
+				cookies[#cookies + 1] = cookie
+			end
 		end
 	end
 
@@ -339,7 +338,6 @@ function cookiejar_methods:serialize_cookies_for(domain, path, secure)
 		cookie.last_access = time
 	end
 
-	clear_holes(cookies, n)
 	return serialize_cookies(cookies)
 end
 
