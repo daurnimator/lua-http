@@ -35,7 +35,7 @@ local function parse_set_cookie(text_cookie, host, path, time)
 		elseif not match then
 			return nil, "expected [-]DIGIT* for max-age field"
 		else
-			cookie.expires = time + tonumber(match)
+			cookie.expires = time + tonumber(match, 10)
 		end
 	else -- luacheck: ignore
 		-- ::TODO:: make use of `expires` cookie value
