@@ -96,8 +96,12 @@ end
 
 local function parse_cookies(cookie)
 	local cookies = match_cookies(cookie)
+	local to_add = {}
 	for k, v in pairs(cookies) do
-		cookies[#cookies + 1] = {k, v}
+		to_add[#to_add + 1] = {k, v}
+	end
+	for _, v in ipairs(to_add) do
+		cookies[#cookies + 1] = v
 	end
 	table.sort(cookies, function(t1, t2)
 		return t1[1] < t2[1]
