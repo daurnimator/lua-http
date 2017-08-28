@@ -23,6 +23,7 @@ local function parse_set_cookie(text_cookie, host, path, time)
 		value = value;
 		host_only = not not matched_cookie.domain;
 		same_site = matched_cookie.same_site;
+		expires = nil; -- preallocate for usage later
 	}
 	local age = matched_cookie["max-age"]
 	if age then
