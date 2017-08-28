@@ -1,10 +1,16 @@
 local http_patts = require "lpeg_patterns.http"
 local util = require "http.util"
+local lpeg = require "lpeg"
 local psl = require "psl"
+
+local Set_Cookie_anchored = http_patts.Set_Cookie * lpeg.P(-1)
 
 local function parse_set_cookie(text_cookie, host, path, time)
 	assert(time, "missing time value for cookie parsing")
-	local key, value, matched_cookie = assert(http_patts.Set_Cookie:match(text_cookie, 1))
+	local key, value, matched_cookie = Set_Cookie_anchored:match(text_cookie)
+	if not key then
+		return nil, "cookie did not properly parse"
+	end
 	local cookie = {
 		creation = time;
 		last_access = time;
@@ -20,15 +26,16 @@ local function parse_set_cookie(text_cookie, host, path, time)
 	}
 	local age = matched_cookie["max-age"]
 	if age then
-		assert(age:match("^-?%d+$"), "expected [-]DIGIT* for max-age field")
-		local negative = age:match("^-")
-		if negative then
+		local is_negative, match = age:match("^(-?)(%d+)$")
+		if is_negative then
 			-- RFC 6265 section 5.2.2 - if the value when converted to an
 			-- integer is negative, the expiration should be the earliest
 			-- representable expiration time.
 			cookie.expires = 0
+		elseif not match then
+			return nil, "expected [-]DIGIT* for max-age field"
 		else
-			cookie.expires = time + tonumber(age)
+			cookie.expires = time + tonumber(match)
 		end
 	else -- luacheck: ignore
 		-- ::TODO:: make use of `expires` cookie value
@@ -76,8 +83,15 @@ local function bake_cookie(data)
 	return table.concat(cookie)
 end
 
+local Cookie_anchored = http_patts.Cookie * lpeg.P(-1)
+
 local function match_cookies(cookie)
-	return assert(http_patts.Cookie:match(cookie, 1), "improper Cookie header format")
+	local match = Cookie_anchored:match(cookie)
+	if match then
+		return match
+	else
+		return nil, "improper Cookie header format"
+	end
 end
 
 local function parse_cookies(cookie)
@@ -95,6 +109,7 @@ local cookiejar_methods = {}
 if psl.latest then
 	cookiejar_methods.psl_object = psl.latest()
 else
+	-- older versions of libpsl do not offer a `latest` list
 	cookiejar_methods.psl_object = psl.builtin()
 end
 local cookiejar_mt = {
@@ -150,20 +165,6 @@ function cookiejar_methods:add(cookie, time)
 		by_domain[path] = by_path
 	end
 	by_path[key] = cookie
-end
-
-function cookiejar_methods:get_expired(time)
-	time = time or os.time()
-	local cookies = self.cookies
-	local returned_cookies = {}
-	for i=#cookies, 1, -1 do
-		local cookie = cookies[i]
-		if cookie.expires > time then
-			break
-		end
-		returned_cookies[#returned_cookies + 1] = cookie
-	end
-	return returned_cookies
 end
 
 function cookiejar_methods:get(domain, path, key)
@@ -229,8 +230,22 @@ function cookiejar_methods:remove_cookies(cookies)
 	clear_holes(s_cookies, n)
 end
 
+local function get_expired(jar, time)
+	time = time or os.time()
+	local cookies = jar.cookies
+	local returned_cookies = {}
+	for i=#cookies, 1, -1 do
+		local cookie = cookies[i]
+		if cookie.expires > time then
+			break
+		end
+		returned_cookies[#returned_cookies + 1] = cookie
+	end
+	return returned_cookies
+end
+
 function cookiejar_methods:remove_expired(time)
-	self:remove_cookies(self:get_expired(time))
+	self:remove_cookies(get_expired(self, time))
 end
 
 function cookiejar_methods:trim(size)
