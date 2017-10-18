@@ -186,19 +186,6 @@ function cookiejar_methods:get(domain, path, key)
 	return by_path[key]
 end
 
-local function clear_holes(tbl, n)
-	local start_hole = 0
-	for i=1, n do
-		if tbl[i] and start_hole ~= 0 then
-			tbl[start_hole] = tbl[i]
-			tbl[i] = nil
-			start_hole = start_hole + 1
-		elseif not tbl[i] and start_hole == 0 then
-			start_hole = i
-		end
-	end
-end
-
 function cookiejar_methods:remove_cookie(cookie)
 	local cookies = self.cookies
 	for i=1, #cookies do
@@ -218,9 +205,11 @@ function cookiejar_methods:remove_cookies(cookies)
 	end
 	local s_cookies = self.cookies
 	local n = #s_cookies
-	for index, value in pairs(s_cookies) do
-		if cookie_hashes[value] then
-			s_cookies[index] = nil
+	local start_hole = 0
+	for i=1, n do
+		local value = s_cookies[i]
+		if value and cookie_hashes[value] then
+			s_cookies[i] = nil
 			local by_domain = s_cookies[value.domain]
 			local by_path = by_domain[value.path]
 			by_path[value.key] = nil
@@ -230,10 +219,19 @@ function cookiejar_methods:remove_cookies(cookies)
 					s_cookies[value.domain] = nil
 				end
 			end
+			if start_hole == 0 then
+				-- start_hole hasn't been initialized, and a hole exists, so
+				-- start the hole at the current position
+				start_hole = i
+			end
+		elseif start_hole ~= 0 then
+			-- a cookie exists and isn't being removed, so shift the cookie
+			-- downwards to the start of the hole
+			s_cookies[start_hole] = value
+			s_cookies[i] = nil
+			start_hole = start_hole + 1
 		end
 	end
-
-	clear_holes(s_cookies, n)
 end
 
 local function get_expired(jar, time)
