@@ -1,6 +1,6 @@
 language: python
 
-sudo: false
+sudo: true
 
 env:
   matrix:
@@ -38,6 +38,7 @@ before_install:
   - luarocks install luacheck
   - luarocks install luacov-coveralls
   - luarocks install busted
+  - sudo apt install libpsl-dev
 
 install:
   - luarocks install --only-deps http-scm-0.rockspec
