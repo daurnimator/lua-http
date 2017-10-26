@@ -233,8 +233,10 @@ function connection_methods:step(timeout)
 	local deadline = timeout and monotime()+timeout
 	if not self.has_confirmed_preface and self.type == "server" then
 		local ok, err, errno = socket_has_preface(self.socket, false, timeout)
+		self.had_eagain = false
 		if ok == nil then
 			if errno == ce.ETIMEDOUT then
+				self.had_eagain = true
 				return true
 			end
 			return nil, err, errno
