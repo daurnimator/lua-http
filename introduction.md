@@ -99,6 +99,12 @@ The following is a list of API conventions and general reference:
   - Some HTTP 2 operations return/throw special [http 2 error objects](#http.h2_error).
 
 
+### Timeouts
+
+All operations that may block the current thread take a `timeout` argument.
+This argument is always the number of seconds to allow before returning `nil, err_msg, ETIMEDOUT` where `err_msg` is a localised error message such as `"connection timed out"`.
+
+
 ## Terminology
 
 Much lua-http terminology is borrowed from HTTP 2.
