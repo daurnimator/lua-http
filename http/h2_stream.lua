@@ -598,7 +598,7 @@ function stream_methods:write_headers_frame(payload, end_stream, end_headers, pa
 	end
 	if weight or stream_dep then
 		flags = bor(flags, 0x20)
-		assert(stream_dep < 0x80000000)
+		assert(stream_dep <= 0x7fffffff)
 		local tmp = stream_dep
 		if exclusive then
 			tmp = bor(tmp, 0x80000000)
@@ -663,7 +663,7 @@ frame_handlers[frame_types.PRIORITY] = function(stream, flags, payload) -- luach
 end
 
 function stream_methods:write_priority_frame(exclusive, stream_dep, weight, timeout, flush)
-	assert(stream_dep < 0x80000000)
+	assert(stream_dep <= 0x7fffffff)
 	if self.id == nil then
 		self:pick_id()
 	end
@@ -1100,7 +1100,7 @@ function stream_methods:write_window_update_frame(inc, timeout, flush)
 	if self.id ~= 0 and self.state == "idle" then
 		h2_errors.PROTOCOL_ERROR([['WINDOW_UPDATE' frames not allowed in "idle" state]])
 	end
-	if inc >= 0x80000000 or inc <= 0 then
+	if inc > 0x7fffffff or inc <= 0 then
 		h2_errors.PROTOCOL_ERROR("invalid window update increment", true)
 	end
 	local payload = spack(">I4", inc)
@@ -1108,7 +1108,7 @@ function stream_methods:write_window_update_frame(inc, timeout, flush)
 end
 
 function stream_methods:write_window_update(inc, timeout)
-	while inc >= 0x80000000 do
+	while inc > 0x7fffffff do
 		local ok, err, errno = self:write_window_update_frame(0x7fffffff, 0, "f")
 		if not ok then
 			return nil, err, errno
