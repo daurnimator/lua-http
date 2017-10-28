@@ -14,6 +14,7 @@ env:
     - LUA="lua 5.3"    ZLIB=lzlib
     - LUA="lua 5.3"    ZLIB=lua-zlib
     - LUA="lua 5.3"    COMPAT53=no
+    - LUA="lua 5.3"    LUA_CFLAGS="-DLUA_INT_TYPE=LUA_INT_INT"
     - LUA="luajit @"
     - LUA="luajit @"   ZLIB=lzlib
     - LUA="luajit @"   ZLIB=lua-zlib
@@ -30,7 +31,7 @@ branches:
 
 before_install:
   - pip install hererocks
-  - hererocks ~/hererocks -r^ --$LUA
+  - hererocks ~/hererocks -r^ --$LUA --cflags=$LUA_CFLAGS
   - export PATH=$PATH:~/hererocks/bin
   - eval $(luarocks path --bin)
   - luarocks install luacheck
