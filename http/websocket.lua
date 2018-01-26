@@ -752,19 +752,20 @@ function websocket_methods:accept(options, timeout)
 	response_headers:upsert("sec-websocket-accept", base64_sha1(self.key .. magic))
 
 	local chosen_protocol
-	if self.protocols then
-		if options.protocols then
-			for _, protocol in ipairs(options.protocols) do
-				if self.protocols[protocol] then
-					chosen_protocol = protocol
-					break
-				end
+	if self.protocols and options.protocols then
+		--[[ The |Sec-WebSocket-Protocol| request-header field can be
+		used to indicate what subprotocols (application-level protocols
+		layered over the WebSocket Protocol) are acceptable to the client.
+		The server selects one or none of the acceptable protocols and echoes
+		that value in its handshake to indicate that it has selected that
+		protocol.]]
+		for _, protocol in ipairs(options.protocols) do
+			if self.protocols[protocol] then
+				response_headers:upsert("sec-websocket-protocol", protocol)
+				chosen_protocol = protocol
+				break
 			end
 		end
-		if not chosen_protocol then
-			return nil, "no matching protocol", ce.EILSEQNOSUPPORT
-		end
-		response_headers:upsert("sec-websocket-protocol", chosen_protocol)
 	end
 
 	do
