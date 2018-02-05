@@ -355,7 +355,7 @@ function websocket_methods:receive(timeout)
 	end
 	local deadline = timeout and (monotime()+timeout)
 	while true do
-		local frame, err, errno = read_frame(self.socket, deadline and (deadline-monotime()))
+		local frame, err, errno = read_frame(self.socket, deadline)
 		if frame == nil then
 			return nil, err, errno
 		end
