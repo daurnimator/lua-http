@@ -1,3 +1,9 @@
+UNRELEASED
+
+  - Fix incorrect Sec-WebSocket-Protocol negotiation
+  - Fix incorrect timeout handling in `websocket:receive()`
+
+
 0.2 - 2017-05-28
 
   - Remove broken http.server `.client_timeout` option (replaced with `.connection_setup_timeout`)
