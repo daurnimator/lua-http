@@ -29,7 +29,7 @@ This will automatically install run-time lua dependencies for you.
 
 ## Dependencies
 
-  - [cqueues](http://25thandclement.com/~william/projects/cqueues.html) >= 20161214
+  - [cqueues](http://25thandclement.com/~william/projects/cqueues.html) >= 20161214 (Note: cqueues currently doesn't support Microsoft Windows operating systems)
   - [luaossl](http://25thandclement.com/~william/projects/luaossl.html) >= 20161208
   - [basexx](https://github.com/aiq/basexx/) >= 0.2.0
   - [lpeg](http://www.inf.puc-rio.br/~roberto/lpeg/lpeg.html)
