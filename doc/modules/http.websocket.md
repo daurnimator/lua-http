@@ -64,7 +64,8 @@ Low level function to send a raw frame.
 Send the given `data` as a data frame.
 
   - `data` should be a string
-  - `opcode` can be a numeric opcode, `"text"` or `"binary"`. If `nil`, defaults to a text frame
+  - `opcode` can be a numeric opcode, `"text"` or `"binary"`. If `nil`, defaults to a text frame.
+    Note this `opcode` is the websocket frame opcode, not an application specific opcode. The opcode should be one from the [IANA registry](https://www.iana.org/assignments/websocket/websocket.xhtml#opcode).
 
 
 ### `websocket:send_ping(data, timeout)` <!-- --> {#http.websocket:send_ping}
