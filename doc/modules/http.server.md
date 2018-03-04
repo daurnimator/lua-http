@@ -1,6 +1,6 @@
 ## http.server
 
-*http.server* objects are used to encapsulate the `accept()` and dispatch of http clients. Each new client request will invoke the `onstream` callback in a new cqueues managed corourine. In addition to constructing and returning a HTTP response, an `onstream` handler may upgrade a stream from from HTTP 1.1 to a WebSocket connection.
+*http.server* objects are used to encapsulate the `accept()` and dispatch of http clients. Each new client request will invoke the `onstream` callback in a new cqueues managed coroutine. In addition to constructing and returning a HTTP response, an `onstream` handler may upgrade a stream from from HTTP 1.1 to a WebSocket connection.
 
 For examples of how to use the server library, please see the [examples directory](https://github.com/daurnimator/lua-http/tree/master/examples) in the source tree.
 
