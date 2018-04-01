@@ -41,15 +41,7 @@ local uri_patt = uri_patts.uri * EOF
 local uri_ref = uri_patts.uri_reference * EOF
 
 local function new_from_uri(uri_t, headers)
-	if type(uri_t) == "string" then
-		uri_t = assert(uri_patt:match(uri_t), "invalid URI")
-	else
-		assert(type(uri_t) == "table")
-	end
-	local scheme = assert(uri_t.scheme, "URI missing scheme")
-	assert(scheme == "https" or scheme == "http" or scheme == "ws" or scheme == "wss", "scheme not valid")
-	local host = tostring(assert(uri_t.host, "URI must include a host")) -- tostring required to e.g. convert lpeg_patterns IPv6 objects
-	local port = uri_t.port or http_util.scheme_to_port[scheme]
+	local scheme, host, port = http_util.parse_uri(uri_t)
 	local is_connect -- CONNECT requests are a bit special, see http2 spec section 8.3
 	if headers == nil then
 		headers = new_headers()
