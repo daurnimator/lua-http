@@ -261,8 +261,8 @@ function stream_methods:read_headers(timeout)
 	local is_trailers = self.body_read_type == "chunked"
 	local headers = self.headers_in_progress
 	if not headers then
-		headers = new_headers()
-		if is_trailers then -- luacheck: ignore 542
+		if is_trailers then
+			headers = new_headers()
 		elseif self.type == "server" then
 			if self.state == "half closed (local)" then
 				return nil
@@ -279,6 +279,7 @@ function stream_methods:read_headers(timeout)
 			end
 			self.req_method = method
 			self.peer_version = httpversion
+			headers = new_headers()
 			headers:append(":method", method)
 			if method == "CONNECT" then
 				headers:append(":authority", path)
@@ -310,6 +311,7 @@ function stream_methods:read_headers(timeout)
 				return nil, status_code, reason_phrase
 			end
 			self.peer_version = httpversion
+			headers = new_headers()
 			headers:append(":status", status_code)
 			-- reason phase intentionally does not exist in HTTP2; discard for consistency
 		end
