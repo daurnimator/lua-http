@@ -1,4 +1,5 @@
 local lpeg = require "lpeg"
+local uri_patts = require "lpeg_patterns.uri"
 local http_patts = require "lpeg_patterns.http"
 
 -- Encodes a character as a percent encoded string
@@ -171,6 +172,23 @@ local function to_authority(host, port, scheme)
 	return authority
 end
 
+local EOF = lpeg.P(-1)
+local uri_patt = uri_patts.uri * EOF
+
+-- Parse the scheme, host, and port out of a URI string.
+local function parse_uri(uri_t)
+	if type(uri_t) == "string" then
+		uri_t = assert(uri_patt:match(uri_t), "invalid URI")
+	else
+		assert(type(uri_t) == "table")
+	end
+	local scheme = assert(uri_t.scheme, "URI missing scheme")
+	assert(scheme == "https" or scheme == "http" or scheme == "ws" or scheme == "wss", "scheme not valid")
+	local host = tostring(assert(uri_t.host, "URI must include a host")) -- tostring required to e.g. convert lpeg_patterns IPv6 objects
+	local port = uri_t.port or scheme_to_port[scheme]
+	return scheme, host, port
+end
+
 -- HTTP prefered date format
 -- See RFC 7231 section 7.1.1.1
 local function imf_date(time)
@@ -224,6 +242,7 @@ return {
 	scheme_to_port = scheme_to_port;
 	split_authority = split_authority;
 	to_authority = to_authority;
+	parse_uri = parse_uri;
 	imf_date = imf_date;
 	maybe_quote = maybe_quote;
 	yieldable_pcall = yieldable_pcall;
