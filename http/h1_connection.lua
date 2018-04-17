@@ -114,6 +114,7 @@ function connection_methods:get_next_incoming_stream(timeout)
 	if self.req_locked then
 		local deadline = timeout and monotime()+timeout
 		assert(cqueues.running(), "cannot wait for condition if not within a cqueues coroutine")
+		if not timeout then timeout = math.huge end
 		if cqueues.poll(self.req_cond, timeout) == timeout then
 			return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 		end
@@ -128,6 +129,7 @@ function connection_methods:get_next_incoming_stream(timeout)
 	if not ok then
 		if errno == ce.ETIMEDOUT then
 			local deadline = timeout and monotime()+timeout
+			if not timeout then timeout = math.huge end
 			if cqueues.poll(self.socket, timeout) ~= timeout then
 				return self:get_next_incoming_stream(deadline and deadline-monotime())
 			end
@@ -301,7 +303,7 @@ function connection_methods:read_body_chunk(timeout)
 				return nil, onerror(self.socket, "unget", unget_errno1)
 			end
 			if errno2 == ce.ETIMEDOUT then
-				timeout = deadline and deadline-monotime()
+				local timeout = deadline and deadline-monotime() or math.huge
 				if cqueues.poll(self.socket, timeout) ~= timeout then
 					-- retry
 					return self:read_body_chunk(deadline and deadline-monotime())

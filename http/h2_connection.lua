@@ -328,6 +328,7 @@ end
 -- this function *should never throw*
 function connection_methods:get_next_incoming_stream(timeout)
 	local deadline = timeout and (monotime()+timeout)
+	if not timeout then timeout = math.huge end
 	while self.new_streams:length() == 0 do
 		if self.recv_goaway_lowest or self.socket:eof("r") then
 			-- TODO? clarification required: can the sender of a GOAWAY subsequently start streams?
@@ -344,7 +345,7 @@ function connection_methods:get_next_incoming_stream(timeout)
 		elseif which == timeout then
 			return nil, onerror(self.socket, "get_next_incoming_stream", ce.ETIMEDOUT)
 		end
-		timeout = deadline and (deadline-monotime())
+		timeout = deadline and deadline-monotime() or math.huge
 	end
 
 	local stream = self.new_streams:pop()
@@ -397,7 +398,7 @@ function connection_methods:read_http2_frame(timeout)
 		end
 		if errno2 == ce.ETIMEDOUT then
 			self.had_eagain = true
-			timeout = deadline and deadline-monotime()
+			local timeout = deadline and deadline-monotime() or math.huge
 			if cqueues.poll(self.socket, timeout) ~= timeout then
 				return self:read_http2_frame(deadline and deadline-monotime())
 			end
@@ -438,7 +439,7 @@ function connection_methods:ping(timeout)
 	self.pongs[payload] = cond
 	assert(self.stream0:write_ping_frame(false, payload, timeout))
 	while self.pongs[payload] do
-		timeout = deadline and (deadline-monotime())
+		local timeout = deadline and deadline-monotime() or math.huge
 		local which = cqueues.poll(cond, self, timeout)
 		if which == self then
 			local ok, err, errno = self:step(0)
@@ -513,7 +514,7 @@ function connection_methods:settings(tbl, timeout)
 	end
 	-- Now wait for ACK
 	while self.send_settings_acked < n do
-		timeout = deadline and (deadline-monotime())
+		local timeout = deadline and deadline-monotime() or math.huge
 		local which = cqueues.poll(self.send_settings_ack_cond, self, timeout)
 		if which == self then
 			local ok2, err2, errno2 = self:step(0)
