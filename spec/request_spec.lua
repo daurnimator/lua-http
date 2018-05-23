@@ -629,6 +629,30 @@ describe("http.request module", function()
 				stream:shutdown()
 			end)
 		end)
+		it("works with a proxy server with a path component", function()
+			test(function(stream)
+				local h = assert(stream:get_headers())
+				local _, host, port = stream:localname()
+				local authority = http_util.to_authority(host, port, "http")
+				assert.same(authority, h:get ":authority")
+				assert.same("http://" .. authority .. "/", h:get(":path"))
+				local resp_headers = new_headers()
+				resp_headers:append(":status", "200")
+				assert(stream:write_headers(resp_headers, false))
+				assert(stream:write_chunk("hello world", true))
+			end, function(req)
+				req.proxy = {
+					scheme = "http";
+					host = req.host;
+					port = req.port;
+					path = "/path";
+				}
+				local headers, stream = assert(req:go())
+				assert.same("200", headers:get(":status"))
+				assert.same("hello world", assert(stream:get_body_as_string()))
+				stream:shutdown()
+			end)
+		end)
 		it("works with http proxies on OPTIONS requests", function()
 			test(function(stream)
 				local h = assert(stream:get_headers())
@@ -709,6 +733,34 @@ describe("http.request module", function()
 					host = req.host;
 					port = req.port;
 					userinfo = "user:pass";
+				}
+				local headers, stream = assert(req:go())
+				assert.same("200", headers:get(":status"))
+				assert.same("hello world", assert(stream:get_body_as_string()))
+				stream:shutdown()
+			end)
+		end)
+		it("CONNECT proxy with path component", function()
+			test(function(stream, s)
+				local h = assert(stream:get_headers())
+				local resp_headers = new_headers()
+				resp_headers:append(":status", "200")
+				assert(stream:write_headers(resp_headers, false))
+				if h:get(":method") == "CONNECT" then
+					assert(stream.connection.version < 2)
+					local sock = assert(stream.connection:take_socket())
+					s:add_socket(sock)
+					return true
+				else
+					assert(stream:write_chunk("hello world", true))
+				end
+			end, function(req)
+				req.tls = true
+				req.proxy = {
+					scheme = "http";
+					host = req.host;
+					port = req.port;
+					path = "/path";
 				}
 				local headers, stream = assert(req:go())
 				assert.same("200", headers:get(":status"))
