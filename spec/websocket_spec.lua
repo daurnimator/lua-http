@@ -169,14 +169,18 @@ describe("http.websocket", function()
 	end)
 end)
 describe("http.websocket module two sided tests", function()
+	local onerror  = require "http.connection_common".onerror
 	local server = require "http.server"
 	local util = require "http.util"
 	local websocket = require "http.websocket"
 	local cqueues = require "cqueues"
 	local ca = require "cqueues.auxlib"
+	local ce = require "cqueues.errno"
 	local cs = require "cqueues.socket"
 	local function new_pair()
 		local s, c = ca.assert(cs.pair())
+		s:onerror(onerror)
+		c:onerror(onerror)
 		local ws_server = websocket.new("server")
 		ws_server.socket = s
 		ws_server.readyState = 1
@@ -188,6 +192,26 @@ describe("http.websocket module two sided tests", function()
 	it("works with a socketpair", function()
 		local cq = cqueues.new()
 		local c, s = new_pair()
+		cq:wrap(function()
+			assert(c:send("hello"))
+			assert.same("world", c:receive())
+			assert(c:close())
+		end)
+		cq:wrap(function()
+			assert.same("hello", s:receive())
+			assert(s:send("world"))
+			assert(s:close())
+		end)
+		assert_loop(cq, TEST_TIMEOUT)
+		assert.truthy(cq:empty())
+	end)
+	it("timeouts return nil, err, errno", function()
+		local cq = cqueues.new()
+		local c, s = new_pair()
+		local ok, _, errno = c:receive(0)
+		assert.same(nil, ok)
+		assert.same(ce.ETIMEDOUT, errno)
+		-- Check it still works afterwards
 		cq:wrap(function()
 			assert(c:send("hello"))
 			assert.same("world", c:receive())
