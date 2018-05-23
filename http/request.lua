@@ -378,8 +378,16 @@ function request_methods:go(timeout)
 	if proxy then
 		if type(proxy) == "string" then
 			proxy = assert(uri_patt:match(proxy), "invalid proxy URI")
+			proxy.path = nil -- ignore proxy.path component
 		else
 			assert(type(proxy) == "table" and getmetatable(proxy) == nil and proxy.scheme, "invalid proxy URI")
+			proxy = {
+				scheme = proxy.scheme;
+				userinfo = proxy.userinfo;
+				host = proxy.host;
+				port = proxy.port;
+				-- ignore proxy.path component
+			}
 		end
 		if proxy.scheme == "http" or proxy.scheme == "https" then
 			if tls then
@@ -422,9 +430,6 @@ function request_methods:go(timeout)
 			else
 				if request_headers:get(":method") == "CONNECT" then
 					error("cannot use HTTP Proxy with CONNECT method")
-				end
-				if proxy.path ~= nil and proxy.path ~= "" then
-					error("an HTTP proxy cannot have a path component")
 				end
 				-- TODO: Check if :path already has authority?
 				local old_url = self:to_uri(false)
