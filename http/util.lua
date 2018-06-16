@@ -188,10 +188,29 @@ local maybe_quote do
 	end
 end
 
--- A pcall relative that can be yielded over in PUC 5.1
+-- A pcall-alike function that can be yielded over even in PUC 5.1
 local yieldable_pcall
--- See if pcall can be yielded over
-if coroutine.wrap(function() return pcall(coroutine.yield, true) end)() then
+--[[ If pcall can already yield, then we want to use that.
+
+However, we can't do the feature check straight away, Openresty breaks
+coroutine.wrap in some contexts. See #98
+Openresty nominally only supports LuaJIT, which always supports a yieldable
+pcall, so we short-circuit the feature check by checking if the 'ngx' library
+is loaded, plus that jit.version_num indicates LuaJIT 2.0.
+This combination ensures that we don't take the wrong branch if:
+  - lua-http is being used to mock the openresty environment
+  - openresty is compiled with something other than LuaJIT
+]]
+if (
+		package.loaded.ngx
+		and type(package.loaded.jit) == "table"
+		and type(package.loaded.jit.version_num) == "number"
+		and package.loaded.jit.version_num >= 20000
+	)
+	-- See if pcall can be yielded over
+	or coroutine.wrap(function()
+		return pcall(coroutine.yield, true) end
+	)() then
 	yieldable_pcall = pcall
 else
 	local function handle_resume(co, ok, ...)
