@@ -3,6 +3,7 @@ UNRELEASED
   - Fix incorrect Sec-WebSocket-Protocol negotiation
   - Fix incorrect timeout handling in `websocket:receive()`
   - Add workaround to allow being required in openresty (#98)
+  - Add http.tls.old_cipher_list (#112)
 
 
 0.2 - 2017-05-28

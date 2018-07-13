@@ -66,6 +66,59 @@ local intermediate_cipher_list = cipher_list {
 	"!DSS";
 }
 
+-- "Old" cipher list
+local old_cipher_list = cipher_list {
+	"ECDHE-ECDSA-CHACHA20-POLY1305";
+	"ECDHE-RSA-CHACHA20-POLY1305";
+	"ECDHE-RSA-AES128-GCM-SHA256";
+	"ECDHE-ECDSA-AES128-GCM-SHA256";
+	"ECDHE-RSA-AES256-GCM-SHA384";
+	"ECDHE-ECDSA-AES256-GCM-SHA384";
+	"DHE-RSA-AES128-GCM-SHA256";
+	"DHE-DSS-AES128-GCM-SHA256";
+	"kEDH+AESGCM";
+	"ECDHE-RSA-AES128-SHA256";
+	"ECDHE-ECDSA-AES128-SHA256";
+	"ECDHE-RSA-AES128-SHA";
+	"ECDHE-ECDSA-AES128-SHA";
+	"ECDHE-RSA-AES256-SHA384";
+	"ECDHE-ECDSA-AES256-SHA384";
+	"ECDHE-RSA-AES256-SHA";
+	"ECDHE-ECDSA-AES256-SHA";
+	"DHE-RSA-AES128-SHA256";
+	"DHE-RSA-AES128-SHA";
+	"DHE-DSS-AES128-SHA256";
+	"DHE-RSA-AES256-SHA256";
+	"DHE-DSS-AES256-SHA";
+	"DHE-RSA-AES256-SHA";
+	"ECDHE-RSA-DES-CBC3-SHA";
+	"ECDHE-ECDSA-DES-CBC3-SHA";
+	"EDH-RSA-DES-CBC3-SHA";
+	"AES128-GCM-SHA256";
+	"AES256-GCM-SHA384";
+	"AES128-SHA256";
+	"AES256-SHA256";
+	"AES128-SHA";
+	"AES256-SHA";
+	"AES";
+	"DES-CBC3-SHA";
+	"HIGH";
+	"SEED";
+	"!aNULL";
+	"!eNULL";
+	"!EXPORT";
+	"!DES";
+	"!RC4";
+	"!MD5";
+	"!PSK";
+	"!RSAPSK";
+	"!aDH";
+	"!aECDH";
+	"!EDH-DSS-DES-CBC3-SHA";
+	"!KRB5-DES-CBC3-SHA";
+	"!SRP";
+}
+
 -- A map from the cipher identifiers used in specifications to
 -- the identifiers used by OpenSSL.
 local spec_to_openssl = {
@@ -730,6 +783,7 @@ return {
 	has_hostname_validation = has_hostname_validation;
 	modern_cipher_list = modern_cipher_list;
 	intermediate_cipher_list = intermediate_cipher_list;
+	old_cipher_list = old_cipher_list;
 	banned_ciphers = banned_ciphers;
 	new_client_context = new_client_context;
 	new_server_context = new_server_context;
