@@ -102,8 +102,8 @@ local function new_connection(socket, conn_type, settings)
 	local ssl = socket:checktls()
 	if ssl then
 		local cipher = ssl:getCipherInfo()
-		if h2_banned_ciphers[cipher.name] then
-			h2_error.errors.INADEQUATE_SECURITY("bad cipher: " .. cipher.name)
+		if h2_banned_ciphers[cipher.standard_name] then
+			h2_error.errors.INADEQUATE_SECURITY("bad cipher: " .. cipher.standard_name)
 		end
 	end
 

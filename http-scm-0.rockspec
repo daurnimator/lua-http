@@ -16,7 +16,7 @@ dependencies = {
 	"compat53 >= 0.3"; -- Only if lua < 5.3
 	"bit32"; -- Only if lua == 5.1
 	"cqueues >= 20161214";
-	"luaossl >= 20161208";
+	"luaossl >= 20180803";
 	"basexx >= 0.2.0";
 	"lpeg";
 	"lpeg_patterns >= 0.3";
