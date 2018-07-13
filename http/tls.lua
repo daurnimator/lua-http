@@ -698,14 +698,10 @@ local default_tls_options = openssl_ctx.OP_NO_COMPRESSION
 	+ openssl_ctx.OP_NO_SSLv2
 	+ openssl_ctx.OP_NO_SSLv3
 
-local client_params = openssl_verify_param.new()
-client_params:setPurpose("sslserver") -- the purpose the peer has to present
-
 local function new_client_context()
 	local ctx = openssl_ctx.new("TLS", false)
 	ctx:setCipherList(intermediate_cipher_list)
 	ctx:setOptions(default_tls_options)
-	ctx:setParam(client_params)
 	ctx:setEphemeralKey(openssl_pkey.new{ type = "EC", curve = "prime256v1" })
 	local store = ctx:getStore()
 	store:addDefaults()
@@ -713,14 +709,10 @@ local function new_client_context()
 	return ctx
 end
 
-local server_params = openssl_verify_param.new()
-server_params:setPurpose("sslclient") -- the purpose the peer has to present
-
 local function new_server_context()
 	local ctx = openssl_ctx.new("TLS", true)
 	ctx:setCipherList(intermediate_cipher_list)
 	ctx:setOptions(default_tls_options)
-	ctx:setParam(server_params)
 	ctx:setEphemeralKey(openssl_pkey.new{ type = "EC", curve = "prime256v1" })
 	return ctx
 end
