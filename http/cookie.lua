@@ -173,7 +173,7 @@ function store_methods:store(req_domain, req_path, req_is_http, req_is_secure, n
 	end
 
 	-- If the domain-attribute is non-empty:
-	if #domain > 0 then
+	if domain ~= "" then
 		-- If the canonicalized request-host does not domain-match the
 		-- domain-attribute:
 		if not domain_match(domain, req_domain) then
