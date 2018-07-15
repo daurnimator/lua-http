@@ -101,7 +101,7 @@ local function new_store()
 	}, store_mt)
 end
 
-function store_methods:store(req_domain, req_path, req_is_http, req_is_secure, name, value, params)
+function store_methods:store(req_domain, req_path, req_is_http, req_is_secure, req_site_for_cookies, name, value, params)
 	assert(type(req_domain) == "string")
 	assert(type(req_path) == "string")
 	assert(type(name) == "string")
@@ -125,6 +125,7 @@ function store_methods:store(req_domain, req_path, req_is_http, req_is_secure, n
 		host_only = true;
 		secure_only = not not params.secure;
 		http_only = not not params.httponly;
+		same_site = nil;
 	}, cookie_mt)
 
 	-- If a cookie has both the Max-Age and the Expires attribute, the Max-
@@ -266,6 +267,26 @@ function store_methods:store(req_domain, req_path, req_is_http, req_is_secure, n
 					end
 				end
 			end
+		end
+	end
+
+	-- If the cookie-attribute-list contains an attribute with an
+	-- attribute-name of "SameSite", set the cookie's same-site-flag to
+	-- attribute-value (i.e. either "Strict" or "Lax").  Otherwise, set
+	-- the cookie's same-site-flag to "None".
+	local same_site = params.samesite
+	if same_site then
+		same_site = same_site:lower()
+		if same_site == "lax" or same_site == "strict" then
+			-- If the cookie's "same-site-flag" is not "None", and the cookie
+			-- is being set from a context whose "site for cookies" is not an
+			-- exact match for request-uri's host's registered domain, then
+			-- abort these steps and ignore the newly created cookie entirely.
+			if req_domain ~= req_site_for_cookies then
+				return false
+			end
+
+			cookie.same_site = same_site
 		end
 	end
 
@@ -412,7 +433,7 @@ local function cookie_cmp(a, b)
 	return a.name < b.name
 end
 
-local function cookie_match(cookie, req_domain, req_is_http, req_is_secure)
+local function cookie_match(cookie, req_domain, req_is_http, req_is_secure, req_is_safe_method, req_site_for_cookies, req_is_top_level)
 	-- req_domain should be already canonicalized
 
 	if cookie.host_only then -- Either:
@@ -439,10 +460,24 @@ local function cookie_match(cookie, req_domain, req_is_http, req_is_secure)
 		return false
 	end
 
+	-- If the cookie's same-site-flag is not "None", and the HTTP
+	-- request is cross-site (as defined in Section 5.2) then exclude
+	-- the cookie unless all of the following statements hold:
+	if cookie.same_site and req_site_for_cookies ~= req_domain and not (
+		-- 1. The same-site-flag is "Lax"
+		cookie.same_site == "lax"
+		-- 2. The HTTP request's method is "safe".
+		and req_is_safe_method
+		-- 3. The HTTP request's target browsing context is a top-level browsing context.
+		and req_is_top_level
+	) then
+		return false
+	end
+
 	return true
 end
 
-function store_methods:lookup(req_domain, req_path, req_is_http, req_is_secure)
+function store_methods:lookup(req_domain, req_path, req_is_http, req_is_secure, req_is_safe_method, req_site_for_cookies, req_is_top_level)
 	assert(type(req_domain) == "string")
 	assert(type(req_path) == "string")
 	local now = self.time()
@@ -455,7 +490,7 @@ function store_methods:lookup(req_domain, req_path, req_is_http, req_is_secure)
 					for _, cookie in pairs(path_cookies) do
 						if cookie.expiry_time < now then
 							self:clean()
-						elseif cookie_match(cookie, req_domain, req_is_http, req_is_secure) then
+						elseif cookie_match(cookie, req_domain, req_is_http, req_is_secure, req_is_safe_method, req_site_for_cookies, req_is_top_level) then
 							cookie.last_access_time = now
 							n = n + 1
 							list[n] = cookie
