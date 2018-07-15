@@ -234,6 +234,39 @@ function store_methods:store(req_domain, req_path, req_is_http, req_is_secure, n
 		return false
 	end
 
+	-- If the cookie's secure-only-flag is not set, and the scheme
+	-- component of request-uri does not denote a "secure" protocol,
+	if not req_is_secure and not cookie.secure_only then
+		-- then abort these steps and ignore the cookie entirely if the
+		-- cookie store contains one or more cookies that meet all of the
+		-- following criteria:
+		for d, domain_cookies in pairs(self.domains) do
+			-- See '3' below
+			if domain_match(cookie.domain, d) or domain_match(d, cookie.domain) then
+				for p, path_cookies in pairs(domain_cookies) do
+					local cmp_cookie = path_cookies[name]
+					if cmp_cookie then
+						-- 1. Their name matches the name of the newly-created cookie.
+						if cmp_cookie.expiry_time < now then
+							self:clean()
+						elseif
+							-- 2. Their secure-only-flag is true.
+							cmp_cookie.secure_only
+							-- 3. Their domain domain-matches the domain of the newly-created
+							-- cookie, or vice-versa.
+							-- Note: already checked above in domain_match
+							-- 4. The path of the newly-created cookie path-matches the path
+							-- of the existing cookie.
+							and path_match(p, cookie.path)
+						then
+							return false
+						end
+					end
+				end
+			end
+		end
+	end
+
 	-- If the cookie-name begins with a case-sensitive match for the
 	-- string "__Secure-", abort these steps and ignore the cookie
 	-- entirely unless the cookie's secure-only-flag is true.
