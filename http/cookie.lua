@@ -317,7 +317,6 @@ function store_methods:store(req_domain, req_path, req_is_http, req_is_secure, n
 			cookie.creation_time = old_cookie.creation_time
 
 			-- Remove the old-cookie from the cookie store.
-			path_cookies[cookie.name] = nil
 		end
 
 		path_cookies[cookie.name] = cookie
