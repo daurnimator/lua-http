@@ -34,6 +34,7 @@ This will automatically install run-time lua dependencies for you.
   - [basexx](https://github.com/aiq/basexx/) >= 0.2.0
   - [lpeg](http://www.inf.puc-rio.br/~roberto/lpeg/lpeg.html)
   - [lpeg_patterns](https://github.com/daurnimator/lpeg_patterns) >= 0.5
+  - [binaryheap.lua](https://github.com/Tieske/binaryheap.lua)
   - [fifo](https://github.com/daurnimator/fifo.lua)
 
 To use gzip compression you need **one** of:

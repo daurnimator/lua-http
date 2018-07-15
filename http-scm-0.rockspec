@@ -20,6 +20,7 @@ dependencies = {
 	"basexx >= 0.2.0";
 	"lpeg";
 	"lpeg_patterns >= 0.5";
+	"binaryheap >= 0.3";
 	"fifo";
 	-- "psl"; -- Optional
 }

@@ -4,6 +4,7 @@ RFC 6265
 ]]
 
 local http_patts = require "lpeg_patterns.http"
+local binaryheap = require "binaryheap"
 local has_psl, psl = pcall(require, "psl")
 
 local EOF = require "lpeg".P(-1)
@@ -96,6 +97,7 @@ local store_mt = {
 local function new_store()
 	return setmetatable({
 		domains = {};
+		expiry_heap = binaryheap.minUnique();
 	}, store_mt)
 end
 
@@ -317,9 +319,11 @@ function store_methods:store(req_domain, req_path, req_is_http, req_is_secure, n
 			cookie.creation_time = old_cookie.creation_time
 
 			-- Remove the old-cookie from the cookie store.
+			self.expiry_heap:remove(old_cookie)
 		end
 
 		path_cookies[cookie.name] = cookie
+		self.expiry_heap:insert(cookie.expiry_time, cookie)
 	end
 
 	return true
@@ -352,12 +356,20 @@ function store_methods:remove(domain, path, name)
 	end
 	if path == nil then
 		-- Delete whole domain
+		for _, path_cookies in pairs(domain_cookies) do
+			for _, cookie in pairs(path_cookies) do
+				self.expiry_heap:remove(cookie)
+			end
+		end
 		self.domains[domain] = nil
 	else
 		local path_cookies = domain_cookies[path]
 		if path_cookies then
 			if name == nil then
 				-- Delete all names at path
+				for _, cookie in pairs(path_cookies) do
+					self.expiry_heap:remove(cookie)
+				end
 				domain_cookies[path] = nil
 				if next(domain_cookies) == nil then
 					self.domains[domain] = nil
@@ -366,6 +378,7 @@ function store_methods:remove(domain, path, name)
 				-- Delete singular cookie
 				local cookie = path_cookies[name]
 				if cookie then
+					self.expiry_heap:remove(cookie)
 					path_cookies[name] = nil
 					if next(path_cookies) == nil then
 						domain_cookies[path] = nil
@@ -463,19 +476,20 @@ end
 
 function store_methods:clean()
 	local now = self.time()
-	for domain, domain_cookies in pairs(self.domains) do
-		for path, path_cookies in pairs(domain_cookies) do
-			for name, cookie in pairs(path_cookies) do
-				if cookie.expiry_time < now then
-					path_cookies[name] = nil
+	while self.expiry_heap:peek().expiry_time < now do
+		local cookie = self.expiry_heap:pop()
+		local domain_cookies = self.domains[cookie.domain]
+		if domain_cookies then
+			local path_cookies = domain_cookies[cookie.path]
+			if path_cookies then
+				path_cookies[cookie.name] = nil
+				if next(path_cookies) == nil then
+					domain_cookies[cookie.path] = nil
+					if next(domain_cookies) == nil then
+						self.domains[cookie.domain] = nil
+					end
 				end
 			end
-			if next(path_cookies) == nil then
-				domain_cookies[path] = nil
-			end
-		end
-		if next(domain_cookies) == nil then
-			self.domains[domain] = nil
 		end
 	end
 	return true
