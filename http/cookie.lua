@@ -234,6 +234,24 @@ function store_methods:store(req_domain, req_path, req_is_http, req_is_secure, n
 		return false
 	end
 
+	-- If the cookie-name begins with a case-sensitive match for the
+	-- string "__Secure-", abort these steps and ignore the cookie
+	-- entirely unless the cookie's secure-only-flag is true.
+	if not cookie.secure_only and name:sub(1, 9) == "__Secure-" then
+		return false
+	end
+
+	-- If the cookie-name begins with a case-sensitive match for the
+	-- string "__Host-", abort these steps and ignore the cookie
+	-- entirely unless the cookie meets all the following criteria:
+	-- 1.  The cookie's secure-only-flag is true.
+	-- 2.  The cookie's host-only-flag is true.
+	-- 3.  The cookie-attribute-list contains an attribute with an
+	--     attribute-name of "Path", and the cookie's path is "/".
+	if not (cookie.secure_only and cookie.host_only and cookie.path == "/") and name:sub(1, 7) == "__Host-" then
+		return false
+	end
+
 	if cookie.expiry_time < now then
 		-- This was all just a trigger to delete the old cookie
 		self:remove(cookie.domain, cookie.path, cookie.name)
