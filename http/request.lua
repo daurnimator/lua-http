@@ -36,7 +36,7 @@ local request_mt = {
 }
 
 local EOF = lpeg.P(-1)
-local sts_patt = lpeg.Cf(lpeg.Ct(true) * http_patts.Strict_Transport_Security, rawset) * EOF
+local sts_patt = http_patts.Strict_Transport_Security * EOF
 local uri_patt = uri_patts.uri * EOF
 local uri_ref = uri_patts.uri_reference * EOF
 

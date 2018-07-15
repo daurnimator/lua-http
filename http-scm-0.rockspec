@@ -19,7 +19,7 @@ dependencies = {
 	"luaossl >= 20161208";
 	"basexx >= 0.2.0";
 	"lpeg";
-	"lpeg_patterns >= 0.3";
+	"lpeg_patterns >= 0.5";
 	"fifo";
 }
 
