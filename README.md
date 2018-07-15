@@ -40,6 +40,10 @@ To use gzip compression you need **one** of:
 
   - [lzlib](https://github.com/LuaDist/lzlib) or [lua-zlib](https://github.com/brimworks/lua-zlib)
 
+To check cookies against a public suffix list:
+
+  - [lua-psl](https://github.com/daurnimator/lua-psl)
+
 If using lua < 5.3 you will need
 
   - [compat-5.3](https://github.com/keplerproject/lua-compat-5.3) >= 0.3

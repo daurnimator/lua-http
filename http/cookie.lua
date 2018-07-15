@@ -4,6 +4,7 @@ RFC 6265
 ]]
 
 local http_patts = require "lpeg_patterns.http"
+local has_psl, psl = pcall(require, "psl")
 
 local EOF = require "lpeg".P(-1)
 local sane_cookie_date = http_patts.IMF_fixdate * EOF
@@ -68,7 +69,14 @@ local cookie_mt = {
 	__index = cookie_methods;
 }
 
+local default_psl
+if has_psl and psl.latest then
+	default_psl = psl.latest()
+elseif has_psl then
+	default_psl = psl.builtin()
+end
 local store_methods = {
+	psl = default_psl;
 	time = function() return os.time() end;
 }
 
@@ -139,6 +147,19 @@ function store_methods:store(req_domain, req_path, req_is_http, req_is_secure, n
 
 	-- Convert the cookie-domain to lower case.
 	domain = canonicalise_host(domain)
+
+	-- If the user agent is configured to reject "public suffixes" and
+	-- the domain-attribute is a public suffix:
+	if domain ~= "" and self.psl and self.psl:is_public_suffix(domain) then
+		-- If the domain-attribute is identical to the canonicalized request-host:
+		if domain == req_domain then
+			-- Let the domain-attribute be the empty string.
+			domain = ""
+		else
+			-- Ignore the cookie entirely and abort these steps.
+			return false
+		end
+	end
 
 	-- If the domain-attribute is non-empty:
 	if #domain > 0 then

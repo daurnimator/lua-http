@@ -21,6 +21,7 @@ dependencies = {
 	"lpeg";
 	"lpeg_patterns >= 0.5";
 	"fifo";
+	-- "psl"; -- Optional
 }
 
 build = {
