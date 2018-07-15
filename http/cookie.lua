@@ -19,9 +19,17 @@ local function parse_setcookie(setcookie_header)
 	return Set_Cookie:match(setcookie_header)
 end
 
-local function canonicalise_host(domain)
-	-- TODO!
-	return domain
+local canonicalise_host
+if has_psl then
+	canonicalise_host = psl.str_to_utf8lower
+else
+	canonicalise_host = function(str)
+		-- fail on non-ascii chars
+		if str:find("[^%p%w]") then
+			return nil
+		end
+		return str:lower()
+	end
 end
 
 --[[
@@ -100,7 +108,7 @@ function store_methods:store(req_domain, req_path, req_is_http, req_is_secure, n
 
 	local now = self.time()
 
-	req_domain = canonicalise_host(req_domain)
+	req_domain = assert(canonicalise_host(req_domain), "invalid request domain")
 
 	-- RFC 6265 Section 5.3
 	local cookie = setmetatable({
@@ -147,6 +155,9 @@ function store_methods:store(req_domain, req_path, req_is_http, req_is_secure, n
 
 	-- Convert the cookie-domain to lower case.
 	domain = canonicalise_host(domain)
+	if not domain then
+		return false
+	end
 
 	-- If the user agent is configured to reject "public suffixes" and
 	-- the domain-attribute is a public suffix:
