@@ -399,7 +399,7 @@ local function cookie_cmp(a, b)
 	return a.name < b.name
 end
 
-local function cookie_match(cookie, req_domain, req_path, req_is_http, req_is_secure)
+local function cookie_match(cookie, req_domain, req_is_http, req_is_secure)
 	-- req_domain should be already canonicalized
 
 	if cookie.host_only then -- Either:
@@ -408,17 +408,12 @@ local function cookie_match(cookie, req_domain, req_path, req_is_http, req_is_se
 		if cookie.domain ~= req_domain then
 			return false
 		end
-	else -- Or:
-		-- The cookie's host-only-flag is false and the canonicalized
-		-- request-host domain-matches the cookie's domain.
-		if not domain_match(cookie.domain, req_domain) then
-			return false
-		end
 	end
+	-- Or:
+	-- The cookie's host-only-flag is false and the canonicalized
+	-- request-host domain-matches the cookie's domain.
 
-	if not path_match(cookie.path, req_path) then
-		return false
-	end
+	-- already done domain_match and path_match
 
 	-- If the cookie's http-only-flag is true, then exclude the
 	-- cookie if the cookie-string is being generated for a "non-
@@ -440,15 +435,19 @@ function store_methods:lookup(req_domain, req_path, req_is_http, req_is_secure)
 	local now = self.time()
 	local list = {}
 	local n = 0
-	for _, domain_cookies in pairs(self.domains) do
-		for _, path_cookies in pairs(domain_cookies) do
-			for _, cookie in pairs(path_cookies) do
-				if cookie.expiry_time < now then
-					self:clean()
-				elseif cookie_match(cookie, req_domain, req_path, req_is_http, req_is_secure) then
-					cookie.last_access_time = now
-					n = n + 1
-					list[n] = cookie
+	for domain, domain_cookies in pairs(self.domains) do
+		if domain_match(domain, req_domain) then
+			for path, path_cookies in pairs(domain_cookies) do
+				if path_match(path, req_path) then
+					for _, cookie in pairs(path_cookies) do
+						if cookie.expiry_time < now then
+							self:clean()
+						elseif cookie_match(cookie, req_domain, req_is_http, req_is_secure) then
+							cookie.last_access_time = now
+							n = n + 1
+							list[n] = cookie
+						end
+					end
 				end
 			end
 		end
