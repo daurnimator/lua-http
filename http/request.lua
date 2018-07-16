@@ -81,7 +81,7 @@ local function new_from_uri(uri_t, headers)
 		else
 			field = "authorization"
 		end
-		local userinfo = http_util.decodeURIComponent(uri_t.userinfo) -- XXX: this doesn't seem right, but it's same behaviour as curl
+		local userinfo = http_util.decodeURIComponent(uri_t.userinfo) -- XXX: this doesn't seem right, but it's the same behaviour as curl
 		headers:upsert(field, "basic " .. basexx.to_base64(userinfo), true)
 	end
 	if not headers:has("user-agent") then

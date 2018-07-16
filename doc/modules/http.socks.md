@@ -11,7 +11,7 @@ Returns a *http.socks* object.
 
 ### `fdopen(socket)` <!-- --> {#http.socks.fdopen}
 
-This function takes an existing cqueues.socket as a parameter and returns a *http.socks* object with `socket` as it's base.
+This function takes an existing cqueues.socket as a parameter and returns a *http.socks* object with `socket` as its base.
 
 
 ### `socks.needs_resolve` <!-- --> {#http.socks.needs_resolve}

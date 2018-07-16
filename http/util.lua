@@ -177,7 +177,7 @@ local function imf_date(time)
 	return os.date("!%a, %d %b %Y %H:%M:%S GMT", time)
 end
 
--- This pattern checks if it's argument is a valid token, if so, it returns it as is.
+-- This pattern checks if its argument is a valid token, if so, it returns it as is.
 -- Otherwise, it returns it as a quoted string (with any special characters escaped)
 local maybe_quote do
 	local EOF = lpeg.P(-1)
