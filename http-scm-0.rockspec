@@ -21,6 +21,7 @@ dependencies = {
 	"lpeg";
 	"lpeg_patterns >= 0.5";
 	"fifo";
+	"psl";
 }
 
 build = {
@@ -28,6 +29,7 @@ build = {
 	modules = {
 		["http.bit"] = "http/bit.lua";
 		["http.client"] = "http/client.lua";
+		["http.cookies"] = "http/cookies.lua";
 		["http.connection_common"] = "http/connection_common.lua";
 		["http.h1_connection"] = "http/h1_connection.lua";
 		["http.h1_reason_phrases"] = "http/h1_reason_phrases.lua";
