@@ -1,0 +1,158 @@
+stages:
+- lint
+- test
+- upload_coverage
+
+lint:
+  stage: lint
+  image: registry.gitlab.com/daurnimator/docker-hererocks/luacheck
+  script:
+    - luacheck .
+
+upload_coverage:
+  stage: upload_coverage
+  image: registry.gitlab.com/daurnimator/docker-hererocks/lua5.3
+  before_script:
+    - luarocks install luacov-coveralls
+  script:
+    - ls -l
+    - luacov-coveralls -v
+  when: on_success
+
+.job_template: &job_definition
+  stage: test
+  image: registry.gitlab.com/daurnimator/docker-hererocks/hererocks
+  before_script:
+    - hererocks ~/hererocks -r^ --$LUA --cflags=$LUA_CFLAGS
+    - export PATH=$PATH:~/hererocks/bin
+    - eval $(luarocks path --bin)
+    - apt-get update && apt-get install zlib1g-dev
+    - luarocks install luacov
+    - luarocks install busted
+    - luarocks install --only-deps http-scm-0.rockspec
+    - if [ "$ZLIB" = "lzlib" ]; then luarocks install lzlib; fi
+    - if [ "$ZLIB" = "lua-zlib" ]; then luarocks install lua-zlib; fi
+    - if [ "$COMPAT53" = "no" ]; then luarocks remove compat53; fi
+  script:
+    - busted -c
+  artifacts:
+    paths:
+      - luacov.stats.out
+  cache:
+    paths:
+      - $HOME/.cache/hererocks
+
+
+test:lua5.1:
+  <<: *job_definition
+  variables:
+    LUA: "lua 5.1 --no-readline"
+
+test:lua5.1-lzlib:
+  <<: *job_definition
+  variables:
+    LUA: "lua 5.1 --no-readline"
+    ZLIB: lzlib
+
+test:lua5.1-lua-zlib:
+  <<: *job_definition
+  variables:
+    LUA: "lua 5.1 --no-readline"
+    ZLIB: lua-zlib
+
+test:lua5.2:
+  <<: *job_definition
+  variables:
+    LUA: "lua 5.2"
+
+test:lua5.2-lzlib:
+  <<: *job_definition
+  variables:
+    LUA: "lua 5.2"
+    ZLIB: lzlib
+
+test:lua5.2-lua-zlib:
+  <<: *job_definition
+  variables:
+    LUA: "lua 5.2"
+    ZLIB: lua-zlib
+
+test:lua5.3:
+  <<: *job_definition
+  variables:
+    LUA: "lua 5.3"
+
+test:lua5.3-lzlib:
+  <<: *job_definition
+  variables:
+    LUA: "lua 5.3"
+    ZLIB: lzlib
+
+test:lua5.3-lua-zlib:
+  <<: *job_definition
+  variables:
+    LUA: "lua 5.3"
+    ZLIB: lua-zlib
+
+test:lua5.3-no-compat:
+  <<: *job_definition
+  variables:
+    LUA: "lua 5.3"
+    COMPAT53: "no"
+
+test:lua5.3-32bit:
+  <<: *job_definition
+  variables:
+    LUA: "lua 5.3"
+    LUA_CFLAGS: "-DLUA_INT_TYPE=LUA_INT_INT"
+
+test:luajit-HEAD:
+  <<: *job_definition
+  variables:
+    LUA: "luajit @"
+
+test:luajit-HEAD-lzlib:
+  <<: *job_definition
+  variables:
+    LUA: "luajit @"
+    ZLIB: lzlib
+
+test:luajit-HEAD-lua-zlib:
+  <<: *job_definition
+  variables:
+    LUA: "luajit @"
+    ZLIB: lua-zlib
+
+test:luajit-2.0:
+  <<: *job_definition
+  variables:
+    LUA: "luajit 2.0"
+
+test:luajit-2.0-lzlib:
+  <<: *job_definition
+  variables:
+    LUA: "luajit 2.0"
+    ZLIB: lzlib
+
+test:luajit-2.0-lua-zlib:
+  <<: *job_definition
+  variables:
+    LUA: "luajit 2.0"
+    ZLIB: lua-zlib
+
+test:luajit-2.1:
+  <<: *job_definition
+  variables:
+    LUA: "luajit 2.1"
+
+test:luajit-2.1-lzlib:
+  <<: *job_definition
+  variables:
+    LUA: "luajit 2.1"
+    ZLIB: lzlib
+
+test:luajit-2.1-lua-zlib:
+  <<: *job_definition
+  variables:
+    LUA: "luajit 2.1"
+    ZLIB: lua-zlib

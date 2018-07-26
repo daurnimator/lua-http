@@ -1,6 +1,17 @@
 local lpeg = require "lpeg"
 local http_patts = require "lpeg_patterns.http"
 
+-- Defined in RFC7231 Section 4.2.1
+local safe_methods = {
+	GET = true;
+	HEAD = true;
+	OPTIONS = true;
+	TRACE = true;
+}
+local function is_safe_method(method)
+	return safe_methods[method]
+end
+
 -- Encodes a character as a percent encoded string
 local function char_to_pchar(c)
 	return string.format("%%%02X", c:byte(1,1))
@@ -233,6 +244,7 @@ else
 end
 
 return {
+	is_safe_method = is_safe_method;
 	encodeURI = encodeURI;
 	encodeURIComponent = encodeURIComponent;
 	decodeURI = decodeURI;
