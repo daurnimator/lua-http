@@ -4,6 +4,7 @@ UNRELEASED
   - Fix incorrect timeout handling in `websocket:receive()`
   - Add workaround to allow being required in openresty (#98)
   - Add http.tls.old_cipher_list (#112)
+  - Change http.tls.banned_ciphers to be indexed by standard cipher name (#116)
 
 
 0.2 - 2017-05-28

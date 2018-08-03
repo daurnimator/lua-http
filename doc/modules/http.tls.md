@@ -31,9 +31,7 @@ The [Mozilla "Old" cipher list](https://wiki.mozilla.org/Security/Server_Side_TL
 
 ### `banned_ciphers` <!-- --> {#http.tls.banned_ciphers}
 
-A set (table with string keys and values of `true`) of the [ciphers banned in HTTP 2](https://http2.github.io/http2-spec/#BadCipherSuites) where the keys are OpenSSL cipher names.
-
-Ciphers not known by OpenSSL are missing from the set.
+A set (table with string keys and values of `true`) of the [ciphers banned in HTTP 2](https://http2.github.io/http2-spec/#BadCipherSuites) where the keys are standard cipher names.
 
 
 ### `new_client_context()` <!-- --> {#http.tls.new_client_context}
