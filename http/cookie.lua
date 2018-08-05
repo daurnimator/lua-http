@@ -87,6 +87,7 @@ end
 local store_methods = {
 	psl = default_psl;
 	time = function() return os.time() end;
+	max_cookie_length = math.huge;
 }
 
 local store_mt = {
@@ -477,9 +478,15 @@ local function cookie_match(cookie, req_domain, req_is_http, req_is_secure, req_
 	return true
 end
 
-function store_methods:lookup(req_domain, req_path, req_is_http, req_is_secure, req_is_safe_method, req_site_for_cookies, req_is_top_level)
+function store_methods:lookup(req_domain, req_path, req_is_http, req_is_secure, req_is_safe_method, req_site_for_cookies, req_is_top_level, max_cookie_length)
 	assert(type(req_domain) == "string")
 	assert(type(req_path) == "string")
+	if max_cookie_length ~= nil then
+		assert(type(max_cookie_length) == "number")
+	else
+		max_cookie_length = self.max_cookie_length
+	end
+
 	local now = self.time()
 	local list = {}
 	local n = 0
@@ -501,10 +508,17 @@ function store_methods:lookup(req_domain, req_path, req_is_http, req_is_secure, 
 		end
 	end
 	table.sort(list, cookie_cmp)
+	local cookie_length = -2 -- length of separator ("; ")
 	for i=1, n do
 		local cookie = list[i]
 		-- TODO: validate?
-		list[i] = cookie.name .. "=" .. cookie.value
+		local cookie_pair = cookie.name .. "=" .. cookie.value
+		local new_length = cookie_length + #cookie_pair + 2
+		if new_length > max_cookie_length then
+			break
+		end
+		list[i] = cookie_pair
+		cookie_length = new_length
 	end
 	return table.concat(list, "; ", 1, n)
 end
