@@ -570,9 +570,17 @@ function store_methods:lookup_for_request(req_headers, req_host, req_site_for_co
 	return self:lookup(req_domain, req_path, true, req_is_secure, req_is_safe_method, req_site_for_cookies, req_is_top_level, max_cookie_length)
 end
 
+function store_methods:clean_due()
+	local next_expiring = self.expiry_heap:peek()
+	if not next_expiring then
+		return math.huge
+	end
+	return next_expiring.expiry_time
+end
+
 function store_methods:clean()
 	local now = self.time()
-	while self.expiry_heap:peek().expiry_time < now do
+	while self:clean_due() < now do
 		local cookie = self.expiry_heap:pop()
 		local domain_cookies = self.domains[cookie.domain]
 		if domain_cookies then
