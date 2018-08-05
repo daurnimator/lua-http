@@ -186,4 +186,33 @@ describe("cookie module", function()
 			assert.same("", s:lookup("example.com", "/", true, true, false, "other.com", false))
 		end)
 	end)
+	it("can dump a netscape format cookiejar", function()
+		local s = http_cookie.new_store()
+		assert(s:store("example.com", "/", true, true, "example.com", http_cookie.parse_setcookie("foo=FOO;")))
+		assert(s:store("example.com", "/", true, true, "example.com", http_cookie.parse_setcookie("bar=BAR; HttpOnly")))
+		assert(s:store("example.com", "/", true, true, "example.com", http_cookie.parse_setcookie("baz=BAZ; Path=/someplace")))
+		assert(s:store("sub.example.com", "/", true, true, "sub.example.com", http_cookie.parse_setcookie("subdomain=matched; Domain=sub.example.com")))
+		assert(s:store("example.com", "/", true, true, "example.com", http_cookie.parse_setcookie("qux=QUX; SameSite=Lax")))
+		assert(s:store("other.com", "/", true, true, "other.com", http_cookie.parse_setcookie("foo=somethingelse; HttpOnly")))
+		local file = io.tmpfile()
+		assert(s:save_to_file(file))
+		assert(file:seek("set"))
+		-- preamble
+		assert.truthy(assert(file:read("*l")):match"^#.*HTTP Cookie File")
+		assert.truthy(assert(file:read("*l")):match"^#")
+		assert.same("", assert(file:read("*l")))
+		local lines = {}
+		for line in file:lines() do
+			table.insert(lines, line)
+		end
+		table.sort(lines)
+		assert.same({
+			"#HttpOnly_example.com	TRUE	/	FALSE	2147483647	bar	BAR";
+			"#HttpOnly_other.com	TRUE	/	FALSE	2147483647	foo	somethingelse";
+			"example.com	TRUE	/	FALSE	2147483647	foo	FOO";
+			"example.com	TRUE	/	FALSE	2147483647	qux	QUX";
+			"example.com	TRUE	/someplace	FALSE	2147483647	baz	BAZ";
+			"sub.example.com	FALSE	/	FALSE	2147483647	subdomain	matched";
+		}, lines)
+	end)
 end)
