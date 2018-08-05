@@ -4,6 +4,7 @@ local uri_patts = require "lpeg_patterns.uri"
 local basexx = require "basexx"
 local client = require "http.client"
 local new_headers = require "http.headers".new
+local http_cookie = require "http.cookie"
 local http_hsts = require "http.hsts"
 local http_socks = require "http.socks"
 local http_proxies = require "http.proxies"
@@ -15,6 +16,7 @@ local ce = require "cqueues.errno"
 local default_user_agent = string.format("%s/%s", http_version.name, http_version.version)
 local default_hsts_store = http_hsts.new_store()
 local default_proxies = http_proxies.new():update()
+local default_cookie_store = http_cookie.new_store()
 
 local default_h2_settings = {
 	ENABLE_PUSH = false;
@@ -23,6 +25,9 @@ local default_h2_settings = {
 local request_methods = {
 	hsts = default_hsts_store;
 	proxies = default_proxies;
+	cookie_store = default_cookie_store;
+	is_top_level = true;
+	site_for_cookies = nil;
 	expect_100_timeout = 1;
 	follow_redirects = true;
 	max_redirects = 5;
@@ -119,6 +124,9 @@ function request_methods:clone()
 
 		hsts = rawget(self, "hsts");
 		proxies = rawget(self, "proxies");
+		cookie_store = rawget(self, "cookie_store");
+		is_top_level = rawget(self, "is_top_level");
+		site_for_cookies = rawget(self, "site_for_cookies");
 		expect_100_timeout = rawget(self, "expect_100_timeout");
 		follow_redirects = rawget(self, "follow_redirects");
 		max_redirects = rawget(self, "max_redirects");
@@ -367,6 +375,18 @@ function request_methods:go(timeout)
 		end
 	end
 
+	if self.cookie_store then
+		local cookie_header = self.cookie_store:lookup_for_request(request_headers, host, self.site_for_cookies, self.is_top_level)
+		if cookie_header ~= "" then
+			if not cloned_headers then
+				request_headers = request_headers:clone()
+				cloned_headers = true
+			end
+			-- Append rather than upsert: user may have added their own cookies
+			request_headers:append("cookie", cookie_header)
+		end
+	end
+
 	local connection
 
 	local proxy = self.proxy
@@ -592,6 +612,10 @@ function request_methods:go(timeout)
 		if sts then
 			self.hsts:store(self.host, sts)
 		end
+	end
+
+	if self.cookie_store then
+		self.cookie_store:store_from_request(request_headers, headers, self.host, self.site_for_cookies)
 	end
 
 	if self.follow_redirects and headers:get(":status"):sub(1,1) == "3" then

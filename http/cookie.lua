@@ -5,6 +5,7 @@ RFC 6265
 
 local http_patts = require "lpeg_patterns.http"
 local binaryheap = require "binaryheap"
+local http_util = require "http.util"
 local has_psl, psl = pcall(require, "psl")
 
 local EOF = require "lpeg".P(-1)
@@ -351,6 +352,33 @@ function store_methods:store(req_domain, req_path, req_is_http, req_is_secure, r
 	return true
 end
 
+function store_methods:store_from_request(req_headers, resp_headers, req_host, req_site_for_cookies)
+	local set_cookies = resp_headers:get_as_sequence("set-cookie")
+	local n = set_cookies.n
+	if n == 0 then
+		return true
+	end
+
+	local req_scheme = req_headers:get(":scheme")
+	local req_authority = req_headers:get(":authority")
+	local req_domain
+	if req_authority then
+		req_domain = http_util.split_authority(req_authority, req_scheme)
+	else -- :authority can be missing for HTTP/1.0 requests; fall back to req_host
+		req_domain = req_host
+	end
+	local req_path = req_headers:get(":path")
+	local req_is_secure = req_scheme == "https"
+
+	for i=1, n do
+		local name, value, params = parse_setcookie(set_cookies[i])
+		if name then
+			self:store(req_domain, req_path, true, req_is_secure, req_site_for_cookies, name, value, params)
+		end
+	end
+	return true
+end
+
 function store_methods:get(domain, path, name)
 	assert(type(domain) == "string")
 	assert(type(path) == "string")
@@ -521,6 +549,25 @@ function store_methods:lookup(req_domain, req_path, req_is_http, req_is_secure, 
 		cookie_length = new_length
 	end
 	return table.concat(list, "; ", 1, n)
+end
+
+function store_methods:lookup_for_request(req_headers, req_host, req_site_for_cookies, req_is_top_level, max_cookie_length)
+	local req_method = req_headers:get(":method")
+	if req_method == "CONNECT" then
+		return ""
+	end
+	local req_scheme = req_headers:get(":scheme")
+	local req_authority = req_headers:get(":authority")
+	local req_domain
+	if req_authority then
+		req_domain = http_util.split_authority(req_authority, req_scheme)
+	else -- :authority can be missing for HTTP/1.0 requests; fall back to req_host
+		req_domain = req_host
+	end
+	local req_path = req_headers:get(":path")
+	local req_is_secure = req_scheme == "https"
+	local req_is_safe_method = http_util.is_safe_method(req_method)
+	return self:lookup(req_domain, req_path, true, req_is_secure, req_is_safe_method, req_site_for_cookies, req_is_top_level, max_cookie_length)
 end
 
 function store_methods:clean()
