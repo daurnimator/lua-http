@@ -125,6 +125,19 @@ local function resolve_relative_path(orig_path, relative_path)
 	return table.concat(t, "/", s, i)
 end
 
+local safe_methods = {
+	-- RFC 7231 Section 4.2.1:
+	-- Of the request methods defined by this specification, the GET, HEAD,
+	-- OPTIONS, and TRACE methods are defined to be safe.
+	GET = true;
+	HEAD = true;
+	OPTIONS = true;
+	TRACE = true;
+}
+local function is_safe_method(method)
+	return safe_methods[method] or false
+end
+
 local scheme_to_port = {
 	http = 80;
 	ws = 80;
@@ -240,6 +253,7 @@ return {
 	query_args = query_args;
 	dict_to_query = dict_to_query;
 	resolve_relative_path = resolve_relative_path;
+	is_safe_method = is_safe_method;
 	scheme_to_port = scheme_to_port;
 	split_authority = split_authority;
 	to_authority = to_authority;
