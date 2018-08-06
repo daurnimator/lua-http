@@ -126,6 +126,9 @@ function store_methods:store(req_domain, req_path, req_is_http, req_is_secure, r
 
 	req_domain = assert(canonicalise_host(req_domain), "invalid request domain")
 
+	-- Clean now so that we can assume there are no expired cookies in store
+	self:clean()
+
 	-- RFC 6265 Section 5.3
 	local cookie = setmetatable({
 		name = name;
@@ -262,22 +265,18 @@ function store_methods:store(req_domain, req_path, req_is_http, req_is_secure, r
 			if domain_match(cookie.domain, d) or domain_match(d, cookie.domain) then
 				for p, path_cookies in pairs(domain_cookies) do
 					local cmp_cookie = path_cookies[name]
-					if cmp_cookie then
-						-- 1. Their name matches the name of the newly-created cookie.
-						if cmp_cookie.expiry_time < now then
-							self:clean()
-						elseif
-							-- 2. Their secure-only-flag is true.
-							cmp_cookie.secure_only
-							-- 3. Their domain domain-matches the domain of the newly-created
-							-- cookie, or vice-versa.
-							-- Note: already checked above in domain_match
-							-- 4. The path of the newly-created cookie path-matches the path
-							-- of the existing cookie.
-							and path_match(p, cookie.path)
-						then
-							return false
-						end
+					-- 1. Their name matches the name of the newly-created cookie.
+					if cmp_cookie
+						-- 2. Their secure-only-flag is true.
+						and cmp_cookie.secure_only
+						-- 3. Their domain domain-matches the domain of the newly-created
+						-- cookie, or vice-versa.
+						-- Note: already checked above in domain_match
+						-- 4. The path of the newly-created cookie path-matches the path
+						-- of the existing cookie.
+						and path_match(p, cookie.path)
+					then
+						return false
 					end
 				end
 			end
@@ -528,6 +527,10 @@ function store_methods:lookup(req_domain, req_path, req_is_http, req_is_secure, 
 	end
 
 	local now = self.time()
+
+	-- Clean now so that we can assume there are no expired cookies in store
+	self:clean()
+
 	local list = {}
 	local n = 0
 	for domain, domain_cookies in pairs(self.domains) do
@@ -535,9 +538,7 @@ function store_methods:lookup(req_domain, req_path, req_is_http, req_is_secure, 
 			for path, path_cookies in pairs(domain_cookies) do
 				if path_match(path, req_path) then
 					for _, cookie in pairs(path_cookies) do
-						if cookie.expiry_time < now then
-							self:clean()
-						elseif cookie_match(cookie, req_domain, req_is_http, req_is_secure, req_is_safe_method, req_site_for_cookies, req_is_top_level) then
+						if cookie_match(cookie, req_domain, req_is_http, req_is_secure, req_is_safe_method, req_site_for_cookies, req_is_top_level) then
 							cookie.last_access_time = now
 							n = n + 1
 							list[n] = cookie
