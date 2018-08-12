@@ -63,6 +63,14 @@ The value should be a URI or `false` to turn off proxying for the request.
 A [*http.headers*](#http.headers) object of headers that will be sent in the request.
 
 
+### `request.hsts` <!-- --> {#http.request.hsts}
+
+The [*http.hsts*](#http.hsts) store that will be used to enforce HTTP strict transport security.
+An attempt will be made to add strict transport headers from a response to the store.
+
+Defaults to a shared store.
+
+
 ### `request.cookie_store` <!-- --> {#http.request.cookie_store}
 
 The [*http.cookie.store*](#http.cookie.store) that will be used to find cookies for the request.
