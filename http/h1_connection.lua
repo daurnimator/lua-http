@@ -56,6 +56,14 @@ local function new_connection(socket, conn_type, version)
 	return self
 end
 
+function connection_methods:setmaxline(read_length)
+	if self.socket == nil then
+		return nil
+	end
+	self.socket:setmaxline(read_length)
+	return true
+end
+
 function connection_methods:clearerr(...)
 	if self.socket == nil then
 		return nil
