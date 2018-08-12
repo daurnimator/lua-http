@@ -170,6 +170,7 @@ local store_methods = {
 	time = function() return os.time() end;
 	max_cookie_length = (1e999);
 	max_cookies = (1e999);
+	max_cookies_per_domain = (1e999);
 }
 
 local store_mt = {
@@ -182,6 +183,7 @@ local function new_store()
 		domains = {};
 		expiry_heap = binaryheap.minUnique();
 		n_cookies = 0;
+		n_cookies_per_domain = {};
 	}, store_mt)
 end
 
@@ -195,6 +197,7 @@ local function add_to_store(self, cookie, req_is_http, now)
 		if domain_cookies == nil then
 			domain_cookies = {}
 			self.domains[cookie.domain] = domain_cookies
+			self.n_cookies_per_domain[cookie.domain] = 0
 		end
 		local path_cookies = domain_cookies[cookie.path]
 		if path_cookies == nil then
@@ -220,9 +223,11 @@ local function add_to_store(self, cookie, req_is_http, now)
 			-- Remove the old-cookie from the cookie store.
 			self.expiry_heap:remove(old_cookie)
 		else
-			if self.n_cookies >= self.max_cookies then
+			if self.n_cookies >= self.max_cookies
+				or self.n_cookies_per_domain[cookie.domain] >= self.max_cookies_per_domain then
 				return false
 			end
+			self.n_cookies_per_domain[cookie.domain] = self.n_cookies_per_domain[cookie.domain] + 1
 			self.n_cookies = self.n_cookies + 1
 		end
 
@@ -508,18 +513,24 @@ function store_methods:remove(domain, path, name)
 			end
 		end
 		self.domains[domain] = nil
+		self.n_cookies_per_domain[domain] = nil
 	else
 		local path_cookies = domain_cookies[path]
 		if path_cookies then
 			if name == nil then
 				-- Delete all names at path
+				local domains_deleted = 0
 				for _, cookie in pairs(path_cookies) do
 					self.expiry_heap:remove(cookie)
-					n_cookies = n_cookies - 1
+					domains_deleted = domains_deleted + 1
 				end
 				domain_cookies[path] = nil
+				n_cookies = n_cookies - domains_deleted
 				if next(domain_cookies) == nil then
 					self.domains[domain] = nil
+					self.n_cookies_per_domain[domain] = nil
+				else
+					self.n_cookies_per_domain[domain] = self.n_cookies_per_domain[domain] - domains_deleted
 				end
 			else
 				-- Delete singular cookie
@@ -527,11 +538,13 @@ function store_methods:remove(domain, path, name)
 				if cookie then
 					self.expiry_heap:remove(cookie)
 					n_cookies = n_cookies - 1
+					self.n_cookies_per_domain[domain] = self.n_cookies_per_domain[domain] - 1
 					path_cookies[name] = nil
 					if next(path_cookies) == nil then
 						domain_cookies[path] = nil
 						if next(domain_cookies) == nil then
 							self.domains[domain] = nil
+							self.n_cookies_per_domain[domain] = nil
 						end
 					end
 				end
@@ -684,15 +697,18 @@ function store_methods:clean()
 	while self:clean_due() < now do
 		local cookie = self.expiry_heap:pop()
 		self.n_cookies = self.n_cookies - 1
-		local domain_cookies = self.domains[cookie.domain]
+		local domain = cookie.domain
+		local domain_cookies = self.domains[domain]
 		if domain_cookies then
+			self.n_cookies_per_domain[domain] = self.n_cookies_per_domain[domain] - 1
 			local path_cookies = domain_cookies[cookie.path]
 			if path_cookies then
 				path_cookies[cookie.name] = nil
 				if next(path_cookies) == nil then
 					domain_cookies[cookie.path] = nil
 					if next(domain_cookies) == nil then
-						self.domains[cookie.domain] = nil
+						self.domains[domain] = nil
+						self.n_cookies_per_domain[domain] = nil
 					end
 				end
 			end
