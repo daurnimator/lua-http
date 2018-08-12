@@ -180,6 +180,7 @@ local function new_store()
 	return setmetatable({
 		domains = {};
 		expiry_heap = binaryheap.minUnique();
+		n_cookies = 0;
 	}, store_mt)
 end
 
@@ -217,6 +218,8 @@ local function add_to_store(self, cookie, req_is_http, now)
 
 			-- Remove the old-cookie from the cookie store.
 			self.expiry_heap:remove(old_cookie)
+		else
+			self.n_cookies = self.n_cookies + 1
 		end
 
 		path_cookies[cookie.name] = cookie
@@ -491,11 +494,13 @@ function store_methods:remove(domain, path, name)
 	if not domain_cookies then
 		return
 	end
+	local n_cookies = self.n_cookies
 	if path == nil then
 		-- Delete whole domain
 		for _, path_cookies in pairs(domain_cookies) do
 			for _, cookie in pairs(path_cookies) do
 				self.expiry_heap:remove(cookie)
+				n_cookies = n_cookies - 1
 			end
 		end
 		self.domains[domain] = nil
@@ -506,6 +511,7 @@ function store_methods:remove(domain, path, name)
 				-- Delete all names at path
 				for _, cookie in pairs(path_cookies) do
 					self.expiry_heap:remove(cookie)
+					n_cookies = n_cookies - 1
 				end
 				domain_cookies[path] = nil
 				if next(domain_cookies) == nil then
@@ -516,6 +522,7 @@ function store_methods:remove(domain, path, name)
 				local cookie = path_cookies[name]
 				if cookie then
 					self.expiry_heap:remove(cookie)
+					n_cookies = n_cookies - 1
 					path_cookies[name] = nil
 					if next(path_cookies) == nil then
 						domain_cookies[path] = nil
@@ -527,6 +534,7 @@ function store_methods:remove(domain, path, name)
 			end
 		end
 	end
+	self.n_cookies = n_cookies
 end
 
 --[[ The user agent SHOULD sort the cookie-list in the following order:
@@ -671,6 +679,7 @@ function store_methods:clean()
 	local now = self.time()
 	while self:clean_due() < now do
 		local cookie = self.expiry_heap:pop()
+		self.n_cookies = self.n_cookies - 1
 		local domain_cookies = self.domains[cookie.domain]
 		if domain_cookies then
 			local path_cookies = domain_cookies[cookie.path]
