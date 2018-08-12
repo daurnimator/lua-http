@@ -666,8 +666,96 @@ function store_methods:clean()
 	return true
 end
 
--- Saves to a file in netscape format
+-- Files in 'netscape format'
 -- curl's lib/cookie.c is best reference for the format
+local function parse_netscape_format(line, now)
+	if line == "" then
+		return
+	end
+	local i = 1
+	local http_only = false
+	if line:sub(1, 1) == "#" then
+		if line:sub(1, 10) == "#HttpOnly_" then
+			http_only = true
+			i = 11
+		else
+			return
+		end
+	end
+
+	local domain, host_only, path, secure_only, expiry, name, value =
+		line:match("^%.?([^\t]+)\t([^\t]+)\t([^\t]+)\t([^\t]+)\t(%d+)\t([^\t]+)\t(.+)", i)
+	if not domain then
+		return
+	end
+	domain = canonicalise_host(domain)
+	if domain == nil then
+		return
+	end
+
+	if host_only == "TRUE" then
+		host_only = true
+	elseif host_only == "FALSE" then
+		host_only = false
+	else
+		return
+	end
+
+	if secure_only == "TRUE" then
+		secure_only = true
+	elseif secure_only == "FALSE" then
+		secure_only = false
+	else
+		return
+	end
+
+	expiry = tonumber(expiry, 10)
+
+	return setmetatable({
+		name = name;
+		value = value;
+		expiry_time = expiry;
+		domain = domain;
+		path = path;
+		creation_time = now;
+		last_access_time = now;
+		persistent = expiry == 0;
+		host_only = host_only;
+		secure_only = secure_only;
+		http_only = http_only;
+		same_site = nil;
+	}, cookie_mt)
+end
+
+function store_methods:load_from_file(file)
+	local now = self.time()
+
+	-- Clean now so that we don't hit storage limits
+	self:clean()
+
+	local cookies = {}
+	local n = 0
+	while true do
+		local line, err, errno = file:read()
+		if not line then
+			if err ~= nil then
+				return nil, err, errno
+			end
+			break
+		end
+		local cookie = parse_netscape_format(line, now)
+		if cookie then
+			n = n + 1
+			cookies[n] = cookie
+		end
+	end
+	for i=1, n do
+		local cookie = cookies[i]
+		add_to_store(self, cookie, cookie.http_only, now)
+	end
+	return true
+end
+
 function store_methods:save_to_file(file)
 	do -- write a preamble
 		local ok, err, errno = file:write [[
