@@ -1207,6 +1207,7 @@ end
 -- this function *should never throw*
 function stream_methods:get_headers(timeout)
 	local deadline = timeout and (monotime()+timeout)
+	if not timeout then timeout = math.huge end
 	while self.recv_headers_fifo:length() < 1 do
 		if self.state == "closed" then
 			return nil, self.rst_stream_error
@@ -1220,7 +1221,7 @@ function stream_methods:get_headers(timeout)
 		elseif which == timeout then
 			return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 		end
-		timeout = deadline and (deadline-monotime())
+		timeout = deadline and deadline-monotime() or math.huge
 	end
 	local headers = self.recv_headers_fifo:pop()
 	return headers
@@ -1228,6 +1229,7 @@ end
 
 function stream_methods:get_next_chunk(timeout)
 	local deadline = timeout and (monotime()+timeout)
+	if not timeout then timeout = math.huge end
 	while self.chunk_fifo:length() == 0 do
 		if self.state == "closed" or self.state == "half closed (remote)" then
 			return nil, self.rst_stream_error
@@ -1241,7 +1243,7 @@ function stream_methods:get_next_chunk(timeout)
 		elseif which == timeout then
 			return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 		end
-		timeout = deadline and (deadline-monotime())
+		timeout = deadline and deadline-monotime() or math.huge
 	end
 	local chunk = self.chunk_fifo:pop()
 	if chunk == nil then
@@ -1347,6 +1349,7 @@ end
 
 function stream_methods:write_chunk(payload, end_stream, timeout)
 	local deadline = timeout and (monotime()+timeout)
+	if not timeout then timeout = math.huge end
 	local sent = 0
 	while true do
 		while self.peer_flow_credits <= 0 do
@@ -1359,7 +1362,7 @@ function stream_methods:write_chunk(payload, end_stream, timeout)
 			elseif which == timeout then
 				return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 			end
-			timeout = deadline and (deadline-monotime())
+			timeout = deadline and deadline-monotime() or math.huge
 		end
 		while self.connection.peer_flow_credits <= 0 do
 			local which = cqueues.poll(self.connection.peer_flow_credits_change, self.connection, timeout)
@@ -1371,7 +1374,7 @@ function stream_methods:write_chunk(payload, end_stream, timeout)
 			elseif which == timeout then
 				return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 			end
-			timeout = deadline and (deadline-monotime())
+			timeout = deadline and deadline-monotime() or math.huge
 		end
 		local SETTINGS_MAX_FRAME_SIZE = self.connection.peer_settings[known_settings.MAX_FRAME_SIZE]
 		local max_available = math.min(self.peer_flow_credits, self.connection.peer_flow_credits, SETTINGS_MAX_FRAME_SIZE)

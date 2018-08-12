@@ -270,7 +270,7 @@ function stream_methods:read_headers(timeout)
 			local method, path, httpversion = self.connection:read_request_line(0)
 			if method == nil then
 				if httpversion == ce.ETIMEDOUT then
-					timeout = deadline and deadline-monotime()
+					local timeout = deadline and deadline-monotime() or math.huge
 					if cqueues.poll(self.connection.socket, timeout) ~= timeout then
 						return self:read_headers(deadline and deadline-monotime())
 					end
@@ -292,6 +292,7 @@ function stream_methods:read_headers(timeout)
 			-- Make sure we're at front of connection pipeline
 			if self.connection.pipeline:peek() ~= self then
 				assert(cqueues.running(), "cannot wait for condition if not within a cqueues coroutine")
+				local timeout = timeout or math.huge
 				if cqueues.poll(self.pipeline_cond, timeout) == timeout then
 					return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 				end
@@ -301,7 +302,7 @@ function stream_methods:read_headers(timeout)
 			httpversion, status_code, reason_phrase = self.connection:read_status_line(0)
 			if httpversion == nil then
 				if reason_phrase == ce.ETIMEDOUT then
-					timeout = deadline and deadline-monotime()
+					local timeout = deadline and deadline-monotime() or math.huge
 					if cqueues.poll(self.connection.socket, timeout) ~= timeout then
 						return self:read_headers(deadline and deadline-monotime())
 					end
@@ -331,7 +332,7 @@ function stream_methods:read_headers(timeout)
 		if k == nil then
 			if v ~= nil then
 				if errno == ce.ETIMEDOUT then
-					timeout = deadline and deadline-monotime()
+					local timeout = deadline and deadline-monotime() or math.huge
 					if cqueues.poll(self.connection.socket, timeout) ~= timeout then
 						return self:read_headers(deadline and deadline-monotime())
 					end
@@ -351,7 +352,7 @@ function stream_methods:read_headers(timeout)
 		local ok, err, errno = self.connection:read_headers_done(0)
 		if ok == nil then
 			if errno == ce.ETIMEDOUT then
-				timeout = deadline and deadline-monotime()
+				local timeout = deadline and deadline-monotime() or math.huge
 				if cqueues.poll(self.connection.socket, timeout) ~= timeout then
 					return self:read_headers(deadline and deadline-monotime())
 				end
@@ -546,6 +547,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		if self.connection.pipeline:peek() ~= self then
 			assert(cqueues.running(), "cannot wait for condition if not within a cqueues coroutine")
 			headers = headers:clone() -- don't want user to edit it and send wrong headers
+			local timeout = timeout or math.huge
 			if cqueues.poll(self.pipeline_cond, timeout) == timeout then
 				return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 			end
@@ -577,6 +579,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 				-- Wait until previous responses have been fully written
 				assert(cqueues.running(), "cannot wait for condition if not within a cqueues coroutine")
 				headers = headers:clone() -- don't want user to edit it and send wrong headers
+				local timeout = timeout or math.huge
 				if cqueues.poll(self.connection.req_cond, timeout) == timeout then
 					return nil, ce.strerror(ce.ETIMEDOUT), ce.ETIMEDOUT
 				end
