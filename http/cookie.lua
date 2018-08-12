@@ -100,7 +100,7 @@ end
 local store_methods = {
 	psl = default_psl;
 	time = function() return os.time() end;
-	max_cookie_length = math.huge;
+	max_cookie_length = (1e999);
 }
 
 local store_mt = {
@@ -133,7 +133,7 @@ function store_methods:store(req_domain, req_path, req_is_http, req_is_secure, r
 	local cookie = setmetatable({
 		name = name;
 		value = value;
-		expiry_time = math.huge;
+		expiry_time = (1e999);
 		domain = req_domain;
 		path = nil;
 		creation_time = now;
@@ -153,7 +153,7 @@ function store_methods:store(req_domain, req_path, req_is_http, req_is_secure, r
 		max_age = tonumber(max_age, 10)
 		cookie.persistent = true
 		if max_age <= 0 then
-			cookie.expiry_time = -math.huge
+			cookie.expiry_time = (-1e999)
 		else
 			cookie.expiry_time = now + max_age
 		end
@@ -586,7 +586,7 @@ end
 function store_methods:clean_due()
 	local next_expiring = self.expiry_heap:peek()
 	if not next_expiring then
-		return math.huge
+		return (1e999)
 	end
 	return next_expiring.expiry_time
 end
