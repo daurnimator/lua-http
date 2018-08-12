@@ -20,7 +20,9 @@ dependencies = {
 	"basexx >= 0.2.0";
 	"lpeg";
 	"lpeg_patterns >= 0.5";
+	"binaryheap >= 0.3";
 	"fifo";
+	-- "psl"; -- Optional
 }
 
 build = {
@@ -29,6 +31,7 @@ build = {
 		["http.bit"] = "http/bit.lua";
 		["http.client"] = "http/client.lua";
 		["http.connection_common"] = "http/connection_common.lua";
+		["http.cookie"] = "http/cookie.lua";
 		["http.h1_connection"] = "http/h1_connection.lua";
 		["http.h1_reason_phrases"] = "http/h1_reason_phrases.lua";
 		["http.h1_stream"] = "http/h1_stream.lua";

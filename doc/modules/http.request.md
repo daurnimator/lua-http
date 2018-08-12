@@ -63,6 +63,28 @@ The value should be a URI or `false` to turn off proxying for the request.
 A [*http.headers*](#http.headers) object of headers that will be sent in the request.
 
 
+### `request.cookie_store` <!-- --> {#http.request.cookie_store}
+
+The [*http.cookie.store*](#http.cookie.store) that will be used to find cookies for the request.
+An attempt will be made to add cookies from a response to the store.
+
+Defaults to a shared store.
+
+
+### `request.is_top_level` <!-- --> {#http.request.is_top_level}
+
+A boolean flag indicating if this request is a "top level" request (See [RFC 6265bis-02 Section 5.2](https://tools.ietf.org/html/draft-ietf-httpbis-rfc6265bis-02#section-5.2))
+
+Defaults to `true`
+
+
+### `request.site_for_cookies` <!-- --> {#http.request.site_for_cookies}
+
+A string containing the host that should be considered as the "site for cookies" (See [RFC 6265bis-02 Section 5.2](https://tools.ietf.org/html/draft-ietf-httpbis-rfc6265bis-02#section-5.2)), can be `nil` if unknown.
+
+Defaults to `nil`.
+
+
 ### `request.follow_redirects` <!-- --> {#http.request.follow_redirects}
 
 Boolean indicating if `:go()` should follow redirects.

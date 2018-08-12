@@ -45,6 +45,17 @@ print(http_util.dict_to_query({foo = "bar"; baz = "qux"})) --> "baz=qux&foo=bar"
 ### `resolve_relative_path(orig_path, relative_path)` <!-- --> {#http.util.resolve_relative_path}
 
 
+### `is_safe_method(method)` <!-- --> {#http.util.is_safe_method}
+
+Returns a boolean indicating if the passed string `method` is a "safe" method.
+See [RFC 7231 section 4.2.1](https://tools.ietf.org/html/rfc7231#section-4.2.1) for more information.
+
+
+### `is_ip(str)` <!-- --> {#http.util.is_ip}
+
+Returns a boolean indicating if the passed string `str` is a valid IP.
+
+
 ### `scheme_to_port` <!-- --> {#http.util.scheme_to_port}
 
 Map from schemes (as strings) to default ports (as integers).

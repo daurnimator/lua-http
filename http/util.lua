@@ -1,5 +1,9 @@
 local lpeg = require "lpeg"
 local http_patts = require "lpeg_patterns.http"
+local IPv4_patts = require "lpeg_patterns.IPv4"
+local IPv6_patts = require "lpeg_patterns.IPv6"
+
+local EOF = lpeg.P(-1)
 
 -- Encodes a character as a percent encoded string
 local function char_to_pchar(c)
@@ -125,6 +129,24 @@ local function resolve_relative_path(orig_path, relative_path)
 	return table.concat(t, "/", s, i)
 end
 
+local safe_methods = {
+	-- RFC 7231 Section 4.2.1:
+	-- Of the request methods defined by this specification, the GET, HEAD,
+	-- OPTIONS, and TRACE methods are defined to be safe.
+	GET = true;
+	HEAD = true;
+	OPTIONS = true;
+	TRACE = true;
+}
+local function is_safe_method(method)
+	return safe_methods[method] or false
+end
+
+local IPaddress = (IPv4_patts.IPv4address + IPv6_patts.IPv6addrz) * EOF
+local function is_ip(str)
+	return IPaddress:match(str) ~= nil
+end
+
 local scheme_to_port = {
 	http = 80;
 	ws = 80;
@@ -180,7 +202,6 @@ end
 -- This pattern checks if its argument is a valid token, if so, it returns it as is.
 -- Otherwise, it returns it as a quoted string (with any special characters escaped)
 local maybe_quote do
-	local EOF = lpeg.P(-1)
 	local patt = http_patts.token * EOF
 		+ lpeg.Cs(lpeg.Cc'"' * ((lpeg.S"\\\"") / "\\%0" + http_patts.qdtext)^0 * lpeg.Cc'"') * EOF
 	maybe_quote = function (s)
@@ -240,6 +261,8 @@ return {
 	query_args = query_args;
 	dict_to_query = dict_to_query;
 	resolve_relative_path = resolve_relative_path;
+	is_safe_method = is_safe_method;
+	is_ip = is_ip;
 	scheme_to_port = scheme_to_port;
 	split_authority = split_authority;
 	to_authority = to_authority;

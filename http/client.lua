@@ -1,6 +1,7 @@
 local ca = require "cqueues.auxlib"
 local cs = require "cqueues.socket"
 local http_tls = require "http.tls"
+local http_util = require "http.util"
 local connection_common = require "http.connection_common"
 local onerror = connection_common.onerror
 local new_h1_connection = require "http.h1_connection".new
@@ -8,11 +9,6 @@ local new_h2_connection = require "http.h2_connection".new
 local openssl_ssl = require "openssl.ssl"
 local openssl_ctx = require "openssl.ssl.context"
 local openssl_verify_param = require "openssl.x509.verify_param"
-
-local EOF = require "lpeg".P(-1)
-local IPv4address = require "lpeg_patterns.IPv4".IPv4address
-local IPv6addrz = require "lpeg_patterns.IPv6".IPv6addrz
-local IPaddress = (IPv4address + IPv6addrz) * EOF
 
 -- Create a shared 'default' TLS context
 local default_ctx = http_tls.new_client_context()
@@ -24,7 +20,7 @@ local function negotiate(s, options, timeout)
 	if tls then
 		local ctx = options.ctx or default_ctx
 		local ssl = openssl_ssl.new(ctx)
-		local ip = options.host and IPaddress:match(options.host)
+		local ip = options.host and http_util.is_ip(options.host)
 		if options.sendname ~= nil then
 			if options.sendname then -- false indicates no sendname wanted
 				ssl:setHostName(options.sendname)
