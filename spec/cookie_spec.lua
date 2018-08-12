@@ -1,5 +1,28 @@
 describe("cookie module", function()
 	local http_cookie = require "http.cookie"
+	local http_headers = require "http.headers"
+	describe(".parse_cookies", function()
+		it("can parse a request with a single cookie headers", function()
+			local h = http_headers.new()
+			h:append("cookie", "foo=FOO; bar=BAR")
+			assert.same({
+				foo = "FOO";
+				bar = "BAR";
+			}, http_cookie.parse_cookies(h))
+		end)
+		it("can parse a request with a multiple cookie headers", function()
+			local h = http_headers.new()
+			h:append("cookie", "foo=FOO; bar=BAR")
+			h:append("cookie", "baz=BAZ; bar=BAR2")
+			h:append("cookie", "qux=QUX")
+			assert.same({
+				foo = "FOO";
+				bar = "BAR2"; -- last occurence should win
+				baz = "BAZ";
+				qux = "QUX";
+			}, http_cookie.parse_cookies(h))
+		end)
+	end)
 	it(":get works", function()
 		local s = http_cookie.new_store()
 		assert.same(nil, s:get("mysite.com", "/", "lang"))

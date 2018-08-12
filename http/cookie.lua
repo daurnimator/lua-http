@@ -66,6 +66,24 @@ local function parse_cookie(cookie_header)
 	return Cookie:match(cookie_header)
 end
 
+local function parse_cookies(req_headers)
+	local cookie_headers = req_headers:get_as_sequence("cookie")
+	local cookies
+	for i=1, cookie_headers.n do
+		local header_cookies = parse_cookie(cookie_headers[i])
+		if header_cookies then
+			if cookies then
+				for k, v in pairs(header_cookies) do
+					cookies[k] = v
+				end
+			else
+				cookies = header_cookies
+			end
+		end
+	end
+	return cookies or {}
+end
+
 local function parse_setcookie(setcookie_header)
 	return Set_Cookie:match(setcookie_header)
 end
@@ -788,6 +806,7 @@ return {
 	bake = bake;
 
 	parse_cookie = parse_cookie;
+	parse_cookies = parse_cookies;
 	parse_setcookie = parse_setcookie;
 
 	new_store = new_store;

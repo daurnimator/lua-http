@@ -14,6 +14,13 @@ Parses the `Cookie` header contents `cookie`.
 Returns a table containing `name` and `value` pairs as strings.
 
 
+### `parse_cookies(req_headers)` <!-- --> {#http.cookie.parse_cookies}
+
+Parses all `Cookie` headers in the [*http.headers*](#http.headers) object `req_headers`.
+
+Returns a table containing `name` and `value` pairs as strings.
+
+
 ### `parse_setcookie(setcookie)` <!-- --> {#http.cookie.parse_setcookie}
 
 Parses the `Set-Cookie` header contents `setcookie`.
