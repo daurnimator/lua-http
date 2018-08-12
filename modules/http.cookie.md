@@ -57,7 +57,8 @@ Defaults to a function based on [`os.time`](https://www.lua.org/manual/5.3/manua
 
 ### `store.max_cookie_length` <!-- --> {#http.cookie.store.max_cookie_length}
 
-The default maximum cookie length for store methods such as `:lookup()`.
+The maximum length (in bytes) of cookies in the store; this value is also used as default maximum cookie length for `:lookup()`.
+Decreasing this value will only prevent new cookies from being added, it will not remove old cookies.
 
 Defaults to infinity (no maximum size).
 
