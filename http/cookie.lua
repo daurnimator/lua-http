@@ -169,6 +169,7 @@ local store_methods = {
 	psl = default_psl;
 	time = function() return os.time() end;
 	max_cookie_length = (1e999);
+	max_cookies = (1e999);
 }
 
 local store_mt = {
@@ -219,6 +220,9 @@ local function add_to_store(self, cookie, req_is_http, now)
 			-- Remove the old-cookie from the cookie store.
 			self.expiry_heap:remove(old_cookie)
 		else
+			if self.n_cookies >= self.max_cookies then
+				return false
+			end
 			self.n_cookies = self.n_cookies + 1
 		end
 

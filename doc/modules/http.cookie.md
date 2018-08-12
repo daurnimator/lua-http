@@ -62,6 +62,14 @@ The default maximum cookie length for store methods such as `:lookup()`.
 Defaults to infinity (no maximum size).
 
 
+### `store.max_cookies` <!-- --> {#http.cookie.store.max_cookies}
+
+The maximum number of cookies allowed in the `store`.
+Decreasing this value will only prevent new cookies from being added, it will not remove old cookies.
+
+Defaults to infinity (any number of cookies is allowed).
+
+
 ### `store:store(req_domain, req_path, req_is_http, req_is_secure, req_site_for_cookies, name, value, params)` <!-- --> {#http.cookie.store:store}
 
 Attempts to add a cookie to the `store`.
