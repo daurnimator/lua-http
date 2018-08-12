@@ -160,6 +160,8 @@ describe("cookie module", function()
 		assert.truthy(s:store("example.com", "/", true, true, nil, http_cookie.parse_setcookie("foo=bar; HttpOnly")))
 		assert.same("", s:lookup("example.com", "/", false, true))
 		assert.same("foo=bar", s:lookup("example.com", "/", true, true))
+		-- Now try and overwrite it with non-http :store
+		assert.falsy(s:store("example.com", "/", false, true, nil, http_cookie.parse_setcookie("foo=bar")))
 	end)
 	it("supports Secure attribute", function()
 		local s = http_cookie.new_store()
