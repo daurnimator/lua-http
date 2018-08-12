@@ -192,20 +192,18 @@ local function add_to_store(self, cookie, req_is_http, now)
 		-- This was all just a trigger to delete the old cookie
 		self:remove(cookie.domain, cookie.path, cookie.name)
 	else
-		-- Insert the newly created cookie into the cookie store.
-		local domain_cookies = self.domains[cookie.domain]
-		if domain_cookies == nil then
-			domain_cookies = {}
-			self.domains[cookie.domain] = domain_cookies
-			self.n_cookies_per_domain[cookie.domain] = 0
-		end
-		local path_cookies = domain_cookies[cookie.path]
-		if path_cookies == nil then
-			path_cookies = {}
-			domain_cookies[cookie.path] = path_cookies
+		local name = cookie.name
+		local domain = cookie.domain
+		local domain_cookies = self.domains[domain]
+		local path_cookies
+		local old_cookie
+		if domain_cookies ~= nil then
+			path_cookies = domain_cookies[cookie.path]
+			if path_cookies ~= nil then
+				old_cookie = path_cookies[name]
+			end
 		end
 
-		local old_cookie = path_cookies[cookie.name]
 		-- If the cookie store contains a cookie with the same name,
 		-- domain, and path as the newly created cookie:
 		if old_cookie then
@@ -223,15 +221,35 @@ local function add_to_store(self, cookie, req_is_http, now)
 			-- Remove the old-cookie from the cookie store.
 			self.expiry_heap:remove(old_cookie)
 		else
-			if self.n_cookies >= self.max_cookies
-				or self.n_cookies_per_domain[cookie.domain] >= self.max_cookies_per_domain then
+			if self.n_cookies >= self.max_cookies or self.max_cookies_per_domain < 1 then
 				return false
 			end
-			self.n_cookies_per_domain[cookie.domain] = self.n_cookies_per_domain[cookie.domain] + 1
+
+			-- Cookie will be added
+			if domain_cookies == nil then
+				path_cookies = {}
+				domain_cookies = {
+					[cookie.path] = path_cookies;
+				}
+				self.domains[domain] = domain_cookies
+				self.n_cookies_per_domain[domain] = 1
+			else
+				local n_cookies_per_domain = self.n_cookies_per_domain[domain]
+				if n_cookies_per_domain >= self.max_cookies_per_domain then
+					return false
+				end
+				path_cookies = domain_cookies[cookie.path]
+				if path_cookies == nil then
+					path_cookies = {}
+					domain_cookies[cookie.path] = path_cookies
+				end
+				self.n_cookies_per_domain[domain] = n_cookies_per_domain
+			end
+
 			self.n_cookies = self.n_cookies + 1
 		end
 
-		path_cookies[cookie.name] = cookie
+		path_cookies[name] = cookie
 		self.expiry_heap:insert(cookie.expiry_time, cookie)
 	end
 
