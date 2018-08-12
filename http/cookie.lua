@@ -165,6 +165,49 @@ local function new_store()
 	}, store_mt)
 end
 
+local function add_to_store(self, cookie, req_is_http, now)
+	if cookie.expiry_time < now then
+		-- This was all just a trigger to delete the old cookie
+		self:remove(cookie.domain, cookie.path, cookie.name)
+	else
+		-- Insert the newly created cookie into the cookie store.
+		local domain_cookies = self.domains[cookie.domain]
+		if domain_cookies == nil then
+			domain_cookies = {}
+			self.domains[cookie.domain] = domain_cookies
+		end
+		local path_cookies = domain_cookies[cookie.path]
+		if path_cookies == nil then
+			path_cookies = {}
+			domain_cookies[cookie.path] = path_cookies
+		end
+
+		local old_cookie = path_cookies[cookie.name]
+		-- If the cookie store contains a cookie with the same name,
+		-- domain, and path as the newly created cookie:
+		if old_cookie then
+			-- If the newly created cookie was received from a "non-HTTP"
+			-- API and the old-cookie's http-only-flag is set, abort these
+			-- steps and ignore the newly created cookie entirely.
+			if not req_is_http and old_cookie.http_only then
+				return false
+			end
+
+			-- Update the creation-time of the newly created cookie to
+			-- match the creation-time of the old-cookie.
+			cookie.creation_time = old_cookie.creation_time
+
+			-- Remove the old-cookie from the cookie store.
+			self.expiry_heap:remove(old_cookie)
+		end
+
+		path_cookies[cookie.name] = cookie
+		self.expiry_heap:insert(cookie.expiry_time, cookie)
+	end
+
+	return true
+end
+
 function store_methods:store(req_domain, req_path, req_is_http, req_is_secure, req_site_for_cookies, name, value, params)
 	assert(type(req_domain) == "string")
 	assert(type(req_path) == "string")
@@ -371,46 +414,7 @@ function store_methods:store(req_domain, req_path, req_is_http, req_is_secure, r
 		return false
 	end
 
-	if cookie.expiry_time < now then
-		-- This was all just a trigger to delete the old cookie
-		self:remove(cookie.domain, cookie.path, cookie.name)
-	else
-		-- Insert the newly created cookie into the cookie store.
-		local domain_cookies = self.domains[cookie.domain]
-		if domain_cookies == nil then
-			domain_cookies = {}
-			self.domains[cookie.domain] = domain_cookies
-		end
-		local path_cookies = domain_cookies[cookie.path]
-		if path_cookies == nil then
-			path_cookies = {}
-			domain_cookies[cookie.path] = path_cookies
-		end
-
-		local old_cookie = path_cookies[cookie.name]
-		-- If the cookie store contains a cookie with the same name,
-		-- domain, and path as the newly created cookie:
-		if old_cookie then
-			-- If the newly created cookie was received from a "non-HTTP"
-			-- API and the old-cookie's http-only-flag is set, abort these
-			-- steps and ignore the newly created cookie entirely.
-			if not req_is_http and old_cookie.http_only then
-				return false
-			end
-
-			-- Update the creation-time of the newly created cookie to
-			-- match the creation-time of the old-cookie.
-			cookie.creation_time = old_cookie.creation_time
-
-			-- Remove the old-cookie from the cookie store.
-			self.expiry_heap:remove(old_cookie)
-		end
-
-		path_cookies[cookie.name] = cookie
-		self.expiry_heap:insert(cookie.expiry_time, cookie)
-	end
-
-	return true
+	return add_to_store(self, cookie, req_is_http, now)
 end
 
 function store_methods:store_from_request(req_headers, resp_headers, req_host, req_site_for_cookies)
