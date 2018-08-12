@@ -448,6 +448,10 @@ function store_methods:get(domain, path, name)
 	assert(type(domain) == "string")
 	assert(type(path) == "string")
 	assert(type(name) == "string")
+
+	-- Clean now so that we can assume there are no expired cookies in store
+	self:clean()
+
 	local domain_cookies = self.domains[domain]
 	if domain_cookies then
 		local path_cookies = domain_cookies[path]
