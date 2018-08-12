@@ -98,7 +98,7 @@ local function domain_match(domain_string, str)
 	return str == domain_string or (
 		str:sub(-#domain_string) == domain_string
 		and str:sub(-#domain_string-1, -#domain_string-1) == "."
-		-- TODO: check if IP address?
+		and not http_util.is_ip(str)
 	)
 end
 
