@@ -381,6 +381,14 @@ describe("cookie module", function()
 			assert.same("foo=path; bar=path; bar=domain; bar=time; foo=time", s:lookup("sub.example.com", "/path/longerpath", true, true))
 		end)
 	end)
+	it("enforces store.max_cookie_length", function()
+		local s = http_cookie.new_store()
+		s.max_cookie_length = 3
+		assert.falsy(s:store("example.com", "/", true, true, nil, http_cookie.parse_setcookie("foo=foo")))
+		s.max_cookie_length = 8
+		assert.truthy(s:store("example.com", "/", true, true, nil, http_cookie.parse_setcookie("foo=foo")))
+		assert.falsy(s:store("example.com", "/", true, true, nil, http_cookie.parse_setcookie("bar=longervalue")))
+	end)
 	it("enforces store.max_cookies", function()
 		local s = http_cookie.new_store()
 		s.max_cookies = 0

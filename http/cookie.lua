@@ -193,6 +193,11 @@ local function add_to_store(self, cookie, req_is_http, now)
 		self:remove(cookie.domain, cookie.path, cookie.name)
 	else
 		local name = cookie.name
+		local cookie_length = #name + 1 + #cookie.value
+		if cookie_length > self.max_cookie_length then
+			return false
+		end
+
 		local domain = cookie.domain
 		local domain_cookies = self.domains[domain]
 		local path_cookies
