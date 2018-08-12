@@ -5,6 +5,7 @@
   - Optionally asynchronous (including DNS lookups and TLS)
   - Supports HTTP(S) version 1.0, 1.1 and 2
   - Functionality for both client and server
+  - Cookie Management
   - Websockets
   - Compatible with Lua 5.1, 5.2, 5.3 and [LuaJIT](http://luajit.org/)
 
