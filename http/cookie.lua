@@ -518,7 +518,7 @@ local function cookie_match(cookie, req_domain, req_is_http, req_is_secure, req_
 end
 
 function store_methods:lookup(req_domain, req_path, req_is_http, req_is_secure, req_is_safe_method, req_site_for_cookies, req_is_top_level, max_cookie_length)
-	assert(type(req_domain) == "string")
+	req_domain = assert(type(req_domain) == "string" and canonicalise_host(req_domain), "invalid request domain")
 	assert(type(req_path) == "string")
 	if max_cookie_length ~= nil then
 		assert(type(max_cookie_length) == "number")
