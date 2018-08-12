@@ -71,6 +71,12 @@ An attempt will be made to add strict transport headers from a response to the s
 Defaults to a shared store.
 
 
+### `request.proxies` <!-- --> {#http.request.proxies}
+
+The [*http.proxies*](#http.proxies) object used to select a proxy for the request.
+Only consulted if `request.proxy` is `nil`.
+
+
 ### `request.cookie_store` <!-- --> {#http.request.cookie_store}
 
 The [*http.cookie.store*](#http.cookie.store) that will be used to find cookies for the request.
