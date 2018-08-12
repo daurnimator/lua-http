@@ -88,6 +88,14 @@ See [`connection:get_next_incoming_stream(timeout)`](#connection:get_next_incomi
 See [`connection:onidle(new_handler)`](#connection:onidle)
 
 
+### `h1_connection:setmaxline(read_length)` <!-- --> {#http.h1_connection:setmaxline}
+
+Sets the maximum read buffer size (in bytes) to `read_length`. i.e. sets the maximum length lines (such as headers).
+
+The default comes from the underlying socket, which gets the (changable) cqueues default at time of construction.
+The default cqueues default is 4096 bytes.
+
+
 ### `h1_connection:clearerr(...)` <!-- --> {#http.h1_connection:clearerr}
 
 Clears errors to allow for further read or write operations on the connection. Returns the error number of existing errors. This function is used to recover from known errors.
