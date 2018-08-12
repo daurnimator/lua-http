@@ -5,6 +5,7 @@ INTERFACES = \
 MODULES = \
 	http.bit.md \
 	http.client.md \
+	http.cookie.md \
 	http.h1_connection.md \
 	http.h1_reason_phrases.md \
 	http.h1_stream.md \
