@@ -24,10 +24,8 @@ local function encodeURIComponent(str)
 end
 
 -- decodeURI unescapes url encoded characters
--- excluding for characters that are special in urls
+-- excluding characters that are special in urls
 local decodeURI do
-	-- Keep the blacklist in numeric form.
-	-- This means we can skip case normalisation of the hex characters
 	local decodeURI_blacklist = {}
 	for char in ("#$&+,/:;=?@"):gmatch(".") do
 		decodeURI_blacklist[string.byte(char)] = true
