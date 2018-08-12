@@ -70,6 +70,14 @@ Decreasing this value will only prevent new cookies from being added, it will no
 Defaults to infinity (any number of cookies is allowed).
 
 
+### `store.max_cookies_per_domain` <!-- --> {#http.cookie.store.max_cookies_per_domain}
+
+The maximum number of cookies allowed in the `store` per domain.
+Decreasing this value will only prevent new cookies from being added, it will not remove old cookies.
+
+Defaults to infinity (any number of cookies is allowed).
+
+
 ### `store:store(req_domain, req_path, req_is_http, req_is_secure, req_site_for_cookies, name, value, params)` <!-- --> {#http.cookie.store:store}
 
 Attempts to add a cookie to the `store`.
