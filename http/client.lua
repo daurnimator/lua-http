@@ -20,13 +20,14 @@ local function negotiate(s, options, timeout)
 	if tls then
 		local ctx = options.ctx or default_ctx
 		local ssl = openssl_ssl.new(ctx)
-		local ip = options.host and http_util.is_ip(options.host)
-		if options.sendname ~= nil then
-			if options.sendname then -- false indicates no sendname wanted
-				ssl:setHostName(options.sendname)
-			end
-		elseif options.host and not ip then
-			ssl:setHostName(options.host)
+		local host = options.host
+		local host_is_ip = host and http_util.is_ip(host)
+		local sendname = options.sendname
+		if sendname == nil and not host_is_ip and host then
+			sendname = host
+		end
+		if sendname then -- false indicates no sendname wanted
+			ssl:setHostName(sendname)
 		end
 		if http_tls.has_alpn then
 			if version == nil then
@@ -40,12 +41,12 @@ local function negotiate(s, options, timeout)
 		if version == 2 then
 			ssl:setOptions(openssl_ctx.OP_NO_TLSv1 + openssl_ctx.OP_NO_TLSv1_1)
 		end
-		if options.host and http_tls.has_hostname_validation then
+		if host and http_tls.has_hostname_validation then
 			local params = openssl_verify_param.new()
-			if ip then
-				params:setIP(options.host)
+			if host_is_ip then
+				params:setIP(host)
 			else
-				params:setHost(options.host)
+				params:setHost(host)
 			end
 			-- Allow user defined params to override
 			local old = ssl:getParam()
