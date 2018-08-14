@@ -63,15 +63,17 @@ local function wrap_socket(self, socket, timeout)
 		if not ok then
 			return nil, err, errno
 		end
-		local ssl = socket:checktls()
-		if ssl and http_tls.has_alpn then
+		local ssl = assert(socket:checktls())
+		if http_tls.has_alpn then
 			local proto = ssl:getAlpnSelected()
-			if proto == "h2" and (version == nil or version == 2) then
-				version = 2
-			elseif (proto == "http/1.1") and (version == nil or version < 2) then
-				version = 1.1
-			elseif proto ~= nil then
-				return nil, "unexpected ALPN protocol: " .. proto, ce.EILSEQNOSUPPORT
+			if proto then
+				if proto == "h2" and (version == nil or version == 2) then
+					version = 2
+				elseif proto == "http/1.1" and (version == nil or version < 2) then
+					version = 1.1
+				else
+					return nil, "unexpected ALPN protocol: " .. proto, ce.EILSEQNOSUPPORT
+				end
 			end
 		end
 	end
