@@ -71,6 +71,8 @@ local function wrap_socket(self, socket, timeout)
 					version = 2
 				elseif proto == "http/1.1" and (version == nil or version < 2) then
 					version = 1.1
+				elseif proto == "http/1.0" and (version == nil or version == 1.0) then
+					version = 1.0
 				else
 					return nil, "unexpected ALPN protocol: " .. proto, ce.EILSEQNOSUPPORT
 				end
@@ -198,7 +200,8 @@ local function alpn_select(ssl, protos, version)
 			if ssl:getVersion() >= openssl_ssl.TLS1_2_VERSION or version == 2 then
 				return proto
 			end
-		elseif proto == "http/1.1" and (version == nil or version == 1.1) then
+		elseif (proto == "http/1.1" and (version == nil or version == 1.1))
+			or (proto == "http/1.0" and (version == nil or version == 1.0)) then
 			return proto
 		end
 	end
