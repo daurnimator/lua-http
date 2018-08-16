@@ -49,17 +49,13 @@ function store_methods:store(host, directives)
 	else
 		max_age = tonumber(max_age, 10)
 	end
-	if http_util.is_ip(host) then
-		return false
-	end
+
 	if max_age == 0 then
-		-- delete from store
-		local item = self.domains[host]
-		if item then
-			self.expiry_heap:remove(item)
-			self.domains[host] = nil
-		end
+		return self:remove(host)
 	else
+		if http_util.is_ip(host) then
+			return false
+		end
 		-- add to store
 		local old_item = self.domains[host]
 		if old_item then
@@ -73,6 +69,15 @@ function store_methods:store(host, directives)
 		}, store_item_mt)
 		self.domains[host] = item
 		self.expiry_heap:insert(expires, item)
+	end
+	return true
+end
+
+function store_methods:remove(host)
+	local item = self.domains[host]
+	if item then
+		self.expiry_heap:remove(item)
+		self.domains[host] = nil
 	end
 	return true
 end

@@ -17,6 +17,11 @@ Creates and returns a copy of a store.
 Add new directives to the store about the given `host`. `directives` should be a table of directives, which *must* include the key `"max-age"`.
 
 
+### `hsts_store:remove(host)` <!-- --> {#http.hsts:remove}
+
+Removes the entry for `host` from the store (if it exists).
+
+
 ### `hsts_store:check(host)` <!-- --> {#http.hsts:check}
 
 Returns a boolean indicating if the given `host` is a known HSTS host.
