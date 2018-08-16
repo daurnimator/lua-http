@@ -22,6 +22,11 @@ Add new directives to the store about the given `host`. `directives` should be a
 Returns a boolean indicating if the given `host` is a known HSTS host.
 
 
+### `hsts_store:clean_due()` <!-- --> {#http.hsts:clean_due}
+
+Returns the number of seconds until the next item in the store expires.
+
+
 ### `hsts_store:clean()` <!-- --> {#http.hsts:clean}
 
 Removes expired entries from the store.

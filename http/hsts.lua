@@ -3,6 +3,7 @@ Data structures useful for HSTS (HTTP Strict Transport Security)
 HSTS is described in RFC 6797
 ]]
 
+local binaryheap = require "binaryheap"
 local http_util = require "http.util"
 
 local store_methods = {
@@ -23,14 +24,17 @@ local store_item_mt = {
 local function new_store()
 	return setmetatable({
 		domains = {};
+		expiry_heap = binaryheap.minUnique();
 	}, store_mt)
 end
 
 function store_methods:clone()
 	local r = new_store()
 	r.time = rawget(self, "time")
+	r.expiry_heap = binaryheap.minUnique()
 	for host, item in pairs(self.domains) do
 		r.domains[host] = item
+		r.expiry_heap:insert(item.expires, item)
 	end
 	return r
 end
@@ -50,14 +54,25 @@ function store_methods:store(host, directives)
 	end
 	if max_age == 0 then
 		-- delete from store
-		self.domains[host] = nil
+		local item = self.domains[host]
+		if item then
+			self.expiry_heap:remove(item)
+			self.domains[host] = nil
+		end
 	else
 		-- add to store
-		self.domains[host] = setmetatable({
+		local old_item = self.domains[host]
+		if old_item then
+			self.expiry_heap:remove(old_item)
+		end
+		local expires = now + max_age
+		local item = setmetatable({
 			host = host;
 			includeSubdomains = directives.includeSubdomains;
-			expires = now + max_age;
+			expires = expires;
 		}, store_item_mt)
+		self.domains[host] = item
+		self.expiry_heap:insert(expires, item)
 	end
 	return true
 end
@@ -83,12 +98,19 @@ function store_methods:check(host)
 	return false
 end
 
+function store_methods:clean_due()
+	local next_expiring = self.expiry_heap:peek()
+	if not next_expiring then
+		return (1e999)
+	end
+	return next_expiring.expires
+end
+
 function store_methods:clean()
 	local now = self.time()
-	for host, item in pairs(self.domains) do
-		if item.expires < now then
-			self.domains[host] = nil
-		end
+	while self:clean_due() < now do
+		local item = self.expiry_heap:pop()
+		self.domains[item.host] = nil
 	end
 	return true
 end
