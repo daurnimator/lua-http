@@ -8,6 +8,7 @@ local http_util = require "http.util"
 
 local store_methods = {
 	time = function() return os.time() end;
+	max_items = (1e999);
 }
 
 local store_mt = {
@@ -25,12 +26,14 @@ local function new_store()
 	return setmetatable({
 		domains = {};
 		expiry_heap = binaryheap.minUnique();
+		n_items = 0;
 	}, store_mt)
 end
 
 function store_methods:clone()
 	local r = new_store()
 	r.time = rawget(self, "time")
+	r.n_items = rawget(self, "n_items")
 	r.expiry_heap = binaryheap.minUnique()
 	for host, item in pairs(self.domains) do
 		r.domains[host] = item
@@ -63,6 +66,12 @@ function store_methods:store(host, directives)
 		local old_item = self.domains[host]
 		if old_item then
 			self.expiry_heap:remove(old_item)
+		else
+			local n_items = self.n_items
+			if n_items >= self.max_items then
+				return false
+			end
+			self.n_items = n_items + 1
 		end
 		local expires = now + max_age
 		local item = setmetatable({
@@ -81,6 +90,7 @@ function store_methods:remove(host)
 	if item then
 		self.expiry_heap:remove(item)
 		self.domains[host] = nil
+		self.n_items = self.n_items - 1
 	end
 	return true
 end
@@ -120,6 +130,7 @@ function store_methods:clean()
 	while self:clean_due() < now do
 		local item = self.expiry_heap:pop()
 		self.domains[item.host] = nil
+		self.n_items = self.n_items - 1
 	end
 	return true
 end

@@ -107,4 +107,22 @@ describe("hsts module", function()
 		assert.falsy(s:check("example.com"))
 		assert.truthy(s:check("keep.me"))
 	end)
+	it("enforces .max_items", function()
+		local s = http_hsts.new_store()
+		s.max_items = 0
+		assert.falsy(s:store("example.com", {
+			["max-age"] = "100";
+		}))
+		s.max_items = 1
+		assert.truthy(s:store("example.com", {
+			["max-age"] = "100";
+		}))
+		assert.falsy(s:store("other.com", {
+			["max-age"] = "100";
+		}))
+		s:remove("example.com", "/", "foo")
+		assert.truthy(s:store("other.com", {
+			["max-age"] = "100";
+		}))
+	end)
 end)
