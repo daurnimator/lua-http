@@ -50,6 +50,9 @@ function store_methods:store(host, directives)
 		max_age = tonumber(max_age, 10)
 	end
 
+	-- Clean now so that we can assume there are no expired items in store
+	self:clean()
+
 	if max_age == 0 then
 		return self:remove(host)
 	else
@@ -86,14 +89,15 @@ function store_methods:check(host)
 	if http_util.is_ip(host) then
 		return false
 	end
-	local now = self.time()
+
+	-- Clean now so that we can assume there are no expired items in store
+	self:clean()
+
 	local h = host
 	repeat
 		local item = self.domains[h]
 		if item then
-			if item.expires < now then
-				self:clean()
-			elseif host == h or item.includeSubdomains then
+			if host == h or item.includeSubdomains then
 				return true
 			end
 		end
