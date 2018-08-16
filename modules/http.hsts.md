@@ -7,6 +7,14 @@ Data structures useful for HSTS (HTTP Strict Transport Security)
 Creates and returns a new HSTS store.
 
 
+### `hsts_store.max_items` <!-- --> {#http.hsts.max_items}
+
+The maximum number of items allowed in the store.
+Decreasing this value will only prevent new items from being added, it will not remove old items.
+
+Defaults to infinity (any number of items is allowed).
+
+
 ### `hsts_store:clone()` <!-- --> {#http.hsts:clone}
 
 Creates and returns a copy of a store.
