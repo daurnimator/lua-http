@@ -3,10 +3,7 @@ Data structures useful for HSTS (HTTP Strict Transport Security)
 HSTS is described in RFC 6797
 ]]
 
-local EOF = require "lpeg".P(-1)
-local IPv4address = require "lpeg_patterns.IPv4".IPv4address
-local IPv6address = require "lpeg_patterns.IPv6".IPv6address
-local IPaddress = (IPv4address + IPv6address) * EOF
+local http_util = require "http.util"
 
 local store_methods = {
 	time = function() return os.time() end;
@@ -22,14 +19,6 @@ local store_item_mt = {
 	__name = "http.hsts.store_item";
 	__index = store_item_methods;
 }
-
-local function host_is_ip(host)
-	if IPaddress:match(host) then
-		return true
-	else
-		return false
-	end
-end
 
 local function new_store()
 	return setmetatable({
@@ -56,7 +45,7 @@ function store_methods:store(host, directives)
 	else
 		max_age = tonumber(max_age, 10)
 	end
-	if host_is_ip(host) then
+	if http_util.is_ip(host) then
 		return false
 	end
 	if max_age == 0 then
@@ -73,7 +62,7 @@ function store_methods:store(host, directives)
 end
 
 function store_methods:check(host)
-	if host_is_ip(host) then
+	if http_util.is_ip(host) then
 		return false
 	end
 	local now = self.time()
