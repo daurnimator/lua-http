@@ -54,6 +54,7 @@ function store_methods:store(host, directives)
 	else
 		-- add to store
 		self.domains[host] = setmetatable({
+			host = host;
 			includeSubdomains = directives.includeSubdomains;
 			expires = now + max_age;
 		}, store_item_mt)
