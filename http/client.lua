@@ -1,5 +1,7 @@
+local monotime = require "cqueues".monotime
 local ca = require "cqueues.auxlib"
 local cs = require "cqueues.socket"
+local cqueues_dns_record = require "cqueues.dns.record"
 local http_tls = require "http.tls"
 local http_util = require "http.util"
 local connection_common = require "http.connection_common"
@@ -80,7 +82,88 @@ local function negotiate(s, options, timeout)
 	end
 end
 
+-- `type` parameter is what sort of records you want to find could be "A" or
+-- "AAAA" or `nil` if you want to filter yourself e.g. to implement
+-- https://www.ietf.org/archive/id/draft-vavrusa-dnsop-aaaa-for-free-00.txt
+local function each_matching_record(pkt, name, type)
+	-- First need to do CNAME chasing
+	local params = {
+		section = "answer";
+		class = cqueues_dns_record.IN;
+		type = cqueues_dns_record.CNAME;
+		name = name .. ".";
+	}
+	for _=1, 8 do -- avoid cname loops
+		-- Ignores any CNAME record past the first (which should never occur anyway)
+		local func, state, first = pkt:grep(params)
+		local record = func(state, first)
+		if record == nil then
+			-- Not found
+			break
+		end
+		params.name = record:host()
+	end
+	params.type = type
+	return pkt:grep(params)
+end
+
 local function connect(options, timeout)
+	local family = options.family
+	local path = options.path
+	local host = options.host
+	if not path and not http_util.is_ip(host) then
+		local dns_resolver = options.dns_resolver
+		if dns_resolver then
+			local deadline = timeout and monotime()+timeout
+			local hostv4, hostv6
+			if family == nil or family == cs.AF_UNSPEC or family == cs.AF_INET6 then
+				-- Query for AAAA record
+				local packet = ca.fileresult(dns_resolver:query(host, cqueues_dns_record.AAAA, nil, timeout))
+				if packet then
+					-- If IPv6 explicitly requested then filter down to only AAAA records
+					local type = (family == cs.AF_INET6) and cqueues_dns_record.AAAA or nil
+					for rec in each_matching_record(packet, host, type) do
+						local t = rec:type()
+						if t == cqueues_dns_record.AAAA then
+							hostv6 = rec:addr()
+							break
+						elseif t == cqueues_dns_record.A then
+							hostv4 = rec:addr()
+							break
+						end
+					end
+				end
+			end
+			if (hostv4 == nil and hostv6 == nil) and (family == nil or family == cs.AF_UNSPEC or family == cs.AF_INET) then
+				-- Query for A record
+				local packet = ca.fileresult(dns_resolver:query(host, cqueues_dns_record.A, nil, deadline and deadline-monotime()))
+				if packet then
+					-- If IPv4 explicitly requested then filter down to only A records
+					-- Skip AAAA if we already have hostv6
+					local type = (family == cs.AF_INET or hostv6) and cqueues_dns_record.A or nil
+					for rec in each_matching_record(packet, host, type) do
+						local t = rec:type()
+						if t == cqueues_dns_record.A then
+							hostv4 = rec:addr()
+							break
+						elseif t == cqueues_dns_record.AAAA then
+							hostv6 = rec:addr()
+							break
+						end
+					end
+				end
+			end
+			if hostv6 then
+				host = hostv6
+			elseif hostv4 then
+				host = hostv4
+			else
+				return nil, "The name does not resolve for the supplied parameters"
+			end
+			timeout = deadline and deadline-monotime()
+		end
+	end
+
 	local bind = options.bind
 	if bind ~= nil then
 		assert(type(bind) == "string")
@@ -99,11 +182,12 @@ local function connect(options, timeout)
 			port = bind_port;
 		}
 	end
+
 	local s, err, errno = ca.fileresult(cs.connect {
-		family = options.family;
-		host = options.host;
+		family = family;
+		host = host;
 		port = options.port;
-		path = options.path;
+		path = path;
 		bind = bind;
 		sendname = false;
 		v6only = options.v6only;

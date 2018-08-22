@@ -4,10 +4,14 @@ describe("http.client module", function()
 	local http_h1_connection = require "http.h1_connection"
 	local http_h2_connection = require "http.h2_connection"
 	local http_headers = require "http.headers"
+	local http_server = require "http.server"
 	local http_tls = require "http.tls"
 	local cqueues = require "cqueues"
 	local ca = require "cqueues.auxlib"
 	local cs = require "cqueues.socket"
+	local cdh = require "cqueues.dns.hosts"
+	local cdr = require "cqueues.dns.resolver"
+	local cdrs = require "cqueues.dns.resolvers"
 	local openssl_pkey = require "openssl.pkey"
 	local openssl_ctx = require "openssl.ssl.context"
 	local openssl_x509 = require "openssl.x509"
@@ -29,6 +33,55 @@ describe("http.client module", function()
 		local res_headers = assert(stream:get_headers())
 		assert.same("200", res_headers:get(":status"))
 	end
+	local function test(client_cb)
+		local cq = cqueues.new()
+		local s = assert(http_server.listen {
+			host = "localhost";
+			port = 0;
+			onstream = function(s, stream)
+				assert(stream:get_headers())
+				local resp_headers = http_headers.new()
+				resp_headers:append(":status", "200")
+				assert(stream:write_headers(resp_headers, false))
+				assert(stream:write_chunk("hello world", true))
+				stream:shutdown()
+				stream.connection:shutdown()
+				s:close()
+			end;
+		})
+		assert(s:listen())
+		local family, host, port = s:localname()
+		cq:wrap(function()
+			assert_loop(s)
+		end)
+		cq:wrap(client_cb, family, host, port)
+		assert_loop(cq, TEST_TIMEOUT)
+		assert.truthy(cq:empty())
+	end
+	it("works with a cqueues.dns.resolver object", function()
+		test(function(family, ip, port)
+			local hosts = cdh.new()
+			hosts:insert(ip, "example.com")
+			send_request(assert(client.connect {
+				dns_resolver = cdr.new(nil, hosts);
+				family = family;
+				host = "example.com";
+				port = port;
+			}))
+		end)
+	end)
+	it("works with a cqueues.dns.resolvers object", function()
+		test(function(family, ip, port)
+			local hosts = cdh.new()
+			hosts:insert(ip, "example.com")
+			send_request(assert(client.connect {
+				dns_resolver = cdrs.new(nil, hosts);
+				family = family;
+				host = "example.com";
+				port = port;
+			}))
+		end)
+	end)
 	local function test_pair(client_options, server_func)
 		local s, c = ca.assert(cs.pair())
 		local cq = cqueues.new();
