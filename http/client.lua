@@ -107,6 +107,19 @@ local function each_matching_record(pkt, name, type)
 	return pkt:grep(params)
 end
 
+local function dns_lookup(records, dns_resolver, host, query_type, filter_type, timeout)
+	local packet = dns_resolver:query(host, query_type, nil, timeout)
+	if not packet then
+		return
+	end
+	for rec in each_matching_record(packet, host, filter_type) do
+		local t = rec:type()
+		if t == cqueues_dns_record.AAAA or t == cqueues_dns_record.A then
+			table.insert(records, rec)
+		end
+	end
+end
+
 local function connect(options, timeout)
 	local family = options.family
 	local path = options.path
@@ -115,51 +128,20 @@ local function connect(options, timeout)
 		local dns_resolver = options.dns_resolver
 		if dns_resolver then
 			local deadline = timeout and monotime()+timeout
-			local hostv4, hostv6
-			if family == nil or family == cs.AF_UNSPEC or family == cs.AF_INET6 then
-				-- Query for AAAA record
-				local packet = ca.fileresult(dns_resolver:query(host, cqueues_dns_record.AAAA, nil, timeout))
-				if packet then
-					-- If IPv6 explicitly requested then filter down to only AAAA records
-					local type = (family == cs.AF_INET6) and cqueues_dns_record.AAAA or nil
-					for rec in each_matching_record(packet, host, type) do
-						local t = rec:type()
-						if t == cqueues_dns_record.AAAA then
-							hostv6 = rec:addr()
-							break
-						elseif t == cqueues_dns_record.A then
-							hostv4 = rec:addr()
-							break
-						end
-					end
-				end
+			local records = {}
+			if family == nil or family == cs.AF_UNSPEC then
+				dns_lookup(records, dns_resolver, host, cqueues_dns_record.AAAA, nil, timeout)
+				dns_lookup(records, dns_resolver, host, cqueues_dns_record.A, nil, deadline and deadline-monotime())
+			elseif family == cs.AF_INET then
+				dns_lookup(records, dns_resolver, host, cqueues_dns_record.A, cqueues_dns_record.A, timeout)
+			elseif family == cs.AF_INET6 then
+				dns_lookup(records, dns_resolver, host, cqueues_dns_record.AAAA, cqueues_dns_record.AAAA, timeout)
 			end
-			if (hostv4 == nil and hostv6 == nil) and (family == nil or family == cs.AF_UNSPEC or family == cs.AF_INET) then
-				-- Query for A record
-				local packet = ca.fileresult(dns_resolver:query(host, cqueues_dns_record.A, nil, deadline and deadline-monotime()))
-				if packet then
-					-- If IPv4 explicitly requested then filter down to only A records
-					-- Skip AAAA if we already have hostv6
-					local type = (family == cs.AF_INET or hostv6) and cqueues_dns_record.A or nil
-					for rec in each_matching_record(packet, host, type) do
-						local t = rec:type()
-						if t == cqueues_dns_record.A then
-							hostv4 = rec:addr()
-							break
-						elseif t == cqueues_dns_record.AAAA then
-							hostv6 = rec:addr()
-							break
-						end
-					end
-				end
-			end
-			if hostv6 then
-				host = hostv6
-			elseif hostv4 then
-				host = hostv4
-			else
+			local rec = records[1]
+			if not rec then
 				return nil, "The name does not resolve for the supplied parameters"
 			end
+			host = rec:addr()
 			timeout = deadline and deadline-monotime()
 		end
 	end
