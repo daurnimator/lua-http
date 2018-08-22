@@ -115,8 +115,10 @@ local function dns_lookup(records, dns_resolver, host, query_type, filter_type, 
 	end
 	for rec in each_matching_record(packet, host, filter_type) do
 		local t = rec:type()
-		if t == cqueues_dns_record.AAAA or t == cqueues_dns_record.A then
-			table.insert(records, rec)
+		if t == cqueues_dns_record.AAAA then
+			table.insert(records, { family = cs.AF_INET6, host = rec:addr() })
+		elseif t == cqueues_dns_record.A then
+			table.insert(records, { family = cs.AF_INET, host = rec:addr() })
 		end
 	end
 end
@@ -136,12 +138,19 @@ local function connect(options, timeout)
 		end
 	end
 
+	local deadline = timeout and monotime()+timeout
+
 	local host = options.host
-	if not path and not http_util.is_ip(host) then
+	local records
+	if path then
+		records = { { family = family, path = path } }
+	elseif http_util.is_ip(host) then
+		family = host:find(":", 1, true) and cs.AF_INET6 or cs.AF_INET
+		records = { { family = family, host = host } }
+	else
 		local dns_resolver = options.dns_resolver or cqueues_dns.getpool()
-		local deadline = timeout and monotime()+timeout
-		local records = {}
-		if family == nil or family == cs.AF_UNSPEC then
+		records = {}
+		if family == cs.AF_UNSPEC then
 			dns_lookup(records, dns_resolver, host, cqueues_dns_record.AAAA, nil, timeout)
 			dns_lookup(records, dns_resolver, host, cqueues_dns_record.A, nil, deadline and deadline-monotime())
 		elseif family == cs.AF_INET then
@@ -149,11 +158,6 @@ local function connect(options, timeout)
 		elseif family == cs.AF_INET6 then
 			dns_lookup(records, dns_resolver, host, cqueues_dns_record.AAAA, cqueues_dns_record.AAAA, timeout)
 		end
-		local rec = records[1]
-		if not rec then
-			return nil, "The name does not resolve for the supplied parameters"
-		end
-		host = rec:addr()
 		timeout = deadline and deadline-monotime()
 	end
 
@@ -176,20 +180,42 @@ local function connect(options, timeout)
 		}
 	end
 
-	local s, err, errno = ca.fileresult(cs.connect {
-		family = family;
-		host = host;
+	local connect_params = {
+		family = nil;
+		host = nil;
 		port = options.port;
-		path = path;
+		path = nil;
 		bind = bind;
 		sendname = false;
 		v6only = options.v6only;
 		nodelay = true;
-	})
-	if s == nil then
-		return nil, err, errno
+	}
+
+	local lasterr, lasterrno = "The name does not resolve for the supplied parameters"
+	for _, rec in ipairs(records) do
+		connect_params.family = rec.family;
+		connect_params.host = rec.host;
+		connect_params.path = rec.path;
+		local s
+		s, lasterr, lasterrno = ca.fileresult(cs.connect(connect_params))
+		if s then
+			local c
+			c, lasterr, lasterrno = negotiate(s, options, timeout)
+			if c then
+				-- Force TCP connect to occur
+				local ok
+				ok, lasterr, lasterrno = c:connect(deadline and deadline-monotime())
+				if ok then
+					return c
+				end
+				c:close()
+			else
+				s:close()
+			end
+			timeout = deadline and deadline-monotime()
+		end
 	end
-	return negotiate(s, options, timeout)
+	return nil, lasterr, lasterrno
 end
 
 return {
