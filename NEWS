@@ -5,6 +5,7 @@ UNRELEASED
   - Add workaround to allow being required in openresty (#98)
   - Add http.tls.old_cipher_list (#112)
   - Add http.cookie module (#117)
+  - Improvements to http.hsts module (#119)
 
 
 0.2 - 2017-05-28
