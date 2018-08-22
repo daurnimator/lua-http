@@ -1,6 +1,7 @@
 local monotime = require "cqueues".monotime
 local ca = require "cqueues.auxlib"
 local cs = require "cqueues.socket"
+local cqueues_dns = require "cqueues.dns"
 local cqueues_dns_record = require "cqueues.dns.record"
 local http_tls = require "http.tls"
 local http_util = require "http.util"
@@ -125,25 +126,23 @@ local function connect(options, timeout)
 	local path = options.path
 	local host = options.host
 	if not path and not http_util.is_ip(host) then
-		local dns_resolver = options.dns_resolver
-		if dns_resolver then
-			local deadline = timeout and monotime()+timeout
-			local records = {}
-			if family == nil or family == cs.AF_UNSPEC then
-				dns_lookup(records, dns_resolver, host, cqueues_dns_record.AAAA, nil, timeout)
-				dns_lookup(records, dns_resolver, host, cqueues_dns_record.A, nil, deadline and deadline-monotime())
-			elseif family == cs.AF_INET then
-				dns_lookup(records, dns_resolver, host, cqueues_dns_record.A, cqueues_dns_record.A, timeout)
-			elseif family == cs.AF_INET6 then
-				dns_lookup(records, dns_resolver, host, cqueues_dns_record.AAAA, cqueues_dns_record.AAAA, timeout)
-			end
-			local rec = records[1]
-			if not rec then
-				return nil, "The name does not resolve for the supplied parameters"
-			end
-			host = rec:addr()
-			timeout = deadline and deadline-monotime()
+		local dns_resolver = options.dns_resolver or cqueues_dns.getpool()
+		local deadline = timeout and monotime()+timeout
+		local records = {}
+		if family == nil or family == cs.AF_UNSPEC then
+			dns_lookup(records, dns_resolver, host, cqueues_dns_record.AAAA, nil, timeout)
+			dns_lookup(records, dns_resolver, host, cqueues_dns_record.A, nil, deadline and deadline-monotime())
+		elseif family == cs.AF_INET then
+			dns_lookup(records, dns_resolver, host, cqueues_dns_record.A, cqueues_dns_record.A, timeout)
+		elseif family == cs.AF_INET6 then
+			dns_lookup(records, dns_resolver, host, cqueues_dns_record.AAAA, cqueues_dns_record.AAAA, timeout)
 		end
+		local rec = records[1]
+		if not rec then
+			return nil, "The name does not resolve for the supplied parameters"
+		end
+		host = rec:addr()
+		timeout = deadline and deadline-monotime()
 	end
 
 	local bind = options.bind
