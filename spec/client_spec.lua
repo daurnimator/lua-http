@@ -15,6 +15,11 @@ describe("http.client module", function()
 	local openssl_pkey = require "openssl.pkey"
 	local openssl_ctx = require "openssl.ssl.context"
 	local openssl_x509 = require "openssl.x509"
+	it("throws error on invalid family+path combination", function()
+		assert.has.errors(function()
+			client.connect{family = cs.AF_INET, path = "/somepath"}
+		end)
+	end)
 	it("invalid network parameters return nil, err, errno", function()
 		-- Invalid network parameters will return nil, err, errno
 		local ok, err, errno = client.connect{host="127.0.0.1", port="invalid"}

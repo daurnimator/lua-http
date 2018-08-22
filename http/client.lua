@@ -123,7 +123,19 @@ end
 
 local function connect(options, timeout)
 	local family = options.family
+	if family == nil then
+		family = cs.AF_UNSPEC
+	end
+
 	local path = options.path
+	if path then
+		if family == cs.AF_UNSPEC then
+			family = cs.AF_UNIX
+		elseif family ~= cs.AF_UNIX then
+			error("cannot use .path with non-unix address family")
+		end
+	end
+
 	local host = options.host
 	if not path and not http_util.is_ip(host) then
 		local dns_resolver = options.dns_resolver or cqueues_dns.getpool()
