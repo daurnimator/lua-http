@@ -6,6 +6,7 @@ local cqueues_dns = require "cqueues.dns"
 local cqueues_dns_record = require "cqueues.dns.record"
 local http_tls = require "http.tls"
 local http_util = require "http.util"
+local http_client_pool = require "http.client_pool"
 local connection_common = require "http.connection_common"
 local onerror = connection_common.onerror
 local new_h1_connection = require "http.h1_connection".new
@@ -166,6 +167,9 @@ local record_ipv4_mt = {
 	__name = "http.client.record.ipv4";
 	__index = record_ipv4_methods;
 }
+function record_ipv4_methods:pool_key()
+	return http_client_pool.ipv4_pool_key(self.addr, self.port)
+end
 function records_methods:add_v4(addr, port)
 	local n = self.n + 1
 	self[n] = setmetatable({ addr = addr, port = port }, record_ipv4_mt)
@@ -179,6 +183,9 @@ local record_ipv6_mt = {
 	__name = "http.client.record.ipv6";
 	__index = record_ipv6_methods;
 }
+function record_ipv6_methods:pool_key()
+	return http_client_pool.ipv6_pool_key(self.addr, self.port)
+end
 function records_methods:add_v6(addr, port)
 	if type(addr) == "string" then
 		-- Normalise
@@ -199,6 +206,9 @@ local record_unix_mt = {
 	__name = "http.client.record.unix";
 	__index = record_unix_methods;
 }
+function record_unix_methods:pool_key()
+	return http_client_pool.unix_pool_key(self.path)
+end
 function records_methods:add_unix(path)
 	local n = self.n + 1
 	self[n] = setmetatable({ path = path }, record_unix_mt)
@@ -278,6 +288,19 @@ local function connect(options, timeout)
 		return nil, lasterr, lasterrno
 	end
 
+	local pool = options.pool
+	if pool then
+		for i=1, records.n do
+			local dst_pool = pool[records[i]:pool_key()]
+			if dst_pool then
+				local c = http_client_pool.find_connection(dst_pool, options)
+				if c then
+					return c
+				end
+			end
+		end
+	end
+
 	local bind = options.bind
 	if bind ~= nil then
 		assert(type(bind) == "string")
@@ -325,6 +348,9 @@ local function connect(options, timeout)
 				local ok
 				ok, lasterr, lasterrno = c:connect(deadline and deadline-monotime())
 				if ok then
+					if pool then
+						pool:add(c)
+					end
 					return c
 				end
 				c:close()
