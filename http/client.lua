@@ -117,9 +117,66 @@ local function dns_lookup(records, dns_resolver, host, query_type, filter_type, 
 	for rec in each_matching_record(packet, host, filter_type) do
 		local t = rec:type()
 		if t == cqueues_dns_record.AAAA then
-			table.insert(records, { family = cs.AF_INET6, host = rec:addr() })
+			records:add_v6(rec:addr())
 		elseif t == cqueues_dns_record.A then
-			table.insert(records, { family = cs.AF_INET, host = rec:addr() })
+			records:add_v4(rec:addr())
+		end
+	end
+end
+
+local records_methods = {}
+local records_mt = {
+	__name = "http.client.records";
+	__index = records_methods;
+}
+
+local function new_records()
+	return setmetatable({
+		n = 0;
+		nil -- preallocate space for one
+	}, records_mt)
+end
+
+function records_mt:__len()
+	return self.n
+end
+
+function records_methods:add_v4(addr)
+	local n = self.n + 1
+	self[n] = {
+		family = cs.AF_INET;
+		addr = addr;
+	}
+	self.n = n
+end
+
+function records_methods:add_v6(addr)
+	local n = self.n + 1
+	self[n] = {
+		family = cs.AF_INET6;
+		addr = addr;
+	}
+	self.n = n
+end
+
+function records_methods:add_unix(path)
+	local n = self.n + 1
+	self[n] = {
+		family = cs.AF_UNIX;
+		path = path;
+	}
+	self.n = n
+end
+
+function records_methods:remove_family(family)
+	if family == nil then
+		family = AF_UNSPEC
+	end
+
+	for i=self.n, 1, -1 do
+		if self[i].family == family then
+			table.remove(self, i)
+			self.n = self.n - 1
 		end
 	end
 end
@@ -142,15 +199,19 @@ local function connect(options, timeout)
 	local deadline = timeout and monotime()+timeout
 
 	local host = options.host
-	local records
+
+	local records = new_records()
+
 	if path then
-		records = { { family = family, path = path } }
+		records:add_unix(path)
 	elseif http_util.is_ip(host) then
-		family = host:find(":", 1, true) and cs.AF_INET6 or cs.AF_INET
-		records = { { family = family, host = host } }
+		if host:find(":", 1, true) then
+			records:add_v6(host)
+		else
+			records:add_v4(host)
+		end
 	else
 		local dns_resolver = options.dns_resolver or cqueues_dns.getpool()
-		records = {}
 		if family == cs.AF_UNSPEC then
 			dns_lookup(records, dns_resolver, host, cqueues_dns_record.AAAA, nil, timeout)
 			dns_lookup(records, dns_resolver, host, cqueues_dns_record.A, nil, deadline and deadline-monotime())
@@ -194,11 +255,10 @@ local function connect(options, timeout)
 
 	local lasterr, lasterrno = "The name does not resolve for the supplied parameters"
 	local i = 1
-	local n = #records
-	while i <= n do
+	while i <= records.n do
 		local rec = records[i]
 		connect_params.family = rec.family;
-		connect_params.host = rec.host;
+		connect_params.host = rec.addr;
 		connect_params.path = rec.path;
 		local s
 		s, lasterr, lasterrno = ca.fileresult(cs.connect(connect_params))
@@ -221,15 +281,7 @@ local function connect(options, timeout)
 		if lasterrno == ce.EAFNOSUPPORT then
 			-- If an address family is not supported then entirely remove that
 			-- family from candidate records
-			local af = connect_params.family
-			for j=n, i+1, -1 do
-				if records[j].family == af then
-					table.remove(records, j)
-					n = n - 1
-				end
-			end
-			table.remove(records, i)
-			n = n - 1
+			records:remove_family(connect_params.family)
 		else
 			i = i + 1
 		end
