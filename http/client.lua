@@ -17,6 +17,10 @@ local openssl_ssl = require "openssl.ssl"
 local openssl_ctx = require "openssl.ssl.context"
 local openssl_verify_param = require "openssl.x509.verify_param"
 
+local EOF = lpeg.P(-1)
+local IPv4address = IPv4_patts.IPv4address * EOF
+local IPv6addrz = IPv6_patts.IPv6addrz * EOF
+
 -- Create a shared 'default' TLS context
 local default_ctx = http_tls.new_client_context()
 
@@ -165,6 +169,13 @@ local record_ipv6_mt = {
 	__index = record_ipv6_methods;
 }
 function records_methods:add_v6(addr, port)
+	if type(addr) == "string" then
+		-- Normalise
+		addr = assert(IPv6addrz:match(addr))
+	elseif getmetatable(addr) ~= IPv6_patts.IPv6_mt then
+		error("invalid argument")
+	end
+	addr = tostring(addr)
 	local n = self.n + 1
 	self[n] = setmetatable({ addr = addr, port = port }, record_ipv6_mt)
 	self.n = n
@@ -196,10 +207,6 @@ function records_methods:remove_family(family)
 	end
 end
 
-local EOF = lpeg.P(-1)
-local IPv4address = IPv4_patts.IPv4address * EOF
-local IPv6addrz = IPv6_patts.IPv6addrz * EOF
-
 local function lookup_records(options, timeout)
 	local family = options.family
 	if family == nil then
@@ -228,7 +235,7 @@ local function lookup_records(options, timeout)
 
 	local ipv6 = IPv6addrz:match(host)
 	if ipv6 then
-		records:add_v6(host, port)
+		records:add_v6(ipv6, port)
 		return records
 	end
 
