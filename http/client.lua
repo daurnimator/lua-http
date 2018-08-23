@@ -112,7 +112,7 @@ local function each_matching_record(pkt, name, type)
 	return pkt:grep(params)
 end
 
-local function dns_lookup(records, dns_resolver, host, query_type, filter_type, timeout)
+local function dns_lookup(records, dns_resolver, host, port, query_type, filter_type, timeout)
 	local packet = dns_resolver:query(host, query_type, nil, timeout)
 	if not packet then
 		return
@@ -120,9 +120,9 @@ local function dns_lookup(records, dns_resolver, host, query_type, filter_type, 
 	for rec in each_matching_record(packet, host, filter_type) do
 		local t = rec:type()
 		if t == cqueues_dns_record.AAAA then
-			records:add_v6(rec:addr())
+			records:add_v6(rec:addr(), port)
 		elseif t == cqueues_dns_record.A then
-			records:add_v4(rec:addr())
+			records:add_v4(rec:addr(), port)
 		end
 	end
 end
@@ -144,20 +144,22 @@ function records_mt:__len()
 	return self.n
 end
 
-function records_methods:add_v4(addr)
+function records_methods:add_v4(addr, port)
 	local n = self.n + 1
 	self[n] = {
 		family = cs.AF_INET;
 		addr = addr;
+		port = port;
 	}
 	self.n = n
 end
 
-function records_methods:add_v6(addr)
+function records_methods:add_v6(addr, port)
 	local n = self.n + 1
 	self[n] = {
 		family = cs.AF_INET6;
 		addr = addr;
+		port = port;
 	}
 	self.n = n
 end
@@ -206,28 +208,29 @@ local function lookup_records(options, timeout)
 	end
 
 	local host = options.host
+	local port = options.port
 
 	local ipv4 = IPv4address:match(host)
 	if ipv4 then
-		records:add_v4(host)
+		records:add_v4(host, port)
 		return records
 	end
 
 	local ipv6 = IPv6addrz:match(host)
 	if ipv6 then
-		records:add_v6(host)
+		records:add_v6(host, port)
 		return records
 	end
 
 	local dns_resolver = options.dns_resolver or cqueues_dns.getpool()
 	if family == cs.AF_UNSPEC then
 		local deadline = timeout and monotime()+timeout
-		dns_lookup(records, dns_resolver, host, cqueues_dns_record.AAAA, nil, timeout)
-		dns_lookup(records, dns_resolver, host, cqueues_dns_record.A, nil, deadline and deadline-monotime())
+		dns_lookup(records, dns_resolver, host, port, cqueues_dns_record.AAAA, nil, timeout)
+		dns_lookup(records, dns_resolver, host, port, cqueues_dns_record.A, nil, deadline and deadline-monotime())
 	elseif family == cs.AF_INET then
-		dns_lookup(records, dns_resolver, host, cqueues_dns_record.A, cqueues_dns_record.A, timeout)
+		dns_lookup(records, dns_resolver, host, port, cqueues_dns_record.A, cqueues_dns_record.A, timeout)
 	elseif family == cs.AF_INET6 then
-		dns_lookup(records, dns_resolver, host, cqueues_dns_record.AAAA, cqueues_dns_record.AAAA, timeout)
+		dns_lookup(records, dns_resolver, host, port, cqueues_dns_record.AAAA, cqueues_dns_record.AAAA, timeout)
 	end
 
 	return records
@@ -260,7 +263,7 @@ local function connect(options, timeout)
 	local connect_params = {
 		family = nil;
 		host = nil;
-		port = options.port;
+		port = nil;
 		path = nil;
 		bind = bind;
 		sendname = false;
@@ -274,6 +277,7 @@ local function connect(options, timeout)
 		local rec = records[i]
 		connect_params.family = rec.family;
 		connect_params.host = rec.addr;
+		connect_params.port = rec.port;
 		connect_params.path = rec.path;
 		local s
 		s, lasterr, lasterrno = ca.fileresult(cs.connect(connect_params))
