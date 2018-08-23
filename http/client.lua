@@ -43,7 +43,9 @@ local function negotiate(s, options, timeout)
 		end
 		if host and http_tls.has_hostname_validation then
 			local params = openssl_verify_param.new()
-			if host_is_ip then
+			if sendname then
+				params:setHost(sendname)
+			elseif host_is_ip then
 				params:setIP(host)
 			else
 				params:setHost(host)
