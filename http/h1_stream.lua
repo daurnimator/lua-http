@@ -574,7 +574,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 				path = assert(headers:get(":path"), "missing path")
 			end
 			if self.connection.req_locked then
-				-- Wait until previous responses have been fully written
+				-- Wait until previous request has been fully written
 				assert(cqueues.running(), "cannot wait for condition if not within a cqueues coroutine")
 				headers = headers:clone() -- don't want user to edit it and send wrong headers
 				if cqueues.poll(self.connection.req_cond, timeout) == timeout then
