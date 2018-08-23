@@ -144,32 +144,42 @@ function records_mt:__len()
 	return self.n
 end
 
+local record_ipv4_methods = {
+	family = cs.AF_INET;
+}
+local record_ipv4_mt = {
+	__name = "http.client.record.ipv4";
+	__index = record_ipv4_methods;
+}
 function records_methods:add_v4(addr, port)
 	local n = self.n + 1
-	self[n] = {
-		family = cs.AF_INET;
-		addr = addr;
-		port = port;
-	}
+	self[n] = setmetatable({ addr = addr, port = port }, record_ipv4_mt)
 	self.n = n
 end
 
+local record_ipv6_methods = {
+	family = cs.AF_INET6;
+}
+local record_ipv6_mt = {
+	__name = "http.client.record.ipv6";
+	__index = record_ipv6_methods;
+}
 function records_methods:add_v6(addr, port)
 	local n = self.n + 1
-	self[n] = {
-		family = cs.AF_INET6;
-		addr = addr;
-		port = port;
-	}
+	self[n] = setmetatable({ addr = addr, port = port }, record_ipv6_mt)
 	self.n = n
 end
 
+local record_unix_methods = {
+	family = cs.AF_UNIX;
+}
+local record_unix_mt = {
+	__name = "http.client.record.unix";
+	__index = record_unix_methods;
+}
 function records_methods:add_unix(path)
 	local n = self.n + 1
-	self[n] = {
-		family = cs.AF_UNIX;
-		path = path;
-	}
+	self[n] = setmetatable({ path = path }, record_unix_mt)
 	self.n = n
 end
 
