@@ -1,5 +1,6 @@
 local monotime = require "cqueues".monotime
 local ca = require "cqueues.auxlib"
+local ce = require "cqueues.errno"
 local cs = require "cqueues.socket"
 local cqueues_dns = require "cqueues.dns"
 local cqueues_dns_record = require "cqueues.dns.record"
@@ -192,7 +193,10 @@ local function connect(options, timeout)
 	}
 
 	local lasterr, lasterrno = "The name does not resolve for the supplied parameters"
-	for _, rec in ipairs(records) do
+	local i = 1
+	local n = #records
+	while i <= n do
+		local rec = records[i]
 		connect_params.family = rec.family;
 		connect_params.host = rec.host;
 		connect_params.path = rec.path;
@@ -213,6 +217,21 @@ local function connect(options, timeout)
 				s:close()
 			end
 			timeout = deadline and deadline-monotime()
+		end
+		if lasterrno == ce.EAFNOSUPPORT then
+			-- If an address family is not supported then entirely remove that
+			-- family from candidate records
+			local af = connect_params.family
+			for j=n, i+1, -1 do
+				if records[j].family == af then
+					table.remove(records, j)
+					n = n - 1
+				end
+			end
+			table.remove(records, i)
+			n = n - 1
+		else
+			i = i + 1
 		end
 	end
 	return nil, lasterr, lasterrno
