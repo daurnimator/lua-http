@@ -93,6 +93,8 @@ Writes the string `str` to the stream and ends the stream. On error, returns `ni
 
   - `options` is a table containing:
 	- `.file` (file)
+	- `.count` (positive integer): number of bytes of `file` to write  
+	  defaults to infinity (the whole file will be written)
 
 Writes the contents of file `file` to the stream and ends the stream. `file` will not be automatically seeked, so ensure it is at the correct offset before calling. On error, returns `nil`, an error message and an error number.
 
