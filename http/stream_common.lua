@@ -154,18 +154,25 @@ end
 
 function stream_methods:write_body_from_file(options, timeout)
 	local deadline = timeout and (monotime()+timeout)
-	local file
+	local file, count
 	if io.type(options) then -- lua-http <= 0.2 took a file handle
 		file = options
 	else
 		file = options.file
+		count = options.count
 	end
-	-- Can't use :lines here as in Lua 5.1 it doesn't take a parameter
-	while true do
-		local chunk, err = file:read(CHUNK_SIZE)
+	if count == nil then
+		count = math.huge
+	elseif type(count) ~= "number" or count < 0 or count % 1 ~= 0 then
+		error("invalid .count parameter (expected positive integer)")
+	end
+	while count > 0 do
+		local chunk, err = file:read(math.min(CHUNK_SIZE, count))
 		if chunk == nil then
 			if err then
 				error(err)
+			elseif count ~= math.huge and count > 0 then
+				error("unexpected EOF")
 			end
 			break
 		end
@@ -173,6 +180,7 @@ function stream_methods:write_body_from_file(options, timeout)
 		if not ok then
 			return nil, err2, errno2
 		end
+		count = count - #chunk
 	end
 	return self:write_chunk("", true, deadline and (deadline-monotime()))
 end
