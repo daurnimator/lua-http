@@ -152,8 +152,14 @@ function stream_methods:write_body_from_string(str, timeout)
 	return self:write_chunk(str, true, timeout)
 end
 
-function stream_methods:write_body_from_file(file, timeout)
+function stream_methods:write_body_from_file(options, timeout)
 	local deadline = timeout and (monotime()+timeout)
+	local file
+	if io.type(options) then -- lua-http <= 0.2 took a file handle
+		file = options
+	else
+		file = options.file
+	end
 	-- Can't use :lines here as in Lua 5.1 it doesn't take a parameter
 	while true do
 		local chunk, err = file:read(CHUNK_SIZE)
