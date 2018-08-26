@@ -1,6 +1,6 @@
 interface headers
 	const clone: (self) -> (headers)
-	const append: (self, string, string, nil|boolean) -> ()
+	const append: (self, string, string, boolean?) -> ()
 	const each: (self) -> ((self) -> (string, string, boolean))
 	const has: (self, string) -> (boolean)
 	const delete: (self, string) -> (boolean)
@@ -11,7 +11,7 @@ interface headers
 	const modifyi: (self, integer, string, boolean?) -> ()
 	const upsert: (self, string, string, boolean?) -> ()
 	const sort: (self) -> ()
-	const dump: (self, nil|file, nil|string) -> ()
+	const dump: (self, file?, string?) -> ()
 end
 
 new : () -> (headers)
