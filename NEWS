@@ -6,6 +6,7 @@ UNRELEASED
   - Add http.tls.old_cipher_list (#112)
   - Add http.cookie module (#117)
   - Improvements to http.hsts module (#119)
+  - Add `options` argument form to `stream:write_body_from_file()` (#125)
 
 
 0.2 - 2017-05-28

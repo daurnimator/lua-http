@@ -94,9 +94,9 @@ See [`stream:write_chunk(chunk, end_stream, timeout)`](#stream:write_chunk)
 See [`stream:write_body_from_string(str, timeout)`](#stream:write_body_from_string)
 
 
-### `h1_stream:write_body_from_file(file, timeout)` <!-- --> {#http.h1_stream:write_body_from_file}
+### `h1_stream:write_body_from_file(options|file, timeout)` <!-- --> {#http.h1_stream:write_body_from_file}
 
-See [`stream:write_body_from_file(file, timeout)`](#stream:write_body_from_file)
+See [`stream:write_body_from_file(options|file, timeout)`](#stream:write_body_from_file)
 
 
 ### `h1_stream:shutdown()` <!-- --> {#http.h1_stream:shutdown}
