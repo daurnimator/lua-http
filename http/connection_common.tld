@@ -14,6 +14,8 @@ interface connection
 
     -- Not in connection_common.lua
     const version: integer
-    const unget: (self, string) -> (true)
+    -- XXX: needs circular require https://github.com/andremm/typedlua/issues/120
+    -- const new_stream: (self) -> (stream)|(nil) -- Note: in http2 this takes optional id argument
+    -- const get_next_incoming_stream: (self, number?) -> (stream)|(nil)|(nil, string, number)
     const shutdown: (self) -> (true)
 end
