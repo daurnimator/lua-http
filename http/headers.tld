@@ -1,5 +1,5 @@
 interface headers
-	const clone : (self) -> headers
+	const clone : (self) -> (headers)
 	const append : (self, string, string, nil|boolean) -> ()
 	const each : (self) -> ((self) -> (string, string, boolean))
 	const has : (self, string) -> (boolean)
