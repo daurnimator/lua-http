@@ -1,0 +1,6 @@
+interface proxies
+    const update: (self, (string)->(string?))->(self)
+    const choose: (self, string, string)->(string?)
+end
+
+new: proxies

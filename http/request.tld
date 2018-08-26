@@ -1,0 +1,26 @@
+require "http.cookie"
+require "http.hsts"
+require "http.proxies"
+require "http.stream_common"
+
+interface request
+	hsts: hsts_store|false
+	proxies: proxies|false
+	cookie_store: cookie_store|false
+	is_top_level: boolean
+	site_for_cookies: string?
+	expect_100_timeout: integer
+	follow_redirects: boolean
+	max_redirects: integer
+	post301: boolean
+	post302: boolean
+	headers: headers
+	const clone: (self) -> (request)
+	const to_uri: (self, boolean?) -> (string)
+	const handle_redirect: (self, headers) -> (request)|(nil, string, integer)
+	const set_body: (self, string|file|()->(string?)) -> ()
+	const go: (self, number) -> (headers, stream)|(nil, string, integer)
+end
+
+new_from_uri: (string, headers?) -> (request)
+new_connect: (string, string) -> (request)

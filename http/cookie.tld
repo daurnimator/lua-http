@@ -1,0 +1,28 @@
+require "http.headers"
+
+bake: (string, string, number?, string?, string?, true?, true?, string?) -> (string)
+
+parse_cookie: (string) -> ({string:string})
+parse_cookies: (headers) -> ({{string:string}})
+parse_setcookie: (string) -> (string, string, {string:string})
+
+interface cookie_store
+	psl: any|false -- TODO: use psl type
+	time: () -> (number)
+	max_cookie_length: number
+	max_cookies: number
+	max_cookies_per_domain: number
+
+    const store: (self, string, string, boolean, boolean, string?, string, string, {string:string}) -> (boolean)
+    const store_from_request: (self, headers, headers, string, string?) -> (boolean)
+    const get: (self, string, string, string) -> (string)
+    const remove: (self, string, string?, string?) -> ()
+    const lookup: (self, string, string, boolean?, boolean?, boolean?, string?, boolean?, integer?) -> ()
+    const lookup_for_request: (self, headers, string, string?, boolean?, integer?) -> ()
+    const clean_due: (self) -> (number)
+    const clean: (self) -> (boolean)
+    const load_from_file: (self, file) -> (true) | (nil, string, integer)
+    const save_to_file: (self, file) -> (true) | (nil, string, integer)
+end
+
+new_store: () -> (cookie_store)
