@@ -1,0 +1,13 @@
+interface hsts_store
+	time: () -> (number)
+	max_items: number
+
+    clone: (self) -> (hsts_store)
+    store: (self, string, {string:string}) -> (boolean)
+    remove: (self, string) -> (boolean)
+    check: (self, hsts_store) -> (boolean)
+    const clean_due: (self) -> (number)
+    const clean: (self) -> (boolean)
+end
+
+new_store: () -> (hsts_store)

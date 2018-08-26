@@ -1,0 +1,22 @@
+require "http.connection_common"
+
+interface stream
+    const checktls: (self) -> (nil)|(any)
+    const localname: (self) -> (integer, string, integer?)|(nil)|(nil, string, number)
+    const peername: (self) -> (integer, string, integer?)|(nil)|(nil, string, number)
+    const write_continue: (self, number?) -> (true)|(nil, string, number)
+    const each_chunk: (self) -> ()
+    const get_body_as_string: (self, number?) -> (string)|(nil, string, number)
+    const get_body_chars: (self, integer, number?) -> (string)|(nil, string, number)
+    const get_body_until: (self, string, boolean, boolean, number?) -> (string)|(nil, string, number)
+    const save_body_to_file: (self, file, number?) -> (true)|(nil, string, number)
+    const get_body_as_file: (self, number?) -> (file)|(nil, string, number)
+    const write_body_from_string: (self, string, number?) -> (true)|(nil, string, number)
+    const write_body_from_file: (self, {"file":file, "count": integer?}|file, number?) -> (true)|(nil, string, number)
+    -- Not in stream_common.lua
+    const connection: connection
+    const write_headers: (self, headers, boolean, number?) -> (true)|(nil, string, number)
+    const write_chunk: (self, string, boolean, number?) -> (true)|(nil, string, number)
+    const unget: (self, string) -> (true)
+    const shutdown: (self) -> (true)
+end

@@ -1,0 +1,15 @@
+interface h2_error
+	const new: (self, {
+		"name": string?,
+		"code": integer?,
+		"description": string?,
+		"message": string?,
+		"traceback": string?,
+		"stream_error": boolean?
+	}) -> (h2_error)
+	const new_traceback: (self, string, boolean, integer?) -> (h2_error)
+	const error:  (self, string, boolean, integer?) -> (void)
+end
+
+errors: {any:h2_error}
+is: (any) -> (boolean)

@@ -35,6 +35,7 @@ before_install:
   - export PATH=$PATH:~/hererocks/bin
   - eval $(luarocks path --bin)
   - luarocks install luacheck
+  - luarocks install https://raw.githubusercontent.com/andremm/typedlua/master/typedlua-scm-1.rockspec
   - luarocks install luacov-coveralls
   - luarocks install busted
 
@@ -46,6 +47,7 @@ install:
 
 script:
   - luacheck .
+  - tlc -o /dev/null spec/require-all.lua
   - busted -c
 
 after_success:

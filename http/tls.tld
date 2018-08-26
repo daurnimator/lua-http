@@ -1,0 +1,9 @@
+has_alpn: boolean
+has_hostname_validation: boolean
+modern_cipher_list: string
+intermediate_cipher_list: string
+old_cipher_list: string
+banned_ciphers: {string: true}
+-- TODO: luaossl SSL context type
+new_client_context: any
+new_server_context: any
