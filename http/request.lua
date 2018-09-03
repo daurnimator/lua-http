@@ -416,10 +416,8 @@ function request_methods:go(timeout)
 				local connect_request = new_connect(proxy, authority)
 				connect_request.proxy = false
 				connect_request.version = 1.1 -- TODO: CONNECT over HTTP/2
-				if tls then
-					if connect_request.tls then
-						error("NYI: TLS over TLS")
-					end
+				if connect_request.tls then
+					error("NYI: TLS over TLS")
 				end
 				-- Perform CONNECT request
 				local headers, stream, errno = connect_request:go(deadline and deadline-monotime())
@@ -437,9 +435,10 @@ function request_methods:go(timeout)
 				local sock = stream.connection:take_socket()
 				local err, errno2
 				connection, err, errno2 = client.negotiate(sock, {
+					host = host;
 					tls = tls;
 					ctx = self.ctx;
-					sendname = self.sendname ~= nil and self.sendname or host;
+					sendname = self.sendname;
 					version = self.version;
 					h2_settings = default_h2_settings;
 				}, deadline and deadline-monotime())
