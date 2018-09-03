@@ -53,7 +53,7 @@ local function new_from_uri(uri_t, headers)
 	end
 	local scheme = assert(uri_t.scheme, "URI missing scheme")
 	assert(scheme == "https" or scheme == "http" or scheme == "ws" or scheme == "wss", "scheme not valid")
-	local host = tostring(assert(uri_t.host, "URI must include a host")) -- tostring required to e.g. convert lpeg_patterns IPv6 objects
+	local host = assert(uri_t.host, "URI must include a host")
 	local port = uri_t.port or http_util.scheme_to_port[scheme]
 	local is_connect -- CONNECT requests are a bit special, see http2 spec section 8.3
 	if headers == nil then
