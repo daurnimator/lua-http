@@ -273,6 +273,11 @@ local function connect(options, timeout)
 
 	local records = lookup_records(options, timeout)
 
+	local lasterr, lasterrno = "The name does not resolve for the supplied parameters", nil
+	if records.n == 0 then
+		return nil, lasterr, lasterrno
+	end
+
 	local bind = options.bind
 	if bind ~= nil then
 		assert(type(bind) == "string")
@@ -303,7 +308,6 @@ local function connect(options, timeout)
 		nodelay = true;
 	}
 
-	local lasterr, lasterrno = "The name does not resolve for the supplied parameters"
 	local i = 1
 	while i <= records.n do
 		local rec = records[i]
