@@ -22,6 +22,7 @@ local AF_UNIX = cs.AF_UNIX
 local AF_INET = cs.AF_INET
 local AF_INET6 = cs.AF_INET6
 
+local DNS_SECTION_ANSWER = cqueues_dns_record.ANSWER
 local DNS_CLASS_IN = cqueues_dns_record.IN
 local DNS_TYPE_A = cqueues_dns_record.A
 local DNS_TYPE_AAAA = cqueues_dns_record.AAAA
@@ -107,7 +108,7 @@ end
 local function each_matching_record(pkt, name, type)
 	-- First need to do CNAME chasing
 	local params = {
-		section = "answer";
+		section = DNS_SECTION_ANSWER;
 		class = DNS_CLASS_IN;
 		type = DNS_TYPE_CNAME;
 		name = name .. ".";
@@ -239,13 +240,17 @@ local function lookup_records(options, timeout)
 
 	local ipv4 = IPv4address:match(host)
 	if ipv4 then
-		records:add_v4(host, port)
+		if family == AF_UNSPEC or family == AF_INET then
+			records:add_v4(host, port)
+		end
 		return records
 	end
 
 	local ipv6 = IPv6addrz:match(host)
 	if ipv6 then
-		records:add_v6(ipv6, port)
+		if family == AF_UNSPEC or family == AF_INET6 then
+			records:add_v6(ipv6, port)
+		end
 		return records
 	end
 
