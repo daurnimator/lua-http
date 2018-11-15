@@ -17,6 +17,16 @@ local openssl_ssl = require "openssl.ssl"
 local openssl_ctx = require "openssl.ssl.context"
 local openssl_verify_param = require "openssl.x509.verify_param"
 
+local AF_UNSPEC = cs.AF_UNSPEC
+local AF_UNIX = cs.AF_UNIX
+local AF_INET = cs.AF_INET
+local AF_INET6 = cs.AF_INET6
+
+local DNS_CLASS_IN = cqueues_dns_record.IN
+local DNS_TYPE_A = cqueues_dns_record.A
+local DNS_TYPE_AAAA = cqueues_dns_record.AAAA
+local DNS_TYPE_CNAME = cqueues_dns_record.CNAME
+
 local EOF = lpeg.P(-1)
 local IPv4address = IPv4_patts.IPv4address * EOF
 local IPv6addrz = IPv6_patts.IPv6addrz * EOF
@@ -98,8 +108,8 @@ local function each_matching_record(pkt, name, type)
 	-- First need to do CNAME chasing
 	local params = {
 		section = "answer";
-		class = cqueues_dns_record.IN;
-		type = cqueues_dns_record.CNAME;
+		class = DNS_CLASS_IN;
+		type = DNS_TYPE_CNAME;
 		name = name .. ".";
 	}
 	for _=1, 8 do -- avoid cname loops
@@ -123,9 +133,9 @@ local function dns_lookup(records, dns_resolver, host, port, query_type, filter_
 	end
 	for rec in each_matching_record(packet, host, filter_type) do
 		local t = rec:type()
-		if t == cqueues_dns_record.AAAA then
+		if t == DNS_TYPE_AAAA then
 			records:add_v6(rec:addr(), port)
-		elseif t == cqueues_dns_record.A then
+		elseif t == DNS_TYPE_A then
 			records:add_v4(rec:addr(), port)
 		end
 	end
@@ -149,7 +159,7 @@ function records_mt:__len()
 end
 
 local record_ipv4_methods = {
-	family = cs.AF_INET;
+	family = AF_INET;
 }
 local record_ipv4_mt = {
 	__name = "http.client.record.ipv4";
@@ -162,7 +172,7 @@ function records_methods:add_v4(addr, port)
 end
 
 local record_ipv6_methods = {
-	family = cs.AF_INET6;
+	family = AF_INET6;
 }
 local record_ipv6_mt = {
 	__name = "http.client.record.ipv6";
@@ -182,7 +192,7 @@ function records_methods:add_v6(addr, port)
 end
 
 local record_unix_methods = {
-	family = cs.AF_UNIX;
+	family = AF_UNIX;
 }
 local record_unix_mt = {
 	__name = "http.client.record.unix";
@@ -210,14 +220,14 @@ end
 local function lookup_records(options, timeout)
 	local family = options.family
 	if family == nil then
-		family = cs.AF_UNSPEC
+		family = AF_UNSPEC
 	end
 
 	local records = new_records()
 
 	local path = options.path
 	if path then
-		if family ~= cs.AF_UNSPEC and family ~= cs.AF_UNIX then
+		if family ~= AF_UNSPEC and family ~= AF_UNIX then
 			error("cannot use .path with non-unix address family")
 		end
 		records:add_unix(path)
@@ -240,14 +250,14 @@ local function lookup_records(options, timeout)
 	end
 
 	local dns_resolver = options.dns_resolver or cqueues_dns.getpool()
-	if family == cs.AF_UNSPEC then
+	if family == AF_UNSPEC then
 		local deadline = timeout and monotime()+timeout
-		dns_lookup(records, dns_resolver, host, port, cqueues_dns_record.AAAA, nil, timeout)
-		dns_lookup(records, dns_resolver, host, port, cqueues_dns_record.A, nil, deadline and deadline-monotime())
-	elseif family == cs.AF_INET then
-		dns_lookup(records, dns_resolver, host, port, cqueues_dns_record.A, cqueues_dns_record.A, timeout)
-	elseif family == cs.AF_INET6 then
-		dns_lookup(records, dns_resolver, host, port, cqueues_dns_record.AAAA, cqueues_dns_record.AAAA, timeout)
+		dns_lookup(records, dns_resolver, host, port, DNS_TYPE_AAAA, nil, timeout)
+		dns_lookup(records, dns_resolver, host, port, DNS_TYPE_A, nil, deadline and deadline-monotime())
+	elseif family == AF_INET then
+		dns_lookup(records, dns_resolver, host, port, DNS_TYPE_A, DNS_TYPE_A, timeout)
+	elseif family == AF_INET6 then
+		dns_lookup(records, dns_resolver, host, port, DNS_TYPE_AAAA, DNS_TYPE_AAAA, timeout)
 	end
 
 	return records
