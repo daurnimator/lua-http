@@ -19,16 +19,19 @@ end
 
 local MAX_HEADER_BUFFER_SIZE = 400*1024 -- 400 KB is max size in h2o
 
-local known_settings = {
+local known_settings = {}
+for i, s in pairs({
 	[0x1] = "HEADER_TABLE_SIZE";
 	[0x2] = "ENABLE_PUSH";
 	[0x3] = "MAX_CONCURRENT_STREAMS";
 	[0x4] = "INITIAL_WINDOW_SIZE";
 	[0x5] = "MAX_FRAME_SIZE";
 	[0x6] = "MAX_HEADER_LIST_SIZE";
-}
-for i=0x1, 0x6 do
-	known_settings[known_settings[i]] = i
+	[0x8] = "SETTINGS_ENABLE_CONNECT_PROTOCOL";
+	[0x10] = "TLS_RENEG_PERMITTED";
+}) do
+	known_settings[i] = s
+	known_settings[s] = i
 end
 
 local frame_types = {
@@ -42,6 +45,8 @@ local frame_types = {
 	[0x7] = "GOAWAY";
 	[0x8] = "WINDOW_UPDATE";
 	[0x9] = "CONTINUATION";
+	[0xa] = "ALTSVC";
+	[0xc] = "ORIGIN";
 }
 for i=0x0, 0x9 do
 	frame_types[frame_types[i]] = i

@@ -33,6 +33,8 @@ local default_settings = {
 	[known_settings.INITIAL_WINDOW_SIZE] = 65535;
 	[known_settings.MAX_FRAME_SIZE] = 16384;
 	[known_settings.MAX_HEADER_LIST_SIZE] = math.huge;
+	[known_settings.SETTINGS_ENABLE_CONNECT_PROTOCOL] = false;
+	[known_settings.TLS_RENEG_PERMITTED] = 0;
 }
 
 local function merge_settings(tbl, new)
