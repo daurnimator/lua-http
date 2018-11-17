@@ -4,6 +4,7 @@ local uri_patts = require "lpeg_patterns.uri"
 local basexx = require "basexx"
 local client = require "http.client"
 local new_headers = require "http.headers".new
+local http_client_pool = require "http.client_pool"
 local http_cookie = require "http.cookie"
 local http_hsts = require "http.hsts"
 local http_socks = require "http.socks"
@@ -17,6 +18,7 @@ local default_user_agent = string.format("%s/%s", http_version.name, http_versio
 local default_hsts_store = http_hsts.new_store()
 local default_proxies = http_proxies.new():update()
 local default_cookie_store = http_cookie.new_store()
+local default_connection_pool = http_client_pool.new()
 
 local default_h2_settings = {
 	ENABLE_PUSH = false;
@@ -26,6 +28,7 @@ local request_methods = {
 	hsts = default_hsts_store;
 	proxies = default_proxies;
 	cookie_store = default_cookie_store;
+	pool = default_connection_pool;
 	is_top_level = true;
 	site_for_cookies = nil;
 	expect_100_timeout = 1;
@@ -125,6 +128,7 @@ function request_methods:clone()
 		hsts = rawget(self, "hsts");
 		proxies = rawget(self, "proxies");
 		cookie_store = rawget(self, "cookie_store");
+		pool = rawget(self, "pool");
 		is_top_level = rawget(self, "is_top_level");
 		site_for_cookies = rawget(self, "site_for_cookies");
 		expect_100_timeout = rawget(self, "expect_100_timeout");
@@ -490,6 +494,7 @@ function request_methods:go(timeout)
 	if not connection then
 		local err, errno
 		connection, err, errno = client.connect({
+			pool = self.pool;
 			host = host;
 			port = port;
 			bind = self.bind;
@@ -502,8 +507,6 @@ function request_methods:go(timeout)
 		if connection == nil then
 			return nil, err, errno
 		end
-		-- Close the connection (and free resources) when done
-		connection:onidle(connection.close)
 	end
 
 	local stream do

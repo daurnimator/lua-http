@@ -30,6 +30,7 @@ build = {
 	modules = {
 		["http.bit"] = "http/bit.lua";
 		["http.client"] = "http/client.lua";
+		["http.client_pool"] = "http/client_pool.lua";
 		["http.connection_common"] = "http/connection_common.lua";
 		["http.cookie"] = "http/cookie.lua";
 		["http.h1_connection"] = "http/h1_connection.lua";
