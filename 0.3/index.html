@@ -1,0 +1,2494 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="pandoc">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <meta name="author" content="Daurnimator quae@daurnimator.com">
+  <title>lua-http</title>
+  <style type="text/css">code{white-space: pre;}</style>
+  <style type="text/css">
+a.sourceLine { display: inline-block; line-height: 1.25; }
+a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
+a.sourceLine:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode { white-space: pre; position: relative; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+code.sourceCode { white-space: pre-wrap; }
+a.sourceLine { text-indent: -1em; padding-left: 1em; }
+}
+pre.numberSource a.sourceLine
+  { position: relative; left: -4em; }
+pre.numberSource a.sourceLine::before
+  { content: attr(title);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; pointer-events: all; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  }
+@media screen {
+a.sourceLine::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <style type="text/css">* {
+-webkit-box-sizing: border-box;
+-moz-box-sizing: border-box;
+box-sizing: border-box
+}
+html,
+body {
+height: 100%
+}
+article,
+aside,
+figure,
+footer,
+header,
+hgroup,
+menu,
+nav,
+section {
+display: block
+}
+body {
+margin: 0
+}
+h1,
+h2,
+h3 {
+margin: 1rem 0
+}
+h4,
+h5,
+h6,
+ul,
+ol,
+dl,
+blockquote,
+address,
+p,
+figure {
+margin: 0 0 1rem 0
+}
+img {
+max-width: 100%
+}
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+font-weight: 700
+}
+h1 {
+font-size: 2.5rem;
+line-height: 3rem
+}
+h2 {
+font-size: 1.5rem;
+line-height: 2rem
+}
+h3 {
+font-size: 1.25rem;
+line-height: 1.5rem
+}
+h4,
+h5,
+h6 {
+font-size: 1rem;
+line-height: 1.25rem
+}
+hr {
+border: 0;
+border-bottom: 1px solid;
+margin-top: -1px;
+margin-bottom: 1rem
+}
+a:hover {
+color: inherit
+}
+small {
+font-size: .875rem
+}
+ul,
+ol {
+padding-left: 1rem
+}
+ul ul,
+ul ol,
+ol ol,
+ol ul {
+margin: 0
+}
+dt {
+font-weight: 700
+}
+dd {
+margin: 0
+}
+blockquote {
+border-left: 1px solid;
+padding-left: 1rem
+}
+address {
+font-style: normal
+}
+html {
+color: #333;
+font: 100%/1.5 Avenir, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+-webkit-font-smoothing: antialiased;
+-webkit-text-size-adjust: 100%;
+-ms-text-size-adjust: 100%;
+background: #FFF;
+}
+a {
+color: #999;
+text-decoration: none;
+transition: color 0.3s;
+}
+a > h1,
+a > h2,
+a > h3 {
+color: #333;
+}
+body > * {
+padding: 0 1rem;
+}
+.subtitle {
+font-size: 1rem;
+line-height: 1.5rem
+}
+.author {
+display: none
+}
+@media screen and (min-width: 55rem) {
+.meta {
+position: fixed;
+width: 20rem;
+height: 100%;
+overflow: auto;
+background: #FFF;
+z-index: 1;
+}
+main {
+display: block; 
+margin-left: 20rem;
+overflow: auto;
+}
+}
+@media print {
+section.level1 {
+page-break-inside: avoid
+}
+nav a::after {
+content: leader('.') target-counter(attr(href url), page, decimal)
+}
+}
+</style>
+  <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
+  <![endif]-->
+</head>
+<body>
+<div class="meta">
+<header>
+<h1 class="title">lua-http</h1>
+<h1 class="subtitle">HTTP library for Lua</h1>
+<h2 class="author">Daurnimator <a href="mailto:quae@daurnimator.com" class="email">quae@daurnimator.com</a></h2>
+</header>
+<nav id="TOC">
+<ul>
+<li><a href="#introduction">Introduction</a><ul>
+<li><a href="#why-lua-http">Why lua-http?</a></li>
+<li><a href="#portability">Portability</a></li>
+<li><a href="#common-use-cases">Common Use Cases</a><ul>
+<li><a href="#retrieving-a-document">Retrieving a Document</a></li>
+<li><a href="#http.websocket-example">WebSocket Communications</a></li>
+</ul></li>
+<li><a href="#asynchronous-operation">Asynchronous Operation</a></li>
+<li><a href="#conventions">Conventions</a><ul>
+<li><a href="#http">HTTP</a></li>
+<li><a href="#errors">Errors</a></li>
+<li><a href="#timeouts">Timeouts</a></li>
+</ul></li>
+<li><a href="#terminology">Terminology</a></li>
+</ul></li>
+<li><a href="#interfaces">Interfaces</a><ul>
+<li><a href="#connection">connection</a><ul>
+<li><a href="#connection.type"><code>connection.type</code> <!-- --></a></li>
+<li><a href="#connection.version"><code>connection.version</code> <!-- --></a></li>
+<li><a href="#connection:pollfd"><code>connection:pollfd()</code> <!-- --></a></li>
+<li><a href="#connection:events"><code>connection:events()</code> <!-- --></a></li>
+<li><a href="#connection:timeout"><code>connection:timeout()</code> <!-- --></a></li>
+<li><a href="#connection:connect"><code>connection:connect(timeout)</code> <!-- --></a></li>
+<li><a href="#connection:checktls"><code>connection:checktls()</code> <!-- --></a></li>
+<li><a href="#connection:localname"><code>connection:localname()</code> <!-- --></a></li>
+<li><a href="#connection:peername"><code>connection:peername()</code> <!-- --></a></li>
+<li><a href="#connection:flush"><code>connection:flush(timeout)</code> <!-- --></a></li>
+<li><a href="#connection:shutdown"><code>connection:shutdown()</code> <!-- --></a></li>
+<li><a href="#connection:close"><code>connection:close()</code> <!-- --></a></li>
+<li><a href="#connection:new_stream"><code>connection:new_stream()</code> <!-- --></a></li>
+<li><a href="#connection:get_next_incoming_stream"><code>connection:get_next_incoming_stream(timeout)</code> <!-- --></a></li>
+<li><a href="#http.connection:onidle"><code>connection:onidle(new_handler)</code> <!-- --></a></li>
+</ul></li>
+<li><a href="#stream">stream</a><ul>
+<li><a href="#stream.connection"><code>stream.connection</code> <!-- --></a></li>
+<li><a href="#stream:checktls"><code>stream:checktls()</code> <!-- --></a></li>
+<li><a href="#stream:localname"><code>stream:localname()</code> <!-- --></a></li>
+<li><a href="#stream:peername"><code>stream:peername()</code> <!-- --></a></li>
+<li><a href="#stream:get_headers"><code>stream:get_headers(timeout)</code> <!-- --></a></li>
+<li><a href="#stream:write_headers"><code>stream:write_headers(headers, end_stream, timeout)</code> <!-- --></a></li>
+<li><a href="#stream:write_continue"><code>stream:write_continue(timeout)</code> <!-- --></a></li>
+<li><a href="#stream:get_next_chunk"><code>stream:get_next_chunk(timeout)</code> <!-- --></a></li>
+<li><a href="#stream:each_chunk"><code>stream:each_chunk()</code> <!-- --></a></li>
+<li><a href="#stream:get_body_as_string"><code>stream:get_body_as_string(timeout)</code> <!-- --></a></li>
+<li><a href="#stream:get_body_chars"><code>stream:get_body_chars(n, timeout)</code> <!-- --></a></li>
+<li><a href="#stream:get_body_until"><code>stream:get_body_until(pattern, plain, include_pattern, timeout)</code> <!-- --></a></li>
+<li><a href="#stream:save_body_to_file"><code>stream:save_body_to_file(file, timeout)</code> <!-- --></a></li>
+<li><a href="#stream:get_body_as_file"><code>stream:get_body_as_file(timeout)</code> <!-- --></a></li>
+<li><a href="#stream:unget"><code>stream:unget(str)</code> <!-- --></a></li>
+<li><a href="#stream:write_chunk"><code>stream:write_chunk(chunk, end_stream, timeout)</code> <!-- --></a></li>
+<li><a href="#stream:write_body_from_string"><code>stream:write_body_from_string(str, timeout)</code> <!-- --></a></li>
+<li><a href="#stream:write_body_from_file"><code>stream:write_body_from_file(options|file, timeout)</code> <!-- --></a></li>
+<li><a href="#stream:shutdown"><code>stream:shutdown()</code> <!-- --></a></li>
+</ul></li>
+</ul></li>
+<li><a href="#modules">Modules</a><ul>
+<li><a href="#http.bit">http.bit</a><ul>
+<li><a href="#http.bit.band"><code>band(a, b)</code> <!-- --></a></li>
+<li><a href="#http.bit.bor"><code>bor(a, b)</code> <!-- --></a></li>
+<li><a href="#http.bit.bxor"><code>bxor(a, b)</code> <!-- --></a></li>
+<li><a href="#http.bit-example">Example</a></li>
+</ul></li>
+<li><a href="#http.client">http.client</a><ul>
+<li><a href="#http.client.negotiate"><code>negotiate(socket, options, timeout)</code> <!-- --></a></li>
+<li><a href="#http.client.connect"><code>connect(options, timeout)</code> <!-- --></a></li>
+</ul></li>
+<li><a href="#http.cookie">http.cookie</a><ul>
+<li><a href="#http.cookie.bake"><code>bake(name, value, expiry_time, domain, path, secure_only, http_only, same_site)</code> <!-- --></a></li>
+<li><a href="#http.cookie.parse_cookie"><code>parse_cookie(cookie)</code> <!-- --></a></li>
+<li><a href="#http.cookie.parse_cookies"><code>parse_cookies(req_headers)</code> <!-- --></a></li>
+<li><a href="#http.cookie.parse_setcookie"><code>parse_setcookie(setcookie)</code> <!-- --></a></li>
+<li><a href="#http.cookie.new_store"><code>new_store()</code> <!-- --></a></li>
+<li><a href="#http.cookie.store.psl"><code>store.psl</code> <!-- --></a></li>
+<li><a href="#http.cookie.store.time"><code>store.time()</code> <!-- --></a></li>
+<li><a href="#http.cookie.store.max_cookie_length"><code>store.max_cookie_length</code> <!-- --></a></li>
+<li><a href="#http.cookie.store.max_cookies"><code>store.max_cookies</code> <!-- --></a></li>
+<li><a href="#http.cookie.store.max_cookies_per_domain"><code>store.max_cookies_per_domain</code> <!-- --></a></li>
+<li><a href="#http.cookie.store:store"><code>store:store(req_domain, req_path, req_is_http, req_is_secure, req_site_for_cookies, name, value, params)</code> <!-- --></a></li>
+<li><a href="#http.cookie.store:store_from_request"><code>store:store_from_request(req_headers, resp_headers, req_host, req_site_for_cookies)</code> <!-- --></a></li>
+<li><a href="#http.cookie.store:get"><code>store:get(domain, path, name)</code> <!-- --></a></li>
+<li><a href="#http.cookie.store:remove"><code>store:remove(domain, path, name)</code> <!-- --></a></li>
+<li><a href="#http.cookie.store:lookup"><code>store:lookup(domain, path, is_http, is_secure, is_safe_method, site_for_cookies, is_top_level, max_cookie_length)</code> <!-- --></a></li>
+<li><a href="#http.cookie.store:lookup_for_request"><code>store:lookup_for_request(headers, host, site_for_cookies, is_top_level, max_cookie_length)</code> <!-- --></a></li>
+<li><a href="#http.cookie.store:clean_due"><code>store:clean_due()</code> <!-- --></a></li>
+<li><a href="#http.cookie.store:clean"><code>store:clean()</code> <!-- --></a></li>
+<li><a href="#http.cookie.store:load_from_file"><code>store:load_from_file(file)</code> <!-- --></a></li>
+<li><a href="#http.cookie.store:save_to_file"><code>store:save_to_file(file)</code> <!-- --></a></li>
+</ul></li>
+<li><a href="#http.h1_connection">http.h1_connection</a><ul>
+<li><a href="#connection.new"><code>new(socket, conn_type, version)</code> <!-- --></a></li>
+<li><a href="#http.h1_connection.version"><code>h1_connection.version</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:pollfd"><code>h1_connection:pollfd()</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:events"><code>h1_connection:events()</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:timeout"><code>h1_connection:timeout()</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:connect"><code>h1_connection:connect(timeout)</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:checktls"><code>h1_connection:checktls()</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:localname"><code>h1_connection:localname()</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:peername"><code>h1_connection:peername()</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:flush"><code>h1_connection:flush(timeout)</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:shutdown"><code>h1_connection:shutdown(dir)</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:close"><code>h1_connection:close()</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:new_stream"><code>h1_connection:new_stream()</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:get_next_incoming_stream"><code>h1_connection:get_next_incoming_stream(timeout)</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:onidle"><code>h1_connection:onidle(new_handler)</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:setmaxline"><code>h1_connection:setmaxline(read_length)</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:clearerr"><code>h1_connection:clearerr(...)</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:error"><code>h1_connection:error(...)</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:take_socket"><code>h1_connection:take_socket()</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:read_request_line"><code>h1_connection:read_request_line(timeout)</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:read_status_line"><code>h1_connection:read_status_line(timeout)</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:read_header"><code>h1_connection:read_header(timeout)</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:read_headers_done"><code>h1_connection:read_headers_done(timeout)</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:read_body_by_length"><code>h1_connection:read_body_by_length(len, timeout)</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:read_body_till_close"><code>h1_connection:read_body_till_close(timeout)</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:read_body_chunk"><code>h1_connection:read_body_chunk(timeout)</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:write_request_line"><code>h1_connection:write_request_line(method, path, httpversion, timeout)</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:write_status_line"><code>h1_connection:write_status_line(httpversion, status_code, reason_phrase, timeout)</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:write_header"><code>h1_connection:write_header(k, v, timeout)</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:write_headers_done"><code>h1_connection:write_headers_done(timeout)</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:write_body_chunk"><code>h1_connection:write_body_chunk(chunk, chunk_ext, timeout)</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:write_body_last_chunk"><code>h1_connection:write_body_last_chunk(chunk_ext, timeout)</code> <!-- --></a></li>
+<li><a href="#http.h1_connection:write_body_plain"><code>h1_connection:write_body_plain(body, timeout)</code> <!-- --></a></li>
+</ul></li>
+<li><a href="#http.h1_reason_phrases">http.h1_reason_phrases</a><ul>
+<li><a href="#http.h1_reason_phrases-example">Example</a></li>
+</ul></li>
+<li><a href="#http.h1_stream">http.h1_stream</a><ul>
+<li><a href="#http.h1_stream.connection"><code>h1_stream.connection</code> <!-- --></a></li>
+<li><a href="#http.h1_stream.max_header_lines"><code>h1_stream.max_header_lines</code> <!-- --></a></li>
+<li><a href="#http.h1_stream:checktls"><code>h1_stream:checktls()</code> <!-- --></a></li>
+<li><a href="#http.h1_stream:localname"><code>h1_stream:localname()</code> <!-- --></a></li>
+<li><a href="#http.h1_stream:peername"><code>h1_stream:peername()</code> <!-- --></a></li>
+<li><a href="#http.h1_stream:get_headers"><code>h1_stream:get_headers(timeout)</code> <!-- --></a></li>
+<li><a href="#http.h1_stream:write_headers"><code>h1_stream:write_headers(headers, end_stream, timeout)</code> <!-- --></a></li>
+<li><a href="#http.h1_stream:write_continue"><code>h1_stream:write_continue(timeout)</code> <!-- --></a></li>
+<li><a href="#http.h1_stream:get_next_chunk"><code>h1_stream:get_next_chunk(timeout)</code> <!-- --></a></li>
+<li><a href="#http.h1_stream:each_chunk"><code>h1_stream:each_chunk()</code> <!-- --></a></li>
+<li><a href="#http.h1_stream:get_body_as_string"><code>h1_stream:get_body_as_string(timeout)</code> <!-- --></a></li>
+<li><a href="#http.h1_stream:get_body_chars"><code>h1_stream:get_body_chars(n, timeout)</code> <!-- --></a></li>
+<li><a href="#http.h1_stream:get_body_until"><code>h1_stream:get_body_until(pattern, plain, include_pattern, timeout)</code> <!-- --></a></li>
+<li><a href="#http.h1_stream:save_body_to_file"><code>h1_stream:save_body_to_file(file, timeout)</code> <!-- --></a></li>
+<li><a href="#http.h1_stream:get_body_as_file"><code>h1_stream:get_body_as_file(timeout)</code> <!-- --></a></li>
+<li><a href="#http.h1_stream:unget"><code>h1_stream:unget(str)</code> <!-- --></a></li>
+<li><a href="#http.h1_stream:write_chunk"><code>h1_stream:write_chunk(chunk, end_stream, timeout)</code> <!-- --></a></li>
+<li><a href="#http.h1_stream:write_body_from_string"><code>h1_stream:write_body_from_string(str, timeout)</code> <!-- --></a></li>
+<li><a href="#http.h1_stream:write_body_from_file"><code>h1_stream:write_body_from_file(options|file, timeout)</code> <!-- --></a></li>
+<li><a href="#http.h1_stream:shutdown"><code>h1_stream:shutdown()</code> <!-- --></a></li>
+<li><a href="#http.h1_stream:set_state"><code>h1_stream:set_state(new)</code> <!-- --></a></li>
+<li><a href="#http.h1_stream:read_headers"><code>h1_stream:read_headers(timeout)</code> <!-- --></a></li>
+<li><a href="#http.h1_stream:read_next_chunk"><code>h1_stream:read_next_chunk(timeout)</code> <!-- --></a></li>
+</ul></li>
+<li><a href="#http.h2_connection">http.h2_connection</a><ul>
+<li><a href="#http.h2_connection.new"><code>new(socket, conn_type, settings)</code> <!-- --></a></li>
+<li><a href="#http.h2_connection.version"><code>h2_connection.version</code> <!-- --></a></li>
+<li><a href="#http.h2_connection:pollfd"><code>h2_connection:pollfd()</code> <!-- --></a></li>
+<li><a href="#http.h2_connection:events"><code>h2_connection:events()</code> <!-- --></a></li>
+<li><a href="#http.h2_connection:timeout"><code>h2_connection:timeout()</code> <!-- --></a></li>
+<li><a href="#http.h2_connection:empty"><code>h2_connection:empty()</code> <!-- --></a></li>
+<li><a href="#http.h2_connection:step"><code>h2_connection:step(timeout)</code> <!-- --></a></li>
+<li><a href="#http.h2_connection:loop"><code>h2_connection:loop(timeout)</code> <!-- --></a></li>
+<li><a href="#http.h2_connection:connect"><code>h2_connection:connect(timeout)</code> <!-- --></a></li>
+<li><a href="#http.h2_connection:checktls"><code>h2_connection:checktls()</code> <!-- --></a></li>
+<li><a href="#http.h2_connection:localname"><code>h2_connection:localname()</code> <!-- --></a></li>
+<li><a href="#http.h2_connection:peername"><code>h2_connection:peername()</code> <!-- --></a></li>
+<li><a href="#http.h2_connection:flush"><code>h2_connection:flush(timeout)</code> <!-- --></a></li>
+<li><a href="#http.h2_connection:shutdown"><code>h2_connection:shutdown()</code> <!-- --></a></li>
+<li><a href="#http.h2_connection:close"><code>h2_connection:close()</code> <!-- --></a></li>
+<li><a href="#http.h2_connection:new_stream"><code>h2_connection:new_stream(id)</code> <!-- --></a></li>
+<li><a href="#http.h2_connection:get_next_incoming_stream"><code>h2_connection:get_next_incoming_stream(timeout)</code> <!-- --></a></li>
+<li><a href="#http.h2_connection:onidle"><code>h2_connection:onidle(new_handler)</code> <!-- --></a></li>
+<li><a href="#http.h2_connection:read_http2_frame"><code>h2_connection:read_http2_frame(timeout)</code> <!-- --></a></li>
+<li><a href="#http.h2_connection:write_http2_frame"><code>h2_connection:write_http2_frame(typ, flags, streamid, payload, timeout, flush)</code> <!-- --></a></li>
+<li><a href="#http.h2_connection:ping"><code>h2_connection:ping(timeout)</code> <!-- --></a></li>
+<li><a href="#http.h2_connection:write_window_update"><code>h2_connection:write_window_update(inc, timeout)</code> <!-- --></a></li>
+<li><a href="#http.h2_connection:write_goaway_frame"><code>h2_connection:write_goaway_frame(last_stream_id, err_code, debug_msg, timeout)</code> <!-- --></a></li>
+<li><a href="#http.h2_connection:set_peer_settings"><code>h2_connection:set_peer_settings(peer_settings)</code> <!-- --></a></li>
+<li><a href="#http.h2_connection:ack_settings"><code>h2_connection:ack_settings()</code> <!-- --></a></li>
+<li><a href="#http.h2_connection:settings"><code>h2_connection:settings(tbl, timeout)</code> <!-- --></a></li>
+</ul></li>
+<li><a href="#http.h2_error">http.h2_error</a><ul>
+<li><a href="#http.h2_error.errors"><code>errors</code> <!-- --></a></li>
+<li><a href="#http.h2_error.is"><code>is(ob)</code> <!-- --></a></li>
+<li><a href="#http.h2_error:new"><code>h2_error:new(ob)</code> <!-- --></a></li>
+<li><a href="#http.h2_error:new_traceback"><code>h2_error:new_traceback(message, stream_error, lvl)</code> <!-- --></a></li>
+<li><a href="#http.h2_error:error"><code>h2_error:error(message, stream_error, lvl)</code> <!-- --></a></li>
+<li><a href="#http.h2_error:assert"><code>h2_error:assert(cond, ...)</code> <!-- --></a></li>
+</ul></li>
+<li><a href="#http.h2_stream">http.h2_stream</a><ul>
+<li><a href="#http.h2_stream.connection"><code>h2_stream.connection</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:checktls"><code>h2_stream:checktls()</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:localname"><code>h2_stream:localname()</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:peername"><code>h2_stream:peername()</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:get_headers"><code>h2_stream:get_headers(timeout)</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:write_headers"><code>h2_stream:write_headers(headers, end_stream, timeout)</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:write_continue"><code>h2_stream:write_continue(timeout)</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:get_next_chunk"><code>h2_stream:get_next_chunk(timeout)</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:each_chunk"><code>h2_stream:each_chunk()</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:get_body_as_string"><code>h2_stream:get_body_as_string(timeout)</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:get_body_chars"><code>h2_stream:get_body_chars(n, timeout)</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:get_body_until"><code>h2_stream:get_body_until(pattern, plain, include_pattern, timeout)</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:save_body_to_file"><code>h2_stream:save_body_to_file(file, timeout)</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:get_body_as_file"><code>h2_stream:get_body_as_file(timeout)</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:unget"><code>h2_stream:unget(str)</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:write_chunk"><code>h2_stream:write_chunk(chunk, end_stream, timeout)</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:write_body_from_string"><code>h2_stream:write_body_from_string(str, timeout)</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:write_body_from_file"><code>h2_stream:write_body_from_file(options|file, timeout)</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:shutdown"><code>h2_stream:shutdown()</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:pick_id"><code>h2_stream:pick_id(id)</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:set_state"><code>h2_stream:set_state(new)</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:reprioritise"><code>h2_stream:reprioritise(child, exclusive)</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:write_http2_frame"><code>h2_stream:write_http2_frame(typ, flags, payload, timeout, flush)</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:write_data_frame"><code>h2_stream:write_data_frame(payload, end_stream, padded, timeout, flush)</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:write_headers_frame"><code>h2_stream:write_headers_frame(payload, end_stream, end_headers, padded, exclusive, stream_dep, weight, timeout, flush)</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:write_priority_frame"><code>h2_stream:write_priority_frame(exclusive, stream_dep, weight, timeout, flush)</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:write_rst_stream"><code>h2_stream:write_rst_stream_frame(err_code, timeout, flush)</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:rst_stream"><code>h2_stream:rst_stream(err, timeout)</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:write_settings_frame"><code>h2_stream:write_settings_frame(ACK, settings, timeout, flush)</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:write_push_promise_frame"><code>h2_stream:write_push_promise_frame(promised_stream_id, payload, end_headers, padded, timeout, flush)</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:push_promise"><code>h2_stream:push_promise(headers, timeout)</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:write_ping_frame"><code>h2_stream:write_ping_frame(ACK, payload, timeout, flush)</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:write_goaway_frame"><code>h2_stream:write_goaway_frame(last_streamid, err_code, debug_msg, timeout, flush)</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:write_window_update_frame"><code>h2_stream:write_window_update_frame(inc, timeout, flush)</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:write_window_update"><code>h2_stream:write_window_update(inc, timeout)</code> <!-- --></a></li>
+<li><a href="#http.h2_stream:write_continuation_frame"><code>h2_stream:write_continuation_frame(payload, end_headers, timeout, flush)</code> <!-- --></a></li>
+</ul></li>
+<li><a href="#http.headers">http.headers</a><ul>
+<li><a href="#http.headers.new"><code>new()</code> <!-- --></a></li>
+<li><a href="#http.headers:len"><code>headers:len()</code> <!-- --></a></li>
+<li><a href="#http.headers:clone"><code>headers:clone()</code> <!-- --></a></li>
+<li><a href="#http.headers:append"><code>headers:append(name, value, never_index)</code> <!-- --></a></li>
+<li><a href="#http.headers:each"><code>headers:each()</code> <!-- --></a></li>
+<li><a href="#http.headers:has"><code>headers:has(name)</code> <!-- --></a></li>
+<li><a href="#http.headers:delete"><code>headers:delete(name)</code> <!-- --></a></li>
+<li><a href="#http.headers:geti"><code>headers:geti(i)</code> <!-- --></a></li>
+<li><a href="#http.headers:get_as_sequence"><code>headers:get_as_sequence(name)</code> <!-- --></a></li>
+<li><a href="#http.headers:get"><code>headers:get(name)</code> <!-- --></a></li>
+<li><a href="#http.headers:get_comma_separated"><code>headers:get_comma_separated(name)</code> <!-- --></a></li>
+<li><a href="#http.headers:modifyi"><code>headers:modifyi(i, value, never_index)</code> <!-- --></a></li>
+<li><a href="#http.headers:upsert"><code>headers:upsert(name, value, never_index)</code> <!-- --></a></li>
+<li><a href="#http.headers:sort"><code>headers:sort()</code> <!-- --></a></li>
+<li><a href="#http.headers:dump"><code>headers:dump(file, prefix)</code> <!-- --></a></li>
+</ul></li>
+<li><a href="#http.hpack">http.hpack</a><ul>
+<li><a href="#http.hpack.new"><code>new(SETTINGS_HEADER_TABLE_SIZE)</code> <!-- --></a></li>
+<li><a href="#http.hpack:append_data"><code>hpack_context:append_data(val)</code> <!-- --></a></li>
+<li><a href="#http.hpack:render_data"><code>hpack_context:render_data()</code> <!-- --></a></li>
+<li><a href="#http.hpack:clear_data"><code>hpack_context:clear_data()</code> <!-- --></a></li>
+<li><a href="#http.hpack:evict_from_dynamic_table"><code>hpack_context:evict_from_dynamic_table()</code> <!-- --></a></li>
+<li><a href="#http.hpack:dynamic_table_tostring"><code>hpack_context:dynamic_table_tostring()</code> <!-- --></a></li>
+<li><a href="#http.hpack:set_max_dynamic_table_size"><code>hpack_context:set_max_dynamic_table_size(SETTINGS_HEADER_TABLE_SIZE)</code> <!-- --></a></li>
+<li><a href="#http.hpack:encode_max_size"><code>hpack_context:encode_max_size(val)</code> <!-- --></a></li>
+<li><a href="#http.hpack:resize_dynamic_table"><code>hpack_context:resize_dynamic_table(new_size)</code> <!-- --></a></li>
+<li><a href="#http.hpack:add_to_dynamic_table"><code>hpack_context:add_to_dynamic_table(name, value, k)</code> <!-- --></a></li>
+<li><a href="#http.hpack:dynamic_table_id_to_index"><code>hpack_context:dynamic_table_id_to_index(id)</code> <!-- --></a></li>
+<li><a href="#http.hpack:lookup_pair_index"><code>hpack_context:lookup_pair_index(k)</code> <!-- --></a></li>
+<li><a href="#http.hpack:lookup_name_index"><code>hpack_context:lookup_name_index(name)</code> <!-- --></a></li>
+<li><a href="#http.hpack:lookup_index"><code>hpack_context:lookup_index(index)</code> <!-- --></a></li>
+<li><a href="#http.hpack:add_header_indexed"><code>hpack_context:add_header_indexed(name, value, huffman)</code> <!-- --></a></li>
+<li><a href="#http.hpack:add_header_never_indexed"><code>hpack_context:add_header_never_indexed(name, value, huffman)</code> <!-- --></a></li>
+<li><a href="#http.hpack:encode_headers"><code>hpack_context:encode_headers(headers)</code> <!-- --></a></li>
+<li><a href="#http.hpack:decode_headers"><code>hpack_context:decode_headers(payload, header_list, pos)</code> <!-- --></a></li>
+</ul></li>
+<li><a href="#http.hsts">http.hsts</a><ul>
+<li><a href="#http.hsts.new_store"><code>new_store()</code> <!-- --></a></li>
+<li><a href="#http.hsts.max_items"><code>hsts_store.max_items</code> <!-- --></a></li>
+<li><a href="#http.hsts:clone"><code>hsts_store:clone()</code> <!-- --></a></li>
+<li><a href="#http.hsts:store"><code>hsts_store:store(host, directives)</code> <!-- --></a></li>
+<li><a href="#http.hsts:remove"><code>hsts_store:remove(host)</code> <!-- --></a></li>
+<li><a href="#http.hsts:check"><code>hsts_store:check(host)</code> <!-- --></a></li>
+<li><a href="#http.hsts:clean_due"><code>hsts_store:clean_due()</code> <!-- --></a></li>
+<li><a href="#http.hsts:clean"><code>hsts_store:clean()</code> <!-- --></a></li>
+</ul></li>
+<li><a href="#http.proxies">http.proxies</a><ul>
+<li><a href="#http.proxies.new"><code>new()</code> <!-- --></a></li>
+<li><a href="#http.proxies:update"><code>proxies:update(getenv)</code> <!-- --></a></li>
+<li><a href="#http.proxies:choose"><code>proxies:choose(scheme, host)</code> <!-- --></a></li>
+</ul></li>
+<li><a href="#http.request">http.request</a><ul>
+<li><a href="#http.request.new_from_uri"><code>new_from_uri(uri)</code> <!-- --></a></li>
+<li><a href="#http.request.new_connect"><code>new_connect(uri, connect_authority)</code> <!-- --></a></li>
+<li><a href="#http.request.host"><code>request.host</code> <!-- --></a></li>
+<li><a href="#http.request.port"><code>request.port</code> <!-- --></a></li>
+<li><a href="#http.request.bind"><code>request.bind</code> <!-- --></a></li>
+<li><a href="#http.request.tls"><code>request.tls</code> <!-- --></a></li>
+<li><a href="#http.request.ctx"><code>request.ctx</code> <!-- --></a></li>
+<li><a href="#http.request.sendname"><code>request.sendname</code> <!-- --></a></li>
+<li><a href="#http.request.version"><code>request.version</code> <!-- --></a></li>
+<li><a href="#http.request.proxy"><code>request.proxy</code> <!-- --></a></li>
+<li><a href="#http.request.headers"><code>request.headers</code> <!-- --></a></li>
+<li><a href="#http.request.hsts"><code>request.hsts</code> <!-- --></a></li>
+<li><a href="#http.request.proxies"><code>request.proxies</code> <!-- --></a></li>
+<li><a href="#http.request.cookie_store"><code>request.cookie_store</code> <!-- --></a></li>
+<li><a href="#http.request.is_top_level"><code>request.is_top_level</code> <!-- --></a></li>
+<li><a href="#http.request.site_for_cookies"><code>request.site_for_cookies</code> <!-- --></a></li>
+<li><a href="#http.request.follow_redirects"><code>request.follow_redirects</code> <!-- --></a></li>
+<li><a href="#http.request.expect_100_timeout"><code>request.expect_100_timeout</code> <!-- --></a></li>
+<li><a href="#http.request.max_redirects"><code>request.max_redirects</code> <!-- --></a></li>
+<li><a href="#http.request.post301"><code>request.post301</code> <!-- --></a></li>
+<li><a href="#http.request.post302"><code>request.post302</code> <!-- --></a></li>
+<li><a href="#http.request:clone"><code>request:clone()</code> <!-- --></a></li>
+<li><a href="#http.request:handle_redirect"><code>request:handle_redirect(headers)</code> <!-- --></a></li>
+<li><a href="#http.request:to_uri"><code>request:to_uri(with_userinfo)</code> <!-- --></a></li>
+<li><a href="#http.request:set_body"><code>request:set_body(body)</code> <!-- --></a></li>
+<li><a href="#http.request:timeout"><code>request:go(timeout)</code> <!-- --></a></li>
+</ul></li>
+<li><a href="#http.server">http.server</a><ul>
+<li><a href="#http.server.new"><code>new(options)</code> <!-- --></a></li>
+<li><a href="#http.server.listen"><code>listen(options)</code> <!-- --></a></li>
+<li><a href="#http.server:onerror"><code>server:onerror(new_handler)</code> <!-- --></a></li>
+<li><a href="#http.server:listen"><code>server:listen(timeout)</code> <!-- --></a></li>
+<li><a href="#http.server:localname"><code>server:localname()</code> <!-- --></a></li>
+<li><a href="#http.server:pause"><code>server:pause()</code> <!-- --></a></li>
+<li><a href="#http.server:resume"><code>server:resume()</code> <!-- --></a></li>
+<li><a href="#http.server:close"><code>server:close()</code> <!-- --></a></li>
+<li><a href="#http.server:pollfd"><code>server:pollfd()</code> <!-- --></a></li>
+<li><a href="#http.server:events"><code>server:events()</code> <!-- --></a></li>
+<li><a href="#http.server:timeout"><code>server:timeout()</code> <!-- --></a></li>
+<li><a href="#http.server:empty"><code>server:empty()</code> <!-- --></a></li>
+<li><a href="#http.server:step"><code>server:step(timeout)</code> <!-- --></a></li>
+<li><a href="#http.server:loop"><code>server:loop(timeout)</code> <!-- --></a></li>
+<li><a href="#http.server:add_socket"><code>server:add_socket(socket)</code> <!-- --></a></li>
+<li><a href="#http.server:add_stream"><code>server:add_stream(stream)</code> <!-- --></a></li>
+</ul></li>
+<li><a href="#http.socks">http.socks</a><ul>
+<li><a href="#http.socks.connect"><code>connect(uri)</code> <!-- --></a></li>
+<li><a href="#http.socks.fdopen"><code>fdopen(socket)</code> <!-- --></a></li>
+<li><a href="#http.socks.needs_resolve"><code>socks.needs_resolve</code> <!-- --></a></li>
+<li><a href="#http.socks:clone"><code>socks:clone()</code> <!-- --></a></li>
+<li><a href="#http.socks:add_username_password_auth"><code>socks:add_username_password_auth(username, password)</code> <!-- --></a></li>
+<li><a href="#http.socks:negotiate"><code>socks:negotiate(host, port, timeout)</code> <!-- --></a></li>
+<li><a href="#http.socks:close"><code>socks:close()</code> <!-- --></a></li>
+<li><a href="#http.socks:take_socket"><code>socks:take_socket()</code> <!-- --></a></li>
+</ul></li>
+<li><a href="#http.tls">http.tls</a><ul>
+<li><a href="#http.tls.has_alpn"><code>has_alpn</code> <!-- --></a></li>
+<li><a href="#http.tls.has_hostname_validation"><code>has_hostname_validation</code> <!-- --></a></li>
+<li><a href="#http.tls.modern_cipher_list"><code>modern_cipher_list</code> <!-- --></a></li>
+<li><a href="#http.tls.intermediate_cipher_list"><code>intermediate_cipher_list</code> <!-- --></a></li>
+<li><a href="#http.tls.old_cipher_list"><code>old_cipher_list</code> <!-- --></a></li>
+<li><a href="#http.tls.banned_ciphers"><code>banned_ciphers</code> <!-- --></a></li>
+<li><a href="#http.tls.new_client_context"><code>new_client_context()</code> <!-- --></a></li>
+<li><a href="#http.tls.new_server_context"><code>new_server_context()</code> <!-- --></a></li>
+</ul></li>
+<li><a href="#http.util">http.util</a><ul>
+<li><a href="#http.util.encodeURI"><code>encodeURI(str)</code> <!-- --></a></li>
+<li><a href="#http.util.encodeURIComponent"><code>encodeURIComponent(str)</code> <!-- --></a></li>
+<li><a href="#http.util.decodeURI"><code>decodeURI(str)</code> <!-- --></a></li>
+<li><a href="#http.util.decodeURIComponent"><code>decodeURIComponent(str)</code> <!-- --></a></li>
+<li><a href="#http.util.query_args"><code>query_args(str)</code> <!-- --></a></li>
+<li><a href="#http.util.dict_to_query"><code>dict_to_query(dict)</code> <!-- --></a></li>
+<li><a href="#http.util.resolve_relative_path"><code>resolve_relative_path(orig_path, relative_path)</code> <!-- --></a></li>
+<li><a href="#http.util.is_safe_method"><code>is_safe_method(method)</code> <!-- --></a></li>
+<li><a href="#http.util.is_ip"><code>is_ip(str)</code> <!-- --></a></li>
+<li><a href="#http.util.scheme_to_port"><code>scheme_to_port</code> <!-- --></a></li>
+<li><a href="#http.util.split_authority"><code>split_authority(authority, scheme)</code> <!-- --></a></li>
+<li><a href="#http.util.to_authority"><code>to_authority(host, port, scheme)</code> <!-- --></a></li>
+<li><a href="#http.util.imf_date"><code>imf_date(time)</code> <!-- --></a></li>
+<li><a href="#http.util.maybe_quote"><code>maybe_quote(str)</code> <!-- --></a></li>
+</ul></li>
+<li><a href="#http.version">http.version</a><ul>
+<li><a href="#http.version.name"><code>name</code> <!-- --></a></li>
+<li><a href="#http.version.version"><code>version</code> <!-- --></a></li>
+</ul></li>
+<li><a href="#http.websocket">http.websocket</a><ul>
+<li><a href="#http.websocket.new_from_uri"><code>new_from_uri(uri, protocols)</code> <!-- --></a></li>
+<li><a href="#http.websocket.new_from_stream"><code>new_from_stream(stream, headers)</code> <!-- --></a></li>
+<li><a href="#http.websocket.close_timeout"><code>websocket.close_timeout</code> <!-- --></a></li>
+<li><a href="#http.websocket:accept"><code>websocket:accept(options, timeout)</code> <!-- --></a></li>
+<li><a href="#http.websocket:connect"><code>websocket:connect(timeout)</code> <!-- --></a></li>
+<li><a href="#http.websocket:receive"><code>websocket:receive(timeout)</code> <!-- --></a></li>
+<li><a href="#http.websocket:each"><code>websocket:each()</code> <!-- --></a></li>
+<li><a href="#http.websocket:send_frame"><code>websocket:send_frame(frame, timeout)</code> <!-- --></a></li>
+<li><a href="#http.websocket:send"><code>websocket:send(data, opcode, timeout)</code> <!-- --></a></li>
+<li><a href="#http.websocket:send_ping"><code>websocket:send_ping(data, timeout)</code> <!-- --></a></li>
+<li><a href="#http.websocket:send_pong"><code>websocket:send_pong(data, timeout)</code> <!-- --></a></li>
+<li><a href="#http.websocket:close"><code>websocket:close(code, reason, timeout)</code> <!-- --></a></li>
+</ul></li>
+<li><a href="#http.zlib">http.zlib</a><ul>
+<li><a href="#http.zlib.engine"><code>engine</code> <!-- --></a></li>
+<li><a href="#http.zlib.inflate"><code>inflate()</code> <!-- --></a></li>
+<li><a href="#http.zlib.deflate"><code>deflate()</code> <!-- --></a></li>
+<li><a href="#http.zlib-example">Example</a></li>
+</ul></li>
+<li><a href="#http.compat.prosody">http.compat.prosody</a><ul>
+<li><a href="#http.compat.prosody.request"><code>request(url, ex, callback)</code> <!-- --></a></li>
+<li><a href="#http.compat.prosody-example">Example</a></li>
+</ul></li>
+<li><a href="#http.compat.socket">http.compat.socket</a><ul>
+<li><a href="#http.compat.socket-example">Example</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#links">Links</a></li>
+</ul>
+</nav>
+</div>
+<main>
+<section id="introduction" class="level1">
+<h1>Introduction</h1>
+<p>lua-http is an performant, capable HTTP and WebSocket library for Lua 5.1, 5.2, 5.3 and LuaJIT. Some of the features of the library include:</p>
+<ul>
+<li>Support for HTTP versions 1, 1.1 and 2 as specified by <a href="https://tools.ietf.org/html/rfc7230">RFC 7230</a> and <a href="https://tools.ietf.org/html/rfc7540">RFC 7540</a></li>
+<li>Provides both client and server APIs</li>
+<li>Fully asynchronous API that does not block the current thread when executing operations that typically block</li>
+<li>Support for WebSockets as specified by <a href="https://tools.ietf.org/html/rfc6455">RFC 6455</a> including ping/pong, binary data transfer and TLS encryption</li>
+<li>Transport Layer Security (TLS) - lua-http supports HTTPS and WSS via <a href="https://github.com/wahern/luaossl">luaossl</a>.</li>
+<li>Easy integration into other event-loop or scripts</li>
+</ul>
+<section id="why-lua-http" class="level3">
+<h3>Why lua-http?</h3>
+<p>The lua-http library was written to fill a gap in the Lua ecosystem by providing an HTTP and WebSocket library with the following traits:</p>
+<ul>
+<li>Asynchronous and performant</li>
+<li>Can be used without forcing the developer to follow a specific pattern. Conversely, the library can be adapted to many common patterns.</li>
+<li>Can be used at a very high level without need to understand the transportation of HTTP data (other than connection addresses).</li>
+<li>Provides a rich low level API, if desired, for creating powerful HTTP based tools at the protocol level.</li>
+</ul>
+<p>As a result of these design goals, the library is simple and unobtrusive and can accommodate tens of thousands of connections on commodity hardware.</p>
+<p>lua-http is a flexible HTTP and WebSocket library that allows developers to concentrate on line-of-business features when building Internet enabled applications. If you are looking for a way to streamline development of an internet enabled application, enable HTTP networking in your game, create a new Internet Of Things (IoT) system, or write a performant custom web server for a specific use case, lua-http has the tools you need.</p>
+</section>
+<section id="portability" class="level3">
+<h3>Portability</h3>
+<p>lua-http is pure Lua code with dependencies on the following external libraries:</p>
+<ul>
+<li><a href="http://25thandclement.com/~william/projects/cqueues.html">cqueues</a> - Posix API library for Lua</li>
+<li><a href="http://25thandclement.com/~william/projects/luaossl.html">luaossl</a> - Lua bindings for TLS/SSL</li>
+<li><a href="https://github.com/brimworks/lua-zlib">lua-zlib</a> - Optional Lua bindings for zlib</li>
+</ul>
+<p>lua-http can run on any operating system supported by cqueues and openssl, which at the time of writing is GNU/Linux, FreeBSD, NetBSD, OpenBSD, OSX and Solaris.</p>
+</section>
+<section id="common-use-cases" class="level2">
+<h2>Common Use Cases</h2>
+<p>The following are two simple demonstrations of how the lua-http library can be used:</p>
+<section id="retrieving-a-document" class="level3">
+<h3>Retrieving a Document</h3>
+<p>The highest level interface for clients is <a href="#http.request"><em>http.request</em></a>. By constructing a <a href="#http.request"><em>request</em></a> object from a URI using <a href="#http.request.new_from_uri"><code>new_from_uri</code></a> and immediately evaluating it, you can easily fetch an HTTP resource.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode lua"><code class="sourceCode lua"><a class="sourceLine" id="cb1-1" title="1"><span class="kw">local</span> http_request <span class="op">=</span> <span class="fu">require</span> <span class="st">&quot;http.request&quot;</span></a>
+<a class="sourceLine" id="cb1-2" title="2"><span class="kw">local</span> headers<span class="op">,</span> stream <span class="op">=</span> <span class="fu">assert</span><span class="op">(</span>http_request<span class="op">.</span>new_from_uri<span class="op">(</span><span class="st">&quot;http://example.com&quot;</span><span class="op">):</span>go<span class="op">())</span></a>
+<a class="sourceLine" id="cb1-3" title="3"><span class="kw">local</span> body <span class="op">=</span> <span class="fu">assert</span><span class="op">(</span>stream<span class="op">:</span>get_body_as_string<span class="op">())</span></a>
+<a class="sourceLine" id="cb1-4" title="4"><span class="cf">if</span> headers<span class="op">:</span>get <span class="st">&quot;:status&quot;</span> <span class="op">~=</span> <span class="st">&quot;200&quot;</span> <span class="cf">then</span></a>
+<a class="sourceLine" id="cb1-5" title="5">    <span class="fu">error</span><span class="op">(</span>body<span class="op">)</span></a>
+<a class="sourceLine" id="cb1-6" title="6"><span class="cf">end</span></a>
+<a class="sourceLine" id="cb1-7" title="7"><span class="fu">print</span><span class="op">(</span>body<span class="op">)</span></a></code></pre></div>
+</section>
+<section id="http.websocket-example" class="level3">
+<h3>WebSocket Communications</h3>
+<p>To request information from a WebSocket server, use the <code>websocket</code> module to create a new WebSocket client.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode lua"><code class="sourceCode lua"><a class="sourceLine" id="cb2-1" title="1"><span class="kw">local</span> websocket <span class="op">=</span> <span class="fu">require</span> <span class="st">&quot;http.websocket&quot;</span></a>
+<a class="sourceLine" id="cb2-2" title="2"><span class="kw">local</span> ws <span class="op">=</span> websocket<span class="op">.</span>new_from_uri<span class="op">(</span><span class="st">&quot;wss://echo.websocket.org&quot;</span><span class="op">)</span></a>
+<a class="sourceLine" id="cb2-3" title="3"><span class="fu">assert</span><span class="op">(</span>ws<span class="op">:</span><span class="fu">connect</span><span class="op">())</span></a>
+<a class="sourceLine" id="cb2-4" title="4"><span class="fu">assert</span><span class="op">(</span>ws<span class="op">:</span>send<span class="op">(</span><span class="st">&quot;koo-eee!&quot;</span><span class="op">))</span></a>
+<a class="sourceLine" id="cb2-5" title="5"><span class="kw">local</span> data <span class="op">=</span> <span class="fu">assert</span><span class="op">(</span>ws<span class="op">:</span>receive<span class="op">())</span></a>
+<a class="sourceLine" id="cb2-6" title="6"><span class="fu">assert</span><span class="op">(</span>data <span class="op">==</span> <span class="st">&quot;koo-eee!&quot;</span><span class="op">)</span></a>
+<a class="sourceLine" id="cb2-7" title="7"><span class="fu">assert</span><span class="op">(</span>ws<span class="op">:</span><span class="fu">close</span><span class="op">())</span></a></code></pre></div>
+</section>
+</section>
+<section id="asynchronous-operation" class="level2">
+<h2>Asynchronous Operation</h2>
+<p>lua-http has been written to perform asynchronously so that it can be used in your application, server or game without blocking your main loop. Asynchronous operations are achieved by utilizing cqueues, a Lua/C library that incorporates Lua yielding and kernel level APIs to reduce CPU usage. All lua-http operations including DNS lookup, TLS negotiation and read/write operations will not block the main application thread when run from inside a cqueue or cqueue enabled “container”. While sometimes it is necessary to block a routine (yield) and wait for external data, any blocking API calls take an optional timeout to ensure good behaviour of networked applications and avoid unresponsive or “dead” routines.</p>
+<p>Asynchronous operations are one of the most powerful features of lua-http and require no effort on the developers part. For instance, an HTTP server can be instantiated within any Lua main loop and run alongside application code without adversely affecting the main application process. If other cqueue enabled components are integrated within a cqueue loop, the application is entirely event driven through kernel level polling APIs.</p>
+<p>cqueues can be used in conjunction with lua-http to integrate other features into your lua application and create powerful, performant, web enabled applications. Some of the examples in this guide will use cqueues for simple demonstrations. For more resources about cqueues, please see:</p>
+<ul>
+<li><a href="http://25thandclement.com/~william/projects/cqueues.html">The cqueues website</a> for more information about the cqueues library.</li>
+<li>cqueues examples can be found with the cqueues source code available through <a href="http://www.25thandclement.com/~william/projects/cqueues.html#download">git or archives</a> or accessed online <a href="https://github.com/wahern/cqueues/tree/master/examples">here</a>.</li>
+<li>For more information on integrating cqueues with other event loop libraries please see <a href="https://github.com/wahern/cqueues/wiki/Integrations-with-other-main-loops">integration with other event loops</a>.</li>
+<li>For other libraries that use cqueues such as asynchronous APIs for Redis and PostgreSQL, please see <a href="https://github.com/wahern/cqueues/wiki/Libraries-that-use-cqueues">the cqueues wiki entry here</a>.</li>
+</ul>
+</section>
+<section id="conventions" class="level2">
+<h2>Conventions</h2>
+<p>The following is a list of API conventions and general reference:</p>
+<section id="http" class="level3">
+<h3>HTTP</h3>
+<ul>
+<li>HTTP 1 request and status line fields are passed around inside of <em><a href="#http.headers">headers</a></em> objects under keys <code>&quot;:authority&quot;</code>, <code>&quot;:method&quot;</code>, <code>&quot;:path&quot;</code>, <code>&quot;:scheme&quot;</code> and <code>&quot;:status&quot;</code> as defined in HTTP 2. As such, they are all kept in string form (important to remember for the <code>:status</code> field).</li>
+<li>Header fields should always be used with lower case keys.</li>
+</ul>
+</section>
+<section id="errors" class="level3">
+<h3>Errors</h3>
+<ul>
+<li>Invalid function parameters will throw a lua error (if validated).</li>
+<li>Errors are returned as <code>nil</code>, error, errno unless noted otherwise.</li>
+<li>Some HTTP 2 operations return/throw special <a href="#http.h2_error">http 2 error objects</a>.</li>
+</ul>
+</section>
+<section id="timeouts" class="level3">
+<h3>Timeouts</h3>
+<p>All operations that may block the current thread take a <code>timeout</code> argument. This argument is always the number of seconds to allow before returning <code>nil, err_msg, ETIMEDOUT</code> where <code>err_msg</code> is a localised error message such as <code>&quot;connection timed out&quot;</code>.</p>
+</section>
+</section>
+<section id="terminology" class="level2">
+<h2>Terminology</h2>
+<p>Much lua-http terminology is borrowed from HTTP 2.</p>
+<p><em><a href="#connection">Connection</a></em> - An abstraction over an underlying TCP/IP socket. lua-http currently has two connection types: one for HTTP 1, one for HTTP 2.</p>
+<p><em><a href="#stream">Stream</a></em> - A request/response on a connection object. lua-http has two stream types: one for <a href="#http.h1_stream"><em>HTTP 1 streams</em></a>, and one for <a href="#http.h2_stream"><em>HTTP 2 streams</em></a>. The common interfaces is described in <a href="#stream"><em>stream</em></a>.</p>
+</section>
+</section>
+<section id="interfaces" class="level1">
+<h1>Interfaces</h1>
+<p>lua-http has separate modules for HTTP 1 vs HTTP 2 protocols, yet the different versions share many common concepts. lua-http provides a common interface for operations that make sense for both protocol versions (as well as any future developments).</p>
+<p>The following sections outline the interfaces exposed by the lua-http library.</p>
+<section id="connection" class="level2">
+<h2>connection</h2>
+<p>A connection encapsulates a socket and provides protocol specific operations. A connection may have <a href="#stream"><em>streams</em></a> which encapsulate the requests/responses happening over a conenction. Alternatively, you can ignore streams entirely and use low level protocol specific operations to read and write to the socket.</p>
+<p>All <em>connection</em> types expose the following fields:</p>
+<section id="connection.type" class="level3">
+<h3><code>connection.type</code> <!-- --></h3>
+<p>The mode of use for the connection object. Valid values are:</p>
+<ul>
+<li><code>&quot;client&quot;</code>: Acts as a client; this connection type is used by entities who want to make requests</li>
+<li><code>&quot;server&quot;</code>: Acts as a server; this conenction type is used by entities who want to respond to requests</li>
+</ul>
+</section>
+<section id="connection.version" class="level3">
+<h3><code>connection.version</code> <!-- --></h3>
+<p>The HTTP version number of the connection as a number.</p>
+</section>
+<section id="connection:pollfd" class="level3">
+<h3><code>connection:pollfd()</code> <!-- --></h3>
+</section>
+<section id="connection:events" class="level3">
+<h3><code>connection:events()</code> <!-- --></h3>
+</section>
+<section id="connection:timeout" class="level3">
+<h3><code>connection:timeout()</code> <!-- --></h3>
+</section>
+<section id="connection:connect" class="level3">
+<h3><code>connection:connect(timeout)</code> <!-- --></h3>
+<p>Completes the connection to the remote server using the address specified, HTTP version and any options specified in the <code>connection.new</code> constructor. The <code>connect</code> function will yield until the connection attempt finishes (success or failure) or until <code>timeout</code> is exceeded. Connecting may include DNS lookups, TLS negotiation and HTTP2 settings exchange. Returns <code>true</code> on success. On error, returns <code>nil</code>, an error message and an error number.</p>
+</section>
+<section id="connection:checktls" class="level3">
+<h3><code>connection:checktls()</code> <!-- --></h3>
+<p>Checks the socket for a valid Transport Layer Security connection. Returns the luaossl ssl object if the connection is secured. Returns <code>nil</code> and an error message if there is no active TLS session. Please see the <a href="http://25thandclement.com/~william/projects/luaossl.html">luaossl website</a> for more information about the ssl object.</p>
+</section>
+<section id="connection:localname" class="level3">
+<h3><code>connection:localname()</code> <!-- --></h3>
+<p>Returns the connection information for the local socket. Returns address family, IP address and port for an external socket. For Unix domain sockets, the function returns <code>AF_UNIX</code> and the path. If the connection object is not connected, returns <code>AF_UNSPEC</code> (0). On error, returns <code>nil</code>, an error message and an error number.</p>
+</section>
+<section id="connection:peername" class="level3">
+<h3><code>connection:peername()</code> <!-- --></h3>
+<p>Returns the connection information for the socket <em>peer</em> (as in, the next hop). Returns address family, IP address and port for an external socket. For unix sockets, the function returns <code>AF_UNIX</code> and the path. If the connection object is not connected, returns <code>AF_UNSPEC</code> (0). On error, returns <code>nil</code>, an error message and an error number.</p>
+<p><em>Note: If the client is using a proxy, the values returned <code>:peername()</code> point to the proxy, not the remote server.</em></p>
+</section>
+<section id="connection:flush" class="level3">
+<h3><code>connection:flush(timeout)</code> <!-- --></h3>
+<p>Flushes buffered outgoing data on the socket to the operating system. Returns <code>true</code> on success. On error, returns <code>nil</code>, an error message and an error number.</p>
+</section>
+<section id="connection:shutdown" class="level3">
+<h3><code>connection:shutdown()</code> <!-- --></h3>
+<p>Performs an orderly shutdown of the connection by closing all streams and calls <code>:shutdown()</code> on the socket. The connection cannot be re-opened.</p>
+</section>
+<section id="connection:close" class="level3">
+<h3><code>connection:close()</code> <!-- --></h3>
+<p>Closes a connection and releases operating systems resources. Note that <code>:close()</code> performs a <a href="#connection:shutdown"><code>connection:shutdown()</code></a> prior to releasing resources.</p>
+</section>
+<section id="connection:new_stream" class="level3">
+<h3><code>connection:new_stream()</code> <!-- --></h3>
+<p>Creates and returns a new <a href="#stream"><em>stream</em></a> on the connection.</p>
+</section>
+<section id="connection:get_next_incoming_stream" class="level3">
+<h3><code>connection:get_next_incoming_stream(timeout)</code> <!-- --></h3>
+<p>Returns the next peer initiated <a href="#stream"><em>stream</em></a> on the connection. This function can be used to yield and “listen” for incoming HTTP streams.</p>
+</section>
+<section id="http.connection:onidle" class="level3">
+<h3><code>connection:onidle(new_handler)</code> <!-- --></h3>
+<p>Provide a callback to get called when the connection becomes idle i.e. when there is no request in progress and no pipelined streams waiting. When called it will receive the <code>connection</code> as the first argument. Returns the previous handler.</p>
+</section>
+</section>
+<section id="stream" class="level2">
+<h2>stream</h2>
+<p>An HTTP <em>stream</em> is an abstraction of a request/response within a HTTP connection. Within a stream there may be a number of “header” blocks as well as data known as the “body”.</p>
+<p>All stream types expose the following fields and functions:</p>
+<section id="stream.connection" class="level3">
+<h3><code>stream.connection</code> <!-- --></h3>
+<p>The underlying <a href="#connection"><em>connection</em></a> object.</p>
+</section>
+<section id="stream:checktls" class="level3">
+<h3><code>stream:checktls()</code> <!-- --></h3>
+<p>Convenience wrapper equivalent to <a href="#connection:checktls"><code>stream.connection:checktls()</code></a></p>
+</section>
+<section id="stream:localname" class="level3">
+<h3><code>stream:localname()</code> <!-- --></h3>
+<p>Convenience wrapper equivalent to <a href="#connection:localname"><code>stream.connection:localname()</code></a></p>
+</section>
+<section id="stream:peername" class="level3">
+<h3><code>stream:peername()</code> <!-- --></h3>
+<p>Convenience wrapper equivalent to <a href="#connection:peername"><code>stream.connection:peername()</code></a></p>
+</section>
+<section id="stream:get_headers" class="level3">
+<h3><code>stream:get_headers(timeout)</code> <!-- --></h3>
+<p>Retrieves the next complete headers object (i.e. a block of headers or trailers) from the stream.</p>
+</section>
+<section id="stream:write_headers" class="level3">
+<h3><code>stream:write_headers(headers, end_stream, timeout)</code> <!-- --></h3>
+<p>Write the given <a href="#http.headers"><em>headers</em></a> object to the stream. The function takes a flag indicating if this is the last chunk in the stream, if <code>true</code> the stream will be closed. If <code>timeout</code> is specified, the stream will wait for the send to complete until <code>timeout</code> is exceeded.</p>
+</section>
+<section id="stream:write_continue" class="level3">
+<h3><code>stream:write_continue(timeout)</code> <!-- --></h3>
+<p>Sends a 100-continue header block.</p>
+</section>
+<section id="stream:get_next_chunk" class="level3">
+<h3><code>stream:get_next_chunk(timeout)</code> <!-- --></h3>
+<p>Returns the next chunk of the http body from the socket, potentially yielding for up to <code>timeout</code> seconds. On error, returns <code>nil</code>, an error message and an error number.</p>
+</section>
+<section id="stream:each_chunk" class="level3">
+<h3><code>stream:each_chunk()</code> <!-- --></h3>
+<p>Iterator over <a href="#stream:get_next_chunk"><code>stream:get_next_chunk()</code></a></p>
+</section>
+<section id="stream:get_body_as_string" class="level3">
+<h3><code>stream:get_body_as_string(timeout)</code> <!-- --></h3>
+<p>Reads the entire body from the stream and return it as a string. On error, returns <code>nil</code>, an error message and an error number.</p>
+</section>
+<section id="stream:get_body_chars" class="level3">
+<h3><code>stream:get_body_chars(n, timeout)</code> <!-- --></h3>
+<p>Reads <code>n</code> characters (bytes) of body from the stream and return them as a string. If the stream ends before <code>n</code> characters are read then returns the partial result. On error, returns <code>nil</code>, an error message and an error number.</p>
+</section>
+<section id="stream:get_body_until" class="level3">
+<h3><code>stream:get_body_until(pattern, plain, include_pattern, timeout)</code> <!-- --></h3>
+<p>Reads in body data from the stream until the <a href="http://www.lua.org/manual/5.3/manual.html#6.4.1">lua pattern</a> <code>pattern</code> is found and returns the data as a string. <code>plain</code> is a boolean that indicates that pattern matching facilities should be turned off so that function does a plain “find substring” operation, with no characters in pattern being considered magic. <code>include_patterns</code> specifies if the pattern itself should be included in the returned string. On error, returns <code>nil</code>, an error message and an error number.</p>
+</section>
+<section id="stream:save_body_to_file" class="level3">
+<h3><code>stream:save_body_to_file(file, timeout)</code> <!-- --></h3>
+<p>Reads the body from the stream and saves it to the <a href="http://www.lua.org/manual/5.3/manual.html#6.8">lua file handle</a> <code>file</code>. On error, returns <code>nil</code>, an error message and an error number.</p>
+</section>
+<section id="stream:get_body_as_file" class="level3">
+<h3><code>stream:get_body_as_file(timeout)</code> <!-- --></h3>
+<p>Reads the body from the stream into a temporary file and returns a <a href="http://www.lua.org/manual/5.3/manual.html#6.8">lua file handle</a>. On error, returns <code>nil</code>, an error message and an error number.</p>
+</section>
+<section id="stream:unget" class="level3">
+<h3><code>stream:unget(str)</code> <!-- --></h3>
+<p>Places <code>str</code> back on the incoming data buffer, allowing it to be returned again on a subsequent command (“un-gets” the data). Returns <code>true</code> on success. On error, returns <code>nil</code>, an error message and an error number.</p>
+</section>
+<section id="stream:write_chunk" class="level3">
+<h3><code>stream:write_chunk(chunk, end_stream, timeout)</code> <!-- --></h3>
+<p>Writes the string <code>chunk</code> to the stream. If <code>end_stream</code> is true, the body will be finalized and the stream will be closed. <code>write_chunk</code> yields indefinitely, or until <code>timeout</code> is exceeded. On error, returns <code>nil</code>, an error message and an error number.</p>
+</section>
+<section id="stream:write_body_from_string" class="level3">
+<h3><code>stream:write_body_from_string(str, timeout)</code> <!-- --></h3>
+<p>Writes the string <code>str</code> to the stream and ends the stream. On error, returns <code>nil</code>, an error message and an error number.</p>
+</section>
+<section id="stream:write_body_from_file" class="level3">
+<h3><code>stream:write_body_from_file(options|file, timeout)</code> <!-- --></h3>
+<ul>
+<li><code>options</code> is a table containing:
+<ul>
+<li><code>.file</code> (file)</li>
+<li><code>.count</code> (positive integer): number of bytes of <code>file</code> to write<br />
+defaults to infinity (the whole file will be written)</li>
+</ul></li>
+</ul>
+<p>Writes the contents of file <code>file</code> to the stream and ends the stream. <code>file</code> will not be automatically seeked, so ensure it is at the correct offset before calling. On error, returns <code>nil</code>, an error message and an error number.</p>
+</section>
+<section id="stream:shutdown" class="level3">
+<h3><code>stream:shutdown()</code> <!-- --></h3>
+<p>Closes the stream. The resources are released and the stream can no longer be used.</p>
+</section>
+</section>
+</section>
+<section id="modules" class="level1">
+<h1>Modules</h1>
+<section id="http.bit" class="level2">
+<h2>http.bit</h2>
+<p>An abstraction layer over the various lua bit libraries.</p>
+<p>Results are only consistent between underlying implementations when parameters and results are in the range of <code>0</code> to <code>0x7fffffff</code>.</p>
+<section id="http.bit.band" class="level3">
+<h3><code>band(a, b)</code> <!-- --></h3>
+<p>Bitwise And operation.</p>
+</section>
+<section id="http.bit.bor" class="level3">
+<h3><code>bor(a, b)</code> <!-- --></h3>
+<p>Bitwise Or operation.</p>
+</section>
+<section id="http.bit.bxor" class="level3">
+<h3><code>bxor(a, b)</code> <!-- --></h3>
+<p>Bitwise XOr operation.</p>
+</section>
+<section id="http.bit-example" class="level3">
+<h3>Example</h3>
+<div class="sourceCode" id="cb3"><pre class="sourceCode lua"><code class="sourceCode lua"><a class="sourceLine" id="cb3-1" title="1"><span class="kw">local</span> bit <span class="op">=</span> <span class="fu">require</span> <span class="st">&quot;http.bit&quot;</span></a>
+<a class="sourceLine" id="cb3-2" title="2"><span class="fu">print</span><span class="op">(</span>bit<span class="op">.</span>band<span class="op">(</span><span class="dv">1</span><span class="op">,</span> <span class="dv">3</span><span class="op">))</span> <span class="co">--&gt; 1</span></a></code></pre></div>
+</section>
+</section>
+<section id="http.client" class="level2">
+<h2>http.client</h2>
+<p>Deals with obtaining a connection to an HTTP server.</p>
+<section id="http.client.negotiate" class="level3">
+<h3><code>negotiate(socket, options, timeout)</code> <!-- --></h3>
+<p>Negotiates the HTTP settings with the remote server. If TLS has been specified, this function instantiates the encryption tunnel. Parameters are as follows:</p>
+<ul>
+<li><code>socket</code> is a cqueues socket object</li>
+<li><code>options</code> is a table containing:
+<ul>
+<li><code>.tls</code> (boolean, optional): Should TLS be used?<br />
+defaults to <code>false</code></li>
+<li><code>.ctx</code> (userdata, optional): the <code>SSL_CTX*</code> to use if <code>.tls</code> is <code>true</code>.<br />
+If <code>.ctx</code> is <code>nil</code> then a default context will be used.</li>
+<li><code>.sendname</code> (string|boolean, optional): the <a href="https://en.wikipedia.org/wiki/Server_Name_Indication">TLS SNI</a> host to send.<br />
+defaults to <code>true</code>
+<ul>
+<li><code>true</code> indicates to copy the <code>.host</code> field as long as it is <strong>not</strong> an IP</li>
+<li><code>false</code> disables SNI</li>
+</ul></li>
+<li><code>.version</code> (<code>nil</code>|1.0|1.1|2): HTTP version to use.
+<ul>
+<li><code>nil</code>: attempts HTTP 2 and falls back to HTTP 1.1</li>
+<li><code>1.0</code></li>
+<li><code>1.1</code></li>
+<li><code>2</code></li>
+</ul></li>
+<li><code>.h2_settings</code> (table, optional): HTTP 2 settings to use. See <a href="#http.h2_connection"><em>http.h2_connection</em></a> for details</li>
+</ul></li>
+</ul>
+</section>
+<section id="http.client.connect" class="level3">
+<h3><code>connect(options, timeout)</code> <!-- --></h3>
+<p>This function returns a new connection to an HTTP server. Once a connection has been opened, a stream can be created to start a request/response exchange. Please see <a href="#h1_stream.new_stream"><code>h1_stream.new_stream</code></a> and <a href="#h2_stream.new_stream"><code>h2_stream.new_stream</code></a> for more information about creating streams.</p>
+<ul>
+<li><code>options</code> is a table containing the options to <a href="#http.client.negotiate"><code>http.client.negotiate</code></a>, plus the following:
+<ul>
+<li><code>family</code> (integer, optional): socket family to use.<br />
+defaults to <code>AF_INET</code></li>
+<li><code>host</code> (string): host to connect to.<br />
+may be either a hostname or an IP address</li>
+<li><code>port</code> (string|integer): port to connect to in numeric form<br />
+e.g. <code>&quot;80&quot;</code> or <code>80</code></li>
+<li><code>path</code> (string): path to connect to (UNIX sockets)</li>
+<li><code>v6only</code> (boolean, optional): if the <code>IPV6_V6ONLY</code> flag should be set on the underlying socket.</li>
+<li><code>bind</code> (string, optional): the local outgoing address and optionally port to bind in the form of <code>&quot;address[:port]&quot;</code>, IPv6 addresses may be specified via square bracket notation. e.g. <code>&quot;127.0.0.1&quot;</code>, <code>&quot;127.0.0.1:50000&quot;</code>, <code>&quot;[::1]:30000&quot;</code>.</li>
+</ul></li>
+<li><code>timeout</code> (optional) is the maximum amount of time (in seconds) to allow for connection to be established.<br />
+This includes time for DNS lookup, connection, TLS negotiation (if TLS enabled) and in the case of HTTP 2: settings exchange.</li>
+</ul>
+<section id="http.client.connect-example" class="level4">
+<h4>Example</h4>
+<p>Connect to a local HTTP server running on port 8000</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode lua"><code class="sourceCode lua"><a class="sourceLine" id="cb4-1" title="1"><span class="kw">local</span> http_client <span class="op">=</span> <span class="fu">require</span> <span class="st">&quot;http.client&quot;</span></a>
+<a class="sourceLine" id="cb4-2" title="2"><span class="kw">local</span> myconnection <span class="op">=</span> http_client<span class="op">.</span>connect <span class="op">{</span></a>
+<a class="sourceLine" id="cb4-3" title="3">    host <span class="op">=</span> <span class="st">&quot;localhost&quot;</span><span class="op">;</span></a>
+<a class="sourceLine" id="cb4-4" title="4">    port <span class="op">=</span> <span class="dv">8000</span><span class="op">;</span></a>
+<a class="sourceLine" id="cb4-5" title="5">    tls <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></a>
+<a class="sourceLine" id="cb4-6" title="6"><span class="op">}</span></a></code></pre></div>
+</section>
+</section>
+</section>
+<section id="http.cookie" class="level2">
+<h2>http.cookie</h2>
+<p>A module for working with cookies.</p>
+<section id="http.cookie.bake" class="level3">
+<h3><code>bake(name, value, expiry_time, domain, path, secure_only, http_only, same_site)</code> <!-- --></h3>
+<p>Returns a string suitable for use in a <code>Set-Cookie</code> header with the passed parameters.</p>
+</section>
+<section id="http.cookie.parse_cookie" class="level3">
+<h3><code>parse_cookie(cookie)</code> <!-- --></h3>
+<p>Parses the <code>Cookie</code> header contents <code>cookie</code>.</p>
+<p>Returns a table containing <code>name</code> and <code>value</code> pairs as strings.</p>
+</section>
+<section id="http.cookie.parse_cookies" class="level3">
+<h3><code>parse_cookies(req_headers)</code> <!-- --></h3>
+<p>Parses all <code>Cookie</code> headers in the <a href="#http.headers"><em>http.headers</em></a> object <code>req_headers</code>.</p>
+<p>Returns a table containing <code>name</code> and <code>value</code> pairs as strings.</p>
+</section>
+<section id="http.cookie.parse_setcookie" class="level3">
+<h3><code>parse_setcookie(setcookie)</code> <!-- --></h3>
+<p>Parses the <code>Set-Cookie</code> header contents <code>setcookie</code>.</p>
+<p>Returns <code>name</code>, <code>value</code> and <code>params</code> where:</p>
+<ul>
+<li><code>name</code> is a string containing the cookie name</li>
+<li><code>value</code> is a string containing the cookie value</li>
+<li><code>params</code> is the a table where the keys are cookie attribute names and values are cookie attribute values</li>
+</ul>
+</section>
+<section id="http.cookie.new_store" class="level3">
+<h3><code>new_store()</code> <!-- --></h3>
+<p>Creates a new cookie store.</p>
+<p>Cookies are unique for a tuple of domain, path and name; although multiple cookies with the same name may exist in a request due to overlapping paths or domains.</p>
+</section>
+<section id="http.cookie.store.psl" class="level3">
+<h3><code>store.psl</code> <!-- --></h3>
+<p>A <a href="https://github.com/daurnimator/lua-psl">lua-psl</a> object to use for checking against the Public Suffix List. Set the field to <code>false</code> to skip checking the suffix list.</p>
+<p>Defaults to the <a href="https://rockdaboot.github.io/libpsl/libpsl-Public-Suffix-List-functions.html#psl-latest">latest</a> PSL on the system. If lua-psl is not installed then it will be <code>nil</code>.</p>
+</section>
+<section id="http.cookie.store.time" class="level3">
+<h3><code>store.time()</code> <!-- --></h3>
+<p>A function used by the <code>store</code> to get the current time for expiries and such.</p>
+<p>Defaults to a function based on <a href="https://www.lua.org/manual/5.3/manual.html#pdf-os.time"><code>os.time</code></a>.</p>
+</section>
+<section id="http.cookie.store.max_cookie_length" class="level3">
+<h3><code>store.max_cookie_length</code> <!-- --></h3>
+<p>The maximum length (in bytes) of cookies in the store; this value is also used as default maximum cookie length for <code>:lookup()</code>. Decreasing this value will only prevent new cookies from being added, it will not remove old cookies.</p>
+<p>Defaults to infinity (no maximum size).</p>
+</section>
+<section id="http.cookie.store.max_cookies" class="level3">
+<h3><code>store.max_cookies</code> <!-- --></h3>
+<p>The maximum number of cookies allowed in the <code>store</code>. Decreasing this value will only prevent new cookies from being added, it will not remove old cookies.</p>
+<p>Defaults to infinity (any number of cookies is allowed).</p>
+</section>
+<section id="http.cookie.store.max_cookies_per_domain" class="level3">
+<h3><code>store.max_cookies_per_domain</code> <!-- --></h3>
+<p>The maximum number of cookies allowed in the <code>store</code> per domain. Decreasing this value will only prevent new cookies from being added, it will not remove old cookies.</p>
+<p>Defaults to infinity (any number of cookies is allowed).</p>
+</section>
+<section id="http.cookie.store:store" class="level3">
+<h3><code>store:store(req_domain, req_path, req_is_http, req_is_secure, req_site_for_cookies, name, value, params)</code> <!-- --></h3>
+<p>Attempts to add a cookie to the <code>store</code>.</p>
+<ul>
+<li><code>req_domain</code> is the domain that the cookie was obtained from</li>
+<li><code>req_path</code> is the path that the cookie was obtained from</li>
+<li><code>req_is_http</code> is a boolean flag indicating if the cookie was obtained from a “non-HTTP” API</li>
+<li><code>req_is_secure</code> is a boolean flag indicating if the cookie was obtained from a “secure” protocol</li>
+<li><code>req_site_for_cookies</code> is a string containing the host that should be considered as the “site for cookies” (See <a href="https://tools.ietf.org/html/draft-ietf-httpbis-rfc6265bis-02#section-5.2">RFC 6265bis-02 Section 5.2</a>), can be <code>nil</code> if unknown.</li>
+<li><code>name</code> is a string containing the cookie name</li>
+<li><code>value</code> is a string containing the cookie value</li>
+<li><code>params</code> is the a table where the keys are cookie attribute names and values are cookie attribute values</li>
+</ul>
+<p>Returns a boolean indicating if a cookie was stored.</p>
+</section>
+<section id="http.cookie.store:store_from_request" class="level3">
+<h3><code>store:store_from_request(req_headers, resp_headers, req_host, req_site_for_cookies)</code> <!-- --></h3>
+<p>Attempt to store any cookies found in the response headers.</p>
+<ul>
+<li><code>req_headers</code> is the <a href="#http.headers"><em>http.headers</em></a> object for the outgoing request</li>
+<li><code>resp_headers</code> is the <a href="#http.headers"><em>http.headers</em></a> object received in response</li>
+<li><code>req_host</code> is the host that your query was directed at (only used if <code>req_headers</code> is missing a <code>Host</code> header)</li>
+<li><code>req_site_for_cookies</code> is a string containing the host that should be considered as the “site for cookies” (See <a href="https://tools.ietf.org/html/draft-ietf-httpbis-rfc6265bis-02#section-5.2">RFC 6265bis-02 Section 5.2</a>), can be <code>nil</code> if unknown.</li>
+</ul>
+</section>
+<section id="http.cookie.store:get" class="level3">
+<h3><code>store:get(domain, path, name)</code> <!-- --></h3>
+<p>Returns the cookie value for the cookie stored for the passed <code>domain</code>, <code>path</code> and <code>name</code>.</p>
+</section>
+<section id="http.cookie.store:remove" class="level3">
+<h3><code>store:remove(domain, path, name)</code> <!-- --></h3>
+<p>Deletes the cookie stored for the passed <code>domain</code>, <code>path</code> and <code>name</code>.</p>
+<p>If <code>name</code> is <code>nil</code> or not passed then all cookies for the <code>domain</code> and <code>path</code> are removed.</p>
+<p>If <code>path</code> is <code>nil</code> or not passed (in addition to <code>name</code>) then all cookies for the <code>domain</code> are removed.</p>
+</section>
+<section id="http.cookie.store:lookup" class="level3">
+<h3><code>store:lookup(domain, path, is_http, is_secure, is_safe_method, site_for_cookies, is_top_level, max_cookie_length)</code> <!-- --></h3>
+<p>Finds cookies visible to suitable for passing to an entity.</p>
+<ul>
+<li><code>domain</code> is the domain that will be sent the cookie</li>
+<li><code>path</code> is the path that will be sent the cookie</li>
+<li><code>is_http</code> is a boolean flag indicating if the destination is a “non-HTTP” API</li>
+<li><code>is_secure</code> is a boolean flag indicating if the destination will be communicated with over a “secure” protocol</li>
+<li><code>is_safe_method</code> is a boolean flag indicating if the cookie will be sent via a safe HTTP method (See also <a href="#http.util.is_safe_method">http.util.is_safe_method</a>)</li>
+<li><code>site_for_cookies</code> is a string containing the host that should be considered as the “site for cookies” (See <a href="https://tools.ietf.org/html/draft-ietf-httpbis-rfc6265bis-02#section-5.2">RFC 6265bis-02 Section 5.2</a>), can be <code>nil</code> if unknown.</li>
+<li><code>is_top_level</code> is a boolean flag indicating if this request is a “top level” request (See <a href="https://tools.ietf.org/html/draft-ietf-httpbis-rfc6265bis-02#section-5.2">RFC 6265bis-02 Section 5.2</a>)</li>
+<li><code>max_cookie_length</code> is the maximum cookie length to allow (See also <a href="#http.cookie.store.max_cookie_length"><code>store.max_cookie_length</code></a>)</li>
+</ul>
+<p>Returns a string suitable for use in a <code>Cookie</code> header.</p>
+</section>
+<section id="http.cookie.store:lookup_for_request" class="level3">
+<h3><code>store:lookup_for_request(headers, host, site_for_cookies, is_top_level, max_cookie_length)</code> <!-- --></h3>
+<p>Finds cookies suitable for adding to a request.</p>
+<ul>
+<li><code>headers</code> is the <a href="#http.headers"><em>http.headers</em></a> object for the outgoing request</li>
+<li><code>host</code> is the host that your query was directed at (only used if <code>headers</code> is missing a <code>Host</code> header)</li>
+<li><code>site_for_cookies</code> is a string containing the host that should be considered as the “site for cookies” (See <a href="https://tools.ietf.org/html/draft-ietf-httpbis-rfc6265bis-02#section-5.2">RFC 6265bis-02 Section 5.2</a>), can be <code>nil</code> if unknown.</li>
+<li><code>is_top_level</code> is a boolean flag indicating if this request is a “top level” request (See <a href="https://tools.ietf.org/html/draft-ietf-httpbis-rfc6265bis-02#section-5.2">RFC 6265bis-02 Section 5.2</a>)</li>
+<li><code>max_cookie_length</code> is the maximum cookie length to allow (See also <a href="#http.cookie.store.max_cookie_length"><code>store.max_cookie_length</code></a>)</li>
+</ul>
+<p>Returns a string suitable for use in a <code>Cookie</code> header.</p>
+</section>
+<section id="http.cookie.store:clean_due" class="level3">
+<h3><code>store:clean_due()</code> <!-- --></h3>
+<p>Returns the number of seconds until the next cookie in the <code>store</code> expires.</p>
+</section>
+<section id="http.cookie.store:clean" class="level3">
+<h3><code>store:clean()</code> <!-- --></h3>
+<p>Remove all expired cookies from the <code>store</code>.</p>
+</section>
+<section id="http.cookie.store:load_from_file" class="level3">
+<h3><code>store:load_from_file(file)</code> <!-- --></h3>
+<p>Loads cookie data from the file object <code>file</code> into <code>store</code>. The file should be in the Netscape Cookiejar format. Invalid lines in the file are ignored.</p>
+<p>Returns <code>true</code> on success or passes along <code>nil, err, errno</code> if a <code>:read</code> call fails.</p>
+</section>
+<section id="http.cookie.store:save_to_file" class="level3">
+<h3><code>store:save_to_file(file)</code> <!-- --></h3>
+<p>Writes the cookie data from <code>store</code> into the file object <code>file</code> in the Netscape Cookiejar format. <code>file</code> is not <code>seek</code>-ed or truncated before writing.</p>
+<p>Returns <code>true</code> on success or passes along <code>nil, err, errno</code> if a <code>:write</code> call fails.</p>
+</section>
+</section>
+<section id="http.h1_connection" class="level2">
+<h2>http.h1_connection</h2>
+<p>The <em>h1_connection</em> module adheres to the <a href="#connection"><em>connection</em></a> interface and provides HTTP 1 and 1.1 specific operations.</p>
+<section id="connection.new" class="level3">
+<h3><code>new(socket, conn_type, version)</code> <!-- --></h3>
+<p>Constructor for a new connection. Takes a cqueues socket object, a <a href="#connection.type">connection type string</a> and a numeric HTTP version number. Valid values for the connection type are <code>&quot;client&quot;</code> and <code>&quot;server&quot;</code>. Valid values for the version number are <code>1</code> and <code>1.1</code>. Returns the newly initialized connection object.</p>
+</section>
+<section id="http.h1_connection.version" class="level3">
+<h3><code>h1_connection.version</code> <!-- --></h3>
+<p>Specifies the HTTP version used for the connection handshake. Valid values are:</p>
+<ul>
+<li><code>1.0</code></li>
+<li><code>1.1</code></li>
+</ul>
+<p>See <a href="#connection.version"><code>connection.version</code></a></p>
+</section>
+<section id="http.h1_connection:pollfd" class="level3">
+<h3><code>h1_connection:pollfd()</code> <!-- --></h3>
+<p>See <a href="#connection:pollfd"><code>connection:pollfd()</code></a></p>
+</section>
+<section id="http.h1_connection:events" class="level3">
+<h3><code>h1_connection:events()</code> <!-- --></h3>
+<p>See <a href="#connection:events"><code>connection:events()</code></a></p>
+</section>
+<section id="http.h1_connection:timeout" class="level3">
+<h3><code>h1_connection:timeout()</code> <!-- --></h3>
+<p>See <a href="#connection:timeout"><code>connection:timeout()</code></a></p>
+</section>
+<section id="http.h1_connection:connect" class="level3">
+<h3><code>h1_connection:connect(timeout)</code> <!-- --></h3>
+<p>See <a href="#connection:connect"><code>connection:connect(timeout)</code></a></p>
+</section>
+<section id="http.h1_connection:checktls" class="level3">
+<h3><code>h1_connection:checktls()</code> <!-- --></h3>
+<p>See <a href="#connection:checktls"><code>connection:checktls()</code></a></p>
+</section>
+<section id="http.h1_connection:localname" class="level3">
+<h3><code>h1_connection:localname()</code> <!-- --></h3>
+<p>See <a href="#connection:localname"><code>connection:localname()</code></a></p>
+</section>
+<section id="http.h1_connection:peername" class="level3">
+<h3><code>h1_connection:peername()</code> <!-- --></h3>
+<p>See <a href="#connection:peername"><code>connection:peername()</code></a></p>
+</section>
+<section id="http.h1_connection:flush" class="level3">
+<h3><code>h1_connection:flush(timeout)</code> <!-- --></h3>
+<p>See <a href="#connection:flush"><code>connection:flush(timeout)</code></a></p>
+</section>
+<section id="http.h1_connection:shutdown" class="level3">
+<h3><code>h1_connection:shutdown(dir)</code> <!-- --></h3>
+<p>Shut down is as graceful as possible: pipelined streams are <a href="#http.h1_stream:shutdown">shutdown</a>, then the underlying socket is shut down in the appropriate direction(s).</p>
+<p><code>dir</code> is a string representing the direction of communication to shut down communication in. If it contains <code>&quot;r&quot;</code> it will shut down reading, if it contains <code>&quot;w&quot;</code> it will shut down writing. The default is <code>&quot;rw&quot;</code>, i.e. to shutdown communication in both directions.</p>
+<p>See <a href="#connection:shutdown"><code>connection:shutdown()</code></a></p>
+</section>
+<section id="http.h1_connection:close" class="level3">
+<h3><code>h1_connection:close()</code> <!-- --></h3>
+<p>See <a href="#connection:close"><code>connection:close()</code></a></p>
+</section>
+<section id="http.h1_connection:new_stream" class="level3">
+<h3><code>h1_connection:new_stream()</code> <!-- --></h3>
+<p>In HTTP 1, only a client may initiate new streams with this function.</p>
+<p>See <a href="#connection:new_stream"><code>connection:new_stream()</code></a> for more information.</p>
+</section>
+<section id="http.h1_connection:get_next_incoming_stream" class="level3">
+<h3><code>h1_connection:get_next_incoming_stream(timeout)</code> <!-- --></h3>
+<p>See <a href="#connection:get_next_incoming_stream"><code>connection:get_next_incoming_stream(timeout)</code></a></p>
+</section>
+<section id="http.h1_connection:onidle" class="level3">
+<h3><code>h1_connection:onidle(new_handler)</code> <!-- --></h3>
+<p>See <a href="#connection:onidle"><code>connection:onidle(new_handler)</code></a></p>
+</section>
+<section id="http.h1_connection:setmaxline" class="level3">
+<h3><code>h1_connection:setmaxline(read_length)</code> <!-- --></h3>
+<p>Sets the maximum read buffer size (in bytes) to <code>read_length</code>. i.e. sets the maximum length lines (such as headers).</p>
+<p>The default comes from the underlying socket, which gets the (changable) cqueues default at time of construction. The default cqueues default is 4096 bytes.</p>
+</section>
+<section id="http.h1_connection:clearerr" class="level3">
+<h3><code>h1_connection:clearerr(...)</code> <!-- --></h3>
+<p>Clears errors to allow for further read or write operations on the connection. Returns the error number of existing errors. This function is used to recover from known errors.</p>
+</section>
+<section id="http.h1_connection:error" class="level3">
+<h3><code>h1_connection:error(...)</code> <!-- --></h3>
+<p>Returns the error number of existing errors.</p>
+</section>
+<section id="http.h1_connection:take_socket" class="level3">
+<h3><code>h1_connection:take_socket()</code> <!-- --></h3>
+<p>Used to hand the reference of the connection socket to another object. Resets the socket to defaults and returns the single existing reference of the socket to the calling routine. This function can be used for connection upgrades such as upgrading from HTTP 1 to a WebSocket.</p>
+</section>
+<section id="http.h1_connection:read_request_line" class="level3">
+<h3><code>h1_connection:read_request_line(timeout)</code> <!-- --></h3>
+<p>Reads a request line from the socket. Returns the request method, requested path and HTTP version for an incoming request. <code>:read_request_line()</code> yields until a <code>&quot;\r\n&quot;</code> terminated chunk is received, or <code>timeout</code> is exceeded. If the incoming chunk is not a valid HTTP request line, <code>nil</code> is returned. On error, returns <code>nil</code>, an error message and an error number.</p>
+</section>
+<section id="http.h1_connection:read_status_line" class="level3">
+<h3><code>h1_connection:read_status_line(timeout)</code> <!-- --></h3>
+<p>Reads a line of input from the socket. If the input is a valid status line, the HTTP version (1 or 1.1), status code and reason description (if applicable) is returned. <code>:read_status_line()</code> yields until a <code>&quot;\r\n&quot;</code> terminated chunk is received, or <code>timeout</code> is exceeded. If the socket could not be read, returns <code>nil</code>, an error message and an error number.</p>
+</section>
+<section id="http.h1_connection:read_header" class="level3">
+<h3><code>h1_connection:read_header(timeout)</code> <!-- --></h3>
+<p>Reads a CRLF terminated HTTP header from the socket and returns the header key and value. This function will yield until a MIME compliant header item is received or until <code>timeout</code> is exceeded. If the header could not be read, the function returns <code>nil</code> an error and an error message.</p>
+</section>
+<section id="http.h1_connection:read_headers_done" class="level3">
+<h3><code>h1_connection:read_headers_done(timeout)</code> <!-- --></h3>
+<p>Checks for an empty line, which indicates the end of the HTTP headers. Returns <code>true</code> if an empty line is received. Any other value is pushed back on the socket receive buffer (unget) and the function returns <code>false</code>. This function will yield waiting for input from the socket or until <code>timeout</code> is exceeded. Returns <code>nil</code>, an error and an error message if the socket cannot be read.</p>
+</section>
+<section id="http.h1_connection:read_body_by_length" class="level3">
+<h3><code>h1_connection:read_body_by_length(len, timeout)</code> <!-- --></h3>
+<p>Get <code>len</code> number of bytes from the socket. Use a negative number for <em>up to</em> that number of bytes. This function will yield and wait on the socket if length of the buffered body is less than <code>len</code>. Asserts if len is not a number.</p>
+</section>
+<section id="http.h1_connection:read_body_till_close" class="level3">
+<h3><code>h1_connection:read_body_till_close(timeout)</code> <!-- --></h3>
+<p>Reads the entire request body. This function will yield until the body is complete or <code>timeout</code> is expired. If the read fails the function returns <code>nil</code>, an error message and an error number.</p>
+</section>
+<section id="http.h1_connection:read_body_chunk" class="level3">
+<h3><code>h1_connection:read_body_chunk(timeout)</code> <!-- --></h3>
+<p>Reads the next available line of data from the request and returns the chunk and any chunk extensions. This function will yield until chunk size is received or <code>timeout</code> is exceeded. If the chunk size is indicated as <code>0</code> then <code>false</code> and any chunk extensions are returned. Returns <code>nil</code>, an error message and an error number if there was an error reading reading the chunk header or the socket.</p>
+</section>
+<section id="http.h1_connection:write_request_line" class="level3">
+<h3><code>h1_connection:write_request_line(method, path, httpversion, timeout)</code> <!-- --></h3>
+<p>Writes the opening HTTP 1.x request line for a new request to the socket buffer. Yields until success or <code>timeout</code>. If the write fails, returns <code>nil</code>, an error message and an error number.</p>
+<p><em>Note the request line will not be flushed to the remote server until</em> <a href="#http.h1_connection:write_headers_done"><code>write_headers_done</code></a> <em>is called.</em></p>
+</section>
+<section id="http.h1_connection:write_status_line" class="level3">
+<h3><code>h1_connection:write_status_line(httpversion, status_code, reason_phrase, timeout)</code> <!-- --></h3>
+<p>Writes an HTTP status line to the socket buffer. Yields until success or <code>timeout</code>. If the write fails, the function returns <code>nil</code>, an error message and an error number.</p>
+<p><em>Note the status line will not be flushed to the remote server until</em> <a href="#http.h1_connection:write_headers_done"><code>write_headers_done</code></a> <em>is called.</em></p>
+</section>
+<section id="http.h1_connection:write_header" class="level3">
+<h3><code>h1_connection:write_header(k, v, timeout)</code> <!-- --></h3>
+<p>Writes a header item to the socket buffer as a <code>key:value</code> string. Yields until success or <code>timeout</code>. Returns <code>nil</code>, an error message and an error if the write fails.</p>
+<p><em>Note the header item will not be flushed to the remote server until</em> <a href="#http.h1_connection:write_headers_done"><code>write_headers_done</code></a> <em>is called.</em></p>
+</section>
+<section id="http.h1_connection:write_headers_done" class="level3">
+<h3><code>h1_connection:write_headers_done(timeout)</code> <!-- --></h3>
+<p>Terminates a header block by writing a blank line (<code>&quot;\r\n&quot;</code>) to the socket. This function will flush all outstanding data in the socket output buffer. Yields until success or <code>timeout</code>. Returns <code>nil</code>, an error message and an error if the write fails.</p>
+</section>
+<section id="http.h1_connection:write_body_chunk" class="level3">
+<h3><code>h1_connection:write_body_chunk(chunk, chunk_ext, timeout)</code> <!-- --></h3>
+<p>Writes a chunk of data to the socket. <code>chunk_ext</code> must be <code>nil</code> as chunk extensions are not supported. Will yield until complete or <code>timeout</code> is exceeded. Returns true on success. Returns <code>nil</code>, an error message and an error number if the write fails.</p>
+</section>
+<section id="http.h1_connection:write_body_last_chunk" class="level3">
+<h3><code>h1_connection:write_body_last_chunk(chunk_ext, timeout)</code> <!-- --></h3>
+<p>Writes the chunked body terminator <code>&quot;0\r\n&quot;</code> to the socket. <code>chunk_ext</code> must be <code>nil</code> as chunk extensions are not supported. Will yield until complete or <code>timeout</code> is exceeded. Returns <code>nil</code>, an error message and an error number if the write fails.</p>
+<p><em>Note that the connection will not be immediately flushed to the remote server; normally this will occur when trailers are written.</em></p>
+</section>
+<section id="http.h1_connection:write_body_plain" class="level3">
+<h3><code>h1_connection:write_body_plain(body, timeout)</code> <!-- --></h3>
+<p>Writes the contents of <code>body</code> to the socket and flushes the socket output buffer immediately. Yields until success or <code>timeout</code> is exceeded. Returns <code>nil</code>, an error message and an error number if the write fails.</p>
+</section>
+</section>
+<section id="http.h1_reason_phrases" class="level2">
+<h2>http.h1_reason_phrases</h2>
+<p>A table mapping from status codes (as strings) to reason phrases for HTTP 1. Any unknown status codes return <code>&quot;Unassigned&quot;</code></p>
+<section id="http.h1_reason_phrases-example" class="level3">
+<h3>Example</h3>
+<div class="sourceCode" id="cb5"><pre class="sourceCode lua"><code class="sourceCode lua"><a class="sourceLine" id="cb5-1" title="1"><span class="kw">local</span> reason_phrases <span class="op">=</span> <span class="fu">require</span> <span class="st">&quot;http.h1_reason_phrases&quot;</span></a>
+<a class="sourceLine" id="cb5-2" title="2"><span class="fu">print</span><span class="op">(</span>reason_phrases<span class="op">[</span><span class="st">&quot;200&quot;</span><span class="op">])</span> <span class="co">--&gt; &quot;OK&quot;</span></a>
+<a class="sourceLine" id="cb5-3" title="3"><span class="fu">print</span><span class="op">(</span>reason_phrases<span class="op">[</span><span class="st">&quot;342&quot;</span><span class="op">])</span> <span class="co">--&gt; &quot;Unassigned&quot;</span></a></code></pre></div>
+</section>
+</section>
+<section id="http.h1_stream" class="level2">
+<h2>http.h1_stream</h2>
+<p>The <em>h1_stream</em> module adheres to the <a href="#stream"><em>stream</em></a> interface and provides HTTP 1.x specific operations.</p>
+<p>The gzip transfer encoding is supported transparently.</p>
+<section id="http.h1_stream.connection" class="level3">
+<h3><code>h1_stream.connection</code> <!-- --></h3>
+<p>See <a href="#stream.connection"><code>stream.connection</code></a></p>
+</section>
+<section id="http.h1_stream.max_header_lines" class="level3">
+<h3><code>h1_stream.max_header_lines</code> <!-- --></h3>
+<p>The maximum number of header lines to read. Default is <code>100</code>.</p>
+</section>
+<section id="http.h1_stream:checktls" class="level3">
+<h3><code>h1_stream:checktls()</code> <!-- --></h3>
+<p>See <a href="#stream:checktls"><code>stream:checktls()</code></a></p>
+</section>
+<section id="http.h1_stream:localname" class="level3">
+<h3><code>h1_stream:localname()</code> <!-- --></h3>
+<p>See <a href="#stream:localname"><code>stream:localname()</code></a></p>
+</section>
+<section id="http.h1_stream:peername" class="level3">
+<h3><code>h1_stream:peername()</code> <!-- --></h3>
+<p>See <a href="#stream:peername"><code>stream:peername()</code></a></p>
+</section>
+<section id="http.h1_stream:get_headers" class="level3">
+<h3><code>h1_stream:get_headers(timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:get_headers"><code>stream:get_headers(timeout)</code></a></p>
+</section>
+<section id="http.h1_stream:write_headers" class="level3">
+<h3><code>h1_stream:write_headers(headers, end_stream, timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:write_headers"><code>stream:write_headers(headers, end_stream, timeout)</code></a></p>
+</section>
+<section id="http.h1_stream:write_continue" class="level3">
+<h3><code>h1_stream:write_continue(timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:write_continue"><code>stream:write_continue(timeout)</code></a></p>
+</section>
+<section id="http.h1_stream:get_next_chunk" class="level3">
+<h3><code>h1_stream:get_next_chunk(timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:get_next_chunk"><code>stream:get_next_chunk(timeout)</code></a></p>
+</section>
+<section id="http.h1_stream:each_chunk" class="level3">
+<h3><code>h1_stream:each_chunk()</code> <!-- --></h3>
+<p>See <a href="#stream:each_chunk"><code>stream:each_chunk()</code></a></p>
+</section>
+<section id="http.h1_stream:get_body_as_string" class="level3">
+<h3><code>h1_stream:get_body_as_string(timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:get_body_as_string"><code>stream:get_body_as_string(timeout)</code></a></p>
+</section>
+<section id="http.h1_stream:get_body_chars" class="level3">
+<h3><code>h1_stream:get_body_chars(n, timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:get_body_chars"><code>stream:get_body_chars(n, timeout)</code></a></p>
+</section>
+<section id="http.h1_stream:get_body_until" class="level3">
+<h3><code>h1_stream:get_body_until(pattern, plain, include_pattern, timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:get_body_until"><code>stream:get_body_until(pattern, plain, include_pattern, timeout)</code></a></p>
+</section>
+<section id="http.h1_stream:save_body_to_file" class="level3">
+<h3><code>h1_stream:save_body_to_file(file, timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:save_body_to_file"><code>stream:save_body_to_file(file, timeout)</code></a></p>
+</section>
+<section id="http.h1_stream:get_body_as_file" class="level3">
+<h3><code>h1_stream:get_body_as_file(timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:get_body_as_file"><code>stream:get_body_as_file(timeout)</code></a></p>
+</section>
+<section id="http.h1_stream:unget" class="level3">
+<h3><code>h1_stream:unget(str)</code> <!-- --></h3>
+<p>See <a href="#stream:unget"><code>stream:unget(str)</code></a></p>
+</section>
+<section id="http.h1_stream:write_chunk" class="level3">
+<h3><code>h1_stream:write_chunk(chunk, end_stream, timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:write_chunk"><code>stream:write_chunk(chunk, end_stream, timeout)</code></a></p>
+</section>
+<section id="http.h1_stream:write_body_from_string" class="level3">
+<h3><code>h1_stream:write_body_from_string(str, timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:write_body_from_string"><code>stream:write_body_from_string(str, timeout)</code></a></p>
+</section>
+<section id="http.h1_stream:write_body_from_file" class="level3">
+<h3><code>h1_stream:write_body_from_file(options|file, timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:write_body_from_file"><code>stream:write_body_from_file(options|file, timeout)</code></a></p>
+</section>
+<section id="http.h1_stream:shutdown" class="level3">
+<h3><code>h1_stream:shutdown()</code> <!-- --></h3>
+<p>See <a href="#stream:shutdown"><code>stream:shutdown()</code></a></p>
+</section>
+<section id="http.h1_stream:set_state" class="level3">
+<h3><code>h1_stream:set_state(new)</code> <!-- --></h3>
+<p>Sets the state of the stream to <code>new</code>. <code>new</code> must be one of the following valid states:</p>
+<ul>
+<li><code>&quot;open&quot;</code>: have sent or received headers; haven’t sent body yet</li>
+<li><code>&quot;half closed (local)&quot;</code>: have sent whole body</li>
+<li><code>&quot;half closed (remote)&quot;</code>: have received whole body</li>
+<li><code>&quot;closed&quot;</code>: complete</li>
+</ul>
+<p>Not all state transitions are allowed.</p>
+</section>
+<section id="http.h1_stream:read_headers" class="level3">
+<h3><code>h1_stream:read_headers(timeout)</code> <!-- --></h3>
+<p>Reads and returns a <a href="#http.headers">header block</a> from the underlying connection. Does <em>not</em> take into account buffered header blocks. On error, returns <code>nil</code>, an error message and an error number.</p>
+<p>This function should rarely be used, you’re probably looking for <a href="#http.h1_stream:get_headers"><code>:get_headers()</code></a>.</p>
+</section>
+<section id="http.h1_stream:read_next_chunk" class="level3">
+<h3><code>h1_stream:read_next_chunk(timeout)</code> <!-- --></h3>
+<p>Reads and returns the next chunk as a string from the underlying connection. Does <em>not</em> take into account buffered chunks. On error, returns <code>nil</code>, an error message and an error number.</p>
+<p>This function should rarely be used, you’re probably looking for <a href="#http.h1_stream:get_next_chunk"><code>:get_next_chunk()</code></a>.</p>
+</section>
+</section>
+<section id="http.h2_connection" class="level2">
+<h2>http.h2_connection</h2>
+<p>The <em>h2_connection</em> module adheres to the <a href="#connection"><em>connection</em></a> interface and provides HTTP 2 specific operations. An HTTP 2 connection can have multiple streams actively transmitting data at once, hence an <em>http.h2_connection</em> acts much like a scheduler.</p>
+<section id="http.h2_connection.new" class="level3">
+<h3><code>new(socket, conn_type, settings)</code> <!-- --></h3>
+<p>Constructor for a new connection. Takes a cqueues socket object, a <a href="#connection.type">connection type string</a> and an optional table of HTTP 2 settings. Returns the newly initialized connection object in a non-connected state.</p>
+</section>
+<section id="http.h2_connection.version" class="level3">
+<h3><code>h2_connection.version</code> <!-- --></h3>
+<p>Contains the HTTP connection version. Currently this will always be <code>2</code>.</p>
+<p>See <a href="#connection.version"><code>connection.version</code></a></p>
+</section>
+<section id="http.h2_connection:pollfd" class="level3">
+<h3><code>h2_connection:pollfd()</code> <!-- --></h3>
+<p>See <a href="#connection:pollfd"><code>connection:pollfd()</code></a></p>
+</section>
+<section id="http.h2_connection:events" class="level3">
+<h3><code>h2_connection:events()</code> <!-- --></h3>
+<p>See <a href="#connection:events"><code>connection:events()</code></a></p>
+</section>
+<section id="http.h2_connection:timeout" class="level3">
+<h3><code>h2_connection:timeout()</code> <!-- --></h3>
+<p>See <a href="#connection:timeout"><code>connection:timeout()</code></a></p>
+</section>
+<section id="http.h2_connection:empty" class="level3">
+<h3><code>h2_connection:empty()</code> <!-- --></h3>
+</section>
+<section id="http.h2_connection:step" class="level3">
+<h3><code>h2_connection:step(timeout)</code> <!-- --></h3>
+</section>
+<section id="http.h2_connection:loop" class="level3">
+<h3><code>h2_connection:loop(timeout)</code> <!-- --></h3>
+</section>
+<section id="http.h2_connection:connect" class="level3">
+<h3><code>h2_connection:connect(timeout)</code> <!-- --></h3>
+<p>See <a href="#connection:connect"><code>connection:connect(timeout)</code></a></p>
+</section>
+<section id="http.h2_connection:checktls" class="level3">
+<h3><code>h2_connection:checktls()</code> <!-- --></h3>
+<p>See <a href="#connection:checktls"><code>connection:checktls()</code></a></p>
+</section>
+<section id="http.h2_connection:localname" class="level3">
+<h3><code>h2_connection:localname()</code> <!-- --></h3>
+<p>See <a href="#connection:localname"><code>connection:localname()</code></a></p>
+</section>
+<section id="http.h2_connection:peername" class="level3">
+<h3><code>h2_connection:peername()</code> <!-- --></h3>
+<p>See <a href="#connection:peername"><code>connection:peername()</code></a></p>
+</section>
+<section id="http.h2_connection:flush" class="level3">
+<h3><code>h2_connection:flush(timeout)</code> <!-- --></h3>
+<p>See <a href="#connection:flush"><code>connection:flush(timeout)</code></a></p>
+</section>
+<section id="http.h2_connection:shutdown" class="level3">
+<h3><code>h2_connection:shutdown()</code> <!-- --></h3>
+<p>See <a href="#connection:shutdown"><code>connection:shutdown()</code></a></p>
+</section>
+<section id="http.h2_connection:close" class="level3">
+<h3><code>h2_connection:close()</code> <!-- --></h3>
+<p>See <a href="#connection:close"><code>connection:close()</code></a></p>
+</section>
+<section id="http.h2_connection:new_stream" class="level3">
+<h3><code>h2_connection:new_stream(id)</code> <!-- --></h3>
+<p>Create and return a new <a href="#http.h2_stream"><em>h2_stream</em></a>. <code>id</code> (optional) is the stream id to assign the new stream, if not specified for client initiated streams this will be the next free odd numbered stream, for server initiated streams this will be the next free even numbered stream.</p>
+<p>See <a href="#connection:new_stream"><code>connection:new_stream()</code></a> for more information.</p>
+</section>
+<section id="http.h2_connection:get_next_incoming_stream" class="level3">
+<h3><code>h2_connection:get_next_incoming_stream(timeout)</code> <!-- --></h3>
+<p>See <a href="#connection:get_next_incoming_stream"><code>connection:get_next_incoming_stream(timeout)</code></a></p>
+</section>
+<section id="http.h2_connection:onidle" class="level3">
+<h3><code>h2_connection:onidle(new_handler)</code> <!-- --></h3>
+<p>See <a href="#connection:onidle"><code>connection:onidle(new_handler)</code></a></p>
+</section>
+<section id="http.h2_connection:read_http2_frame" class="level3">
+<h3><code>h2_connection:read_http2_frame(timeout)</code> <!-- --></h3>
+</section>
+<section id="http.h2_connection:write_http2_frame" class="level3">
+<h3><code>h2_connection:write_http2_frame(typ, flags, streamid, payload, timeout, flush)</code> <!-- --></h3>
+</section>
+<section id="http.h2_connection:ping" class="level3">
+<h3><code>h2_connection:ping(timeout)</code> <!-- --></h3>
+</section>
+<section id="http.h2_connection:write_window_update" class="level3">
+<h3><code>h2_connection:write_window_update(inc, timeout)</code> <!-- --></h3>
+</section>
+<section id="http.h2_connection:write_goaway_frame" class="level3">
+<h3><code>h2_connection:write_goaway_frame(last_stream_id, err_code, debug_msg, timeout)</code> <!-- --></h3>
+</section>
+<section id="http.h2_connection:set_peer_settings" class="level3">
+<h3><code>h2_connection:set_peer_settings(peer_settings)</code> <!-- --></h3>
+</section>
+<section id="http.h2_connection:ack_settings" class="level3">
+<h3><code>h2_connection:ack_settings()</code> <!-- --></h3>
+</section>
+<section id="http.h2_connection:settings" class="level3">
+<h3><code>h2_connection:settings(tbl, timeout)</code> <!-- --></h3>
+</section>
+</section>
+<section id="http.h2_error" class="level2">
+<h2>http.h2_error</h2>
+<p>A type of error object that encapsulates HTTP 2 error information. An <code>http.h2_error</code> object has fields:</p>
+<ul>
+<li><code>name</code>: The error name: a short identifier for this error</li>
+<li><code>code</code>: The error code</li>
+<li><code>description</code>: The description of the error code</li>
+<li><code>message</code>: An error message</li>
+<li><code>traceback</code>: A traceback taken at the point the error was thrown</li>
+<li><code>stream_error</code>: A boolean that indicates if this is a stream level or protocol level error</li>
+</ul>
+<section id="http.h2_error.errors" class="level3">
+<h3><code>errors</code> <!-- --></h3>
+<p>A table containing errors <a href="https://http2.github.io/http2-spec/#iana-errors">as defined by the HTTP 2 specification</a>. It can be indexed by error name (e.g. <code>errors.PROTOCOL_ERROR</code>) or numeric code (e.g. <code>errors[0x1]</code>).</p>
+</section>
+<section id="http.h2_error.is" class="level3">
+<h3><code>is(ob)</code> <!-- --></h3>
+<p>Returns a boolean indicating if the object <code>ob</code> is an <code>http.h2_error</code> object</p>
+</section>
+<section id="http.h2_error:new" class="level3">
+<h3><code>h2_error:new(ob)</code> <!-- --></h3>
+<p>Creates a new error object from the passed table. The table should have the form of an error object i.e. with fields <code>name</code>, <code>code</code>, <code>message</code>, <code>traceback</code>, etc.</p>
+<p>Fields <code>name</code>, <code>code</code> and <code>description</code> are inherited from the parent <code>h2_error</code> object if not specified.</p>
+<p><code>stream_error</code> defaults to <code>false</code>.</p>
+</section>
+<section id="http.h2_error:new_traceback" class="level3">
+<h3><code>h2_error:new_traceback(message, stream_error, lvl)</code> <!-- --></h3>
+<p>Creates a new error object, recording a traceback from the current thread.</p>
+</section>
+<section id="http.h2_error:error" class="level3">
+<h3><code>h2_error:error(message, stream_error, lvl)</code> <!-- --></h3>
+<p>Creates and throws a new error.</p>
+</section>
+<section id="http.h2_error:assert" class="level3">
+<h3><code>h2_error:assert(cond, ...)</code> <!-- --></h3>
+<p>If <code>cond</code> is truthy, returns <code>cond, ...</code></p>
+<p>If <code>cond</code> is falsy (i.e. <code>false</code> or <code>nil</code>), throws an error with the first element of <code>...</code> as the <code>message</code>.</p>
+</section>
+</section>
+<section id="http.h2_stream" class="level2">
+<h2>http.h2_stream</h2>
+<p>An h2_stream represents an HTTP 2 stream. The module follows the <a href="#stream"><em>stream</em></a> interface as well as HTTP 2 specific functions.</p>
+<section id="http.h2_stream.connection" class="level3">
+<h3><code>h2_stream.connection</code> <!-- --></h3>
+<p>See <a href="#stream.connection"><code>stream.connection</code></a></p>
+</section>
+<section id="http.h2_stream:checktls" class="level3">
+<h3><code>h2_stream:checktls()</code> <!-- --></h3>
+<p>See <a href="#stream:checktls"><code>stream:checktls()</code></a></p>
+</section>
+<section id="http.h2_stream:localname" class="level3">
+<h3><code>h2_stream:localname()</code> <!-- --></h3>
+<p>See <a href="#stream:localname"><code>stream:localname()</code></a></p>
+</section>
+<section id="http.h2_stream:peername" class="level3">
+<h3><code>h2_stream:peername()</code> <!-- --></h3>
+<p>See <a href="#stream:peername"><code>stream:peername()</code></a></p>
+</section>
+<section id="http.h2_stream:get_headers" class="level3">
+<h3><code>h2_stream:get_headers(timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:get_headers"><code>stream:get_headers(timeout)</code></a></p>
+</section>
+<section id="http.h2_stream:write_headers" class="level3">
+<h3><code>h2_stream:write_headers(headers, end_stream, timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:write_headers"><code>stream:write_headers(headers, end_stream, timeout)</code></a></p>
+</section>
+<section id="http.h2_stream:write_continue" class="level3">
+<h3><code>h2_stream:write_continue(timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:write_continue"><code>stream:write_continue(timeout)</code></a></p>
+</section>
+<section id="http.h2_stream:get_next_chunk" class="level3">
+<h3><code>h2_stream:get_next_chunk(timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:get_next_chunk"><code>stream:get_next_chunk(timeout)</code></a></p>
+</section>
+<section id="http.h2_stream:each_chunk" class="level3">
+<h3><code>h2_stream:each_chunk()</code> <!-- --></h3>
+<p>See <a href="#stream:each_chunk"><code>stream:each_chunk()</code></a></p>
+</section>
+<section id="http.h2_stream:get_body_as_string" class="level3">
+<h3><code>h2_stream:get_body_as_string(timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:get_body_as_string"><code>stream:get_body_as_string(timeout)</code></a></p>
+</section>
+<section id="http.h2_stream:get_body_chars" class="level3">
+<h3><code>h2_stream:get_body_chars(n, timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:get_body_chars"><code>stream:get_body_chars(n, timeout)</code></a></p>
+</section>
+<section id="http.h2_stream:get_body_until" class="level3">
+<h3><code>h2_stream:get_body_until(pattern, plain, include_pattern, timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:get_body_until"><code>stream:get_body_until(pattern, plain, include_pattern, timeout)</code></a></p>
+</section>
+<section id="http.h2_stream:save_body_to_file" class="level3">
+<h3><code>h2_stream:save_body_to_file(file, timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:save_body_to_file"><code>stream:save_body_to_file(file, timeout)</code></a></p>
+</section>
+<section id="http.h2_stream:get_body_as_file" class="level3">
+<h3><code>h2_stream:get_body_as_file(timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:get_body_as_file"><code>stream:get_body_as_file(timeout)</code></a></p>
+</section>
+<section id="http.h2_stream:unget" class="level3">
+<h3><code>h2_stream:unget(str)</code> <!-- --></h3>
+<p>See <a href="#stream:unget"><code>stream:unget(str)</code></a></p>
+</section>
+<section id="http.h2_stream:write_chunk" class="level3">
+<h3><code>h2_stream:write_chunk(chunk, end_stream, timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:write_chunk"><code>stream:write_chunk(chunk, end_stream, timeout)</code></a></p>
+</section>
+<section id="http.h2_stream:write_body_from_string" class="level3">
+<h3><code>h2_stream:write_body_from_string(str, timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:write_body_from_string"><code>stream:write_body_from_string(str, timeout)</code></a></p>
+</section>
+<section id="http.h2_stream:write_body_from_file" class="level3">
+<h3><code>h2_stream:write_body_from_file(options|file, timeout)</code> <!-- --></h3>
+<p>See <a href="#stream:write_body_from_file"><code>stream:write_body_from_file(options|file, timeout)</code></a></p>
+</section>
+<section id="http.h2_stream:shutdown" class="level3">
+<h3><code>h2_stream:shutdown()</code> <!-- --></h3>
+<p>See <a href="#stream:shutdown"><code>stream:shutdown()</code></a></p>
+</section>
+<section id="http.h2_stream:pick_id" class="level3">
+<h3><code>h2_stream:pick_id(id)</code> <!-- --></h3>
+</section>
+<section id="http.h2_stream:set_state" class="level3">
+<h3><code>h2_stream:set_state(new)</code> <!-- --></h3>
+</section>
+<section id="http.h2_stream:reprioritise" class="level3">
+<h3><code>h2_stream:reprioritise(child, exclusive)</code> <!-- --></h3>
+</section>
+<section id="http.h2_stream:write_http2_frame" class="level3">
+<h3><code>h2_stream:write_http2_frame(typ, flags, payload, timeout, flush)</code> <!-- --></h3>
+<p>Writes a frame with <code>h2_stream</code>’s stream id.</p>
+<p>See <a href="#http.h2_connection:write_http2_frame"><code>h2_connection:write_http2_frame(typ, flags, streamid, payload, timeout, flush)</code></a></p>
+</section>
+<section id="http.h2_stream:write_data_frame" class="level3">
+<h3><code>h2_stream:write_data_frame(payload, end_stream, padded, timeout, flush)</code> <!-- --></h3>
+</section>
+<section id="http.h2_stream:write_headers_frame" class="level3">
+<h3><code>h2_stream:write_headers_frame(payload, end_stream, end_headers, padded, exclusive, stream_dep, weight, timeout, flush)</code> <!-- --></h3>
+</section>
+<section id="http.h2_stream:write_priority_frame" class="level3">
+<h3><code>h2_stream:write_priority_frame(exclusive, stream_dep, weight, timeout, flush)</code> <!-- --></h3>
+</section>
+<section id="http.h2_stream:write_rst_stream" class="level3">
+<h3><code>h2_stream:write_rst_stream_frame(err_code, timeout, flush)</code> <!-- --></h3>
+</section>
+<section id="http.h2_stream:rst_stream" class="level3">
+<h3><code>h2_stream:rst_stream(err, timeout)</code> <!-- --></h3>
+</section>
+<section id="http.h2_stream:write_settings_frame" class="level3">
+<h3><code>h2_stream:write_settings_frame(ACK, settings, timeout, flush)</code> <!-- --></h3>
+</section>
+<section id="http.h2_stream:write_push_promise_frame" class="level3">
+<h3><code>h2_stream:write_push_promise_frame(promised_stream_id, payload, end_headers, padded, timeout, flush)</code> <!-- --></h3>
+</section>
+<section id="http.h2_stream:push_promise" class="level3">
+<h3><code>h2_stream:push_promise(headers, timeout)</code> <!-- --></h3>
+<p>Pushes a new promise to the client.</p>
+<p>Returns the new stream as a <a href="#http.h2_stream">h2_stream</a>.</p>
+</section>
+<section id="http.h2_stream:write_ping_frame" class="level3">
+<h3><code>h2_stream:write_ping_frame(ACK, payload, timeout, flush)</code> <!-- --></h3>
+</section>
+<section id="http.h2_stream:write_goaway_frame" class="level3">
+<h3><code>h2_stream:write_goaway_frame(last_streamid, err_code, debug_msg, timeout, flush)</code> <!-- --></h3>
+</section>
+<section id="http.h2_stream:write_window_update_frame" class="level3">
+<h3><code>h2_stream:write_window_update_frame(inc, timeout, flush)</code> <!-- --></h3>
+</section>
+<section id="http.h2_stream:write_window_update" class="level3">
+<h3><code>h2_stream:write_window_update(inc, timeout)</code> <!-- --></h3>
+</section>
+<section id="http.h2_stream:write_continuation_frame" class="level3">
+<h3><code>h2_stream:write_continuation_frame(payload, end_headers, timeout, flush)</code> <!-- --></h3>
+</section>
+</section>
+<section id="http.headers" class="level2">
+<h2>http.headers</h2>
+<p>An ordered list of header fields. Each field has a <em>name</em>, a <em>value</em> and a <em>never_index</em> flag that indicates if the header field is potentially sensitive data.</p>
+<p>Each headers object has an index by field name to efficiently retrieve values by key. Keep in mind that there can be multiple values for a given field name. (e.g. an HTTP server may send two <code>Set-Cookie</code> headers).</p>
+<p>As noted in the <a href="#conventions">Conventions</a> section, HTTP 1 request and status line fields are passed around inside of headers objects under keys <code>&quot;:authority&quot;</code>, <code>&quot;:method&quot;</code>, <code>&quot;:path&quot;</code>, <code>&quot;:scheme&quot;</code> and <code>&quot;:status&quot;</code> as defined in HTTP 2. As such, they are all kept in string form (important to remember for the <code>&quot;:status&quot;</code> field).</p>
+<section id="http.headers.new" class="level3">
+<h3><code>new()</code> <!-- --></h3>
+<p>Creates and returns a new headers object.</p>
+</section>
+<section id="http.headers:len" class="level3">
+<h3><code>headers:len()</code> <!-- --></h3>
+<p>Returns the number of headers.</p>
+<p>Also available as <code>#headers</code> in Lua 5.2+.</p>
+</section>
+<section id="http.headers:clone" class="level3">
+<h3><code>headers:clone()</code> <!-- --></h3>
+<p>Creates and returns a clone of the headers object.</p>
+</section>
+<section id="http.headers:append" class="level3">
+<h3><code>headers:append(name, value, never_index)</code> <!-- --></h3>
+<p>Append a header.</p>
+<ul>
+<li><code>name</code> is the header field name. Lower case is the convention. It will not be validated at this time.</li>
+<li><code>value</code> is the header field value. It will not be validated at this time.</li>
+<li><code>never_index</code> is an optional boolean that indicates if the <code>value</code> should be considered secret. Defaults to true for header fields: authorization, proxy-authorization, cookie and set-cookie.</li>
+</ul>
+</section>
+<section id="http.headers:each" class="level3">
+<h3><code>headers:each()</code> <!-- --></h3>
+<p>An iterator over all headers that emits <code>name, value, never_index</code>.</p>
+<section id="example" class="level4">
+<h4>Example</h4>
+<div class="sourceCode" id="cb6"><pre class="sourceCode lua"><code class="sourceCode lua"><a class="sourceLine" id="cb6-1" title="1"><span class="kw">local</span> http_headers <span class="op">=</span> <span class="fu">require</span> <span class="st">&quot;http.headers&quot;</span></a>
+<a class="sourceLine" id="cb6-2" title="2"><span class="kw">local</span> myheaders <span class="op">=</span> http_headers<span class="op">.</span>new<span class="op">()</span></a>
+<a class="sourceLine" id="cb6-3" title="3">myheaders<span class="op">:</span>append<span class="op">(</span><span class="st">&quot;:status&quot;</span><span class="op">,</span> <span class="st">&quot;200&quot;</span><span class="op">)</span></a>
+<a class="sourceLine" id="cb6-4" title="4">myheaders<span class="op">:</span>append<span class="op">(</span><span class="st">&quot;set-cookie&quot;</span><span class="op">,</span> <span class="st">&quot;foo=bar&quot;</span><span class="op">)</span></a>
+<a class="sourceLine" id="cb6-5" title="5">myheaders<span class="op">:</span>append<span class="op">(</span><span class="st">&quot;connection&quot;</span><span class="op">,</span> <span class="st">&quot;close&quot;</span><span class="op">)</span></a>
+<a class="sourceLine" id="cb6-6" title="6">myheaders<span class="op">:</span>append<span class="op">(</span><span class="st">&quot;set-cookie&quot;</span><span class="op">,</span> <span class="st">&quot;baz=qux&quot;</span><span class="op">)</span></a>
+<a class="sourceLine" id="cb6-7" title="7"><span class="cf">for</span> name<span class="op">,</span> value<span class="op">,</span> never_index <span class="kw">in</span> myheaders<span class="op">:</span>each<span class="op">()</span> <span class="cf">do</span></a>
+<a class="sourceLine" id="cb6-8" title="8">    <span class="fu">print</span><span class="op">(</span>name<span class="op">,</span> value<span class="op">,</span> never_index<span class="op">)</span></a>
+<a class="sourceLine" id="cb6-9" title="9"><span class="cf">end</span></a>
+<a class="sourceLine" id="cb6-10" title="10"><span class="co">--[[ prints:</span></a>
+<a class="sourceLine" id="cb6-11" title="11"><span class="co">&quot;:status&quot;, &quot;200&quot;, false</span></a>
+<a class="sourceLine" id="cb6-12" title="12"><span class="co">&quot;set-cookie&quot;, &quot;foo=bar&quot;, true</span></a>
+<a class="sourceLine" id="cb6-13" title="13"><span class="co">&quot;connection&quot;, &quot;close&quot;, false</span></a>
+<a class="sourceLine" id="cb6-14" title="14"><span class="co">&quot;set-cookie&quot;, &quot;baz=qux&quot;, true</span></a>
+<a class="sourceLine" id="cb6-15" title="15"><span class="co">]]</span></a></code></pre></div>
+</section>
+</section>
+<section id="http.headers:has" class="level3">
+<h3><code>headers:has(name)</code> <!-- --></h3>
+<p>Returns a boolean indicating if the headers object has a field with the given <code>name</code>.</p>
+</section>
+<section id="http.headers:delete" class="level3">
+<h3><code>headers:delete(name)</code> <!-- --></h3>
+<p>Removes all occurrences of a field name from the headers object.</p>
+</section>
+<section id="http.headers:geti" class="level3">
+<h3><code>headers:geti(i)</code> <!-- --></h3>
+<p>Return the <code>i</code>-th header as <code>name, value, never_index</code></p>
+</section>
+<section id="http.headers:get_as_sequence" class="level3">
+<h3><code>headers:get_as_sequence(name)</code> <!-- --></h3>
+<p>Returns all headers with the given name in a table. The table will contain a field <code>.n</code> with the number of elements.</p>
+<section id="example-1" class="level4">
+<h4>Example</h4>
+<div class="sourceCode" id="cb7"><pre class="sourceCode lua"><code class="sourceCode lua"><a class="sourceLine" id="cb7-1" title="1"><span class="kw">local</span> http_headers <span class="op">=</span> <span class="fu">require</span> <span class="st">&quot;http.headers&quot;</span></a>
+<a class="sourceLine" id="cb7-2" title="2"><span class="kw">local</span> myheaders <span class="op">=</span> http_headers<span class="op">.</span>new<span class="op">()</span></a>
+<a class="sourceLine" id="cb7-3" title="3">myheaders<span class="op">:</span>append<span class="op">(</span><span class="st">&quot;:status&quot;</span><span class="op">,</span> <span class="st">&quot;200&quot;</span><span class="op">)</span></a>
+<a class="sourceLine" id="cb7-4" title="4">myheaders<span class="op">:</span>append<span class="op">(</span><span class="st">&quot;set-cookie&quot;</span><span class="op">,</span> <span class="st">&quot;foo=bar&quot;</span><span class="op">)</span></a>
+<a class="sourceLine" id="cb7-5" title="5">myheaders<span class="op">:</span>append<span class="op">(</span><span class="st">&quot;connection&quot;</span><span class="op">,</span> <span class="st">&quot;close&quot;</span><span class="op">)</span></a>
+<a class="sourceLine" id="cb7-6" title="6">myheaders<span class="op">:</span>append<span class="op">(</span><span class="st">&quot;set-cookie&quot;</span><span class="op">,</span> <span class="st">&quot;baz=qux&quot;</span><span class="op">)</span></a>
+<a class="sourceLine" id="cb7-7" title="7"><span class="kw">local</span> mysequence <span class="op">=</span> myheaders<span class="op">:</span>get_as_sequence<span class="op">(</span><span class="st">&quot;set-cookie&quot;</span><span class="op">)</span></a>
+<a class="sourceLine" id="cb7-8" title="8"><span class="co">--[[ mysequence will be:</span></a>
+<a class="sourceLine" id="cb7-9" title="9"><span class="co">{n = 2; &quot;foo=bar&quot;; &quot;baz=qux&quot;}</span></a>
+<a class="sourceLine" id="cb7-10" title="10"><span class="co">]]</span></a></code></pre></div>
+</section>
+</section>
+<section id="http.headers:get" class="level3">
+<h3><code>headers:get(name)</code> <!-- --></h3>
+<p>Returns all headers with the given name as multiple return values.</p>
+</section>
+<section id="http.headers:get_comma_separated" class="level3">
+<h3><code>headers:get_comma_separated(name)</code> <!-- --></h3>
+<p>Returns all headers with the given name as items in a comma separated string.</p>
+</section>
+<section id="http.headers:modifyi" class="level3">
+<h3><code>headers:modifyi(i, value, never_index)</code> <!-- --></h3>
+<p>Change the <code>i</code>-th’s header to a new <code>value</code> and <code>never_index</code>.</p>
+</section>
+<section id="http.headers:upsert" class="level3">
+<h3><code>headers:upsert(name, value, never_index)</code> <!-- --></h3>
+<p>If a header with the given <code>name</code> already exists, replace it. If not, <a href="#http.headers:append"><code>append</code></a> it to the list of headers.</p>
+<p>Cannot be used when a header <code>name</code> already has multiple values.</p>
+</section>
+<section id="http.headers:sort" class="level3">
+<h3><code>headers:sort()</code> <!-- --></h3>
+<p>Sort the list of headers by their field name, ordering those starting with <code>:</code> first. If <code>name</code>s are equal then sort by <code>value</code>, then by <code>never_index</code>.</p>
+</section>
+<section id="http.headers:dump" class="level3">
+<h3><code>headers:dump(file, prefix)</code> <!-- --></h3>
+<p>Print the headers list to the given file, one per line. If <code>file</code> is not given, then print to <code>stderr</code>. <code>prefix</code> is prefixed to each line.</p>
+</section>
+</section>
+<section id="http.hpack" class="level2">
+<h2>http.hpack</h2>
+<section id="http.hpack.new" class="level3">
+<h3><code>new(SETTINGS_HEADER_TABLE_SIZE)</code> <!-- --></h3>
+</section>
+<section id="http.hpack:append_data" class="level3">
+<h3><code>hpack_context:append_data(val)</code> <!-- --></h3>
+</section>
+<section id="http.hpack:render_data" class="level3">
+<h3><code>hpack_context:render_data()</code> <!-- --></h3>
+</section>
+<section id="http.hpack:clear_data" class="level3">
+<h3><code>hpack_context:clear_data()</code> <!-- --></h3>
+</section>
+<section id="http.hpack:evict_from_dynamic_table" class="level3">
+<h3><code>hpack_context:evict_from_dynamic_table()</code> <!-- --></h3>
+</section>
+<section id="http.hpack:dynamic_table_tostring" class="level3">
+<h3><code>hpack_context:dynamic_table_tostring()</code> <!-- --></h3>
+</section>
+<section id="http.hpack:set_max_dynamic_table_size" class="level3">
+<h3><code>hpack_context:set_max_dynamic_table_size(SETTINGS_HEADER_TABLE_SIZE)</code> <!-- --></h3>
+</section>
+<section id="http.hpack:encode_max_size" class="level3">
+<h3><code>hpack_context:encode_max_size(val)</code> <!-- --></h3>
+</section>
+<section id="http.hpack:resize_dynamic_table" class="level3">
+<h3><code>hpack_context:resize_dynamic_table(new_size)</code> <!-- --></h3>
+</section>
+<section id="http.hpack:add_to_dynamic_table" class="level3">
+<h3><code>hpack_context:add_to_dynamic_table(name, value, k)</code> <!-- --></h3>
+</section>
+<section id="http.hpack:dynamic_table_id_to_index" class="level3">
+<h3><code>hpack_context:dynamic_table_id_to_index(id)</code> <!-- --></h3>
+</section>
+<section id="http.hpack:lookup_pair_index" class="level3">
+<h3><code>hpack_context:lookup_pair_index(k)</code> <!-- --></h3>
+</section>
+<section id="http.hpack:lookup_name_index" class="level3">
+<h3><code>hpack_context:lookup_name_index(name)</code> <!-- --></h3>
+</section>
+<section id="http.hpack:lookup_index" class="level3">
+<h3><code>hpack_context:lookup_index(index)</code> <!-- --></h3>
+</section>
+<section id="http.hpack:add_header_indexed" class="level3">
+<h3><code>hpack_context:add_header_indexed(name, value, huffman)</code> <!-- --></h3>
+</section>
+<section id="http.hpack:add_header_never_indexed" class="level3">
+<h3><code>hpack_context:add_header_never_indexed(name, value, huffman)</code> <!-- --></h3>
+</section>
+<section id="http.hpack:encode_headers" class="level3">
+<h3><code>hpack_context:encode_headers(headers)</code> <!-- --></h3>
+</section>
+<section id="http.hpack:decode_headers" class="level3">
+<h3><code>hpack_context:decode_headers(payload, header_list, pos)</code> <!-- --></h3>
+</section>
+</section>
+<section id="http.hsts" class="level2">
+<h2>http.hsts</h2>
+<p>Data structures useful for HSTS (HTTP Strict Transport Security)</p>
+<section id="http.hsts.new_store" class="level3">
+<h3><code>new_store()</code> <!-- --></h3>
+<p>Creates and returns a new HSTS store.</p>
+</section>
+<section id="http.hsts.max_items" class="level3">
+<h3><code>hsts_store.max_items</code> <!-- --></h3>
+<p>The maximum number of items allowed in the store. Decreasing this value will only prevent new items from being added, it will not remove old items.</p>
+<p>Defaults to infinity (any number of items is allowed).</p>
+</section>
+<section id="http.hsts:clone" class="level3">
+<h3><code>hsts_store:clone()</code> <!-- --></h3>
+<p>Creates and returns a copy of a store.</p>
+</section>
+<section id="http.hsts:store" class="level3">
+<h3><code>hsts_store:store(host, directives)</code> <!-- --></h3>
+<p>Add new directives to the store about the given <code>host</code>. <code>directives</code> should be a table of directives, which <em>must</em> include the key <code>&quot;max-age&quot;</code>.</p>
+<p>Returns a boolean indicating if the item was accepted.</p>
+</section>
+<section id="http.hsts:remove" class="level3">
+<h3><code>hsts_store:remove(host)</code> <!-- --></h3>
+<p>Removes the entry for <code>host</code> from the store (if it exists).</p>
+</section>
+<section id="http.hsts:check" class="level3">
+<h3><code>hsts_store:check(host)</code> <!-- --></h3>
+<p>Returns a boolean indicating if the given <code>host</code> is a known HSTS host.</p>
+</section>
+<section id="http.hsts:clean_due" class="level3">
+<h3><code>hsts_store:clean_due()</code> <!-- --></h3>
+<p>Returns the number of seconds until the next item in the store expires.</p>
+</section>
+<section id="http.hsts:clean" class="level3">
+<h3><code>hsts_store:clean()</code> <!-- --></h3>
+<p>Removes expired entries from the store.</p>
+</section>
+</section>
+<section id="http.proxies" class="level2">
+<h2>http.proxies</h2>
+<section id="http.proxies.new" class="level3">
+<h3><code>new()</code> <!-- --></h3>
+<p>Returns an empty ‘proxies’ object</p>
+</section>
+<section id="http.proxies:update" class="level3">
+<h3><code>proxies:update(getenv)</code> <!-- --></h3>
+<p><code>getenv</code> defaults to <a href="http://www.lua.org/manual/5.3/manual.html#pdf-os.getenv"><code>os.getenv</code></a></p>
+<p>Reads environmental variables that are used to control if requests go through a proxy.</p>
+<ul>
+<li><code>http_proxy</code> (or <code>CGI_HTTP_PROXY</code> if running in a program with <code>GATEWAY_INTERFACE</code> set): the proxy to use for normal HTTP connections</li>
+<li><code>https_proxy</code> or <code>HTTPS_PROXY</code>: the proxy to use for HTTPS connections</li>
+<li><code>all_proxy</code> or <code>ALL_PROXY</code>: the proxy to use for <strong>all</strong> connections, overridden by other options</li>
+<li><code>no_proxy</code> or <code>NO_PROXY</code>: a list of hosts to <strong>not</strong> use a proxy for</li>
+</ul>
+<p>Returns <code>proxies</code>.</p>
+</section>
+<section id="http.proxies:choose" class="level3">
+<h3><code>proxies:choose(scheme, host)</code> <!-- --></h3>
+<p>Returns the proxy to use for the given <code>scheme</code> and <code>host</code> as a URI.</p>
+</section>
+</section>
+<section id="http.request" class="level2">
+<h2>http.request</h2>
+<p>The http.request module encapsulates all the functionality required to retrieve an HTTP document from a server.</p>
+<section id="http.request.new_from_uri" class="level3">
+<h3><code>new_from_uri(uri)</code> <!-- --></h3>
+<p>Creates a new <code>http.request</code> object from the given URI.</p>
+</section>
+<section id="http.request.new_connect" class="level3">
+<h3><code>new_connect(uri, connect_authority)</code> <!-- --></h3>
+<p>Creates a new <code>http.request</code> object from the given URI that will perform a <em>CONNECT</em> request.</p>
+</section>
+<section id="http.request.host" class="level3">
+<h3><code>request.host</code> <!-- --></h3>
+<p>The host this request should be sent to.</p>
+</section>
+<section id="http.request.port" class="level3">
+<h3><code>request.port</code> <!-- --></h3>
+<p>The port this request should be sent to.</p>
+</section>
+<section id="http.request.bind" class="level3">
+<h3><code>request.bind</code> <!-- --></h3>
+<p>The local outgoing address and optionally port to bind in the form of <code>&quot;address[:port]&quot;</code>. Default is to allow the kernel to choose an address+port.</p>
+<p>IPv6 addresses may be specified via square bracket notation. e.g. <code>&quot;127.0.0.1&quot;</code>, <code>&quot;127.0.0.1:50000&quot;</code>, <code>&quot;[::1]:30000&quot;</code>.</p>
+<p>This option is rarely needed. Supplying an address can be used to manually select the network interface to make the request from, while supplying a port is only really used to interoperate with firewalls or devices that demand use of a certain port.</p>
+</section>
+<section id="http.request.tls" class="level3">
+<h3><code>request.tls</code> <!-- --></h3>
+<p>A boolean indicating if TLS should be used.</p>
+</section>
+<section id="http.request.ctx" class="level3">
+<h3><code>request.ctx</code> <!-- --></h3>
+<p>An alternative <code>SSL_CTX*</code> to use. If not specified, uses the default TLS settings (see <a href="#http.tls"><em>http.tls</em></a> for information).</p>
+</section>
+<section id="http.request.sendname" class="level3">
+<h3><code>request.sendname</code> <!-- --></h3>
+<p>The TLS SNI host name used.</p>
+</section>
+<section id="http.request.version" class="level3">
+<h3><code>request.version</code> <!-- --></h3>
+<p>The HTTP version to use; leave as <code>nil</code> to auto-select.</p>
+</section>
+<section id="http.request.proxy" class="level3">
+<h3><code>request.proxy</code> <!-- --></h3>
+<p>Specifies the a proxy that the request will be made through. The value should be a URI or <code>false</code> to turn off proxying for the request.</p>
+</section>
+<section id="http.request.headers" class="level3">
+<h3><code>request.headers</code> <!-- --></h3>
+<p>A <a href="#http.headers"><em>http.headers</em></a> object of headers that will be sent in the request.</p>
+</section>
+<section id="http.request.hsts" class="level3">
+<h3><code>request.hsts</code> <!-- --></h3>
+<p>The <a href="#http.hsts"><em>http.hsts</em></a> store that will be used to enforce HTTP strict transport security. An attempt will be made to add strict transport headers from a response to the store.</p>
+<p>Defaults to a shared store.</p>
+</section>
+<section id="http.request.proxies" class="level3">
+<h3><code>request.proxies</code> <!-- --></h3>
+<p>The <a href="#http.proxies"><em>http.proxies</em></a> object used to select a proxy for the request. Only consulted if <code>request.proxy</code> is <code>nil</code>.</p>
+</section>
+<section id="http.request.cookie_store" class="level3">
+<h3><code>request.cookie_store</code> <!-- --></h3>
+<p>The <a href="#http.cookie.store"><em>http.cookie.store</em></a> that will be used to find cookies for the request. An attempt will be made to add cookies from a response to the store.</p>
+<p>Defaults to a shared store.</p>
+</section>
+<section id="http.request.is_top_level" class="level3">
+<h3><code>request.is_top_level</code> <!-- --></h3>
+<p>A boolean flag indicating if this request is a “top level” request (See <a href="https://tools.ietf.org/html/draft-ietf-httpbis-rfc6265bis-02#section-5.2">RFC 6265bis-02 Section 5.2</a>)</p>
+<p>Defaults to <code>true</code></p>
+</section>
+<section id="http.request.site_for_cookies" class="level3">
+<h3><code>request.site_for_cookies</code> <!-- --></h3>
+<p>A string containing the host that should be considered as the “site for cookies” (See <a href="https://tools.ietf.org/html/draft-ietf-httpbis-rfc6265bis-02#section-5.2">RFC 6265bis-02 Section 5.2</a>), can be <code>nil</code> if unknown.</p>
+<p>Defaults to <code>nil</code>.</p>
+</section>
+<section id="http.request.follow_redirects" class="level3">
+<h3><code>request.follow_redirects</code> <!-- --></h3>
+<p>Boolean indicating if <code>:go()</code> should follow redirects. Defaults to <code>true</code>.</p>
+</section>
+<section id="http.request.expect_100_timeout" class="level3">
+<h3><code>request.expect_100_timeout</code> <!-- --></h3>
+<p>Number of seconds to wait for a 100 Continue response before proceeding to send a request body. Defaults to <code>1</code>.</p>
+</section>
+<section id="http.request.max_redirects" class="level3">
+<h3><code>request.max_redirects</code> <!-- --></h3>
+<p>Maximum number of redirects to follow before giving up. Defaults to <code>5</code>. Set to <code>math.huge</code> to not give up.</p>
+</section>
+<section id="http.request.post301" class="level3">
+<h3><code>request.post301</code> <!-- --></h3>
+<p>Respect RFC 2616 Section 10.3.2 and <strong>don’t</strong> convert POST requests into body-less GET requests when following a 301 redirect. The non-RFC behaviour is ubiquitous in web browsers and assumed by servers. Modern HTTP endpoints send status code 308 to indicate that they don’t want the method to be changed. Defaults to <code>false</code>.</p>
+</section>
+<section id="http.request.post302" class="level3">
+<h3><code>request.post302</code> <!-- --></h3>
+<p>Respect RFC 2616 Section 10.3.3 and <strong>don’t</strong> convert POST requests into body-less GET requests when following a 302 redirect. The non-RFC behaviour is ubiquitous in web browsers and assumed by servers. Modern HTTP endpoints send status code 307 to indicate that they don’t want the method to be changed. Defaults to <code>false</code>.</p>
+</section>
+<section id="http.request:clone" class="level3">
+<h3><code>request:clone()</code> <!-- --></h3>
+<p>Creates and returns a clone of the request.</p>
+<p>The clone has its own deep copies of the <a href="#http.request.headers"><code>.headers</code></a> and <a href="#http.request.h2_settings"><code>.h2_settings</code></a> fields.</p>
+<p>The <a href="#http.request.tls"><code>.tls</code></a> and <a href="#http.request.body"><code>.body</code></a> fields are shallow copied from the original request.</p>
+</section>
+<section id="http.request:handle_redirect" class="level3">
+<h3><code>request:handle_redirect(headers)</code> <!-- --></h3>
+<p>Process a redirect.</p>
+<p><code>headers</code> should be response headers for a redirect.</p>
+<p>Returns a new <code>request</code> object that will fetch from new location.</p>
+</section>
+<section id="http.request:to_uri" class="level3">
+<h3><code>request:to_uri(with_userinfo)</code> <!-- --></h3>
+<p>Returns a URI for the request.</p>
+<p>If <code>with_userinfo</code> is <code>true</code> and the request has an <code>authorization</code> header (or <code>proxy-authorization</code> for a CONNECT request), the returned URI will contain a userinfo component.</p>
+</section>
+<section id="http.request:set_body" class="level3">
+<h3><code>request:set_body(body)</code> <!-- --></h3>
+<p>Allows setting a request body. <code>body</code> may be a string, function or lua file object.</p>
+<ul>
+<li>If <code>body</code> is a string it will be sent as given.</li>
+<li>If <code>body</code> is a function, it will be called repeatedly like an iterator. It should return chunks of the request body as a string or <code>nil</code> if done.</li>
+<li>If <code>body</code> is a lua file object, it will be <a href="http://www.lua.org/manual/5.3/manual.html#pdf-file:seek"><code>:seek</code>’d</a> to the start, then sent as a body. Any errors encountered during file operations <strong>will be thrown</strong>.</li>
+</ul>
+</section>
+<section id="http.request:timeout" class="level3">
+<h3><code>request:go(timeout)</code> <!-- --></h3>
+<p>Performs the request.</p>
+<p>The request object is <strong>not</strong> invalidated; and can be reused for a new request. On success, returns the response <a href="#http.headers"><em>headers</em></a> and a <a href="#stream"><em>stream</em></a>.</p>
+</section>
+</section>
+<section id="http.server" class="level2">
+<h2>http.server</h2>
+<p><em>http.server</em> objects are used to encapsulate the <code>accept()</code> and dispatch of http clients. Each new client request will invoke the <code>onstream</code> callback in a new cqueues managed coroutine. In addition to constructing and returning a HTTP response, an <code>onstream</code> handler may decide to take ownership of the connection for other purposes, e.g. upgrade from a HTTP 1.1 connection to a WebSocket connection.</p>
+<p>For examples of how to use the server library, please see the <a href="https://github.com/daurnimator/lua-http/tree/master/examples">examples directory</a> in the source tree.</p>
+<section id="http.server.new" class="level3">
+<h3><code>new(options)</code> <!-- --></h3>
+<p>Creates a new instance of an HTTP server listening on the given socket.</p>
+<ul>
+<li><code>.socket</code> (<em>cqueues.socket</em>): the socket that <code>accept()</code> will be called on</li>
+<li><code>.onerror</code> (<em>function</em>): Function that will be called when an error occurs (default handler throws an error). See <a href="#http.server:onerror">server:onerror()</a></li>
+<li><code>.onstream</code> (<em>function</em>): Callback function for handling a new client request. The function receives the <a href="#http.server"><em>server</em></a> and the new <a href="#stream"><em>stream</em></a> as parameters. If the callback throws an error it will be reported from <a href="#http.server:step"><code>:step()</code></a> or <a href="#http.server:loop"><code>:loop()</code></a></li>
+<li><code>.tls</code> (<em>boolean</em>): Specifies if the system should use Transport Layer Security. Values are:
+<ul>
+<li><code>nil</code>: Allow both tls and non-tls connections</li>
+<li><code>true</code>: Allows tls connections only</li>
+<li><code>false</code>: Allows non-tls connections only</li>
+</ul></li>
+<li><code>.ctx</code> (<em>context object</em>): An <code>openssl.ssl.context</code> object to use for tls connections. If <code>nil</code> is passed, a self-signed context will be generated.</li>
+<li><code>.connection_setup_timeout</code> (<em>number</em>): Timeout (in seconds) to wait for client to send first bytes and/or complete TLS handshake. Default is 10 seconds.</li>
+<li><code>.intra_stream_timeout</code> (<em>number</em>): Timeout (in seconds) to wait for a new <a href="#stream"><em>stream</em></a> on an idle connection before giving up and closing the connection</li>
+<li><code>.version</code> (<em>number</em>): The http version to allow to connect (default: any)</li>
+<li><code>.cq</code> (<em>cqueue</em>): A cqueues controller to use as a main loop. The default is a new controller for the server.</li>
+<li><code>.max_concurrent</code> (<em>number</em>): Maximum number of connections to allow live at a time. Default is infinity.</li>
+</ul>
+</section>
+<section id="http.server.listen" class="level3">
+<h3><code>listen(options)</code> <!-- --></h3>
+<p>Creates a new socket and returns an HTTP server that will accept() from it. Parameters are the same as <a href="#http.server.new"><code>new(options)</code></a> except instead of <code>.socket</code> you provide the following:</p>
+<ul>
+<li><code>.host</code> (<em>string</em>): Local IP address in dotted decimal or IPV6 notation. This value is required if <code>.path</code> is not specified.</li>
+<li><code>.port</code> (<em>number</em>): IP port for the local socket. Specify 0 for automatic port selection. Ports 1-1024 require the application has root privilege to run. Maximum value is 65535. If <code>.tls == nil</code> then this value is required. Otherwise, the defaults are:
+<ul>
+<li><code>80</code> if <code>.tls == false</code></li>
+<li><code>443</code> if <code>.tls == true</code></li>
+</ul></li>
+<li><code>.path</code> (<em>string</em>): Path to UNIX a socket. This value is required if <code>.host</code> is not specified.</li>
+<li><code>.family</code> (<em>string</em>): Protocol family. Default is <code>&quot;AF_INET&quot;</code></li>
+<li><code>.v6only</code> (<em>boolean</em>): Specify <code>true</code> to limit all connections to ipv6 only (no ipv4-mapped-ipv6). Default is <code>false</code>.</li>
+<li><code>.mode</code> (<em>string</em>): <code>fchmod</code> or <code>chmod</code> socket after creating UNIX domain socket.</li>
+<li><code>.mask</code> (<em>boolean</em>): Set and restore umask when binding UNIX domain socket.</li>
+<li><code>.unlink</code> (<em>boolean</em>): <code>true</code> means unlink socket path before binding.</li>
+<li><code>.reuseaddr</code> (<em>boolean</em>): Turn on <code>SO_REUSEADDR</code> flag.</li>
+<li><code>.reuseport</code> (<em>boolean</em>): Turn on <code>SO_REUSEPORT</code> flag.</li>
+</ul>
+</section>
+<section id="http.server:onerror" class="level3">
+<h3><code>server:onerror(new_handler)</code> <!-- --></h3>
+<p>If called with parameters, the function replaces the current error handler function with <code>new_handler</code> and returns a reference to the old function. Calling the function with no parameters returns the current error handler. The default handler throws an error. The <code>onerror</code> function for the server can be set during instantiation through the <code>options</code> table passed to the <a href="#server.listen"><code>server.listen(options)</code></a> function.</p>
+</section>
+<section id="http.server:listen" class="level3">
+<h3><code>server:listen(timeout)</code> <!-- --></h3>
+<p>Initializes the server socket and if required, resolves DNS. <code>server:listen()</code> is required if <a href="#http.server:localname"><em>localname</em></a> is called before <a href="#http.server:step"><em>step</em></a> or <a href="#http.server:loop"><em>loop</em></a>. On error, returns <code>nil</code>, an error message and an error number.</p>
+</section>
+<section id="http.server:localname" class="level3">
+<h3><code>server:localname()</code> <!-- --></h3>
+<p>Returns the connection information for the local socket. Returns address family, IP address and port for an external socket. For Unix domain sockets, the function returns AF_UNIX and the path. If the connection object is not connected, returns AF_UNSPEC (0). On error, returns <code>nil</code>, an error message and an error number.</p>
+</section>
+<section id="http.server:pause" class="level3">
+<h3><code>server:pause()</code> <!-- --></h3>
+<p>Cause the server loop to stop processing new clients until <a href="#http.server:resume"><em>resume</em></a> is called. Existing client connections will run until closed.</p>
+</section>
+<section id="http.server:resume" class="level3">
+<h3><code>server:resume()</code> <!-- --></h3>
+<p>Resumes a <a href="#http.server:pause"><em>paused</em></a> <code>server</code> and processes new client requests.</p>
+</section>
+<section id="http.server:close" class="level3">
+<h3><code>server:close()</code> <!-- --></h3>
+<p>Shutdown the server and close the socket. A closed server cannot be reused.</p>
+</section>
+<section id="http.server:pollfd" class="level3">
+<h3><code>server:pollfd()</code> <!-- --></h3>
+<p>Returns a file descriptor (as an integer) or <code>nil</code>.</p>
+<p>The file descriptor can be passed to a system API like <code>select</code> or <code>kqueue</code> to wait on anything this server object wants to do. This method is used for integrating with other main loops, and should be used in combination with <a href="#http.server:events"><code>:events()</code></a> and <a href="#http.server:timeout"><code>:timeout()</code></a>.</p>
+</section>
+<section id="http.server:events" class="level3">
+<h3><code>server:events()</code> <!-- --></h3>
+<p>Returns a string indicating the type of events the object is waiting on: the string will contain <code>&quot;r&quot;</code> if it wants to be <em>step</em>ed when the file descriptor returned by <a href="#http.server:pollfd"><code>pollfd()</code></a> has had POLLIN indicated; <code>&quot;w&quot;</code> for POLLOUT or <code>&quot;p&quot;</code> for POLLPRI.</p>
+<p>This method is used for integrating with other main loops, and should be used in combination with <a href="#http.server:pollfd"><code>:pollfd()</code></a> and <a href="#http.server:timeout"><code>:timeout()</code></a>.</p>
+</section>
+<section id="http.server:timeout" class="level3">
+<h3><code>server:timeout()</code> <!-- --></h3>
+<p>The maximum time (in seconds) to wait before calling <a href="#http.server:step"><code>server:step()</code></a>.</p>
+<p>This method is used for integrating with other main loops, and should be used in combination with <a href="#http.server:pollfd"><code>:pollfd()</code></a> and <a href="#http.server:events"><code>:events()</code></a>.</p>
+</section>
+<section id="http.server:empty" class="level3">
+<h3><code>server:empty()</code> <!-- --></h3>
+<p>Returns <code>true</code> if the master socket and all client connection have been closed, <code>false</code> otherwise.</p>
+</section>
+<section id="http.server:step" class="level3">
+<h3><code>server:step(timeout)</code> <!-- --></h3>
+<p>Step once through server’s main loop: any waiting clients will be <code>accept()</code>-ed, any pending streams will start getting processed, and each <code>onstream</code> handler will get be run at most once. This method will block for <em>up to</em> <code>timeout</code> seconds. On error, returns <code>nil</code>, an error message and an error number.</p>
+<p>This can be used for integration with external main loops.</p>
+</section>
+<section id="http.server:loop" class="level3">
+<h3><code>server:loop(timeout)</code> <!-- --></h3>
+<p>Run the server as a blocking loop for up to <code>timeout</code> seconds. The server will continue to listen and accept client requests until either <a href="#http.server:pause"><code>:pause()</code></a> or <a href="#http.server:close"><code>:close()</code></a> is called, or an error is experienced.</p>
+</section>
+<section id="http.server:add_socket" class="level3">
+<h3><code>server:add_socket(socket)</code> <!-- --></h3>
+<p>Add a new connection socket to the server for processing. The server will use the current <code>onstream</code> request handler and all <code>options</code> currently specified through the <a href="#http.server.listen"><code>server.listen(options)</code></a> constructor. <code>add_socket</code> can be used to process connection sockets obtained from an external source such as:</p>
+<ul>
+<li>Another cqueues thread with some other master socket.</li>
+<li>From inetd for start on demand daemons.</li>
+<li>A Unix socket with <code>SCM_RIGHTS</code>.</li>
+</ul>
+</section>
+<section id="http.server:add_stream" class="level3">
+<h3><code>server:add_stream(stream)</code> <!-- --></h3>
+<p>Add an existing stream to the server for processing.</p>
+</section>
+</section>
+<section id="http.socks" class="level2">
+<h2>http.socks</h2>
+<p>Implements a subset of the SOCKS proxy protocol.</p>
+<section id="http.socks.connect" class="level3">
+<h3><code>connect(uri)</code> <!-- --></h3>
+<p><code>uri</code> is a string with the address of the SOCKS server. A scheme of <code>&quot;socks5&quot;</code> will resolve hosts locally, a scheme of <code>&quot;socks5h&quot;</code> will resolve hosts on the SOCKS server. If the URI has a userinfo component it will be sent to the SOCKS server as a username and password.</p>
+<p>Returns a <em>http.socks</em> object.</p>
+</section>
+<section id="http.socks.fdopen" class="level3">
+<h3><code>fdopen(socket)</code> <!-- --></h3>
+<p>This function takes an existing cqueues.socket as a parameter and returns a <em>http.socks</em> object with <code>socket</code> as its base.</p>
+</section>
+<section id="http.socks.needs_resolve" class="level3">
+<h3><code>socks.needs_resolve</code> <!-- --></h3>
+<p>Specifies if the destination host should be resolved locally.</p>
+</section>
+<section id="http.socks:clone" class="level3">
+<h3><code>socks:clone()</code> <!-- --></h3>
+<p>Make a clone of a given socks object.</p>
+</section>
+<section id="http.socks:add_username_password_auth" class="level3">
+<h3><code>socks:add_username_password_auth(username, password)</code> <!-- --></h3>
+<p>Add username + password authorisation to the set of allowed authorisation methods with the given credentials.</p>
+</section>
+<section id="http.socks:negotiate" class="level3">
+<h3><code>socks:negotiate(host, port, timeout)</code> <!-- --></h3>
+<p>Complete the SOCKS connection.</p>
+<p>Negotiates a socks connection. <code>host</code> is a required string passed to the SOCKS server as the host address. The address will be resolved locally if <a href="#http.socks.needs_resolve"><code>.needs_resolve</code></a> is <code>true</code>. <code>port</code> is a required number to pass to the SOCKS server as the connection port. On error, returns <code>nil</code>, an error message and an error number.</p>
+</section>
+<section id="http.socks:close" class="level3">
+<h3><code>socks:close()</code> <!-- --></h3>
+</section>
+<section id="http.socks:take_socket" class="level3">
+<h3><code>socks:take_socket()</code> <!-- --></h3>
+<p>Take possession of the socket object managed by the http.socks object. Returns the socket (or <code>nil</code> if not available).</p>
+</section>
+</section>
+<section id="http.tls" class="level2">
+<h2>http.tls</h2>
+<section id="http.tls.has_alpn" class="level3">
+<h3><code>has_alpn</code> <!-- --></h3>
+<p>Boolean indicating if ALPN is available in the current environment.</p>
+<p>It may be disabled if OpenSSL was compiled without ALPN support, or is an old version.</p>
+</section>
+<section id="http.tls.has_hostname_validation" class="level3">
+<h3><code>has_hostname_validation</code> <!-- --></h3>
+<p>Boolean indicating if <a href="https://wiki.openssl.org/index.php/Hostname_validation">hostname validation</a> is available in the current environment.</p>
+<p>It may be disabled if OpenSSL is an old version.</p>
+</section>
+<section id="http.tls.modern_cipher_list" class="level3">
+<h3><code>modern_cipher_list</code> <!-- --></h3>
+<p>The <a href="https://wiki.mozilla.org/Security/Server_Side_TLS#Modern_compatibility">Mozilla “Modern” cipher list</a> as a colon separated list, ready to pass to OpenSSL</p>
+</section>
+<section id="http.tls.intermediate_cipher_list" class="level3">
+<h3><code>intermediate_cipher_list</code> <!-- --></h3>
+<p>The <a href="https://wiki.mozilla.org/Security/Server_Side_TLS#Intermediate_compatibility_.28default.29">Mozilla “Intermediate” cipher list</a> as a colon separated list, ready to pass to OpenSSL</p>
+</section>
+<section id="http.tls.old_cipher_list" class="level3">
+<h3><code>old_cipher_list</code> <!-- --></h3>
+<p>The <a href="https://wiki.mozilla.org/Security/Server_Side_TLS#Old_backward_compatibility">Mozilla “Old” cipher list</a> as a colon separated list, ready to pass to OpenSSL</p>
+</section>
+<section id="http.tls.banned_ciphers" class="level3">
+<h3><code>banned_ciphers</code> <!-- --></h3>
+<p>A set (table with string keys and values of <code>true</code>) of the <a href="https://http2.github.io/http2-spec/#BadCipherSuites">ciphers banned in HTTP 2</a> where the keys are OpenSSL cipher names.</p>
+<p>Ciphers not known by OpenSSL are missing from the set.</p>
+</section>
+<section id="http.tls.new_client_context" class="level3">
+<h3><code>new_client_context()</code> <!-- --></h3>
+<p>Create and return a new luaossl SSL context useful for HTTP client connections.</p>
+</section>
+<section id="http.tls.new_server_context" class="level3">
+<h3><code>new_server_context()</code> <!-- --></h3>
+<p>Create and return a new luaossl SSL context useful for HTTP server connections.</p>
+</section>
+</section>
+<section id="http.util" class="level2">
+<h2>http.util</h2>
+<section id="http.util.encodeURI" class="level3">
+<h3><code>encodeURI(str)</code> <!-- --></h3>
+</section>
+<section id="http.util.encodeURIComponent" class="level3">
+<h3><code>encodeURIComponent(str)</code> <!-- --></h3>
+</section>
+<section id="http.util.decodeURI" class="level3">
+<h3><code>decodeURI(str)</code> <!-- --></h3>
+</section>
+<section id="http.util.decodeURIComponent" class="level3">
+<h3><code>decodeURIComponent(str)</code> <!-- --></h3>
+</section>
+<section id="http.util.query_args" class="level3">
+<h3><code>query_args(str)</code> <!-- --></h3>
+<p>Returns an iterator over the pairs in <code>str</code></p>
+<section id="example-2" class="level4">
+<h4>Example</h4>
+<div class="sourceCode" id="cb8"><pre class="sourceCode lua"><code class="sourceCode lua"><a class="sourceLine" id="cb8-1" title="1"><span class="kw">local</span> http_util <span class="op">=</span> <span class="fu">require</span> <span class="st">&quot;http.util&quot;</span></a>
+<a class="sourceLine" id="cb8-2" title="2"><span class="cf">for</span> name<span class="op">,</span> value <span class="kw">in</span> http_util<span class="op">.</span>query_args<span class="op">(</span><span class="st">&quot;foo=bar&amp;baz=qux&quot;</span><span class="op">)</span> <span class="cf">do</span></a>
+<a class="sourceLine" id="cb8-3" title="3">    <span class="fu">print</span><span class="op">(</span>name<span class="op">,</span> value<span class="op">)</span></a>
+<a class="sourceLine" id="cb8-4" title="4"><span class="cf">end</span></a>
+<a class="sourceLine" id="cb8-5" title="5"><span class="co">--[[ prints:</span></a>
+<a class="sourceLine" id="cb8-6" title="6"><span class="co">&quot;foo&quot;, &quot;bar&quot;</span></a>
+<a class="sourceLine" id="cb8-7" title="7"><span class="co">&quot;baz&quot;, &quot;qux&quot;</span></a>
+<a class="sourceLine" id="cb8-8" title="8"><span class="co">]]</span></a></code></pre></div>
+</section>
+</section>
+<section id="http.util.dict_to_query" class="level3">
+<h3><code>dict_to_query(dict)</code> <!-- --></h3>
+<p>Converts a dictionary (table with string keys) with string values to an encoded query string.</p>
+<section id="example-3" class="level4">
+<h4>Example</h4>
+<div class="sourceCode" id="cb9"><pre class="sourceCode lua"><code class="sourceCode lua"><a class="sourceLine" id="cb9-1" title="1"><span class="kw">local</span> http_util <span class="op">=</span> <span class="fu">require</span> <span class="st">&quot;http.util&quot;</span></a>
+<a class="sourceLine" id="cb9-2" title="2"><span class="fu">print</span><span class="op">(</span>http_util<span class="op">.</span>dict_to_query<span class="op">({</span>foo <span class="op">=</span> <span class="st">&quot;bar&quot;</span><span class="op">;</span> baz <span class="op">=</span> <span class="st">&quot;qux&quot;</span><span class="op">}))</span> <span class="co">--&gt; &quot;baz=qux&amp;foo=bar&quot;</span></a></code></pre></div>
+</section>
+</section>
+<section id="http.util.resolve_relative_path" class="level3">
+<h3><code>resolve_relative_path(orig_path, relative_path)</code> <!-- --></h3>
+</section>
+<section id="http.util.is_safe_method" class="level3">
+<h3><code>is_safe_method(method)</code> <!-- --></h3>
+<p>Returns a boolean indicating if the passed string <code>method</code> is a “safe” method. See <a href="https://tools.ietf.org/html/rfc7231#section-4.2.1">RFC 7231 section 4.2.1</a> for more information.</p>
+</section>
+<section id="http.util.is_ip" class="level3">
+<h3><code>is_ip(str)</code> <!-- --></h3>
+<p>Returns a boolean indicating if the passed string <code>str</code> is a valid IP.</p>
+</section>
+<section id="http.util.scheme_to_port" class="level3">
+<h3><code>scheme_to_port</code> <!-- --></h3>
+<p>Map from schemes (as strings) to default ports (as integers).</p>
+</section>
+<section id="http.util.split_authority" class="level3">
+<h3><code>split_authority(authority, scheme)</code> <!-- --></h3>
+<p>Splits an <code>authority</code> into host and port components. If the authority has no port component, will attempt to use the default for the <code>scheme</code>.</p>
+<section id="example-4" class="level4">
+<h4>Example</h4>
+<div class="sourceCode" id="cb10"><pre class="sourceCode lua"><code class="sourceCode lua"><a class="sourceLine" id="cb10-1" title="1"><span class="kw">local</span> http_util <span class="op">=</span> <span class="fu">require</span> <span class="st">&quot;http.util&quot;</span></a>
+<a class="sourceLine" id="cb10-2" title="2"><span class="fu">print</span><span class="op">(</span>http_util<span class="op">.</span>split_authority<span class="op">(</span><span class="st">&quot;localhost:8000&quot;</span><span class="op">,</span> <span class="st">&quot;http&quot;</span><span class="op">))</span> <span class="co">--&gt; &quot;localhost&quot;, 8000</span></a>
+<a class="sourceLine" id="cb10-3" title="3"><span class="fu">print</span><span class="op">(</span>http_util<span class="op">.</span>split_authority<span class="op">(</span><span class="st">&quot;example.com&quot;</span><span class="op">,</span> <span class="st">&quot;https&quot;</span><span class="op">))</span> <span class="co">--&gt; &quot;localhost&quot;, 443</span></a></code></pre></div>
+</section>
+</section>
+<section id="http.util.to_authority" class="level3">
+<h3><code>to_authority(host, port, scheme)</code> <!-- --></h3>
+<p>Joins the <code>host</code> and <code>port</code> to create a valid authority component. Omits the port if it is the default for the <code>scheme</code>.</p>
+</section>
+<section id="http.util.imf_date" class="level3">
+<h3><code>imf_date(time)</code> <!-- --></h3>
+<p>Returns the time in HTTP preferred date format (See <a href="https://tools.ietf.org/html/rfc7231#section-7.1.1.1">RFC 7231 section 7.1.1.1</a>)</p>
+<p><code>time</code> defaults to the current time</p>
+</section>
+<section id="http.util.maybe_quote" class="level3">
+<h3><code>maybe_quote(str)</code> <!-- --></h3>
+<ul>
+<li>If <code>str</code> is a valid <code>token</code>, return it as-is.</li>
+<li>If <code>str</code> would be valid as a <code>quoted-string</code>, return the quoted version</li>
+<li>Otherwise, returns <code>nil</code></li>
+</ul>
+</section>
+</section>
+<section id="http.version" class="level2">
+<h2>http.version</h2>
+<section id="http.version.name" class="level3">
+<h3><code>name</code> <!-- --></h3>
+<p><code>&quot;lua-http&quot;</code></p>
+</section>
+<section id="http.version.version" class="level3">
+<h3><code>version</code> <!-- --></h3>
+<p>Current version of lua-http as a string.</p>
+</section>
+</section>
+<section id="http.websocket" class="level2">
+<h2>http.websocket</h2>
+<section id="http.websocket.new_from_uri" class="level3">
+<h3><code>new_from_uri(uri, protocols)</code> <!-- --></h3>
+<p>Creates a new <code>http.websocket</code> object of type <code>&quot;client&quot;</code> from the given URI.</p>
+<ul>
+<li><code>protocols</code> (optional) should be a lua table containing a sequence of protocols to send to the server</li>
+</ul>
+</section>
+<section id="http.websocket.new_from_stream" class="level3">
+<h3><code>new_from_stream(stream, headers)</code> <!-- --></h3>
+<p>Attempts to create a new <code>http.websocket</code> object of type <code>&quot;server&quot;</code> from the given request headers and stream.</p>
+<ul>
+<li><a href="#http.h1_stream"><code>stream</code></a> should be a live HTTP 1 stream of the <code>&quot;server&quot;</code> type.</li>
+<li><a href="#http.headers"><code>headers</code></a> should be headers of a suspected websocket upgrade request from an HTTP 1 client.</li>
+</ul>
+<p>This function does <strong>not</strong> have side effects, and is hence okay to use tentatively.</p>
+</section>
+<section id="http.websocket.close_timeout" class="level3">
+<h3><code>websocket.close_timeout</code> <!-- --></h3>
+<p>Amount of time (in seconds) to wait between sending a close frame and actually closing the connection. Defaults to <code>3</code> seconds.</p>
+</section>
+<section id="http.websocket:accept" class="level3">
+<h3><code>websocket:accept(options, timeout)</code> <!-- --></h3>
+<p>Completes negotiation with a websocket client.</p>
+<ul>
+<li><code>options</code> is a table containing:
+<ul>
+<li><code>headers</code> (optional) a <a href="#http.headers">headers</a> object to use as a prototype for the response headers</li>
+<li><code>protocols</code> (optional) should be a lua table containing a sequence of protocols to allow from the client</li>
+</ul></li>
+</ul>
+<p>Usually called after a successful <a href="#http.websocket.new_from_stream"><code>new_from_stream</code></a></p>
+</section>
+<section id="http.websocket:connect" class="level3">
+<h3><code>websocket:connect(timeout)</code> <!-- --></h3>
+<p>Connect to a websocket server.</p>
+<p>Usually called after a successful <a href="#http.websocket.new_from_uri"><code>new_from_uri</code></a></p>
+</section>
+<section id="http.websocket:receive" class="level3">
+<h3><code>websocket:receive(timeout)</code> <!-- --></h3>
+<p>Reads and returns the next data frame plus its opcode. Any ping frames received while reading will be responded to.</p>
+<p>The opcode <code>0x1</code> will be returned as <code>&quot;text&quot;</code> and <code>0x2</code> will be returned as <code>&quot;binary&quot;</code>.</p>
+</section>
+<section id="http.websocket:each" class="level3">
+<h3><code>websocket:each()</code> <!-- --></h3>
+<p>Iterator over <a href="#http.websocket:receive"><code>websocket:receive()</code></a>.</p>
+</section>
+<section id="http.websocket:send_frame" class="level3">
+<h3><code>websocket:send_frame(frame, timeout)</code> <!-- --></h3>
+<p>Low level function to send a raw frame.</p>
+</section>
+<section id="http.websocket:send" class="level3">
+<h3><code>websocket:send(data, opcode, timeout)</code> <!-- --></h3>
+<p>Send the given <code>data</code> as a data frame.</p>
+<ul>
+<li><code>data</code> should be a string</li>
+<li><code>opcode</code> can be a numeric opcode, <code>&quot;text&quot;</code> or <code>&quot;binary&quot;</code>. If <code>nil</code>, defaults to a text frame. Note this <code>opcode</code> is the websocket frame opcode, not an application specific opcode. The opcode should be one from the <a href="https://www.iana.org/assignments/websocket/websocket.xhtml#opcode">IANA registry</a>.</li>
+</ul>
+</section>
+<section id="http.websocket:send_ping" class="level3">
+<h3><code>websocket:send_ping(data, timeout)</code> <!-- --></h3>
+<p>Sends a ping frame.</p>
+<ul>
+<li><code>data</code> is optional</li>
+</ul>
+</section>
+<section id="http.websocket:send_pong" class="level3">
+<h3><code>websocket:send_pong(data, timeout)</code> <!-- --></h3>
+<p>Sends a pong frame. Works as a unidirectional keep-alive.</p>
+<ul>
+<li><code>data</code> is optional</li>
+</ul>
+</section>
+<section id="http.websocket:close" class="level3">
+<h3><code>websocket:close(code, reason, timeout)</code> <!-- --></h3>
+<p>Closes the websocket connection.</p>
+<ul>
+<li><code>code</code> defaults to <code>1000</code></li>
+<li><code>reason</code> is an optional string</li>
+</ul>
+</section>
+</section>
+<section id="http.zlib" class="level2">
+<h2>http.zlib</h2>
+<p>An abstraction layer over the various lua zlib libraries.</p>
+<section id="http.zlib.engine" class="level3">
+<h3><code>engine</code> <!-- --></h3>
+<p>Currently either <a href="https://github.com/brimworks/lua-zlib"><code>&quot;lua-zlib&quot;</code></a> or <a href="https://github.com/LuaDist/lzlib"><code>&quot;lzlib&quot;</code></a></p>
+</section>
+<section id="http.zlib.inflate" class="level3">
+<h3><code>inflate()</code> <!-- --></h3>
+<p>Returns a closure that inflates (uncompresses) a zlib stream.</p>
+<p>The closure takes a string of compressed data and an end of stream flag (<code>boolean</code>) as parameters and returns the inflated output as a string. The function will throw an error if the input is not a valid zlib stream.</p>
+</section>
+<section id="http.zlib.deflate" class="level3">
+<h3><code>deflate()</code> <!-- --></h3>
+<p>Returns a closure that deflates (compresses) a zlib stream.</p>
+<p>The closure takes a string of uncompressed data and an end of stream flag (<code>boolean</code>) as parameters and returns the deflated output as a string.</p>
+</section>
+<section id="http.zlib-example" class="level3">
+<h3>Example</h3>
+<div class="sourceCode" id="cb11"><pre class="sourceCode lua"><code class="sourceCode lua"><a class="sourceLine" id="cb11-1" title="1"><span class="kw">local</span> zlib <span class="op">=</span> <span class="fu">require</span> <span class="st">&quot;http.zlib&quot;</span></a>
+<a class="sourceLine" id="cb11-2" title="2"><span class="kw">local</span> original <span class="op">=</span> <span class="st">&quot;the racecar raced around the racecar track&quot;</span></a>
+<a class="sourceLine" id="cb11-3" title="3"><span class="kw">local</span> deflater <span class="op">=</span> zlib<span class="op">.</span>deflate<span class="op">()</span></a>
+<a class="sourceLine" id="cb11-4" title="4"><span class="kw">local</span> compressed <span class="op">=</span> deflater<span class="op">(</span>original<span class="op">,</span> <span class="kw">true</span><span class="op">)</span></a>
+<a class="sourceLine" id="cb11-5" title="5"><span class="fu">print</span><span class="op">(#</span>original<span class="op">,</span> <span class="op">#</span>compressed<span class="op">)</span> <span class="co">-- compressed should be smaller</span></a>
+<a class="sourceLine" id="cb11-6" title="6"><span class="kw">local</span> inflater <span class="op">=</span> zlib<span class="op">.</span>inflate<span class="op">()</span></a>
+<a class="sourceLine" id="cb11-7" title="7"><span class="kw">local</span> uncompressed <span class="op">=</span> inflater<span class="op">(</span>compressed<span class="op">,</span> <span class="kw">true</span><span class="op">)</span></a>
+<a class="sourceLine" id="cb11-8" title="8"><span class="fu">assert</span><span class="op">(</span>original <span class="op">==</span> uncompressed<span class="op">)</span></a></code></pre></div>
+</section>
+</section>
+<section id="http.compat.prosody" class="level2">
+<h2>http.compat.prosody</h2>
+<p>Provides usage similar to <a href="https://prosody.im/doc/developers/net/http">prosody’s net.http</a></p>
+<section id="http.compat.prosody.request" class="level3">
+<h3><code>request(url, ex, callback)</code> <!-- --></h3>
+<p>A few key differences to the prosody <code>net.http.request</code>:</p>
+<ul>
+<li>must be called from within a running cqueue</li>
+<li>The callback may be called from a different thread in the cqueue</li>
+<li>The returned object will be a <a href="#http.request"><em>http.request</em></a> object
+<ul>
+<li>This object is passed to the callback on errors and as the fourth argument on success</li>
+</ul></li>
+<li>The default user-agent will be from lua-http (rather than <code>&quot;Prosody XMPP Server&quot;</code>)</li>
+<li>lua-http features (such as HTTP2) will be used where possible</li>
+</ul>
+</section>
+<section id="http.compat.prosody-example" class="level3">
+<h3>Example</h3>
+<div class="sourceCode" id="cb12"><pre class="sourceCode lua"><code class="sourceCode lua"><a class="sourceLine" id="cb12-1" title="1"><span class="kw">local</span> prosody_http <span class="op">=</span> <span class="fu">require</span> <span class="st">&quot;http.compat.prosody&quot;</span></a>
+<a class="sourceLine" id="cb12-2" title="2"><span class="kw">local</span> cqueues <span class="op">=</span> <span class="fu">require</span> <span class="st">&quot;cqueues&quot;</span></a>
+<a class="sourceLine" id="cb12-3" title="3"><span class="kw">local</span> cq <span class="op">=</span> cqueues<span class="op">.</span>new<span class="op">()</span></a>
+<a class="sourceLine" id="cb12-4" title="4">cq<span class="op">:</span>wrap<span class="op">(</span><span class="kw">function</span><span class="op">()</span></a>
+<a class="sourceLine" id="cb12-5" title="5">    prosody_http<span class="op">.</span>request<span class="op">(</span><span class="st">&quot;http://httpbin.org/ip&quot;</span><span class="op">,</span> <span class="op">{},</span> <span class="kw">function</span><span class="op">(</span>b<span class="op">,</span> c<span class="op">,</span> r<span class="op">)</span></a>
+<a class="sourceLine" id="cb12-6" title="6">        <span class="fu">print</span><span class="op">(</span>c<span class="op">)</span> <span class="co">--&gt; 200</span></a>
+<a class="sourceLine" id="cb12-7" title="7">        <span class="fu">print</span><span class="op">(</span>b<span class="op">)</span> <span class="co">--&gt; {&quot;origin&quot;: &quot;123.123.123.123&quot;}</span></a>
+<a class="sourceLine" id="cb12-8" title="8">    <span class="cf">end</span><span class="op">)</span></a>
+<a class="sourceLine" id="cb12-9" title="9"><span class="cf">end</span><span class="op">)</span></a>
+<a class="sourceLine" id="cb12-10" title="10"><span class="fu">assert</span><span class="op">(</span>cq<span class="op">:</span>loop<span class="op">())</span></a></code></pre></div>
+</section>
+</section>
+<section id="http.compat.socket" class="level2">
+<h2>http.compat.socket</h2>
+<p>Provides compatibility with <a href="http://w3.impa.br/~diego/software/luasocket/http.html">luasocket’s http.request module</a>.</p>
+<p>Differences:</p>
+<ul>
+<li>Will automatically be non-blocking when run inside a cqueues managed coroutine</li>
+<li>lua-http features (such as HTTP2) will be used where possible</li>
+</ul>
+<section id="http.compat.socket-example" class="level3">
+<h3>Example</h3>
+<p>Using the ‘simple’ interface as part of a normal script:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode lua"><code class="sourceCode lua"><a class="sourceLine" id="cb13-1" title="1"><span class="kw">local</span> socket_http <span class="op">=</span> <span class="fu">require</span> <span class="st">&quot;http.compat.socket&quot;</span></a>
+<a class="sourceLine" id="cb13-2" title="2"><span class="kw">local</span> body<span class="op">,</span> code <span class="op">=</span> <span class="fu">assert</span><span class="op">(</span>socket_http<span class="op">.</span>request<span class="op">(</span><span class="st">&quot;http://lua.org&quot;</span><span class="op">))</span></a>
+<a class="sourceLine" id="cb13-3" title="3"><span class="fu">print</span><span class="op">(</span>code<span class="op">,</span> <span class="op">#</span>body<span class="op">)</span> <span class="co">--&gt; 200, 2514</span></a></code></pre></div>
+</section>
+</section>
+</section>
+<section id="links" class="level1">
+<h1>Links</h1>
+<ul>
+<li><a href="https://github.com/daurnimator/lua-http">Github</a></li>
+<li><a href="https://github.com/daurnimator/lua-http/issues">Issue tracker</a></li>
+</ul>
+</section>
+</main>
+<style type="text/css">
+li.collapsible > ul {
+  display: none;
+}
+@media screen {
+  li.collapsible {
+    cursor: pointer;
+    list-style-type: none;
+  }
+  li.collapsible:before {
+    margin-left: -1rem; /* undo ul's padding-left */
+    width: 1rem;
+    display: inline-block;
+    text-align: center;
+    content: '-';
+  }
+  li.collapsible[state="collapsed"]:before {
+    content: '+';
+  }
+  li.collapsible:not([state="collapsed"]) > ul {
+    display: block;
+  }
+}
+</style>
+<script type="text/javascript">
+  document.querySelectorAll('nav > ul > li > ul > li').forEach(function(element) {
+    element.className = 'collapsible';
+    element.setAttribute('state', 'collapsed');
+    element.onclick = function(event) {
+      if (event.target != this) return;
+      if (this.getAttribute('state') == 'collapsed') {
+        this.removeAttribute('state');
+      } else {
+        this.setAttribute('state', 'collapsed');
+      }
+    }
+  });
+</script>
+</body>
+</html>
