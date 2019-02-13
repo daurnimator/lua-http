@@ -1,5 +1,5 @@
 package = "http"
-version = "scm-0"
+version = "0.3-0"
 
 description = {
 	summary = "HTTP library for Lua";
@@ -8,7 +8,8 @@ description = {
 }
 
 source = {
-	url = "git+https://github.com/daurnimator/lua-http.git";
+	url = "https://github.com/daurnimator/lua-http/archive/v0.3.zip";
+	dir = "lua-http-0.3";
 }
 
 dependencies = {
