@@ -459,6 +459,7 @@ function request_methods:go(timeout)
 				end
 				host = assert(proxy.host, "proxy is missing host")
 				port = proxy.port or http_util.scheme_to_port[proxy.scheme]
+				tls = (proxy.scheme == "https")
 				use_absolute_target = true
 				if proxy.userinfo then
 					if not cloned_headers then
