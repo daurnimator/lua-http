@@ -5,6 +5,7 @@ local ce = require "cqueues.errno"
 local new_fifo = require "fifo"
 local lpeg = require "lpeg"
 local http_patts = require "lpeg_patterns.http"
+local uri_patts = require "lpeg_patterns.uri"
 local new_headers = require "http.headers".new
 local reason_phrases = require "http.h1_reason_phrases"
 local stream_common = require "http.stream_common"
@@ -22,6 +23,8 @@ local Connection = lpeg.Ct(http_patts.Connection) * EOF
 local Content_Encoding = lpeg.Ct(http_patts.Content_Encoding) * EOF
 local Transfer_Encoding = lpeg.Ct(http_patts.Transfer_Encoding) * EOF
 local TE = lpeg.Ct(http_patts.TE) * EOF
+local absolute_form = uri_patts.absolute_uri * EOF
+local authority_form = uri_patts.authority * EOF
 
 local function has(list, val)
 	if list then
@@ -249,6 +252,41 @@ function stream_methods:step(timeout)
 	return true
 end
 
+-- should return scheme, authority, path
+local function parse_target(path)
+	if path:sub(1, 1) == "/" or path == "*" then
+		-- 'origin-form' or 'asterisk-form'
+		-- early exit for common case
+		return nil, nil, path
+	end
+
+	local absolute_uri = absolute_form:match(path)
+	if absolute_uri then
+		-- don't want normalised form of authority or path
+		local authority
+		if absolute_uri.host then
+			authority, path = path:match("://([^/]*)(.*)")
+			if path == "" then
+				path = nil
+			end
+		else
+			-- authority is nil
+			-- path should be nil if there are no characters.
+			path = path:match(":(.+)")
+		end
+		return absolute_uri.scheme, authority, path
+	end
+
+	if authority_form:match(path) then
+		-- don't want normalised form of authority
+		-- `path` *is* the authority
+		return nil, path, nil
+	end
+
+	-- other...
+	return nil, nil, path
+end
+
 -- read_headers may be called more than once for a stream
 -- e.g. for 100 Continue
 -- this function *should never throw* under normal operation
@@ -281,12 +319,43 @@ function stream_methods:read_headers(timeout)
 			self.peer_version = httpversion
 			headers = new_headers()
 			headers:append(":method", method)
-			if method == "CONNECT" then
-				headers:append(":authority", target)
-			else
-				headers:append(":path", target)
+			local scheme, authority, path = parse_target(target)
+			if authority then
+				-- RFC 7230 Section 5.4
+				-- When a proxy receives a request with an absolute-form of
+				-- request-target, the proxy MUST ignore the received Host header field
+				-- (if any) and instead replace it with the host information of the
+				-- request-target.
+				headers:append(":authority", authority)
 			end
-			headers:append(":scheme", self:checktls() and "https" or "http")
+			-- RFC 7230 Section 5.5
+			-- If the request-target is in absolute-form, the effective request URI
+			-- is the same as the request-target.  Otherwise, the effective request
+			-- URI is constructed as follows:
+			if not scheme then
+				-- If the server's configuration (or outbound gateway) provides a
+				-- fixed URI scheme, that scheme is used for the effective request
+				-- URI.  Otherwise, if the request is received over a TLS-secured TCP
+				-- connection, the effective request URI's scheme is "https"; if not,
+				-- the scheme is "http".
+				if self:checktls() then
+					scheme = "https"
+				else
+					scheme = "http"
+				end
+			end
+			if path then
+				headers:append(":path", path)
+			elseif method == "OPTIONS" then
+				-- RFC 7230 Section 5.3.4
+				-- If a proxy receives an OPTIONS request with an absolute-form of
+				-- request-target in which the URI has an empty path and no query
+				-- component, then the last proxy on the request chain MUST send a
+				-- request-target of "*" when it forwards the request to the indicated
+				-- origin server.
+				headers:append(":path", "*")
+			end
+			headers:append(":scheme", scheme)
 			self:set_state("open")
 		else -- client
 			-- Make sure we're at front of connection pipeline
@@ -342,9 +411,17 @@ function stream_methods:read_headers(timeout)
 		end
 		k = k:lower() -- normalise to lower case
 		if k == "host" and not is_trailers then
-			k = ":authority"
+			-- RFC 7230 Section 5.4
+			-- When a proxy receives a request with an absolute-form of
+			-- request-target, the proxy MUST ignore the received Host header field
+			-- (if any) and instead replace it with the host information of the
+			-- request-target.
+			if not headers:has(":authority") then
+				headers:append(":authority", v)
+			end
+		else
+			headers:append(k, v)
 		end
-		headers:append(k, v)
 	end
 
 	do
@@ -742,13 +819,9 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 				return nil, err, errno
 			end
 		elseif name == ":authority" then
-			-- for CONNECT requests, :authority is the path
-			if self.req_method ~= "CONNECT" then
-				-- otherwise it's the Host header
-				local ok, err, errno = self.connection:write_header("host", value, 0)
-				if not ok then
-					return nil, err, errno
-				end
+			local ok, err, errno = self.connection:write_header("host", value, 0)
+			if not ok then
+				return nil, err, errno
 			end
 		end
 	end
