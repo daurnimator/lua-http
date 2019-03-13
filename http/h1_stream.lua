@@ -267,7 +267,7 @@ function stream_methods:read_headers(timeout)
 			if self.state == "half closed (local)" then
 				return nil
 			end
-			local method, path, httpversion = self.connection:read_request_line(0)
+			local method, target, httpversion = self.connection:read_request_line(0)
 			if method == nil then
 				if httpversion == ce.ETIMEDOUT then
 					timeout = deadline and deadline-monotime()
@@ -275,16 +275,16 @@ function stream_methods:read_headers(timeout)
 						return self:read_headers(deadline and deadline-monotime())
 					end
 				end
-				return nil, path, httpversion
+				return nil, target, httpversion
 			end
 			self.req_method = method
 			self.peer_version = httpversion
 			headers = new_headers()
 			headers:append(":method", method)
 			if method == "CONNECT" then
-				headers:append(":authority", path)
+				headers:append(":authority", target)
 			else
-				headers:append(":path", path)
+				headers:append(":path", target)
 			end
 			headers:append(":scheme", self:checktls() and "https" or "http")
 			self:set_state("open")
@@ -564,14 +564,14 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 		if self.state == "idle" then
 			method = assert(headers:get(":method"), "missing method")
 			self.req_method = method
-			local path
+			local target
 			if method == "CONNECT" then
-				path = assert(headers:get(":authority"), "missing authority")
+				target = assert(headers:get(":authority"), "missing authority")
 				assert(not headers:has(":path"), "CONNECT requests should not have a path")
 			else
 				-- RFC 7230 Section 5.4: A client MUST send a Host header field in all HTTP/1.1 request messages.
 				assert(self.connection.version < 1.1 or headers:has(":authority"), "missing authority")
-				path = assert(headers:get(":path"), "missing path")
+				target = assert(headers:get(":path"), "missing path")
 			end
 			if self.connection.req_locked then
 				-- Wait until previous request has been fully written
@@ -585,7 +585,7 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 			self.connection.pipeline:push(self)
 			self.connection.req_locked = self
 			-- write request line
-			local ok, err, errno = self.connection:write_request_line(method, path, self.connection.version, 0)
+			local ok, err, errno = self.connection:write_request_line(method, target, self.connection.version, 0)
 			if not ok then
 				return nil, err, errno
 			end

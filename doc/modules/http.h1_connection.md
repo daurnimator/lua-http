@@ -113,7 +113,7 @@ Used to hand the reference of the connection socket to another object. Resets th
 
 ### `h1_connection:read_request_line(timeout)` <!-- --> {#http.h1_connection:read_request_line}
 
-Reads a request line from the socket. Returns the request method, requested path and HTTP version for an incoming request. `:read_request_line()` yields until a `"\r\n"` terminated chunk is received, or `timeout` is exceeded. If the incoming chunk is not a valid HTTP request line, `nil` is returned. On error, returns `nil`, an error message and an error number.
+Reads a request line from the socket. Returns the request method, request target and HTTP version for an incoming request. `:read_request_line()` yields until a `"\r\n"` terminated chunk is received, or `timeout` is exceeded. If the incoming chunk is not a valid HTTP request line, `nil` is returned. On error, returns `nil`, an error message and an error number.
 
 
 ### `h1_connection:read_status_line(timeout)` <!-- --> {#http.h1_connection:read_status_line}
@@ -146,7 +146,7 @@ Reads the entire request body. This function will yield until the body is comple
 Reads the next available line of data from the request and returns the chunk and any chunk extensions. This function will yield until chunk size is received or `timeout` is exceeded. If the chunk size is indicated as `0` then `false` and any chunk extensions are returned. Returns `nil`, an error message and an error number if there was an error reading reading the chunk header or the socket.
 
 
-### `h1_connection:write_request_line(method, path, httpversion, timeout)` <!-- --> {#http.h1_connection:write_request_line}
+### `h1_connection:write_request_line(method, target, httpversion, timeout)` <!-- --> {#http.h1_connection:write_request_line}
 
 Writes the opening HTTP 1.x request line for a new request to the socket buffer. Yields until success or `timeout`. If the write fails, returns `nil`, an error message and an error number.
 

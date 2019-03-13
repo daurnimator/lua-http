@@ -167,7 +167,7 @@ function connection_methods:read_request_line(timeout)
 		end
 		return nil, err, errno
 	end
-	local method, path, httpversion = line:match("^(%w+) (%S+) HTTP/(1%.[01])\r\n$")
+	local method, target, httpversion = line:match("^(%w+) (%S+) HTTP/(1%.[01])\r\n$")
 	if not method then
 		self.socket:seterror("r", ce.EILSEQ)
 		local ok, errno2 = self.socket:unget(line)
@@ -183,7 +183,7 @@ function connection_methods:read_request_line(timeout)
 		return nil, onerror(self.socket, "read_request_line", ce.EILSEQ)
 	end
 	httpversion = httpversion == "1.0" and 1.0 or 1.1 -- Avoid tonumber() due to locale issues
-	return method, path, httpversion
+	return method, target, httpversion
 end
 
 function connection_methods:read_status_line(timeout)
@@ -344,11 +344,11 @@ function connection_methods:read_body_chunk(timeout)
 	end
 end
 
-function connection_methods:write_request_line(method, path, httpversion, timeout)
+function connection_methods:write_request_line(method, target, httpversion, timeout)
 	assert(method:match("^[^ \r\n]+$"))
-	assert(path:match("^[^ \r\n]+$"))
+	assert(target:match("^[^ \r\n]+$"))
 	assert(httpversion == 1.0 or httpversion == 1.1)
-	local line = string.format("%s %s HTTP/%s\r\n", method, path, httpversion == 1.0 and "1.0" or "1.1")
+	local line = string.format("%s %s HTTP/%s\r\n", method, target, httpversion == 1.0 and "1.0" or "1.1")
 	local ok, err, errno = self.socket:xwrite(line, "f", timeout)
 	if not ok then
 		return nil, err, errno
