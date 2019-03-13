@@ -482,6 +482,7 @@ local ignore_fields = {
 	[":path"] = true;
 	[":scheme"] = true;
 	[":status"] = true;
+	[":protocol"] = true; -- from RFC 8441
 	-- fields written manually in :write_headers
 	["connection"] = true;
 	["content-length"] = true;
