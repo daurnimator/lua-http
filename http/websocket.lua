@@ -545,8 +545,6 @@ end
 
 local function new_from_uri(uri, protocols)
 	local request = http_request.new_from_uri(uri)
-	local scheme = request.headers:get(":scheme")
-	assert(scheme == "ws" or scheme == "wss", "scheme not websocket")
 	local self = new("client")
 	self.request = request
 	self.request.version = 1.1

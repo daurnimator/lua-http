@@ -77,6 +77,11 @@ local function new_from_uri(uri_t, headers)
 			path = path .. "?" .. uri_t.query
 		end
 		headers:upsert(":path", path)
+		if scheme == "wss" then
+			scheme = "https"
+		elseif scheme == "ws" then
+			scheme = "http"
+		end
 		headers:upsert(":scheme", scheme)
 	end
 	if uri_t.userinfo then
@@ -95,7 +100,7 @@ local function new_from_uri(uri_t, headers)
 	return setmetatable({
 		host = host;
 		port = port;
-		tls = (scheme == "https" or scheme == "wss");
+		tls = (scheme == "https");
 		headers = headers;
 		body = nil;
 	}, request_mt)
@@ -209,9 +214,9 @@ function request_methods:handle_redirect(orig_headers)
 		if not is_connect then
 			new_req.headers:upsert(":scheme", new_scheme)
 		end
-		if new_scheme == "https" or new_scheme == "wss" then
+		if new_scheme == "https" then
 			new_req.tls = true
-		elseif new_scheme == "http" or new_scheme == "ws" then
+		elseif new_scheme == "http" then
 			new_req.tls = false
 		else
 			return nil, "unknown scheme", ce.EINVAL

@@ -375,6 +375,7 @@ describe("http.websocket module two sided tests", function()
 			port = 0;
 			onstream = function(s, stream)
 				local headers = assert(stream:get_headers())
+				assert.same("http", headers:get(":scheme"))
 				local ws = websocket.new_from_stream(stream, headers)
 				assert(ws:accept())
 				assert(ws:close())

@@ -57,11 +57,11 @@ function proxies_methods:choose(scheme, host)
 			end
 		end
 	end
-	if scheme == "http" or scheme == "ws" then
+	if scheme == "http" then
 		if self.http_proxy then
 			return self.http_proxy
 		end
-	elseif scheme == "https" or scheme == "wss" then
+	elseif scheme == "https" then
 		if self.https_proxy then
 			return self.https_proxy
 		end
