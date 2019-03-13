@@ -268,6 +268,7 @@ describe("http.server module", function()
 			}))
 			local headers = http_headers.new()
 			headers:append(":method", "GET")
+			headers:append(":scheme", "http")
 			headers:append(":path", "/")
 			headers:append(":authority", "foo")
 			-- Normal request

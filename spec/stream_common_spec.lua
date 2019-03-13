@@ -12,8 +12,9 @@ describe("http.stream_common", function()
 	end
 	local function new_request_headers()
 		local headers = new_headers()
-		headers:append(":authority", "myauthority")
 		headers:append(":method", "GET")
+		headers:append(":scheme", "http")
+		headers:append(":authority", "myauthority")
 		headers:append(":path", "/")
 		return headers
 	end

@@ -92,6 +92,7 @@ describe("http.websocket", function()
 		end
 		local correct_headers = http_headers.new()
 		correct_headers:append(":method", "GET")
+		correct_headers:append(":scheme", "http")
 		correct_headers:append(":authority", "example.com")
 		correct_headers:append(":path", "/")
 		correct_headers:append("upgrade", "websocket")
