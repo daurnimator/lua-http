@@ -77,6 +77,7 @@ local function new_stream(connection)
 
 		req_method = nil; -- string
 		peer_version = nil; -- 1.0 or 1.1
+		use_absolute_target = nil; -- tristate boolean
 		has_main_headers = false;
 		headers_in_progress = nil;
 		headers_fifo = new_fifo();
@@ -648,8 +649,32 @@ function stream_methods:write_headers(headers, end_stream, timeout)
 				assert(not headers:has(":path"), "CONNECT requests should not have a path")
 			else
 				-- RFC 7230 Section 5.4: A client MUST send a Host header field in all HTTP/1.1 request messages.
-				assert(self.connection.version < 1.1 or headers:has(":authority"), "missing authority")
+				local has_authority = headers:has(":authority")
+				assert(has_authority or self.connection.version < 1.1, "missing authority")
 				target = assert(headers:get(":path"), "missing path")
+
+				local use_absolute_target = self.use_absolute_target
+				if use_absolute_target then
+					assert(has_authority, "request-target absolute-form requires an authority")
+				elseif use_absolute_target == nil then
+					use_absolute_target = has_authority
+				end
+				if use_absolute_target then
+					-- RFC 7230 Section 5.3.2
+					-- When making a request to a proxy, other than a CONNECT or server-wide
+					-- OPTIONS request (as detailed below), a client MUST send the target
+					-- URI in absolute-form as the request-target.
+					-- ...
+					-- To allow for transition to the absolute-form for all requests in some
+					-- future version of HTTP, a server MUST accept the absolute-form in
+					-- requests, even though HTTP/1.1 clients will only send them in
+					-- requests to proxies.
+					if target == "*" then
+						target = headers:get(":scheme") .. "://" .. headers:get(":authority")
+					else
+						target = headers:get(":scheme") .. "://" .. headers:get(":authority") .. target
+					end
+				end
 			end
 			if self.connection.req_locked then
 				-- Wait until previous request has been fully written

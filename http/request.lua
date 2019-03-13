@@ -358,6 +358,7 @@ function request_methods:go(timeout)
 	local port = self.port
 	local tls = self.tls
 	local version = self.version
+	local use_absolute_target
 
 	-- RFC 6797 Section 8.3
 	if not tls and self.hsts and self.hsts:check(host) then
@@ -456,17 +457,14 @@ function request_methods:go(timeout)
 				if request_headers:get(":method") == "CONNECT" then
 					error("cannot use HTTP Proxy with CONNECT method")
 				end
-				-- TODO: Check if :path already has authority?
-				local old_url = self:to_uri(false)
 				host = assert(proxy.host, "proxy is missing host")
 				port = proxy.port or http_util.scheme_to_port[proxy.scheme]
-				-- proxy requests get a uri that includes host as their path
-				if not cloned_headers then
-					request_headers = request_headers:clone()
-					cloned_headers = true -- luacheck: ignore 311
-				end
-				request_headers:upsert(":path", old_url)
+				use_absolute_target = true
 				if proxy.userinfo then
+					if not cloned_headers then
+						request_headers = request_headers:clone()
+						cloned_headers = true -- luacheck: ignore 311
+					end
 					request_headers:upsert("proxy-authorization", "basic " .. basexx.to_base64(proxy.userinfo), true)
 				end
 			end
@@ -518,6 +516,10 @@ function request_methods:go(timeout)
 		if stream == nil then
 			return nil, err, errno
 		end
+	end
+
+	if use_absolute_target and connection.version < 2 then
+		stream.use_absolute_target = use_absolute_target
 	end
 
 	local body = self.body
