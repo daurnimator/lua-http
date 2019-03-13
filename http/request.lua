@@ -357,6 +357,7 @@ function request_methods:go(timeout)
 	local host = self.host
 	local port = self.port
 	local tls = self.tls
+	local version = self.version
 
 	-- RFC 6797 Section 8.3
 	if not tls and self.hsts and self.hsts:check(host) then
@@ -444,7 +445,7 @@ function request_methods:go(timeout)
 					tls = tls;
 					ctx = self.ctx;
 					sendname = self.sendname;
-					version = self.version;
+					version = version;
 					h2_settings = default_h2_settings;
 				}, deadline and deadline-monotime())
 				if connection == nil then
@@ -480,7 +481,7 @@ function request_methods:go(timeout)
 				tls = tls;
 				ctx = self.ctx;
 				sendname = self.sendname ~= nil and self.sendname or host;
-				version = self.version;
+				version = version;
 				h2_settings = default_h2_settings;
 			}, deadline and deadline-monotime())
 			if connection == nil then
@@ -501,7 +502,7 @@ function request_methods:go(timeout)
 			tls = tls;
 			ctx = self.ctx;
 			sendname = self.sendname;
-			version = self.version;
+			version = version;
 			h2_settings = default_h2_settings;
 		}, deadline and deadline-monotime())
 		if connection == nil then
