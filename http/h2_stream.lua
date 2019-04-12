@@ -690,6 +690,9 @@ frame_handlers[frame_types.RST_STREAM] = function(stream, flags, payload, deadli
 	end
 	if stream.state == "idle" then
 		return nil, h2_errors.PROTOCOL_ERROR:new_traceback("'RST_STREAM' frames MUST NOT be sent for a stream in the 'idle' state"), ce.EILSEQ
+	elseif stream.state == "closed" then
+		-- probably a delayed RST_STREAM, ignore
+		return true
 	end
 
 	local err_code = sunpack(">I4", payload)
