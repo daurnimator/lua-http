@@ -152,7 +152,16 @@ local function handle_socket(self, socket)
 		while true do
 			local timeout = deadline and deadline-monotime() or self.intra_stream_timeout
 			local stream
-			stream, err, errno = conn:get_next_incoming_stream(timeout)
+			local stream_or_err
+			local finished
+			finished, stream_or_err, err, errno = xpcall(conn.get_next_incoming_stream, debug.traceback, conn, timeout)
+			if not finished then  -- uncaught internal error, terminate connection
+				err = stream_or_err
+				errno = ce.EFAULT
+				stream = nil
+			else
+				stream = stream_or_err
+			end
 			if stream == nil then
 				if (err ~= nil -- client closed connection
 					and errno ~= ce.ECONNRESET
