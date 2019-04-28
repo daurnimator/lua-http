@@ -3,8 +3,8 @@ HTTP Header data structure/type
 
 Design criteria:
   - the same header field is allowed more than once
-      - must be able to fetch seperate occurences (important for some headers e.g. Set-Cookie)
-      - optionally available as comma seperated list
+      - must be able to fetch separate occurences (important for some headers e.g. Set-Cookie)
+      - optionally available as comma separated list
   - http2 adds flag to headers that they should never be indexed
   - header order should be recoverable
 
