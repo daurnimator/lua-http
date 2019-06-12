@@ -755,7 +755,11 @@ local function new_client_context()
 	local ctx = openssl_ctx.new("TLS", false)
 	ctx:setCipherList(intermediate_cipher_list)
 	ctx:setOptions(default_tls_options)
-	ctx:setEphemeralKey(openssl_pkey.new{ type = "EC", curve = "prime256v1" })
+	if ctx.setGroups then
+		ctx:setGroups("P-521:P-384:P-256")
+	else
+		ctx:setEphemeralKey(openssl_pkey.new{ type = "EC", curve = "prime256v1" })
+	end
 	local store = ctx:getStore()
 	store:addDefaults()
 	ctx:setVerify(openssl_ctx.VERIFY_PEER)
@@ -766,7 +770,11 @@ local function new_server_context()
 	local ctx = openssl_ctx.new("TLS", true)
 	ctx:setCipherList(intermediate_cipher_list)
 	ctx:setOptions(default_tls_options)
-	ctx:setEphemeralKey(openssl_pkey.new{ type = "EC", curve = "prime256v1" })
+	if ctx.setGroups then
+		ctx:setGroups("P-521:P-384:P-256")
+	else
+		ctx:setEphemeralKey(openssl_pkey.new{ type = "EC", curve = "prime256v1" })
+	end
 	return ctx
 end
 
