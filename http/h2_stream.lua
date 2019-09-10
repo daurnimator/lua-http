@@ -1386,7 +1386,7 @@ function stream_methods:write_chunk(payload, end_stream, timeout)
 		if max_available < (#payload - sent) then
 			if max_available > 0 then
 				-- send partial payload
-				local ok, err, errno = self:write_data_frame(payload:sub(sent+1, sent+max_available), false, timeout)
+				local ok, err, errno = self:write_data_frame(payload:sub(sent+1, sent+max_available), end_stream, false, timeout)
 				if not ok then
 					return nil, err, errno
 				end
