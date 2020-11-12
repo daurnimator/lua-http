@@ -7,8 +7,8 @@ The bit operations are only done
 This means we can ignore the differences between bit libraries.
 ]]
 
--- Lua 5.3 has built-in bit operators, wrap them in a function.
-if _VERSION == "Lua 5.3" then
+-- Lua 5.3+ has built-in bit operators, wrap them in a function.
+if _VERSION == "Lua 5.4" or _VERSION == "Lua 5.3" then
 	-- Use debug.getinfo to get correct file+line numbers for loaded snippet
 	local info = debug.getinfo(1, "Sl")
 	return assert(load(("\n"):rep(info.currentline+1)..[[return {
