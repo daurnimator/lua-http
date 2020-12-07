@@ -1,5 +1,9 @@
 language: python
 
+arch:
+ - amd64
+ - ppc64le
+ 
 sudo: false
 
 env:
@@ -24,6 +28,26 @@ env:
     - LUA="luajit 2.1"
     - LUA="luajit 2.1" ZLIB=lzlib
     - LUA="luajit 2.1" ZLIB=lua-zlib
+jobs:
+    exclude:
+        - arch: ppc64le
+          env: LUA="luajit @"
+        - arch: ppc64le
+          env: LUA="luajit @"   ZLIB=lzlib    
+        - arch: ppc64le
+          env: LUA="luajit @"   ZLIB=lua-zlib
+        - arch: ppc64le
+          env: LUA="luajit 2.0"       
+        - arch: ppc64le
+          env: LUA="luajit 2.0" ZLIB=lzlib       
+        - arch: ppc64le
+          env: LUA="luajit 2.0" ZLIB=lua-zlib
+        - arch: ppc64le
+          env: LUA="luajit 2.1"
+        - arch: ppc64le
+          env: LUA="luajit 2.1" ZLIB=lzlib
+        - arch: ppc64le
+          env: LUA="luajit 2.1" ZLIB=lua-zlib    
 
 branches:
   only:
