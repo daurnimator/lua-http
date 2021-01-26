@@ -1,0 +1,109 @@
+name: ci
+
+on:
+  pull_request: {}
+  push:
+    branches: [ $default-branch ]
+
+jobs:
+  luacheck:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        path: lua-http
+    - uses: leafo/gh-actions-lua@v8.0.0
+    - uses: leafo/gh-actions-luarocks@v4.0.0
+    - name: install-tooling
+      run: luarocks install luacheck
+    - name: luacheck
+      run: |
+        cd lua-http
+        luacheck .
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        luaVersion:
+          - "5.1"
+          - "5.2"
+          - "5.3"
+          - "5.4"
+          - luajit-2.0.5
+          - luajit-2.1.0-beta3
+        luaCompileFlags: [""]
+        zlib: ["", "lzlib", "lua-zlib"]
+        remove_compat53: [false]
+
+        exclude:
+          # lzlib doesn't support Lua 5.4+
+          - luaVersion: "5.4"
+            zlib: "lzlib"
+        include:
+          - luaVersion: "5.3"
+            luaCompileFlags: LUA_CFLAGS="-DLUA_INT_TYPE=LUA_INT_INT"
+          - luaVersion: "5.3"
+            remove_compat53: true
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        path: lua-http
+    - uses: leafo/gh-actions-lua@v8.0.0
+      with:
+        luaVersion: ${{ matrix.luaVersion }}
+    - uses: leafo/gh-actions-luarocks@v4.0.0
+    - name: install-tooling
+      run: |
+        luarocks install luacov-coveralls
+        luarocks install busted
+    - name: install-dependencies
+      run: |
+        cd lua-http
+        luarocks install --only-deps http-scm-0.rockspec
+
+    - name: install-lzlib
+      if: matrix.zlib == 'lzlib'
+      run: luarocks install lzlib
+    - name: install-lua-zlib
+      if: matrix.zlib == 'lua-zlib'
+      run: luarocks install lua-zlib
+
+    - name: remove-compat53
+      if: matrix.remove_compat53
+      run: luarocks remove compat53
+
+    - name: test
+      run: |
+        cd lua-http
+        busted -c -o utfTerminal
+
+    - name: coveralls
+      continue-on-error: true
+      env:
+        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+      run: |
+        cd lua-http
+        luacov-coveralls -v
+
+  typedlua:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        path: lua-http
+    - uses: leafo/gh-actions-lua@v8.0.0
+      with:
+        luaVersion: "5.3" # tlc doesn't work with 5.4+
+    - uses: leafo/gh-actions-luarocks@v4.0.0
+    - name: install-tooling
+      run: luarocks install https://raw.githubusercontent.com/andremm/typedlua/master/typedlua-scm-1.rockspec
+    - name: install-dependencies
+      run: |
+        cd lua-http
+        luarocks install --only-deps http-scm-0.rockspec
+    - name: typedlua
+      run: |
+        cd lua-http
+        tlc -o /dev/null spec/require-all.lua

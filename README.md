@@ -17,6 +17,7 @@ Can be found at [https://daurnimator.github.io/lua-http/](https://daurnimator.gi
 
 ## Status
 
+![Build Status](https://github.com/daurnimator/lua-http/workflows/ci/badge.svg)
 [![Build Status](https://travis-ci.org/daurnimator/lua-http.svg)](https://travis-ci.org/daurnimator/lua-http)
 [![Coverage Status](https://coveralls.io/repos/daurnimator/lua-http/badge.svg?branch=master&service=github)](https://coveralls.io/github/daurnimator/lua-http?branch=master)
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/108/badge)](https://bestpractices.coreinfrastructure.org/projects/108)
