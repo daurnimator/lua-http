@@ -52,7 +52,7 @@ Defaults to the [latest](https://rockdaboot.github.io/libpsl/libpsl-Public-Suffi
 
 A function used by the `store` to get the current time for expiries and such.
 
-Defaults to a function based on [`os.time`](https://www.lua.org/manual/5.3/manual.html#pdf-os.time).
+Defaults to a function based on [`os.time`](https://www.lua.org/manual/5.4/manual.html#pdf-os.time).
 
 
 ### `store.max_cookie_length` <!-- --> {#http.cookie.store.max_cookie_length}

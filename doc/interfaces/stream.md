@@ -61,17 +61,17 @@ Reads `n` characters (bytes) of body from the stream and return them as a string
 
 ### `stream:get_body_until(pattern, plain, include_pattern, timeout)` <!-- --> {#stream:get_body_until}
 
-Reads in body data from the stream until the [lua pattern](http://www.lua.org/manual/5.3/manual.html#6.4.1) `pattern` is found and returns the data as a string. `plain` is a boolean that indicates that pattern matching facilities should be turned off so that function does a plain "find substring" operation, with no characters in pattern being considered magic. `include_patterns` specifies if the pattern itself should be included in the returned string. On error, returns `nil`, an error message and an error number.
+Reads in body data from the stream until the [lua pattern](http://www.lua.org/manual/5.4/manual.html#6.4.1) `pattern` is found and returns the data as a string. `plain` is a boolean that indicates that pattern matching facilities should be turned off so that function does a plain "find substring" operation, with no characters in pattern being considered magic. `include_patterns` specifies if the pattern itself should be included in the returned string. On error, returns `nil`, an error message and an error number.
 
 
 ### `stream:save_body_to_file(file, timeout)` <!-- --> {#stream:save_body_to_file}
 
-Reads the body from the stream and saves it to the [lua file handle](http://www.lua.org/manual/5.3/manual.html#6.8) `file`. On error, returns `nil`, an error message and an error number.
+Reads the body from the stream and saves it to the [lua file handle](http://www.lua.org/manual/5.4/manual.html#6.8) `file`. On error, returns `nil`, an error message and an error number.
 
 
 ### `stream:get_body_as_file(timeout)` <!-- --> {#stream:get_body_as_file}
 
-Reads the body from the stream into a temporary file and returns a [lua file handle](http://www.lua.org/manual/5.3/manual.html#6.8). On error, returns `nil`, an error message and an error number.
+Reads the body from the stream into a temporary file and returns a [lua file handle](http://www.lua.org/manual/5.4/manual.html#6.8). On error, returns `nil`, an error message and an error number.
 
 
 ### `stream:unget(str)` <!-- --> {#stream:unget}

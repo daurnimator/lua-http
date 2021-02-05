@@ -1,6 +1,6 @@
 # Introduction
 
-lua-http is an performant, capable HTTP and WebSocket library for Lua 5.1, 5.2, 5.3 and LuaJIT. Some of the features of the library include:
+lua-http is an performant, capable HTTP and WebSocket library for Lua 5.1, 5.2, 5.3, 5.4 and LuaJIT. Some of the features of the library include:
 
   - Support for HTTP versions 1, 1.1 and 2 as specified by [RFC 7230](https://tools.ietf.org/html/rfc7230) and [RFC 7540](https://tools.ietf.org/html/rfc7540)
   - Provides both client and server APIs
