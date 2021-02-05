@@ -1,3 +1,10 @@
+0.4 - 2021-02-06
+
+  - Support multiple elliptic curves under OpenSSL 1.1.1+ (#150)
+  - Improve support for Lua 5.4 (not longer require bit library to be installed) (#180)
+  - Ignore delayed RST_STREAM frames in HTTP 2 (#145)
+
+
 0.3 - 2019-02-13
 
   - Fix incorrect Sec-WebSocket-Protocol negotiation
