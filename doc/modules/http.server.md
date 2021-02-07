@@ -98,6 +98,11 @@ This method is used for integrating with other main loops, and should be used in
 Returns `true` if the master socket and all client connection have been closed, `false` otherwise.
 
 
+### `server:connections()` <!-- --> {#http.server:connections}
+
+Returns the number of clients currently connected to this server.
+
+
 ### `server:step(timeout)` <!-- --> {#http.server:step}
 
 Step once through server's main loop: any waiting clients will be `accept()`-ed, any pending streams will start getting processed, and each `onstream` handler will get be run at most once. This method will block for *up to* `timeout` seconds. On error, returns `nil`, an error message and an error number.

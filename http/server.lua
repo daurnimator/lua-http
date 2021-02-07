@@ -472,6 +472,10 @@ function server_methods:loop(...)
 	return self.cq:loop(...)
 end
 
+function server_methods:connections()
+	return self.n_connections
+end
+
 function server_methods:add_socket(socket)
 	self.n_connections = self.n_connections + 1
 	self.cq:wrap(handle_socket, self, socket)
