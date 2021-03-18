@@ -53,6 +53,16 @@ The opcode `0x1` will be returned as `"text"` and `0x2` will be returned as `"bi
 
 Iterator over [`websocket:receive()`](#http.websocket:receive).
 
+#### Example {#http.websocket:each-example}
+
+```lua
+local ws = websocket.new_from_uri("wss://echo.websocket.org")
+assert(ws:connect())
+
+for data, opcode in ws:each() do
+	print(data, opcode)
+end
+```
 
 ### `websocket:send_frame(frame, timeout)` <!-- --> {#http.websocket:send_frame}
 
