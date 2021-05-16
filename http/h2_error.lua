@@ -49,7 +49,7 @@ function http_error_methods:new_traceback(message, stream_error, lvl)
 		message = message;
 		stream_error = stream_error;
 	}
-	if lvl ~= 0 then
+	if lvl ~= 0 and debug then
 		-- COMPAT: should be passing `nil` message (not the empty string)
 		-- see https://github.com/keplerproject/lua-compat-5.3/issues/16
 		e.traceback = debug.traceback("", lvl)
