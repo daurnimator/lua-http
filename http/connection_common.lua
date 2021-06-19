@@ -4,6 +4,16 @@ local ce = require "cqueues.errno"
 
 local connection_methods = {}
 
+local function positive(x)
+	return x ~= nil and x ~= "0" and x:lower() ~= "false" and x:lower() ~= "no"
+end
+
+if positive(os.getenv "LUA_HTTP_DEBUG") then
+	function connection_methods.debug(...)
+		io.stderr:write(...)
+	end
+end
+
 local function onerror(socket, op, why, lvl) -- luacheck: ignore 212
 	local err = string.format("%s: %s", op, ce.strerror(why))
 	if op == "starttls" then

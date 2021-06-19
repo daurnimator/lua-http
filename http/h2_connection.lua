@@ -163,6 +163,12 @@ local function new_connection(socket, conn_type, settings)
 	socket:setvbuf("full", math.huge) -- 'infinite' buffering; no write locks needed
 	socket:setmode("b", "bna") -- writes that don't explicitly buffer will now flush the buffer. autoflush on
 	socket:onerror(onerror)
+	if self.debug then
+		self.debug(string.format("h2_connection.new(socket=%s, type=%s, ...) = %s\n",
+			tostring(socket),
+			conn_type,
+			tostring(self)))
+	end
 	if self.type == "client" then
 		assert(socket:xwrite(preface, "f", 0))
 	end
@@ -411,6 +417,15 @@ function connection_methods:read_http2_frame(timeout)
 	end
 	-- reserved bit MUST be ignored by receivers
 	streamid = band(streamid, 0x7fffffff)
+	if self.debug then
+		self.debug(string.format("h2_connection.read_http2_frame(self=%s, timeout=%f) = type=%s, flags=%d, streamid=%d, #payload=%d\n",
+			tostring(self),
+			timeout or math.huge,
+			h2_stream.frame_types[typ] or tostring(typ),
+			flags,
+			streamid,
+			#payload))
+	end
 	return typ, flags, streamid, payload
 end
 
@@ -418,6 +433,16 @@ end
 -- hence it's not always total failure.
 -- It's up to the caller to take some action (e.g. closing) rather than doing it here
 function connection_methods:write_http2_frame(typ, flags, streamid, payload, timeout, flush)
+	if self.debug then
+		self.debug(string.format("h2_connection.write_http2_frame(self=%s, type=%s, flags=%d, streamid=%d, #payload=%d, timeout=%f, flush=%q)\n",
+			tostring(self),
+			h2_stream.frame_types[typ] or tostring(typ),
+			flags,
+			streamid,
+			#payload,
+			timeout or math.huge,
+			flush or ""))
+	end
 	if #payload > self.peer_settings[known_settings.MAX_FRAME_SIZE] then
 		return nil, h2_error.errors.FRAME_SIZE_ERROR:new_traceback("frame too large"), ce.E2BIG
 	end
