@@ -52,7 +52,7 @@ describe("http.client module", function()
 		s:close()
 	end
 	local function new_server_ctx()
-		local key = openssl_pkey.new()
+		local key = openssl_pkey.new({type="RSA", bits=2048})
 		local crt = openssl_x509.new()
 		crt:setPublicKey(key)
 		crt:sign(key)
