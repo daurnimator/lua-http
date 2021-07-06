@@ -192,6 +192,146 @@ function request_methods:to_uri(with_userinfo)
 	return scheme .. "://" .. authority .. path
 end
 
+function request_methods:to_curl()
+	local cmd = {
+		"curl";
+	}
+	local n = 1
+
+	if self.version then
+		if self.version == 1 then
+			cmd[n+1] = "-0"
+		elseif self.version == 1.1 then
+			cmd[n+1] = "--http1.1"
+		elseif self.version == 2 then
+			cmd[n+1] = "--http2"
+		else
+			error("invalid version")
+		end
+		n = n + 1
+	end
+
+	if self.proxy then
+		if type(self.proxy) ~= "string" then
+			error("NYI")
+		end
+		cmd[n+1] = "--proxy"
+		cmd[n+2] = self.proxy
+		n = n + 2
+	elseif not self.proxies then
+		cmd[n+1] = "--noproxy"
+		cmd[n+2] = "*"
+		n = n + 2
+	elseif self.proxies ~= default_proxies then
+		assert(getmetatable(self.proxies) == http_proxies.mt, "proxies property should be a http.proxies object")
+		error("NYI")
+	end
+
+	if self.expect_100_timeout ~= 1 then
+		cmd[n+1] = "--expect100-timeout"
+		cmd[n+2] = string.format("%d", self.expect_100_timeout)
+		n = n + 2
+	end
+
+	if self.follow_redirects then
+		cmd[n+1] = "--location-trusted"
+		cmd[n+2] = "-e"
+		cmd[n+3] = ";auto"
+		n = n + 3
+
+		if self.max_redirects ~= 50 then -- curl default is 50
+			cmd[n+1] = "--max-redirs"
+			cmd[n+2] = string.format("%d", self.max_redirects or -1)
+			n = n + 2
+		end
+
+		if self.post301 then
+			cmd[n+1] = "--post301"
+			n = n + 1
+		end
+
+		if self.post302 then
+			cmd[n+1] = "--post302"
+			n = n + 1
+		end
+	end
+
+	if self.tls and self.tls ~= true then
+		error("NYI")
+	end
+
+	local scheme = self.headers:get(":scheme")
+	-- Unlike the ':to_uri' method, curl needs the authority in the URI to be the actual host/port
+	local authority = http_util.to_authority(self.host, self.port, scheme)
+	local path = self.headers:get(":path")
+	assert(path == "" or path:sub(1,1) == "/" or path:sub(1,1) == "?", "invalid path for cURL")
+	local url = scheme .. "://" .. authority .. path
+	if url:match("[%[%]%{%}]") then
+		-- Turn off curl URL globbing
+		cmd[n+1] = "-g"
+		n = n + 1
+	end
+	cmd[n+1] = url
+	n = n + 1
+
+	for name, value in self.headers:each() do
+		if name:sub(1,1) == ":" then
+			if name == ":authority" then
+				if value ~= authority then
+					cmd[n+1] = "-H"
+					cmd[n+2] = "host: " .. value
+					n = n + 2
+				end
+			elseif name == ":method" then
+				if value == "HEAD" then
+					cmd[n+1] = "-I"
+					n = n + 1
+				elseif (value ~= "GET" or self.body ~= nil) and (value ~= "POST" or self.body == nil) then
+					cmd[n+1] = "-X"
+					cmd[n+2] = value
+					n = n + 2
+				end
+			end
+		elseif name == "user-agent" then
+			cmd[n+1] = "-A"
+			cmd[n+2] = value
+			n = n + 2
+		elseif name == "referer" then
+			cmd[n+1] = "-e"
+			assert(not value:match(";"), "cannot render referer")
+			if self.follow_redirects then
+				cmd[n+2] = value .. ";auto"
+			else
+				cmd[n+2] = value
+			end
+			n = n + 2
+		else
+			cmd[n+1] = "-H"
+			cmd[n+2] = name .. ": " .. value
+			n = n + 2
+		end
+	end
+
+	if self.body then
+		if type(self.body) == "string" then
+			cmd[n+1] = "--data-raw"
+			cmd[n+2] = self.body
+			n = n + 2
+		else
+			error("NYI")
+		end
+	end
+
+	-- escape ready for a command line
+	for i=1, n do
+		local arg = cmd[i]
+		if arg:match("[^%w%_%:%/%@%^%.%-]") then
+			cmd[i] = "'" .. arg:gsub("'", "'\\''") .. "'"
+		end
+	end
+	return table.concat(cmd, " ", 1, n)
+end
+
 function request_methods:handle_redirect(orig_headers)
 	local max_redirects = self.max_redirects
 	if max_redirects <= 0 then
