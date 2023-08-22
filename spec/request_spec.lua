@@ -361,7 +361,7 @@ describe("http.request module", function()
 			-- different
 			assert.same("GET", new_req.headers:get ":method")
 			assert.same("/foo", new_req.headers:get ":path")
-			assert.falsy(new_req.headers:get "expect")
+			assert.falsy(new_req.headers:has "expect")
 			assert.falsy(new_req.headers:has "content-type")
 			assert.same(nil, new_req.body)
 			assert.same(orig_req.max_redirects-1, new_req.max_redirects)
