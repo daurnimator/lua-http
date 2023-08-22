@@ -861,6 +861,8 @@ function stream_methods:read_next_chunk(timeout)
 			if chunk ~= nil then
 				self.body_read_left = length_n - #chunk
 				end_stream = (self.body_read_left == 0)
+			elseif err == nil then
+				return nil, ce.strerror(ce.EPIPE), ce.EPIPE
 			end
 		elseif length_n == 0 then
 			chunk = ""
