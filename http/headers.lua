@@ -78,11 +78,11 @@ function headers_mt:__tostring()
 	return string.format("http.headers{%d headers}", self._n)
 end
 
-local function add_to_index(_index, name, i)
-	local dex = _index[name]
+local function add_to_index(index, name, i)
+	local dex = index[name]
 	if dex == nil then
 		dex = {n=1, i}
-		_index[name] = dex
+		index[name] = dex
 	else
 		local n = dex.n + 1
 		dex[n] = i
