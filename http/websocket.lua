@@ -241,7 +241,7 @@ local function read_frame(sock, deadline)
 	if frame.length == 126 then
 		extra_fill_unget = assert(sock:xread(2, "b", 0))
 		frame.length = sunpack(">I2", extra_fill_unget)
-		fill_length = fill_length - 2
+		fill_length = fill_length - 2 + frame.length
 	elseif frame.length == 127 then
 		extra_fill_unget = assert(sock:xread(8, "b", 0))
 		frame.length = sunpack(">I8", extra_fill_unget)
