@@ -11,7 +11,7 @@ This means we can ignore the differences between bit libraries.
 if _VERSION ~= "Lua 5.1" then
     -- Lua 5.3+ has built-in bit operators, wrap them in a function.
 	-- Use debug.getinfo to get correct file+line numbers for loaded snippet
-	local info = debug.getinfo(1, "Sl")
+	local info = debug and debug.getinfo(1, "Sl") or { currentline = -1 }
 	local has_bitwise, bitwise = pcall(load(("\n"):rep(info.currentline+1)..[[return {
 		band = function(a, b) return a & b end;
 		bor = function(a, b) return a | b end;
