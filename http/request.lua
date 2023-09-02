@@ -345,6 +345,13 @@ function request_methods:set_body(body)
 	return true
 end
 
+function request_methods:set_form_data(form)
+	local body = http_util.dict_to_query(form)
+	self.headers:upsert(":method", "POST")
+	self.headers:upsert("content-type", "application/x-www-form-urlencoded")
+	return self:set_body(body)
+end
+
 local function non_final_status(status)
 	return status:sub(1, 1) == "1" and status ~= "101"
 end

@@ -170,6 +170,17 @@ describe("http.request module", function()
 		req:set_body(io.tmpfile())
 		assert.same("100-continue", req.headers:get("expect"))
 	end)
+	it(":set_form_data works", function()
+		local req = request.new_from_uri("http://example.com")
+		assert.same("GET", req.headers:get(":method"))
+		assert.falsy(req.headers:has("content-type"))
+		req:set_form_data {
+			foo = "bar";
+		}
+		assert.same("POST", req.headers:get(":method"))
+		assert.same("application/x-www-form-urlencoded", req.headers:get("content-type"))
+		assert.same("foo=bar", req.body)
+	end)
 	describe(":handle_redirect method", function()
 		local headers = require "http.headers"
 		it("works", function()
