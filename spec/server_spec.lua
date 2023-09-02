@@ -77,12 +77,14 @@ describe("http.server module", function()
 			options.port = 0
 		end
 		local onstream = spy.new(function(s, stream)
+			assert.is_equal(1, s:connections())
 			stream:get_headers()
 			stream:shutdown()
 			s:close()
 		end)
 		options.onstream = onstream
 		local s = assert(http_server.listen(options))
+		assert.is_equal(0, s:connections())
 		assert(s:listen())
 		cq:wrap(function()
 			assert_loop(s)
@@ -125,6 +127,7 @@ describe("http.server module", function()
 		assert_loop(cq, TEST_TIMEOUT)
 		assert.truthy(cq:empty())
 		assert.spy(onstream).was.called()
+		assert.is_equal(0, s:connections())
 	end
 	it("works with plain http 1.1 using IP", function()
 		simple_test(cs.AF_INET, false, 1.1)
