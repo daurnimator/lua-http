@@ -623,7 +623,7 @@ function request_methods:go(timeout)
 		self.cookie_store:store_from_request(request_headers, headers, self.host, self.site_for_cookies)
 	end
 
-	if self.follow_redirects and headers:get(":status"):sub(1,1) == "3" then
+	if self.follow_redirects and headers:get(":status"):sub(1,1) == "3" and headers:get(":status") ~= "304" then
 		stream:shutdown()
 		local new_req, err2, errno2 = self:handle_redirect(headers)
 		if not new_req then
