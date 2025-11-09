@@ -99,6 +99,9 @@ local function new_stream(connection)
 		recv_headers_fifo = new_fifo();
 		recv_headers_cond = cc.new();
 
+		recv_final_header = false;
+		sent_final_header = false;
+
 		chunk_fifo = new_fifo();
 		chunk_cond = cc.new();
 
@@ -371,7 +374,7 @@ local valid_pseudo_headers = {
 	[":authority"] = true;
 	[":status"] = false;
 }
-local function validate_headers(headers, is_request, nth_header, ended_stream)
+local function validate_headers(headers, is_request, nth_header, ended_stream, expect_trailer)
 	-- Section 8.1.2: A request or response containing uppercase header field names MUST be treated as malformed
 	for name in headers:each() do
 		if name:lower() ~= name then
@@ -389,7 +392,7 @@ local function validate_headers(headers, is_request, nth_header, ended_stream)
 				Pseudo-header fields MUST NOT appear in trailers.
 				Endpoints MUST treat a request or response that contains
 				undefined or invalid pseudo-header fields as malformed]]
-				if (is_request and nth_header ~= 1) or valid_pseudo_headers[name] ~= is_request then
+				if (is_request and nth_header ~= 1) or valid_pseudo_headers[name] ~= is_request or expect_trailer then
 					return nil, h2_errors.PROTOCOL_ERROR:new_traceback("Pseudo-header fields are only valid in the context in which they are defined", true), ce.EILSEQ
 				end
 				if seen_non_colon then
@@ -440,13 +443,17 @@ local function validate_headers(headers, is_request, nth_header, ended_stream)
 		elseif nth_header > 2 then
 			return nil, h2_errors.PROTOCOL_ERROR:new_traceback("An HTTP request consists of maximum 2 HEADER blocks", true), ce.EILSEQ
 		end
-	else
+	elseif not expect_trailer then
 		--[[ For HTTP/2 responses, a single :status pseudo-header field is
 		defined that carries the HTTP status code field (RFC7231, Section 6).
 		This pseudo-header field MUST be included in all responses; otherwise,
 		the response is malformed (Section 8.1.2.6)]]
 		if not headers:has(":status") then
 			return nil, h2_errors.PROTOCOL_ERROR:new_traceback(":status pseudo-header field MUST be included in all responses", true), ce.EILSEQ
+		end
+	else
+		if not ended_stream then
+			return nil, h2_errors.PROTOCOL_ERROR:new_traceback("Trailers MUST be at end of stream", true), ce.EILSEQ
 		end
 	end
 	return true
@@ -474,12 +481,16 @@ local function process_end_headers(stream, end_stream, pad_len, pos, promised_st
 
 	if not promised_stream then
 		stream.stats_recv_headers = stream.stats_recv_headers + 1
-		local validate_ok, validate_err, errno2 = validate_headers(headers, stream.type ~= "client", stream.stats_recv_headers, end_stream)
+		local validate_ok, validate_err, errno2 = validate_headers(headers, stream.type ~= "client", stream.stats_recv_headers, end_stream, stream.recv_final_header)
 		if not validate_ok then
 			return nil, validate_err, errno2
 		end
 		if headers:has("content-length") then
 			stream.content_length = tonumber(headers:get("content-length"), 10)
+		end
+		if stream.type == "client" and not stream.recv_final_header then
+			local status = headers:get(":status")
+			stream.recv_final_header = string.match(status, "1%d%d") == nil
 		end
 		stream.recv_headers_fifo:push(headers)
 
@@ -498,7 +509,7 @@ local function process_end_headers(stream, end_stream, pad_len, pos, promised_st
 			end
 		end
 	else
-		local validate_ok, validate_err, errno2 = validate_headers(headers, true, 1, false)
+		local validate_ok, validate_err, errno2 = validate_headers(headers, true, 1, false, false)
 		if not validate_ok then
 			return nil, validate_err, errno2
 		end
@@ -1321,8 +1332,13 @@ end
 
 function stream_methods:write_headers(headers, end_stream, timeout)
 	assert(headers, "missing argument: headers")
-	assert(validate_headers(headers, self.type == "client", self.stats_sent_headers+1, end_stream))
+	assert(validate_headers(headers, self.type == "client", self.stats_sent_headers+1, end_stream, self.sent_final_header))
 	assert(type(end_stream) == "boolean", "'end_stream' MUST be a boolean")
+
+	if self.type ~= "client" and not self.sent_final_header then
+		local status = headers:get(":status")
+		self.sent_final_header = string.match(status, "1%d%d") == nil
+	end
 
 	local padded, exclusive, stream_dep, weight = nil, nil, nil, nil
 	return write_headers(self, function(payload, end_headers, deadline)
@@ -1333,7 +1349,7 @@ end
 function stream_methods:push_promise(headers, timeout)
 	assert(self.type == "server")
 	assert(headers, "missing argument: headers")
-	assert(validate_headers(headers, true, 1, false))
+	assert(validate_headers(headers, true, 1, false, false))
 	assert(headers:has(":authority"), "PUSH_PROMISE must have an :authority")
 
 	local promised_stream = self.connection:new_stream()
