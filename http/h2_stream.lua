@@ -343,15 +343,14 @@ function stream_methods:write_data_frame(payload, end_stream, padded, timeout, f
 	payload = pad_len .. payload .. padding
 	-- The entire DATA frame payload is included in flow control,
 	-- including Pad Length and Padding fields if present
-	local new_stream_peer_flow_credits = self.peer_flow_credits - #payload
-	local new_connection_peer_flow_credits = self.connection.peer_flow_credits - #payload
-	if new_stream_peer_flow_credits < 0 or new_connection_peer_flow_credits < 0 then
+	if self.peer_flow_credits < #payload or self.connection.peer_flow_credits < #payload then
 		h2_errors.FLOW_CONTROL_ERROR("not enough flow credits")
 	end
+	-- Note, write_http2_frame may yield. We apply the change now to avoid a data-race.
+	self.peer_flow_credits = self.peer_flow_credits - #payload
+	self.connection.peer_flow_credits = self.connection.peer_flow_credits - #payload
 	local ok, err, errno = self:write_http2_frame(frame_types.DATA, flags, payload, timeout, flush)
 	if not ok then return nil, err, errno end
-	self.peer_flow_credits = new_stream_peer_flow_credits
-	self.connection.peer_flow_credits = new_connection_peer_flow_credits
 	self.stats_sent = self.stats_sent + #payload
 	if end_stream then
 		if self.state == "half closed (remote)" then
