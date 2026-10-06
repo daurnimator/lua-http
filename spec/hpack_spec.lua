@@ -287,6 +287,27 @@ e9ae 82ae 43d3]])
 	end)
 end)
 
+describe("Integer prefix boundaries", function()
+	local hpack = require "http.hpack"
+	it("encodes the prefix maximum with a zero continuation byte", function()
+		for prefix_len=1, 8 do
+			local maximum = 2^prefix_len-1
+			assert.same(string.char(maximum) .. "\0", hpack.encode_integer(maximum, prefix_len, 0))
+		end
+	end)
+	it("does not consume the next field at the prefix maximum", function()
+		for prefix_len=1, 8 do
+			local maximum = 2^prefix_len-1
+			for _, value in ipairs({maximum-1, maximum, maximum+1}) do
+				local encoded = hpack.encode_integer(value, prefix_len, 0)
+				local decoded, next_pos = hpack.decode_integer(encoded .. "x", prefix_len)
+				assert.same(value, decoded)
+				assert.same(#encoded+1, next_pos)
+			end
+		end
+	end)
+end)
+
 describe("Partial input is returned with correct offset", function()
 	local hpack = require "http.hpack"
 	it("decodes integers without errors", function()
