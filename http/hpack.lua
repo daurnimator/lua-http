@@ -15,7 +15,7 @@ local function encode_integer(i, prefix_len, mask)
 	assert(i >= 0 and i % 1 == 0)
 	assert(prefix_len >= 0 and prefix_len <= 8 and prefix_len % 1 == 0)
 	assert(mask >= 0 and mask <= 256 and mask % 1 == 0)
-	if i < 2^prefix_len then
+	if i < 2^prefix_len-1 then
 		return schar(bor(mask, i))
 	else
 		local prefix_mask = 2^prefix_len-1
